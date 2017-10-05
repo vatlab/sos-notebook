@@ -1,0 +1,14 @@
+.sos
+*.swp
+__pycache__
+tmp*
+build
+dist
+*egg-info
+.DS_Store
+_site/
+.ipynb_checkpoints
+process.sh
+process_homepage.sh
+*.pem
+*.pyc
