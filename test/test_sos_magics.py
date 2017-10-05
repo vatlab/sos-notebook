@@ -75,11 +75,9 @@ cat(a)
 %use R
 cat(a)
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, _ = assemble_output(iopub)
             # not sure what is going on
-            # we should have error message, right?
             self.assertEqual(stdout, '')
-            self.assertEqual(stderr, '')
             execute(kc=kc, code='%use SoS')
             wait_for_idle(kc)
 

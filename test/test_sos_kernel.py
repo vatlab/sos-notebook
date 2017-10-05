@@ -30,8 +30,8 @@
 import os
 import sys
 import unittest
-from ipykernel.tests.utils import assemble_output, execute, wait_for_idle
-from sos_notebook.test_utils import sos_kernel, get_result, get_display_data
+from ipykernel.tests.utils import execute, wait_for_idle
+from sos_notebook.test_utils import sos_kernel, get_result, get_display_data, get_std_output
 
 class TestSoSKernel(unittest.TestCase):
     #
@@ -51,7 +51,7 @@ class TestSoSKernel(unittest.TestCase):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             execute(kc=kc, code='print("a=${100+11}")')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertTrue(stdout.endswith('a=111\n'))
             self.assertEqual(stderr, '')
 
@@ -77,7 +77,7 @@ class TestSoSKernel(unittest.TestCase):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             execute(kc=kc, code="!echo ha ha")
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertTrue('ha ha' in stdout, "GOT ERROR {}".format(stderr))
             self.assertEqual(stderr, '')
 
@@ -87,7 +87,7 @@ class TestSoSKernel(unittest.TestCase):
             execute(kc=kc, code="%cd ..")
             wait_for_idle(kc)
             execute(kc=kc, code="print(os.getcwd())")
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertFalse(stdout.strip().endswith('jupyter'))
             self.assertEqual(stderr, '')
             execute(kc=kc, code="%cd jupyter")
@@ -95,14 +95,14 @@ class TestSoSKernel(unittest.TestCase):
     def testMagicUse(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
-            execute(kc=kc, code="%use R0 -l sos.R.kernel:sos_R -c #CCCCCC")
-            _, stderr = assemble_output(iopub)
+            execute(kc=kc, code="%use R0 -l sos_r.kernel:sos_R -c #CCCCCC")
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
-            execute(kc=kc, code="%use R1 -l sos.R.kernel:sos_R -k ir -c #CCCCCC")
-            _, stderr = assemble_output(iopub)
+            execute(kc=kc, code="%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC")
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="%use R2 -k ir")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="a <- 1024")
             wait_for_idle(kc)
@@ -110,7 +110,7 @@ class TestSoSKernel(unittest.TestCase):
             res = get_display_data(iopub)
             self.assertEqual(res, '[1] 1024')
             execute(kc=kc, code="%use R3 -k ir -l R")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="a <- 233")
             wait_for_idle(kc)
@@ -118,7 +118,7 @@ class TestSoSKernel(unittest.TestCase):
             res = get_display_data(iopub)
             self.assertEqual(res, '[1] 233')
             execute(kc=kc, code="%use R2 -c red")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="a")
             res = get_display_data(iopub)
@@ -130,7 +130,7 @@ class TestSoSKernel(unittest.TestCase):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             execute(kc=kc, code="%use R")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="a <- 1024")
             wait_for_idle(kc)
@@ -144,7 +144,7 @@ class TestSoSKernel(unittest.TestCase):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             execute(kc=kc, code="%use R")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="a <- 1024")
             wait_for_idle(kc)
@@ -207,7 +207,7 @@ class TestSoSKernel(unittest.TestCase):
             execute(kc=kc, code="_b_a = 22")
             wait_for_idle(kc)
             execute(kc=kc, code="%use R")
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             execute(kc=kc, code="%get a")
             wait_for_idle(kc)
@@ -276,10 +276,10 @@ class TestSoSKernel(unittest.TestCase):
             wait_for_idle(kc)
             execute(kc=kc, code='%use R4 -c cyan')
             wait_for_idle(kc)
-            execute(kc=kc, code='%with R5 -l sos.R:sos_R -c default')
+            execute(kc=kc, code='%with R5 -l sos_r.kernel:sos_R -c default')
             wait_for_idle(kc)
             execute(kc=kc, code='%with R6 -l unknown -c default')
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertTrue('Failed to switch' in stderr, 'expect error {}'.format(stderr))
             execute(kc=kc, code="%use sos")
             wait_for_idle(kc)
@@ -328,7 +328,8 @@ class TestSoSKernel(unittest.TestCase):
             self.assertFalse(os.path.isfile('push_pull.txt'))
             #
             execute(kc=kc, code='%pull push_pull.txt --from docker -c ~/docker.yml')
-            wait_for_idle(kc)
+            _, stderr = get_std_output(kc.iopub_channel)
+            self.assertEqual(stderr, '', 'Expect no error, get {}'.format(stderr))
             self.assertTrue(os.path.isfile('push_pull.txt'))
 
 if __name__ == '__main__':

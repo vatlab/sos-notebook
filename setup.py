@@ -169,5 +169,6 @@ rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
     extras_require = {
         'image':    ['wand'],
         'md':       ['markdown'],
+        'dot':      ['graphviz']
     }
 )

@@ -30,8 +30,8 @@
 import os
 import unittest
 import subprocess
-from ipykernel.tests.utils import execute, wait_for_idle, assemble_output
-from sos_notebook.test_utils import sos_kernel, get_result
+from ipykernel.tests.utils import execute, wait_for_idle
+from sos_notebook.test_utils import sos_kernel, get_result, get_std_output
 from sos.target import FileTarget
 
 class TestJupyterSoS(unittest.TestCase):
@@ -76,7 +76,7 @@ A=10
 [default]
 A=20
 ''')
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertTrue('A' in stderr, 'Expect an error {}'.format(stderr))
         subprocess.call('sos config --global --unset sos.change_all_cap_vars', shell=True)
 

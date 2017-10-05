@@ -28,7 +28,8 @@
 #
 #
 from contextlib import contextmanager
-from ipykernel.tests.utils import start_new_kernel
+from ipykernel.tests.utils import start_new_kernel, assemble_output
+
 
 import atexit
 from queue import Empty
@@ -148,3 +149,8 @@ def clear_channels(iopub):
             # idle message signals end of output
             break
 
+def get_std_output(iopub):
+    '''Obtain stderr and remove some unnecessary warning from 
+    https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710'''
+    stdout, stderr = assemble_output(iopub)
+    return stdout, '\n'.join([x for x in stderr.splitlines() if 'sticky' not in x and 'RuntimeWarning' not in x])
