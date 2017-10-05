@@ -31,7 +31,7 @@ import os
 import unittest
 import subprocess
 from ipykernel.tests.utils import wait_for_idle, execute
-from sos.jupyter.test_utils import sos_kernel, KC, get_display_data
+from sos_notebook.test_utils import sos_kernel, KC, get_display_data
 
 import nose.tools as nt
 

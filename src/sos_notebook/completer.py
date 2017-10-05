@@ -24,7 +24,7 @@ import os
 import glob
 
 import rlcompleter
-from sos_core.utils import env
+from sos.utils import env
 
 def last_valid(line):
     text = line

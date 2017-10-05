@@ -36,10 +36,10 @@ from ipykernel.ipkernel import IPythonKernel
 from collections import Sized, defaultdict, OrderedDict
 
 from types import ModuleType
-from sos_core.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
-from sos_core._version import __sos_version__, __version__
-from sos_core.sos_eval import SoS_exec, SoS_eval, interpolate, get_default_global_sigil
-from sos_core.sos_syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
+from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
+from sos._version import __sos_version__, __version__
+from sos.sos_eval import SoS_exec, SoS_eval, interpolate, get_default_global_sigil
+from sos.sos_syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
 
 from IPython.lib.clipboard import ClipboardEmpty, osx_clipboard_get, tkinter_clipboard_get
 from IPython.core.error import UsageError
@@ -103,7 +103,7 @@ class SoS_Kernel(IPythonKernel):
         'file_extension': '.sos',
         'pygments_lexer': 'sos',
         'codemirror_mode': 'sos',
-        'nbconvert_exporter': 'sos.jupyter.converter.SoS_Exporter',
+        'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
     }
     banner = "SoS kernel - script of scripts"
 
@@ -758,7 +758,7 @@ class SoS_Kernel(IPythonKernel):
 
     def handle_taskinfo(self, task_id, task_queue, side_panel=None):
         # requesting information on task
-        from sos_core.hosts import Host
+        from sos.hosts import Host
         host = Host(task_queue)
         result = host._task_engine.query_tasks([task_id], verbosity=2, html=True)
         #log_to_file(result)
@@ -784,7 +784,7 @@ class SoS_Kernel(IPythonKernel):
 
 
     def handle_tasks(self, tasks, queue='localhost', status=None, age=None):
-        from sos_core.hosts import Host
+        from sos.hosts import Host
         try:
             host = Host(queue)
         except Exception as e:
@@ -797,7 +797,7 @@ class SoS_Kernel(IPythonKernel):
 
     def handle_sessioninfo(self):
         #
-        from sos_core.utils import loaded_modules
+        from sos.utils import loaded_modules
         result = OrderedDict()
         #
         result['SoS'] = [('SoS Version', __version__)]
@@ -867,12 +867,12 @@ class SoS_Kernel(IPythonKernel):
                     self.send_frontend_msg('kernel-list', self.get_kernel_list(v))
                 elif k == 'kill-task':
                     # kill specified task
-                    from sos_core.hosts import Host
+                    from sos.hosts import Host
                     Host(v[1])._task_engine.kill_tasks([v[0]])
                     self.notify_task_status(['change-status', v[1], v[0], 'aborted'])
                 elif k == 'resume-task':
                     # kill specified task
-                    from sos_core.hosts import Host
+                    from sos.hosts import Host
                     Host(v[1])._task_engine.resume_task(v[0])
                     self.notify_task_status(['change-status', v[1], v[0], 'pending'])
                 elif k == 'task-info':
@@ -895,7 +895,7 @@ class SoS_Kernel(IPythonKernel):
                         host_status[tqu].append(tid)
                     #log_to_file(host_status)
                     #
-                    from sos_core.hosts import Host
+                    from sos.hosts import Host
                     for tqu, tids in host_status.items():
                         try:
                             h = Host(tqu)
@@ -1010,7 +1010,7 @@ class SoS_Kernel(IPythonKernel):
     def _reset_dict(self):
         env.sos_dict = WorkflowDict()
         SoS_exec('import os, sys, glob', None)
-        SoS_exec('from sos_core.runtime import *', None)
+        SoS_exec('from sos.runtime import *', None)
         SoS_exec("run_mode = 'interactive'", None)
         self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG', \
             'step_name', '__builtins__', 'input', 'output', 'depends'}
@@ -1411,7 +1411,7 @@ Available subkernels:\n{}'''.format(
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    from sos_core.utils import log_to_file
+                    from sos.utils import log_to_file
                     log_to_file('MSG TYPE {}'.format(msg_type))
                     log_to_file('CONTENT  {}'.format(sub_msg['content']))
                 if msg_type == 'status':
@@ -1509,13 +1509,13 @@ Available subkernels:\n{}'''.format(
                 return
 
     def handle_magic_pull(self, args):
-        from sos_core.hosts import Host
+        from sos.hosts import Host
         if args.config:
-            from sos_core.utils import load_config_files
+            from sos.utils import load_config_files
             load_config_files(args.config)
         cfg = env.sos_dict['CONFIG']
         if args.host == '':
-            from sos_core.hosts import list_queues
+            from sos.hosts import list_queues
             list_queues(cfg, args.verbosity)
             return
         try:
@@ -1536,9 +1536,9 @@ Available subkernels:\n{}'''.format(
             self.warn('Failed to retrieve {}: {}'.format(', '.join(args.items), e))
 
     def handle_magic_push(self, args):
-        from sos_core.hosts import Host
+        from sos.hosts import Host
         if args.config:
-            from sos_core.utils import load_config_files
+            from sos.utils import load_config_files
             load_config_files(args.config)
         cfg = env.sos_dict['CONFIG']
         if args.host == '':
@@ -1671,7 +1671,7 @@ Available subkernels:\n{}'''.format(
         # interpolate command
         if not cmd:
             return
-        from sos_core.utils import pexpect_run
+        from sos.utils import pexpect_run
         try:
             with self.redirect_sos_io():
                 pexpect_run(cmd, shell=True, win_width=40 if isinstance(self.cell_idx, int) and self.cell_idx < 0 else 80)
@@ -2428,7 +2428,7 @@ Available subkernels:\n{}'''.format(
                             script.write(self._workflow)
                     else:
                         # convert to sos report
-                        from sos_core.jupyter.converter import notebook_to_script
+                        from .converter import notebook_to_script
                         arg = argparse.Namespace()
                         arg.all = True
                         notebook_to_script(self._notebook_name + '.ipynb', filename, args=arg, unknown_args=[])
@@ -2437,7 +2437,7 @@ Available subkernels:\n{}'''.format(
                         os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
                 else:
                     # convert to sos report
-                    from sos_core.jupyter.converter import notebook_to_html
+                    from .converter import notebook_to_html
                     arg = argparse.Namespace()
                     arg.template = args.template
                     notebook_to_html(self._notebook_name + '.ipynb', filename, sargs=arg, unknown_args=[])
@@ -2577,7 +2577,7 @@ Available subkernels:\n{}'''.format(
                         self.warn('Invalid option --kernel with -r (--host)')
                     else:
                         if args.config:
-                            from sos_core.utils import load_config_files
+                            from sos.utils import load_config_files
                             load_config_files(args.config)
                         try:
                             rargs = ['sos', 'preview', '--html'] + options
@@ -2613,7 +2613,7 @@ Available subkernels:\n{}'''.format(
             except SystemExit:
                 return
             if args.config:
-                from sos_core.utils import load_cfg_files
+                from sos.utils import load_cfg_files
                 load_cfg_files(args.config)
             self.handle_taskinfo(args.task, args.queue)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -2625,7 +2625,7 @@ Available subkernels:\n{}'''.format(
             except SystemExit:
                 return
             if args.config:
-                from sos_core.utils import load_cfg_files
+                from sos.utils import load_cfg_files
                 load_cfg_files(args.config)
             self.handle_tasks(args.tasks, args.queue if args.queue else 'localhost', args.status, args.age)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)

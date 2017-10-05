@@ -34,7 +34,7 @@ with open('src/sos_notebook/_version.py') as version:
             break
 
 kernel_json = {
-    "argv":         ["python", "-m", "sos.jupyter.kernel", "-f", "{connection_file}"],
+    "argv":         ["python", "-m", "sos_notebook.kernel", "-f", "{connection_file}"],
     "display_name": "SoS",
     "language":     "sos",
 }
@@ -69,33 +69,22 @@ class InstallWithConfigurations(install):
         log.info('And "sos -h" to start using Script of Scripts.')
 
 dest = '''\
-Exploratory data analysis in computationally intensive disciplines such as computational
-biology often requires one to exploit a variety of tools implemented in different programming
-languages and analyzing large datasets on high performance computing systems (e.g. computer
-clusters). On top of all the difficulties in exchanging data between languages and computing
-systems and analyzing data on different platforms, it becomes challenging to keep track of
-such fragmented workflows and reproduce prior analyses.
+Complex bioinformatic data analysis workflows involving multiple scripts
+in different languages can be difficult to consolidate, share, and reproduce.
+An environment that streamlines the entire data collection, analysis,
+visualization and reporting processes of such multi-language analyses is
+currently lacking.
 
-With strong emphases on readability, practicality, and reproducibility, we have developed
-a workflow system called "Script of Scripts" (SoS) with a web front-end and notebook format
-based on Jupyter. Major features of SoS for exploratory analysis include multi-language
-support, explicit and automatic data exchange between running sessions (kernels) in
-different languages, cell-specific kernel switch using frontend-UI or cell magics,
-a side-panel that allows scratch execution of statements, preview of files and expressions,
-and line-by-line execution of statements in cells. In particular, variable and file preview
-on the side panel makes it possible to trouble-shoot scripts in multiple languages without
-contaminating the main notebook or interrupting the logic flow of the analysis. For large-scale
-data analysis, the SoS workflow engine provides a unified interface to executing and managing
-tasks on a variety of computing platforms such as PBS/Torch/LSF/Slurm clusters and RQ and
-Celery task queues. Specified files are automatically synchronized between file systems,
-thus enabling a single workflow to utilize multiple remote computing environments.
-
-Researchers will benefit from the SoS system the flexibility to use their preferred languages
-and tools for tasks without having to worry about data flow, and can perform light interactive
-analysis while executing heavy remote tasks simultaneous in the same notebook in a neat and
-organized fashion. SoS is available at http://vatlab.github.io/SOS/ and is distributed freely
-under a GPL3 license. A live Jupyter server and several docker containers are available for
-testing and running SoS without a local installation.
+We developed Script of Scripts (SoS) Notebook, an interactive data analysis
+environment in which data from different scripting languages flow freely
+within and across languages. SoS Notebook features a multi-language notebook
+interface, a protocol for cross-language variable exchange, a preview engine
+to visualize variables and common bioinformatic file formats, and a
+report-generation tool to create dynamic documents from steps in different
+languages. SoS Notebook enables researchers to perform sophisticated
+bioinformatic analysis using the most suitable tools for different parts of
+the workflow, without the limitations of a particular language or
+complications of cross-language communications. 
 
 Please refer to http://vatlab.github.io/SOS/ for more details on SoS.
 '''
@@ -150,6 +139,9 @@ imghdr:what,1 = sos_notebook.preview:preview_img [image]
 zipfile:is_zipfile,1 = sos_notebook.preview:preview_zip
 tarfile:is_tarfile,1 = sos_notebook.preview:preview_tar
 *,0 = sos_notebook.preview:preview_txt
+
+[sos_functions]
+runfile = sos_notebook.sos_executor:runfile
 
 [sos_converters]
 sos-ipynb.parser = sos_notebook.converter:get_script_to_notebook_parser

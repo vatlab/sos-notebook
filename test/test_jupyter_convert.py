@@ -26,7 +26,7 @@ import shutil
 import subprocess
 
 from sos.utils import env
-from sos.jupyter.converter import script_to_notebook, notebook_to_script
+from sos_notebook.converter import script_to_notebook, notebook_to_script
 
 
 

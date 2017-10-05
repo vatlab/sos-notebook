@@ -25,16 +25,16 @@ import shlex
 import keyword
 import tempfile
 import time
-from sos_core.utils import env, _parse_error, get_traceback, load_config_files
-from sos_core.sos_eval import SoS_exec, get_default_global_sigil
-from sos_core._version import __version__
-from sos_core.__main__ import get_run_parser
-from sos_core.sos_script import SoS_Script
-from sos_core.sos_syntax import SOS_KEYWORDS
-from sos_core.sos_executor import Base_Executor, __null_func__
-from sos_core.sos_syntax import SOS_SECTION_HEADER
-from sos_core.target import FileTarget, UnknownTarget, RemovedTarget, UnavailableLock
-from sos_core.sos_step import PendingTasks
+from sos.utils import env, _parse_error, get_traceback, load_config_files
+from sos.sos_eval import SoS_exec, get_default_global_sigil
+from sos._version import __version__
+from sos.__main__ import get_run_parser
+from sos.sos_script import SoS_Script
+from sos.sos_syntax import SOS_KEYWORDS
+from sos.sos_executor import Base_Executor, __null_func__
+from sos.sos_syntax import SOS_SECTION_HEADER
+from sos.target import FileTarget, UnknownTarget, RemovedTarget, UnavailableLock
+from sos.sos_step import PendingTasks
 from .sos_step import Interactive_Step_Executor
 
 
@@ -264,12 +264,12 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     env.verbosity = args.verbosity
 
     if args.__queue__ == '':
-        from sos_core.hosts import list_queues
+        from sos.hosts import list_queues
         list_queues(args.__config__, args.verbosity)
         return
 
     if args.__remote__:
-        from sos_core.utils import load_config_files
+        from sos.utils import load_config_files
         cfg = load_config_files(args.__config__)
         env.sos_dict.set('CONFIG', cfg)
         if args.__remote__ == '':
@@ -278,7 +278,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             return
 
         # if executing on a remote host...
-        from sos_core.hosts import Host
+        from sos.hosts import Host
         host = Host(args.__remote__)
         #
         if script is None:
@@ -290,7 +290,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
 
         # copy script to remote host...
         host.send_to_host(script)
-        from sos_core.utils import remove_arg
+        from sos.utils import remove_arg
         argv = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
         argv = remove_arg(argv, '-r')
         argv = remove_arg(argv, '-c')

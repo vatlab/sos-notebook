@@ -22,7 +22,7 @@
 import base64
 import argparse
 from IPython.core.display import HTML
-from sos_core.utils import env, dehtml
+from sos.utils import env, dehtml
 
 import pkg_resources
 

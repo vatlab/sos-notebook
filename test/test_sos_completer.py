@@ -22,7 +22,7 @@
 
 import unittest
 from ipykernel.tests.utils import execute, wait_for_idle
-from sos.jupyter.test_utils import sos_kernel, flush_channels
+from sos_notebook.test_utils import sos_kernel, flush_channels
 
 def get_completions(kc, text):
     flush_channels()

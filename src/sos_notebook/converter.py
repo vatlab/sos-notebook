@@ -30,8 +30,8 @@ import nbformat
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 from nbconvert.exporters import Exporter
 
-from sos_core.utils import env
-from sos_core.sos_syntax import SOS_SECTION_HEADER, SOS_CELL_LINE
+from sos.utils import env
+from sos.sos_syntax import SOS_SECTION_HEADER, SOS_CELL_LINE
 
 #
 # Converter from Notebook
@@ -294,7 +294,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                 "mimetype": "text/x-sos",
                 "name": "sos",
                 "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos.jupyter.converter.SoS_Exporter',
+                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
             },
             'sos': {
                 'kernels': [
@@ -485,7 +485,7 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
                 "mimetype": "text/x-sos",
                 "name": "sos",
                 "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos.jupyter.converter.SoS_Exporter',
+                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
             },
             'sos': {
                 'kernels': [
@@ -581,7 +581,7 @@ def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=
                 "mimetype": "text/x-sos",
                 "name": "sos",
                 "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos.jupyter.converter.SoS_Exporter',
+                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
             },
             'sos': {
                 'kernels': [

@@ -21,9 +21,9 @@
 #
 
 
-from sos_core.sos_step import Step_Executor, Base_Step_Executor, PendingTasks
-from sos_core.hosts import Host
-from sos_core.utils import env, short_repr
+from sos.sos_step import Step_Executor, Base_Step_Executor, PendingTasks
+from sos.hosts import Host
+from sos.utils import env, short_repr
 import time
 
 class Interactive_Step_Executor(Step_Executor):

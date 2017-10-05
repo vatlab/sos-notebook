@@ -21,8 +21,8 @@
 #
 
 import pydoc
-from sos_core.utils import env
-from sos_core.sos_syntax import SOS_USAGES
+from sos.utils import env
+from sos.sos_syntax import SOS_USAGES
 
 class SoS_VariableInspector(object):
     def __init__(self, kernel):
