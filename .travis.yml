@@ -29,7 +29,7 @@ before_install:
 
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy
-    - pip install pygments ipython wand graphviz sos sos-bash sos-python sos-r
+    - pip install pygments ipython wand graphviz sos sos-bash sos-python
 
 sudo: required
 services:

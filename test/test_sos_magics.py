@@ -58,28 +58,6 @@ plt.plot(x, np.sin(x), '--', linewidth=2)
 plt.show()''')
             wait_for_idle(kc)
 
-    def testMagicShutdown(self):
-        with sos_kernel() as kc:
-            iopub = kc.iopub_channel
-            execute(kc=kc, code='''
-%use R
-a = 100
-cat(a)
-''')
-            stdout, stderr = assemble_output(iopub)
-            self.assertTrue(stdout.endswith('100'), 'Should have output {}'.format(stdout))
-            self.assertEqual(stderr, '')
-            # now let us restart
-            execute(kc=kc, code='''
-%shutdown --restart R
-%use R
-cat(a)
-''')
-            stdout, _ = assemble_output(iopub)
-            # not sure what is going on
-            self.assertEqual(stdout, '')
-            execute(kc=kc, code='%use SoS')
-            wait_for_idle(kc)
 
     def testMagicSave(self):
         with sos_kernel() as kc:
@@ -227,53 +205,6 @@ with open('a.html', 'w') as dot:
 """)
 ''')
             res = get_display_data(iopub, 'text/html')
-            self.assertTrue('<h1>My First Heading</h1>' in res, 'Expect preview {}'.format(res))
-            #
-            execute(kc=kc, code='''
-%preview mtcars
-%usr R
-''')
-            wait_for_idle(kc)
-            # preview figure
-            execute(kc=kc, code='''
-%preview a.png
-R:
-    png('a.png')
-    plot(0)
-    dev.off()
-''')
-            res = get_display_data(iopub, 'image/png')
-            self.assertGreater(len(res), 1000, 'Expect a image {}'.format(res))
-            # preview jpg
-            execute(kc=kc, code='''
-%preview a.jp*
-R:
-    jpeg('a.jpg')
-    plot(0)
-    dev.off()
-''')
-            res = get_display_data(iopub, 'image/jpeg')
-            self.assertGreater(len(res), 1000, 'Expect a image {}'.format(res))
-            # preview pdf in iframe (by default)
-            execute(kc=kc, code='''
-%preview a.pdf
-R:
-    pdf('a.pdf')
-    plot(0)
-    dev.off()
-''')
-            # or png (which requires imagemagick
-            wait_for_idle(kc)
-            execute(kc=kc, code='''
-%preview a.pdf -s png
-''')
-            # could return html or image depending on configuration
-            res = get_display_data(iopub, ('text/html', 'image/png'))
-            self.assertTrue('iframe' in res or len(res) > 1000, 'Expect a image {}'.format(res))
-            #
-            # switch back
-            execute(kc=kc, code='%use SoS')
-            wait_for_idle(kc)
             # preview dot, needs imagemagick, which is unavailable under windows.
             if sys.platform == 'win32':
                 return
@@ -346,7 +277,6 @@ with open('test_blah.txt', 'w') as tb:
         with sos_kernel() as kc:
             # preview variable
             execute(kc=kc, code='''
-%use R
 %use Python3
 %use SoS
 %sessioninfo
