@@ -28,7 +28,8 @@ before_install:
     - conda install pandas numpy
 
     # SoS Notebook
-    - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy
+    - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown
+    - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz redis-server
     - pip install pygments ipython wand graphviz sos sos-bash sos-python
 
 sudo: required
