@@ -22,7 +22,7 @@ before_install:
     - conda update -q conda
     - conda info -a
     - pip install docker rq
-    - pip install pyyaml psutil tqdm
+    - pip install pyyaml psutil tqdm nose
     - pip install fasteners pygments networkx pydot pydotplus 
     - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     - conda install pandas numpy
