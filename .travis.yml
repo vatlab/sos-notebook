@@ -32,7 +32,7 @@ before_install:
 
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown
-    - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz redis-server
+    - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz
     - pip install pygments ipython wand graphviz sos sos-bash sos-python
 
 sudo: required
@@ -46,14 +46,12 @@ script:
     - 'if [ $TRAVIS_PYTHON_VERSION == "3.6" ]; then
            pytest -x -v;
        else
-           pytest -x -v --cov sos_notebook --cov-report=xml;
+           pytest -x -v --cov sos_notebook --cov-report=term-missing;
        fi'
       
 after_success:
     - 'if [ $TRAVIS_PYTHON_VERSION == "3.5" ]; then
            coverage combine;
-           ls -l coverage.xml;
-           python-codacy-coverage -r coverage.xml;
            coveralls;
         fi'
 
