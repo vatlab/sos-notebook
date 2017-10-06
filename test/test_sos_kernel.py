@@ -112,19 +112,21 @@ class TestSoSKernel(unittest.TestCase):
     @unittest.skipIf(sys.platform == 'win32', 'AppVeyor does not support linux based docker')
     def testPullPush(self):
         '''Test set_options of sigil'''
-        with open('push_pull.txt', 'w') as pp:
+        import random
+        fname = "push_pull_{}.txt".format(random.randint(1, 100000))
+        with open(fname, 'w') as pp:
             pp.write('something')
         with sos_kernel() as kc:
             # create a data frame
-            execute(kc=kc, code='%push push_pull.txt --to docker -c ~/docker.yml')
+            execute(kc=kc, code='%push {} --to docker -c ~/docker.yml'.format(fname))
             wait_for_idle(kc)
-            os.remove('push_pull.txt')
-            self.assertFalse(os.path.isfile('push_pull.txt'))
+            os.remove(fname)
+            self.assertFalse(os.path.isfile(fname))
             #
-            execute(kc=kc, code='%pull push_pull.txt --from docker -c ~/docker.yml')
+            execute(kc=kc, code='%pull {} --from docker -c ~/docker.yml'.format(fname))
             _, stderr = get_std_output(kc.iopub_channel)
             self.assertEqual(stderr, '', 'Expect no error, get {}'.format(stderr))
-            self.assertTrue(os.path.isfile('push_pull.txt'))
+            self.assertTrue(os.path.isfile(fname))
 
 if __name__ == '__main__':
     unittest.main()
