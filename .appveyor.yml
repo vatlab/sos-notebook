@@ -43,52 +43,14 @@ install:
     - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose 
     # https://github.com/jupyter/jupyter/issues/150
     - pip install entrypoints
-    - pip install jupyter wand
-    # install r kernel
-    - conda install -c r r-essentials r-feather
-    - conda install -c conda-forge feather-format
-    # for python2 kernel
-    - conda create -n ipykernel_py2 python=2 ipykernel
-    - activate ipykernel_py2
-    - python -m ipykernel install --user
-    - deactivate
+    - pip install jupyter wand sos
  
-    # used by ./run_tests for coverage
-    #- pip install coverage
-    #- pip install codacy-coverage
-    # install bash kernel
-    #- pip install bash_kernel
-    #- python -m bash_kernel.install
-
-    # install sos
     - pip install pytest
     - python setup.py install
 
 test_script:
     - cd test
-    - pytest -x -v core
-    - pytest -x -v jupyter
-    - pytest -x -v bioinfo
-    - pytest -x -v PBS
-      #- pytest -x -v rq
-      #- pytest -x -v docker
-      #- pytest -x -v Bash
-      #- pytest -x -v JavaScript
-    - pytest -x -v Python2
-    - pytest -x -v Python3
-    - pytest -x -v R
-      #- pytest -x -v SAS
-      #- pytest -x -v Matlab
-      #- pytest -x -v Octave
-
-#on_finish:
-#  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-
-# do not report coverage because codacy only accept coverage for each commit
-#
-#on_success:
-#    - coverage xml
-#    - python-codacy-coverage -r coverage.xml
+    - pytest -x -v 
 
 notifications:
     - provider: Email
