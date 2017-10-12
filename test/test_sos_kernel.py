@@ -70,7 +70,7 @@ class TestSoSKernel(unittest.TestCase):
             execute(kc=kc, code="%dict --keys --all")
             res = get_result(iopub)
             self.assertTrue('a' not in res)
-            for key in ('run', 'sh', 'tcsh', 'expand_pattern'):
+            for key in ('run', 'expand_pattern'):
                 self.assertTrue(key in res)
 
     def testShell(self):
