@@ -41,7 +41,7 @@ class TestSoSCompleter(unittest.TestCase):
         with sos_kernel() as kc:
             # match magics
             ins_print = inspect(kc, 'print')['data']['text/plain']
-            self.assertTrue('built-in function' in ins_print,
+            self.assertTrue('print' in ins_print,
                     'Returned: {}'.format(ins_print))
             wait_for_idle(kc)
             #
