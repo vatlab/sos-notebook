@@ -23,8 +23,8 @@
 import os
 import sys
 import unittest
-from ipykernel.tests.utils import assemble_output, execute, wait_for_idle
-from sos_notebook.test_utils import sos_kernel, get_display_data
+from ipykernel.tests.utils import execute, wait_for_idle
+from sos_notebook.test_utils import sos_kernel, get_display_data, get_std_output
 
 class TestSoSMagics(unittest.TestCase):
     def testHelp(self):
@@ -98,7 +98,7 @@ a=1
 %preview -n a
 a=1
 ''')
-            _, stderr = assemble_output(iopub)
+            _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
 
             # preview csv file
@@ -122,7 +122,7 @@ hello
 world
 """)
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             self.assertTrue('world' in stdout, 'Expect preview {}'.format(stdout))
             # preview zip
@@ -133,7 +133,7 @@ import zipfile
 with zipfile.ZipFile('a.zip', 'w') as zfile:
     zfile.write('a.csv')
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             # preview tar
@@ -145,7 +145,7 @@ with tarfile.open('a.tar', 'w') as tar:
     tar.add('a.csv')
 
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             # preview tar.gz
@@ -156,7 +156,7 @@ import tarfile
 with tarfile.open('a.tar.gz', 'w:gz') as tar:
     tar.add('a.csv')
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             #
@@ -171,7 +171,7 @@ Hello
 world
 """)
 ''')
-            stdout, stderr = assemble_output(iopub)
+            stdout, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '')
             self.assertTrue('world' in stdout, 'Expect preview {}'.format(stdout))
             # preview md
@@ -232,7 +232,7 @@ graph graphname {
 %set
 %set -v1
 ''')
-        stdout, stderr = assemble_output(iopub)
+        stdout, stderr = get_std_output(iopub)
         self.assertEqual(stderr, '', 'Got {}'.format(stderr))
         self.assertTrue('set' in stdout, 'Got {}'.format(stdout))
 
@@ -249,7 +249,7 @@ graph graphname {
 sh:
    echo abc > abc.txt
 ''')
-        stdout, _ = assemble_output(iopub)
+        stdout, _ = get_std_output(iopub)
         #self.assertEqual(stderr, '', 'Got error {}'.format(stderr))
         self.assertTrue('abc' in stdout, 'Got stdout "{}"'.format(stdout))
 
