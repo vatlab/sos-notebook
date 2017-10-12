@@ -1006,6 +1006,8 @@ class SoS_Kernel(IPythonKernel):
                     })
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {'msg_type': msg_type})
+        else:
+            self.warn('Frontend communicator is broken. Please restart jupyter server')
 
     def _reset_dict(self):
         env.sos_dict = WorkflowDict()
@@ -1778,13 +1780,13 @@ Available subkernels:\n{}'''.format(
         txt = type(obj).__name__
         # we could potentially check the shape of data frame and matrix
         # but then we will need to import the numpy and pandas libraries
-        if hasattr(obj, 'shape'):
+        if hasattr(obj, 'shape') and getattr(obj, 'shape') is not None:
             txt += ' of shape {}'.format(getattr(obj, 'shape'))
         elif isinstance(obj, Sized):
             txt += ' of length {}'.format(obj.__len__())
-        if callable(obj) or isinstance(obj, ModuleType):
+        if isinstance(obj, ModuleType):
             return txt, ({'text/plain': pydoc.render_doc(obj, title='SoS Documentation: %s')}, {})
-        elif hasattr(obj, 'to_html'):
+        elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
                 from .visualize import Visualizer
                 result = Visualizer(self, style).preview(obj)
@@ -1797,7 +1799,7 @@ Available subkernels:\n{}'''.format(
                 else:
                     raise ValueError('Unrecognized return value from visualizer: {}.'.format(short_repr(result)))
             except Exception as e:
-                self.warn(e)
+                self.warn('Failed to preview variable: {}'.format(e))
                 return txt, self.format_obj(obj)
         else:
             return txt, self.format_obj(obj)
