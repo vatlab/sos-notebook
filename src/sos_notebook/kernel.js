@@ -1871,6 +1871,8 @@ define([
         events.on("notebook_loaded.Notebook", show_toc);
         // restart kernel does not clear existing side panel.
         events.on("kernel_connected.Kernel", function() {
+            // Issue #1: need to re-register sos_comm after kernel is restarted.
+            register_sos_comm();
             var cell = window.my_panel.cell;
             // do not clear existing content
             if (!cell.get_text())
