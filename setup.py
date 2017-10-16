@@ -123,6 +123,9 @@ setup(name = "sos-notebook",
           'ipython',
           'ipykernel',
           'notebook>=5.0.0',
+          'tabulate',
+          'wand',
+          'markdown',
       ],
     entry_points= '''
 [sos_previewers]
@@ -133,9 +136,9 @@ setup(name = "sos-notebook",
 *.xlsx,1 = sos_notebook.preview:preview_xls
 *.gz,1 = sos_notebook.preview:preview_gz
 *.txt,1 = sos_notebook.preview:preview_txt
-*.md,1 = sos_notebook.preview:preview_md [md]
+*.md,1 = sos_notebook.preview:preview_md
 *.dot,1 = sos_notebook.preview:preview_dot [dot]
-imghdr:what,1 = sos_notebook.preview:preview_img [image]
+imghdr:what,1 = sos_notebook.preview:preview_img
 zipfile:is_zipfile,1 = sos_notebook.preview:preview_zip
 tarfile:is_tarfile,1 = sos_notebook.preview:preview_tar
 *,0 = sos_notebook.preview:preview_txt
@@ -167,8 +170,6 @@ rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
 ''',
 
     extras_require = {
-        'image':    ['wand'],
-        'md':       ['markdown'],
         'dot':      ['graphviz']
     }
 )

@@ -654,6 +654,11 @@ define([
                 }
             } else if (msg_type === "show_toc") {
                 show_toc();
+            } else if (msg_type === "paste-table") {
+                var cm = nb.get_selected_cell().code_mirror;
+                cm.replaceRange(data, cm.getCursor());
+            } else if (msg_type === 'alert') {
+                alert(data);
             } else {
                 // this is preview output
                 cell = window.my_panel.cell;
@@ -1178,6 +1183,10 @@ define([
             help: "show toc in panel",
             handler: show_toc,
         }, "show-toc");
+        var paste_table = this.km.actions.register({
+            help: "paste table as markdown",
+            handler: paste_table_as_markdown,
+        }, "paste-table");
         var toggle_output = this.km.actions.register({
             help: "toggle display output in HTML",
             handler: toggle_display_output,
@@ -1196,6 +1205,7 @@ define([
             "ctrl-shift-enter": execute_selected_in_panel,
             "ctrl-shift-t": show_toc_in_panel,
             "ctrl-shift-o": toggle_output,
+            "ctrl-shift-v": paste_table,
             "ctrl-shift-m": toggle_markdown,
         }
         this.km.edit_shortcuts.add_shortcuts(shortcuts);
@@ -1309,6 +1319,17 @@ define([
             } else {
                 add_tag(cell, "report_output");
             }
+        }
+        // evt.notebook.select_next(true);
+        evt.notebook.focus_cell();
+    }
+
+    var paste_table_as_markdown = function(evt) {
+        var cell = evt.notebook.get_selected_cell();
+        if (cell.cell_type === "markdown") {
+            send_kernel_msg({
+                'paste-table': []
+            })
         }
         // evt.notebook.select_next(true);
         evt.notebook.focus_cell();

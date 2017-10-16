@@ -905,6 +905,17 @@ class SoS_Kernel(IPythonKernel):
                             tst = h._task_engine.check_task_status(tid, unknown='unknown')
                             self.notify_task_status(['change-status', tqu, tid, tst])
                     self.send_frontend_msg('update-duration', {})
+                elif k == 'paste-table':
+                    from sos.utils import log_to_file
+                    try:
+                        import pandas as pd
+                        from tabulate import tabulate
+                        df = pd.read_clipboard()
+                        tbl = tabulate(df, headers='keys', tablefmt='pipe')
+                        self.send_frontend_msg('paste-table', tbl)
+                        log_to_file(tbl)
+                    except Exception as e:
+                        self.send_frontend_msg('alert', 'Failed to paste clipboard as table: {}'.format(e))
                 else:
                     # this somehow does not work
                     self.warn('Unknown message {}: {}'.format(k, v))
