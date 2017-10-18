@@ -2660,6 +2660,7 @@ Available subkernels:\n{}'''.format(
                 return self.run_cell(code, silent, store_history)
             except KeyboardInterrupt:
                 self.warn('Keyboard Interrupt\n')
+                self.KM.interrupt_kernel()
                 return {'status': 'abort', 'execution_count': self._execution_count}
         else:
             if code:
