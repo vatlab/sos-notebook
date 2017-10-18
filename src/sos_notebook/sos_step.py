@@ -34,39 +34,47 @@ class Interactive_Step_Executor(Step_Executor):
         # functions are copied from Base_Step_Executor
         Base_Step_Executor.__init__(self, step)
         self.run_mode='interactive'
+        self.host = None
 
-    def pending_tasks(self, tasks):
+    def submit_tasks(self, tasks):
         if not tasks:
             return
-        if 'queue' in env.sos_dict['_runtime']:
-            queue = env.sos_dict['_runtime']['queue']
-        elif env.config['default_queue']:
-            queue = env.config['default_queue']
-        else:
-            queue = 'localhost'
+        if self.host is None:
+            if 'queue' in env.sos_dict['_runtime']:
+                self.queue = env.sos_dict['_runtime']['queue']
+            elif env.config['default_queue']:
+                self.queue = env.config['default_queue']
+            else:
+                self.queue = 'localhost'
 
-        host = Host(queue)
-        res = [host.submit_task(task) for task in tasks]
-        if all(x == 'completed' for x in host.check_status(tasks)):
+            self.host = Host(self.queue)
+        for task in tasks:
+            self.host.submit_task(task)
+
+    def wait_for_tasks(self, tasks):
+        if not tasks:
+            return {}
+        # wait till the executor responde
+        if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
                 print('!sos_hint: {} task{} completed: {}, {}, ..., {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[0], queue, tasks[0][:4]),
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[1], queue, tasks[1][:4]),
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[-1], queue, tasks[-1][:4])))
+                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[0], self.queue, tasks[0][:4]),
+                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[1], self.queue, tasks[1][:4]),
+                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[-1], self.queue, tasks[-1][:4])))
             else:
                 print('!sos_hint: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                    ','.join(["""<a onclick="task_info('{}', '{}')">{}</a>""".format(x, queue, x[:4]) for x in tasks])))
-            host._task_engine.remove_tasks(tasks)
-            return host.retrieve_results(tasks)
+                    ','.join(["""<a onclick="task_info('{}', '{}')">{}</a>""".format(x, self.queue, x[:4]) for x in tasks])))
+            self.host._task_engine.remove_tasks(tasks)
+            return self.host.retrieve_results(tasks)
         while True:
-            res = host.check_status(tasks)
+            res = self.host.check_status(tasks)
             if all(x not in ('submitted', 'pending', 'running') for x in res):
                 #completed = [task for task, status in zip(tasks, res) if status == 'completed']
-                host._task_engine.remove_tasks(tasks)
-                return host.retrieve_results(tasks)
+                self.host._task_engine.remove_tasks(tasks)
+                return self.host.retrieve_results(tasks)
             # no pending
             elif not env.config['wait_for_task']:
-                raise PendingTasks([(queue, x) for x,y in zip(tasks, res) if y in ('pending', 'submitted', 'running')])
+                raise PendingTasks([(self.queue, x) for x,y in zip(tasks, res) if y in ('pending', 'submitted', 'running')])
             time.sleep(1)
 
 

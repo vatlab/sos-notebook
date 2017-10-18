@@ -265,7 +265,7 @@ define([
                     "%frontend " +
                     (nb.metadata["sos"]["panel"].displayed ? " --use-panel" : "") +
                     " --default-kernel " + nb.metadata["sos"].default_kernel +
-                    " --cell-kernel " + cells[i].metadata.kernel +
+                    " --cell-kernel " + cells[i].metadata.kernel + rerun_option +
                     (run_notebook ? " --filename '" + window.document.getElementById("notebook_name").innerHTML + "'" : "") +
                     " --cell " + i.toString() + "\n" + code,
                     callbacks, options);

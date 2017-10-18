@@ -69,6 +69,9 @@ class TestJupyterTasks(unittest.TestCase):
 
     def testForceTask(self):
         '''Test the execution of tasks with -s force'''
+        # FIXME This test will not work because there is no frontend in the
+        # test so there is no way to pass the --resume option to the kernel
+        # to actually rerun the scripts.
         with sos_kernel() as kc:
             # the cell will actually be executed several times
             # with automatic-reexecution
