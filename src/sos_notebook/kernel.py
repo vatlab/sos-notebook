@@ -968,8 +968,8 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border: 0px">
                         <i id="status_{0}_{1}"
                             class="fa fa-2x fa-fw {2}"
-                            onmouseover="$('#status_{0}_{1}').addClass('{3}').removeClass('{2}')"
-                            onmouseleave="$('#status_{0}_{1}').addClass('{2}').removeClass('{3}')"
+                            onmouseover="$('#status_{0}_{1}').addClass('{3} task_hover').removeClass('{2}')"
+                            onmouseleave="$('#status_{0}_{1}').addClass('{2}').removeClass('{3} task_hover')"
                             onclick="{4}('{1}', '{0}')"
                         ></i> </td>
                         <td style="border:0px"><a onclick="task_info('{1}', '{0}')"><pre>{1}</pre></a></td>

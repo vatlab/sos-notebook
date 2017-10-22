@@ -619,8 +619,8 @@ define([
                 } else {
                     // id, status, status_class, action_class, action_func
                     item.className = "fa fa-fw fa-2x " + data[3];
-                    item.setAttribute("onmouseover", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[4] + "').removeClass('" + data[3] + "')");
-                    item.setAttribute("onmouseleave", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[3] + "').removeClass('" + data[4] + "')");
+                    item.setAttribute("onmouseover", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[4] + " task_hover').removeClass('" + data[3] + "')");
+                    item.setAttribute("onmouseleave", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[3] + "').removeClass('" + data[4] + " task_hover')");
                     item.setAttribute("onClick", data[5] + "('" + data[1] + "', '" + data[0] + "')");
                 }
                 var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
@@ -1739,6 +1739,10 @@ time.aborted, time.unknown {
 table.task_table {
   border: 0px;
   border-style: solid;
+}
+
+.task_hover {
+ color: black !important;
 }
 `;
             document.body.appendChild(css);
