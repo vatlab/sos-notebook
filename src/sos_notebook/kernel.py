@@ -975,10 +975,10 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border:0px"><a onclick="task_info('{1}', '{0}')"><pre>{1}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
-                        <pre><time id="duration_{0}_{1}" datetime="{5}">{6}</time></pre></td>
+                        <pre><time id="duration_{0}_{1}" class="{7}" datetime="{5}">{6}</time></pre></td>
                         </tr>
                         </table>'''.format(tqu, tid, status_class[tst], action_class[tst], action_func[tst], tdt*1000,
-                            PrettyRelativeTime(time.time() - tdt))).data
+                            PrettyRelativeTime(time.time() - tdt), tst)).data
                         }
                 })
             # keep tracks of my tasks to avoid updating status of

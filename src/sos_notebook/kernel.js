@@ -605,6 +605,8 @@ define([
                 if (!window._duration_updater) {
                     window._duration_updater = window.setInterval(function() {
                         $("[id^=duration_]").text(function() {
+                            if ($(this).attr("class") != "running")
+                                return $(this).text();
                             return window.durationFormatter($(this).attr("datetime"));
                         });
                     }, 5000);
@@ -620,6 +622,15 @@ define([
                     item.setAttribute("onmouseover", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[4] + "').removeClass('" + data[3] + "')");
                     item.setAttribute("onmouseleave", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[3] + "').removeClass('" + data[4] + "')");
                     item.setAttribute("onClick", data[5] + "('" + data[1] + "', '" + data[0] + "')");
+                }
+                var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
+                if (item) {
+                    item.className = data[2];
+                    // stop update and reset time ...
+                    if (data[2] != "running") {
+                        var curTime = new Date();
+                        item.setAttribute('datetime', curTime.getTime());
+                    }
                 }
                 if (data[2] === "completed") {
                     /* if successful, let us re-run the cell to submt another task
