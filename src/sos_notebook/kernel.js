@@ -1715,6 +1715,22 @@ define([
   border-right: none;
   width: 1em;
 }
+
+time.pending, time.submitted, time.running  {
+  color: #cdb62c; /* yellow */
+}
+
+time.completed, time.result-ready {
+  color: #39aa56; /* green */
+}
+
+time.failed, time.signature-mismatch {
+  color: #db4545; /* red */
+}
+
+time.aborted, time.unknown {
+  color: #9d9d9d; /* gray */
+}
 `;
             document.body.appendChild(css);
         };
