@@ -964,7 +964,7 @@ class SoS_Kernel(IPythonKernel):
                     'source': 'SoS',
                     'metadata': {},
                     'data': { 'text/html':
-                        HTML('''<table id="table_{0}_{1}" style="border: 0px"><tr style="border: 0px">
+                        HTML('''<table id="table_{0}_{1}" class="task_table"><tr style="border: 0px">
                         <td style="border: 0px">
                         <i id="status_{0}_{1}"
                             class="fa fa-2x fa-fw {2}"

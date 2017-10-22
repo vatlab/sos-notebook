@@ -1731,6 +1731,15 @@ time.failed, time.signature-mismatch {
 time.aborted, time.unknown {
   color: #9d9d9d; /* gray */
 }
+
+.task_table a pre, .task_table i {
+  color: #666;
+}
+
+table.task_table {
+  border: 0px;
+  border-style: solid;
+}
 `;
             document.body.appendChild(css);
         };
