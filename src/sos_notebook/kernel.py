@@ -378,9 +378,10 @@ class SoS_Kernel(IPythonKernel):
             help='''If destination file already exists, overwrite it.''')
         parser.add_argument('-x', '--set-executable', dest = "setx", action='store_true',
             help='''Set `executable` permission to saved script.''')
-        parser.add_argument('--template', default='sos-report',
-            help='''Template to generate HTML output, default to sos-report,
-            which uses a control panel to control the display of contents.''')
+        parser.add_argument('--template', default='default-sos-template',
+            help='''Template to generate HTML output. The default template is a
+            template defined by configuration key default-sos-template, or
+            sos-report if such a key does not exist.''')
         parser.error = self._parse_error
         return parser
 
@@ -2452,7 +2453,15 @@ Available subkernels:\n{}'''.format(
                     # convert to sos report
                     from .converter import notebook_to_html
                     arg = argparse.Namespace()
-                    arg.template = args.template
+                    if args.template == 'default-sos-template':
+                        from sos.utils import load_config_files
+                        cfg = load_config_files()
+                        if 'default-sos-template' in cfg:
+                            arg.template = cfg['default-sos-template']
+                        else:
+                            arg.template = 'sos-report'
+                    else:
+                        arg.template = args.template
                     notebook_to_html(self._notebook_name + '.ipynb', filename, sargs=arg, unknown_args=[])
 
                 self.send_response(self.iopub_socket, 'display_data',
