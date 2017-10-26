@@ -1189,7 +1189,7 @@ define([
 
         add_to_panel_history("sos", "%sossave --to html --force", "");
         add_to_panel_history("sos", "%preview --workflow", "");
-        add_to_panel_history("sos", "%tasks", "");
+        add_to_panel_history("sos", "%clear", "");
         add_to_panel_history("sos", "%toc", "");
 
         // make the font of the panel slightly smaller than the main notebook
