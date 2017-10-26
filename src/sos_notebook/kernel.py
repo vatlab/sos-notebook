@@ -2361,7 +2361,10 @@ Available subkernels:\n{}'''.format(
                 self._reset_dict()
                 self._workflow_mode = True
                 #self.send_frontend_msg('preview-workflow', self._workflow)
-                self._do_execute(self._workflow, silent, store_history, user_expressions, allow_stdin)
+                if not self._workflow:
+                    self.warn('Nothing to execute (notebook workflow is empty).')
+                else:
+                    self._do_execute(self._workflow, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn('Failed to execute workflow: {}'.format(e))
                 raise
