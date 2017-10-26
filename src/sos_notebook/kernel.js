@@ -1767,6 +1767,25 @@ table.task_table {
 .task_hover {
  color: black !important;
 }
+
+/* side panel */
+#panel-wrapper #panel .prompt,
+#panel-wrapper #panel .output_prompt,
+#panel-wrapper #panel .output_prompt_overplay {
+ min-width: 0px;
+}
+
+#panel-wrapper #panel div.output_area {
+  display: -webkit-box;
+}
+
+#panel-wrapper #panel div.output_subarea {
+  max_width: 100%;
+}
+
+#panel-wrapper #panel .output_scroll {
+  height: auto;
+}
 `;
             document.body.appendChild(css);
         };
@@ -1812,23 +1831,11 @@ table.task_table {
 
     function adjustPanel() {
         if ($("#panel-wrapper").css("display") !== "none") {
-
             var panel_width = nb.metadata["sos"]["panel"].style === "side" ? $("#panel-wrapper").width() : 0;
             $("#notebook-container").css("margin-left", panel_width + 30);
             $("#notebook-container").css("width", $("#site").width() - panel_width - 30);
         }
         var cell = window.my_panel.cell;
-        $(".output_area .prompt", cell.element).remove()
-        $(".output_area .output_prompt", cell.element).remove()
-        $(".output_wrapper .out_prompt_overlay", cell.element).remove()
-        var ops = cell.element[0].getElementsByClassName("output_subarea");
-        for (var op = 0; op < ops.length; op++)
-            ops[op].style.maxWidth = "100%";
-        // this will create output_scroll if needed.
-        cell.output_area.scroll_if_long();
-        var ops = cell.element[0].getElementsByClassName("output_scroll");
-        if (ops.length > 0)
-            ops[0].style.height = "auto";
         cell.output_area.expand();
     }
 
