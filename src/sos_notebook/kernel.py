@@ -109,6 +109,7 @@ class SoS_Kernel(IPythonKernel):
 
     ALL_MAGICS = {
         'cd',
+        'clear',
         'debug',
         'dict',
         'get',
@@ -162,6 +163,7 @@ class SoS_Kernel(IPythonKernel):
     MAGIC_TOC = re.compile('^%toc(\s|$)')
     MAGIC_RENDER = re.compile('^%render(\s|$)')
     MAGIC_SESSIONINFO = re.compile('^%sessioninfo(\s|$)')
+    MAGIC_CLEAR = re.compile('^%clear(\s|$)')
 
     def get_use_parser(self):
         parser = argparse.ArgumentParser(prog='%use',
@@ -514,6 +516,15 @@ class SoS_Kernel(IPythonKernel):
         parser = argparse.ArgumentParser(prog='%sessioninfo',
             description='''List the session info of all subkernels, and information
             stored in variable sessioninfo''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_clear_parser(self):
+        parser = argparse.ArgumentParser(prog='%clear',
+            description='''Clear the output of the current cell, or the current
+            active cell if executed in the sidepanel.''')
+        parser.add_argument('-a', '--all', action='store_true',
+            help='''Clear all output of the current notebook.''')
         parser.error = self._parse_error
         return parser
 
@@ -2087,6 +2098,19 @@ Available subkernels:\n{}'''.format(
                 return
             self.shutdown_kernel(args.kernel if args.kernel else self.kernel, args.restart)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        elif self.MAGIC_CLEAR.match(code):
+            options, remaining_code = self.get_magic_and_code(code, False)
+            parser = self.get_clear_parser()
+            try:
+                args = parser.parse_args(options.split())
+            except SystemExit:
+                return
+            # self.cell_idx could be reset by _do_execute
+            cell_idx = self.cell_idx
+            try:
+                return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            finally:
+                self.send_frontend_msg('clear-output', [cell_idx, args.all])
         elif self.MAGIC_FRONTEND.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:

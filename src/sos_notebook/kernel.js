@@ -670,6 +670,29 @@ define([
                 cm.replaceRange(data, cm.getCursor());
             } else if (msg_type === 'alert') {
                 alert(data);
+            } else if (msg_type === 'clear-output') {
+                // if remove output of all cells
+                console.log(data)
+                var active = nb.get_selected_cells_indices();
+                if (data[1]) {
+                    var cells = nb.get_cells();
+                    var i;
+                    for (i = 0; i < cells.length ; ++i) {
+                        cells[i].clear_output();
+                    }
+                } else if (data[0] === -1) {
+                    // clear output of selected cells
+                    var i;
+                    for (i = 0; i < active.length ; ++ i) {
+                        nb.get_cell(active[i]).clear_output();
+                    }
+                } else {
+                    // clear current cell
+                    nb.get_cell(data[0]).clear_output();
+                }
+                if (active.length > 0) {
+                    nb.select(active[0]);
+                }
             } else {
                 // this is preview output
                 cell = window.my_panel.cell;
