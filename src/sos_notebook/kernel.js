@@ -672,7 +672,6 @@ define([
                 alert(data);
             } else if (msg_type === 'clear-output') {
                 // if remove output of all cells
-                console.log(data)
                 var active = nb.get_selected_cells_indices();
                 if (data[1]) {
                     var cells = nb.get_cells();
@@ -992,6 +991,13 @@ define([
                 $("#panel-wrapper").css("top", headerVisibleHeight);
                 $("#panel-wrapper").css("height", $("#site").height());
             }
+        });
+
+        $(".output_scroll").on("resizeOutput", function () {
+            var output = $(this);
+            setTimeout(function () {
+                output.scrollTop(output.prop("scrollHeight"));
+            }, 0);
         });
 
         // enable dragging and save position on stop moving
