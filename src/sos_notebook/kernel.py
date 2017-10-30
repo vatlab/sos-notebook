@@ -803,7 +803,7 @@ class SoS_Kernel(IPythonKernel):
             self.warn('Invalid task queu {}: {}'.format(queue, e))
             return
         # get all tasks
-        for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=None, age=age):
+        for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=status, age=age):
             self.notify_task_status(['new-status', queue, tid, tst, tdt])
         self.send_frontend_msg('update-duration', {})
 
