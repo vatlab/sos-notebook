@@ -1002,10 +1002,16 @@ class SoS_Kernel(IPythonKernel):
                 self.send_frontend_msg('remove-task', [tqu, tid])
         elif task_status[0] == 'change-status':
             tqu, tid, tst = task_status[1:]
+            if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
+                    'failed', 'aborted', 'signature-mismatch'):
+                tst = 'unknown'
             self.send_frontend_msg('task-status', [tqu, tid, tst, status_class[tst], action_class[tst], action_func[tst]])
             self.my_tasks[(tqu, tid)] = time.time()
         elif task_status[0] == 'pulse-status':
             tqu, tid, tst = task_status[1:]
+            if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
+                    'failed', 'aborted', 'signature-mismatch'):
+                tst = 'unknown'
             if (tqu, tid) in self.my_tasks:
                 if time.time() - self.my_tasks[(tqu, tid)] < 20:
                     # if it has been within the first 20 seconds of new or updated message
