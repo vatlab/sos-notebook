@@ -38,7 +38,7 @@ from collections import Sized, defaultdict, OrderedDict
 from types import ModuleType
 from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
 from sos._version import __sos_version__, __version__
-from sos.sos_eval import SoS_exec, SoS_eval
+from sos.sos_eval import SoS_exec, SoS_eval, interpolate
 from sos.sos_syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
 
 from IPython.lib.clipboard import ClipboardEmpty, osx_clipboard_get, tkinter_clipboard_get
@@ -1596,7 +1596,7 @@ Available subkernels:\n{}'''.format(
     def _interpolate_text(self, text, quiet=False):
         # interpolate command
         try:
-            new_text = interpolate(text, sigil='${ }', local_dict=env.sos_dict._dict)
+            new_text = interpolate(text, local_dict=env.sos_dict._dict)
             if new_text != text and not quiet:
                 self.send_response(self.iopub_socket, 'display_data',
                     {

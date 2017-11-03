@@ -26,7 +26,7 @@ import keyword
 import tempfile
 import time
 from sos.utils import env, _parse_error, get_traceback, load_config_files
-from sos.sos_eval import SoS_exec, get_default_global_sigil
+from sos.sos_eval import SoS_exec
 from sos._version import __version__
 from sos.__main__ import get_run_parser
 from sos.sos_script import SoS_Script
@@ -143,7 +143,7 @@ class Interactive_Executor(Base_Executor):
             # The consequence is that global definitions are available in
             # SoS namespace.
             try:
-                SoS_exec(section.global_def, section.global_sigil)
+                SoS_exec(section.global_def)
             except Exception as e:
                 if env.verbosity > 2:
                     sys.stderr.write(get_traceback())
@@ -330,25 +330,25 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             if not code.strip():
                 return
             if kernel is None:
-                script = SoS_Script(content=code, global_sigil=get_default_global_sigil())
+                script = SoS_Script(content=code)
             else:
                 if kernel._workflow_mode:
                     # in workflow mode, the content is sent by magics %run and %sosrun
-                    script = SoS_Script(content=code, global_sigil=get_default_global_sigil())
+                    script = SoS_Script(content=code)
                 else:
                     # this is a scratch step...
                     # if there is no section header, add a header so that the block
                     # appears to be a SoS script with one section
                     if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
                         code = '[scratch_0]\n' + code
-                        script = SoS_Script(content=code, global_sigil=get_default_global_sigil())
+                        script = SoS_Script(content=code)
                     else:
                         if kernel.cell_idx == -1:
                             kernel.send_frontend_msg('stream',
                                 {'name': 'stdout', 'text': 'Workflow can only be executed with magic %run or %sosrun.'})
                         return
         else:
-            script = SoS_Script(filename=script, global_sigil=get_default_global_sigil())
+            script = SoS_Script(filename=script)
         workflow = script.workflow(args.workflow)
         executor = Interactive_Executor(workflow, args=workflow_args, config={
             'config_file': args.__config__,
