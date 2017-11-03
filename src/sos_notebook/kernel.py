@@ -38,7 +38,7 @@ from collections import Sized, defaultdict, OrderedDict
 from types import ModuleType
 from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
 from sos._version import __sos_version__, __version__
-from sos.sos_eval import SoS_exec, SoS_eval, interpolate, get_default_global_sigil
+from sos.sos_eval import SoS_exec, SoS_eval
 from sos.sos_syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
 
 from IPython.lib.clipboard import ClipboardEmpty, osx_clipboard_get, tkinter_clipboard_get
@@ -1804,7 +1804,7 @@ Available subkernels:\n{}'''.format(
         if item in env.sos_dict:
             obj = env.sos_dict[item]
         else:
-            obj = SoS_eval(item, sigil=get_default_global_sigil())
+            obj = SoS_eval(item)
         # get the basic information of object
         txt = type(obj).__name__
         # we could potentially check the shape of data frame and matrix
@@ -2000,8 +2000,8 @@ Available subkernels:\n{}'''.format(
         out = {}
         for key, expr in (user_expressions or {}).items():
             try:
-                #value = self.shell._format_user_obj(SoS_eval(expr, sigil=get_default_global_sigil()))
-                value = SoS_eval(expr, sigil=get_default_global_sigil())
+                #value = self.shell._format_user_obj(SoS_eval(expr))
+                value = SoS_eval(expr)
                 value = self.shell._format_user_obj(value)
             except Exception as e:
                 self.warn('Failed to evaluate user expression {}: {}'.format(expr, e))
