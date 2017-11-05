@@ -82,15 +82,15 @@ class TestJupyterTasks(unittest.TestCase):
 input: for_each={'i': range(1)}
 task:
 run:
-   echo this is "${i}"
-   sleep ${i}
+   echo this is "{i}"
+   sleep {i}
 
 [20]
 input: for_each={'i': range(2)}
 task:
 run:
-   echo this aa is "${i}"
-   sleep ${i}
+   echo this aa is "{i}"
+   sleep {i}
 
 """
             # these should be automatically rerun by the frontend
@@ -108,8 +108,8 @@ run:
 input: for_each={'i': range(2)}
 task:
 run:
-   echo this is jupyter pending test "${i}"
-   sleep  ${10+i}
+   echo this is jupyter pending test "{i}"
+   sleep  {10+i}
 
 """
             # these should be automatically rerun by the frontend

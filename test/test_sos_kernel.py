@@ -92,23 +92,6 @@ class TestSoSKernel(unittest.TestCase):
             self.assertEqual(stderr, '')
             execute(kc=kc, code="%cd jupyter")
 
-
-    def testSetSigil(self):
-        '''Test set_options of sigil'''
-        with sos_kernel() as kc:
-            iopub = kc.iopub_channel
-            # create a data frame
-            execute(kc=kc, code='%set_options sigil=None')
-            wait_for_idle(kc)
-            execute(kc=kc, code='a="${}".format(100)')
-            wait_for_idle(kc)
-            execute(kc=kc, code="%dict a")
-            res = get_result(iopub)
-            self.assertEqual(res['a'], "$100")
-            # reset sigil
-            execute(kc=kc, code='%set_options sigil="${ }"')
-            wait_for_idle(kc)
-
     @unittest.skipIf(sys.platform == 'win32', 'AppVeyor does not support linux based docker')
     def testPullPush(self):
         '''Test set_options of sigil'''

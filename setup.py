@@ -117,7 +117,7 @@ setup(name = "sos-notebook",
     package_dir = {'': 'src'},
     cmdclass={'install': InstallWithConfigurations},
     install_requires=[
-          'sos>=0.9.9.8',
+          'sos>=0.9.10.0',
           'nbformat',
           'nbconvert>=5.1.1',
           'ipython',
