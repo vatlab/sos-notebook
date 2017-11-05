@@ -84,7 +84,7 @@ class TestSoSKernel(unittest.TestCase):
             self.assertEqual(stderr, '')
             execute(kc=kc, code="%cd jupyter")
 
-    @unittest.skipIf(sys.platform == 'win32', 'AppVeyor does not support linux based docker')
+    @unittest.skipIf(sys.platform == 'win32' or 'TRAVIS_PYTHON_VERSION' in os.environ, 'AppVeyor does not support linux based docker')
     def testPullPush(self):
         '''Test set_options of sigil'''
         import random
