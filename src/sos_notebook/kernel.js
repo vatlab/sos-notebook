@@ -629,6 +629,7 @@ define([
                     // stop update and reset time ...
                     if (data[2] != "running") {
                         var curTime = new Date();
+                        item.innerText = window.durationFormatter(item.getAttribute("datetime"));
                         item.setAttribute('datetime', curTime.getTime());
                     }
                 }
