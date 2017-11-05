@@ -246,7 +246,7 @@ graph graphname {
             execute(kc=kc, code='''
 %preview -n abc.txt -c ~/docker.yml -r docker
 %run -r docker -c ~/docker.yml
-sh:
+run:
    echo abc > abc.txt
 ''')
         stdout, _ = get_std_output(iopub)
