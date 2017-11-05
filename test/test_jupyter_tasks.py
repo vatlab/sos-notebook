@@ -81,14 +81,14 @@ class TestJupyterTasks(unittest.TestCase):
 [10]
 input: for_each={'i': range(1)}
 task:
-run:
+run: expand=True
    echo this is "{i}"
    sleep {i}
 
 [20]
 input: for_each={'i': range(2)}
 task:
-run:
+run: expand=True
    echo this aa is "{i}"
    sleep {i}
 
@@ -107,7 +107,7 @@ run:
 [10]
 input: for_each={'i': range(2)}
 task:
-run:
+run: expand=True
    echo this is jupyter pending test "{i}"
    sleep  {10+i}
 
