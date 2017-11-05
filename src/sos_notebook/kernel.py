@@ -2692,7 +2692,7 @@ Available subkernels:\n{}'''.format(
             # handle string interpolation before sending to the underlying kernel
             if code:
                 self.last_executed_code = code
-            code = self._interpolate_text(code, quiet=False)
+            #code = self._interpolate_text(code, quiet=False)
             if self.cell_idx is not None:
                 self.send_frontend_msg('cell-kernel', [self.cell_idx, self.kernel])
                 self.cell_idx = None
