@@ -47,14 +47,6 @@ class TestSoSKernel(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.olddir)
 
-    def testInterpolation(self):
-        with sos_kernel() as kc:
-            iopub = kc.iopub_channel
-            execute(kc=kc, code='print("a=${100+11}")')
-            stdout, stderr = get_std_output(iopub)
-            self.assertTrue(stdout.endswith('a=111\n'))
-            self.assertEqual(stderr, '')
-
     def testMagicDict(self):
         '''Test %dict magic'''
         with sos_kernel() as kc:
