@@ -57,13 +57,14 @@ class Interactive_Step_Executor(Step_Executor):
         # wait till the executor responde
         if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
-                print('!sos_hint: {} task{} completed: {}, {}, ..., {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[0], self.queue, tasks[0][:4]),
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[1], self.queue, tasks[1][:4]),
-                    """<a onclick="task_info('{}', '{}')">{}</a>""".format(tasks[-1], self.queue, tasks[-1][:4])))
+                print('!sos_hint: {} task{} completed: {}, {}, ..., {}'.format(
+                    len(tasks), 's' if len(tasks) > 1 else '',
+                    f"""<a onclick="task_info('{tasks[0]}', '{self.queue}')">{tasks[0][:4]}</a>""",
+                    f"""<a onclick="task_info('{tasks[1]}', '{self.queue}')">{tasks[1][:4]}</a>""",
+                    f"""<a onclick="task_info('{tasks[-1]}', '{self.queue}')">{tasks[-1][:4]}</a>"""))
             else:
                 print('!sos_hint: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                    ','.join(["""<a onclick="task_info('{}', '{}')">{}</a>""".format(x, self.queue, x[:4]) for x in tasks])))
+                    ','.join([f"""<a onclick="task_info('{x}', '{self.queue}')">{x[:4]}</a>""" for x in tasks])))
             self.host._task_engine.remove_tasks(tasks)
             return self.host.retrieve_results(tasks)
         while True:

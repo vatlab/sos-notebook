@@ -38,7 +38,7 @@ class SoS_VariableInspector(object):
                 if 'text/plain' in format_dict:
                     return format_dict
                 else:
-                    return {'text/plain': '{} ({})'.format(repr(env.sos_dict['name']), obj_desc) }
+                    return {'text/plain': f'{repr(env.sos_dict["name"])} ({obj_desc})'}
         except Exception:
             return {}
 
@@ -48,11 +48,11 @@ class SoS_SyntaxInspector(object):
 
     def inspect(self, name, line, pos):
         if line.startswith('%') and name in self.kernel.ALL_MAGICS and pos <= len(name) + 1:
-            if hasattr(self.kernel, 'get_{}_parser'.format(name)):
-                parser = getattr(self.kernel, 'get_{}_parser'.format(name))()
+            if hasattr(self.kernel, f'get_{name}_parser'):
+                parser = getattr(self.kernel, f'get_{name}_parser')()
                 return {'text/plain': parser.format_help()}
             else:
-                return {'text/plain': 'Magic %{}'.format(name) }
+                return {'text/plain': f'Magic %{name}'}
         elif line.startswith(name + ':') and pos <= len(name):
             if self.kernel.original_keys is None:
                 self.kernel._reset_dict()

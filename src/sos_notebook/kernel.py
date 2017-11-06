@@ -69,7 +69,7 @@ class FlushableStringIO:
                 {
                         'source': 'SoS',
                         'metadata': {},
-                        'data': { 'text/html': HTML('<div class="sos_hint">{}</div>'.format(content[10:].strip())).data}
+                        'data': { 'text/html': HTML(f'<div class="sos_hint">{content[10:].strip()}</div>').data}
                 })
         else:
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
@@ -533,7 +533,7 @@ class SoS_Kernel(IPythonKernel):
         def update_existing(idx):
             x = self._kernel_list[idx]
             if (kernel is not None and kernel != x[1]) or (language is not None and language != x[2]):
-                raise ValueError('Cannot change kernel or language of predefined subkernel {}'.format(name))
+                raise ValueError(f'Cannot change kernel or language of predefined subkernel {name}')
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx][2]:
@@ -583,7 +583,8 @@ class SoS_Kernel(IPythonKernel):
         if kernel is not None:
             # in this case kernel should have been defined in kernel list
             if kernel not in [x[1] for x in self._kernel_list]:
-                raise ValueError('Unrecognized Jupyter kernel name {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(kernel))
+                raise ValueError(
+                    f'Unrecognized Jupyter kernel name {kernel}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"')
             # now this a new instance for an existing kernel
             kdef = [x for x in self._kernel_list if x[1] == kernel][0]
             if not language:
@@ -616,7 +617,7 @@ class SoS_Kernel(IPythonKernel):
                             if supported_lan not in self._supported_languages:
                                 self._supported_languages[supported_lan] = plugin
                     except Exception as e:
-                        raise RuntimeError('Failed to load language {}: {}'.format(language, e))
+                        raise RuntimeError(f'Failed to load language {language}: {e}')
                     #
                     if color == 'default':
                         color = plugin.background_color
@@ -625,7 +626,8 @@ class SoS_Kernel(IPythonKernel):
                 else:
                     # if should be defined ...
                     if language not in self._supported_languages:
-                        raise RuntimeError('Unrecognized language definition {}, which should be a known language name or a class in the format of package.module:class'.format(language))
+                        raise RuntimeError(
+                            f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class')
                     #
                     self._supported_languages[name] = self._supported_languages[language]
                     if color == 'default':
@@ -646,7 +648,7 @@ class SoS_Kernel(IPythonKernel):
                     plugin = ep.resolve()
                     self._supported_languages[name] = plugin
                 except Exception as e:
-                    raise RuntimeError('Failed to load language {}: {}'.format(language, e))
+                    raise RuntimeError(f'Failed to load language {language}: {e}')
                 if name in plugin.supported_kernels:
                     # if name is defined in the module, only search kernels for this language
                     avail_kernels = [x for x in plugin.supported_kernels[name] if x in [y[1] for y in self._kernel_list]]
@@ -667,7 +669,7 @@ class SoS_Kernel(IPythonKernel):
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
                 if language not in self._supported_languages:
-                    raise RuntimeError('Unrecognized language definition {}'.format(language))
+                    raise RuntimeError(f'Unrecognized language definition {language}')
                 #
                 plugin = self._supported_languages[language]
                 if language in plugin.supported_kernels:
@@ -692,7 +694,8 @@ class SoS_Kernel(IPythonKernel):
                     # there must be something wrong, let us trigger the exception here
                     entrypoint.load()
             # if nothing is triggerred, kernel is not defined, return a general message
-            raise ValueError('No pre-defined subkernel named {} is found. Please define it with one or both of parameters --kernel and --language'.format(name))
+            raise ValueError(
+                f'No pre-defined subkernel named {name} is found. Please define it with one or both of parameters --kernel and --language')
 
     def get_supported_languages(self):
         if self._supported_languages is not None:
@@ -837,9 +840,9 @@ class SoS_Kernel(IPythonKernel):
                         elif isinstance(sinfo, list):
                             result[kernel].extend(sinfo)
                         else:
-                            self.warn('Unrecognized session info: {}'.format(sinfo))
+                            self.warn(f'Unrecognized session info: {sinfo}')
                     except Exception as e:
-                        self.warn('Failed to obtain sessioninfo of kernel {}: {}'.format(kernel, e))
+                        self.warn(f'Failed to obtain sessioninfo of kernel {kernel}: {e}')
         finally:
             self.switch_kernel(cur_kernel)
         #
@@ -848,18 +851,18 @@ class SoS_Kernel(IPythonKernel):
         #
         res = ''
         for key, items in result.items():
-            res += '<p class="session_section">{}</p>\n'.format(key)
+            res += f'<p class="session_section">{key}</p>\n'
             res += '<table class="session_info">\n'
             for item in items:
                 res += '<tr>\n'
                 if isinstance(item, str):
-                    res += '<td colspan="2"><pre>{}</pre></td>\n'.format(item)
+                    res += f'<td colspan="2"><pre>{item}</pre></td>\n'
                 elif len(item) == 1:
-                    res += '<td colspan="2"><pre>{}</pre></td>\n'.format(item[0])
+                    res += f'<td colspan="2"><pre>{item[0]}</pre></td>\n'
                 elif len(item) == 2:
-                    res += '<th>{}</th><td><pre>{}</pre></td>\n'.format(item[0], item[1])
+                    res += f'<th>{item[0]}</th><td><pre>{item[1]}</pre></td>\n'
                 else:
-                    self.warn('Invalid session info item of type {}: {}'.format(item.__class__.__name__, short_repr(item)))
+                    self.warn(f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}')
                 res += '</tr>\n'
             res += '</table>\n'
         self.send_response(self.iopub_socket, 'display_data',
@@ -927,10 +930,10 @@ class SoS_Kernel(IPythonKernel):
                         self.send_frontend_msg('paste-table', tbl)
                         log_to_file(tbl)
                     except Exception as e:
-                        self.send_frontend_msg('alert', 'Failed to paste clipboard as table: {}'.format(e))
+                        self.send_frontend_msg('alert', f'Failed to paste clipboard as table: {e}')
                 else:
                     # this somehow does not work
-                    self.warn('Unknown message {}: {}'.format(k, v))
+                    self.warn(f'Unknown message {k}: {v}')
 
     def notify_task_status(self, task_status):
         status_class = {
@@ -976,21 +979,20 @@ class SoS_Kernel(IPythonKernel):
                     'source': 'SoS',
                     'metadata': {},
                     'data': { 'text/html':
-                        HTML('''<table id="table_{0}_{1}" class="task_table"><tr style="border: 0px">
+                        HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
                         <td style="border: 0px">
-                        <i id="status_{0}_{1}"
-                            class="fa fa-2x fa-fw {2}"
-                            onmouseover="$('#status_{0}_{1}').addClass('{3} task_hover').removeClass('{2}')"
-                            onmouseleave="$('#status_{0}_{1}').addClass('{2}').removeClass('{3} task_hover')"
-                            onclick="{4}('{1}', '{0}')"
+                        <i id="status_{tqu}_{tid}"
+                            class="fa fa-2x fa-fw {status_class[tst]}"
+                            onmouseover="$('#status_{tqu}_{tid}').addClass('{action_class[tst]} task_hover').removeClass('{status_class[tst]}')"
+                            onmouseleave="$('#status_{tqu}_{tid}').addClass('{status_class[tst]}').removeClass('{action_class[tst]} task_hover')"
+                            onclick="{action_func[tst]}('{tid}', '{tqu}')"
                         ></i> </td>
-                        <td style="border:0px"><a onclick="task_info('{1}', '{0}')"><pre>{1}</pre></a></td>
+                        <td style="border:0px"><a onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
-                        <pre><time id="duration_{0}_{1}" class="{7}" datetime="{5}">{6}</time></pre></td>
+                        <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{PrettyRelativeTime(time.time() - tdt)}</time></pre></td>
                         </tr>
-                        </table>'''.format(tqu, tid, status_class[tst], action_class[tst], action_func[tst], tdt*1000,
-                            PrettyRelativeTime(time.time() - tdt), tst)).data
+                        </table>''').data
                         }
                 })
             # keep tracks of my tasks to avoid updating status of
@@ -1019,7 +1021,7 @@ class SoS_Kernel(IPythonKernel):
                     # ignore such message
                     self.send_frontend_msg('task-status', [tqu, tid, tst, status_class[tst], action_class[tst], action_func[tst]])
         else:
-            raise RuntimeError('Unrecognized status change message {}'.format(task_status))
+            raise RuntimeError(f'Unrecognized status change message {task_status}')
 
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
@@ -1031,7 +1033,7 @@ class SoS_Kernel(IPythonKernel):
                     {
                         'source': 'SoS',
                         'metadata': {},
-                        'data': { 'text/html': HTML('<div class="sos_hint">{}</div>'.format(msg)).data}
+                        'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                     })
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {'msg_type': msg_type})
@@ -1124,7 +1126,7 @@ class SoS_Kernel(IPythonKernel):
         #
         if not self.KM.is_alive():
             self.send_response(self.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': 'Restarting kernel "{}"\n'.format(self.kernel)})
+                               dict(name='stdout', text='Restarting kernel "{}"\n'.format(self.kernel)))
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats
@@ -1179,13 +1181,13 @@ class SoS_Kernel(IPythonKernel):
         if not kernel:
             kinfo = self.find_kernel(self.kernel)
             self.send_response(self.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': '''\
+                               dict(name='stdout', text='''\
 Current subkernel: {} (kernel={}, language={}, color="{}")
 Active subkernels: {}
 Available subkernels:\n{}'''.format(
-        kinfo[0], kinfo[1], kinfo[2] if kinfo[2] else "undefined", kinfo[3],
-        ', '.join(self.kernels.keys()),
-        '\n'.join(['    {} ({})'.format(x[0], x[1]) for x in self.get_kernel_list()]))})
+                                   kinfo[0], kinfo[1], kinfo[2] if kinfo[2] else "undefined", kinfo[3],
+                                   ', '.join(self.kernels.keys()),
+                                   '\n'.join(['    {} ({})'.format(x[0], x[1]) for x in self.get_kernel_list()]))))
             return
         kinfo = self.find_kernel(kernel, kernel_name, language, color)
         if kinfo[0] == self.kernel:
@@ -1220,7 +1222,7 @@ Available subkernels:\n{}'''.format(
             self.switch_kernel(kinfo[0], in_vars, ret_vars)
         else:
             if self._debug_mode:
-                self.warn('Switch from {} to {}'.format(self.kernel, kinfo[0]))
+                self.warn(f'Switch from {self.kernel} to {kinfo[0]}')
             # case when self.kernel == 'sos', kernel != 'sos'
             # to a subkernel
             new_kernel = False
@@ -1241,8 +1243,7 @@ Available subkernels:\n{}'''.format(
                                 stdout=subprocess.DEVNULL, stderr=ferr)
                         except:
                             ferr.seek(0)
-                            self.warn('Failed to start kernel "{}". {}\nError Message:\n{}'.format(kernel, e,
-                                ferr.read().decode()))
+                            self.warn(f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
             self.KM, self.KC = self.kernels[kinfo[0]]
             self.RET_VARS = [] if ret_vars is None else ret_vars
@@ -1262,7 +1263,7 @@ Available subkernels:\n{}'''.format(
         elif kernel:
             if kernel not in self.kernels:
                 self.send_response(self.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': '{} is not running'.format(kernel) })
+                                   dict(name='stdout', text=f'{kernel} is not running'))
             elif restart:
                 orig_kernel = self.kernel
                 try:
@@ -1280,13 +1281,13 @@ Available subkernels:\n{}'''.format(
                 try:
                     self.kernels[kernel][0].shutdown_kernel(restart=False)
                 except Exception as e:
-                    self.warn('Failed to shutdown kernel {}: {}\n'.format(kernel, e))
+                    self.warn(f'Failed to shutdown kernel {kernel}: {e}\n')
                 finally:
                     self.kernels.pop(kernel)
         else:
             self.send_response(self.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': 'Specify one of the kernels to shutdown: SoS{}\n'
-                    .format(''.join(', {}'.format(x) for x in self.kernels))})
+                               dict(name='stdout', text='Specify one of the kernels to shutdown: SoS{}\n'
+                                    .format(''.join(f', {x}' for x in self.kernels))))
 
     def _parse_error(self, msg):
         self.warn(msg)
@@ -1366,15 +1367,15 @@ Available subkernels:\n{}'''.format(
             #self.send_response(self.iopub_socket, 'stream',
             #    {'name': 'stdout', 'text': 'sos options set to "{}"\n'.format(options)})
             if not options.strip().startswith('-'):
-                self.warn('Magic %set cannot set positional argument, {} provided.\n'.format(options))
+                self.warn(f'Magic %set cannot set positional argument, {options} provided.\n')
             else:
                 self.options = options.strip()
                 self.send_response(self.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': 'Set sos options to "{}"\n'.format(self.options)})
+                                   dict(name='stdout', text=f'Set sos options to "{self.options}"\n'))
         else:
             if self.options:
                 self.send_response(self.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': 'Reset sos options from "{}" to ""\n'.format(self.options)})
+                                   dict(name='stdout', text=f'Reset sos options from "{self.options}" to ""\n'))
                 self.options = ''
             else:
                 self.send_response(self.iopub_socket, 'stream',
@@ -1387,7 +1388,7 @@ Available subkernels:\n{}'''.format(
             items = default_items if not items else items + default_items
             for item in items:
                 if item not in env.sos_dict:
-                    self.warn('Variable {} does not exist'.format(item))
+                    self.warn(f'Variable {item} does not exist')
                     return
             if not items:
                 return
@@ -1397,14 +1398,14 @@ Available subkernels:\n{}'''.format(
                 try:
                     lan(self, kinfo[1]).get_vars(items)
                 except Exception as e:
-                    self.warn('Failed to get variable: {}\n'.format(e))
+                    self.warn(f'Failed to get variable: {e}\n')
                     return
             elif self.kernel == 'SoS':
                 self.warn('Magic %get without option --kernel can only be executed by subkernels')
                 return
             else:
                 if explicit:
-                    self.warn('Language {} does not support magic %get.'.format(self.kernel))
+                    self.warn(f'Language {self.kernel} does not support magic %get.')
                 return
         elif self.kernel.lower() == 'sos':
             # if another kernel is specified and the current kernel is sos
@@ -1413,7 +1414,7 @@ Available subkernels:\n{}'''.format(
                 self.switch_kernel(from_kernel)
                 self.handle_magic_put(items)
             except Exception as e:
-                self.warn('Failed to get {} from {}: {}'.format(', '.join(items), from_kernel, e))
+                self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
                 self.switch_kernel('SoS')
         else:
@@ -1425,7 +1426,7 @@ Available subkernels:\n{}'''.format(
                 # put stuff to sos or my_kernel directly
                 self.handle_magic_put(items, to_kernel=my_kernel, explicit=explicit)
             except Exception as e:
-                self.warn('Failed to get {} from {}: {}'.format(', '.join(items), from_kernel, e))
+                self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
                 # then switch back
                 self.switch_kernel(my_kernel)
@@ -1443,8 +1444,8 @@ Available subkernels:\n{}'''.format(
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
                     from sos.utils import log_to_file
-                    log_to_file('MSG TYPE {}'.format(msg_type))
-                    log_to_file('CONTENT  {}'.format(sub_msg['content']))
+                    log_to_file(f'MSG TYPE {msg_type}')
+                    log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
@@ -1452,11 +1453,11 @@ Available subkernels:\n{}'''.format(
                         responses.append([msg_type, sub_msg['content']])
                     else:
                         if self._debug_mode:
-                            self.warn('{}: {}'.format(msg_type, sub_msg['content']))
+                            self.warn(f'{msg_type}: {sub_msg["content"]}')
                         self.send_response(self.iopub_socket, msg_type,
                             sub_msg['content'])
         if not responses and self._debug_mode:
-            self.warn('Failed to get a response from message type {}'.format(msg_types))
+            self.warn(f'Failed to get a response from message type {msg_types}')
 
         return responses
 
@@ -1470,7 +1471,7 @@ Available subkernels:\n{}'''.format(
                 # switch to kernel and bring in items
                 self.switch_kernel(to_kernel, in_vars=items)
             except Exception as e:
-                self.warn('Failed to put {} to {}: {}'.format(', '.join(items), to_kernel, e))
+                self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
             finally:
                 # switch back
                 self.switch_kernel('SoS')
@@ -1483,7 +1484,7 @@ Available subkernels:\n{}'''.format(
                 items = []
             if self.kernel not in self.supported_languages:
                 if explicit:
-                    self.warn('Subkernel {} does not support magic %put.'.format(self.kernel))
+                    self.warn(f'Subkernel {self.kernel} does not support magic %put.')
                 return
             #
             lan = self.supported_languages[self.kernel]
@@ -1498,7 +1499,7 @@ Available subkernels:\n{}'''.format(
                 try:
                     env.sos_dict.update(objects)
                 except Exception as e:
-                    self.warn('Failed to put {} to {}: {}'.format(', '.join(items), to_kernel, e))
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                     return
 
                 if to_kernel is None:
@@ -1510,7 +1511,7 @@ Available subkernels:\n{}'''.format(
                     # switch to the destination kernel and bring in vars
                     self.switch_kernel(to_kernel, in_vars=items)
                 except Exception as e:
-                    self.warn('Failed to put {} to {}: {}'.format(', '.join(items), to_kernel, e))
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
                     self.switch_kernel(my_kernel)
@@ -1522,7 +1523,7 @@ Available subkernels:\n{}'''.format(
                     try:
                         exec(objects, env.sos_dict._dict)
                     except Exception as e:
-                        self.warn('Failed to put variables {} to SoS kernel: {}'.format(items, e))
+                        self.warn(f'Failed to put variables {items} to SoS kernel: {e}')
                         return
                 try:
                     my_kernel = self.kernel
@@ -1531,12 +1532,12 @@ Available subkernels:\n{}'''.format(
                     # execute the statement to pass variables directly to destination kernel
                     self.run_cell(objects, True, False)
                 except Exception as e:
-                    self.warn('Failed to put {} to {}: {}'.format(', '.join(items), to_kernel, e))
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
                     self.switch_kernel(my_kernel)
             else:
-                self.warn('Unrecognized return value of type {} for action %put'.format(object.__class__.__name__))
+                self.warn(f'Unrecognized return value of type {object.__class__.__name__} for action %put')
                 return
 
     def handle_magic_pull(self, args):
@@ -1556,15 +1557,15 @@ Available subkernels:\n{}'''.format(
             #
             msg = '{} item{} received from {}:<br>{}'.format(len(received),
                 ' is' if len(received) <= 1 else 's are', args.host,
-                '<br>'.join(['{} <= {}'.format(x, received[x]) for x in sorted(received.keys())]))
+                '<br>'.join([f'{x} <= {received[x]}' for x in sorted(received.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
                 {
                     'source': 'SoS',
                     'metadata': {},
-                    'data': { 'text/html': HTML('<div class="sos_hint">{}</div>'.format(msg)).data}
+                    'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                 })
         except Exception as e:
-            self.warn('Failed to retrieve {}: {}'.format(', '.join(args.items), e))
+            self.warn(f'Failed to retrieve {", ".join(args.items)}: {e}')
 
     def handle_magic_push(self, args):
         from sos.hosts import Host
@@ -1583,15 +1584,15 @@ Available subkernels:\n{}'''.format(
             #
             msg = '{} item{} sent to {}:<br>{}'.format(len(sent),
                 ' is' if len(sent) <= 1 else 's are', args.host,
-                '<br>'.join(['{} => {}'.format(x, sent[x]) for x in sorted(sent.keys())]))
+                '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
                 {
                     'source': 'SoS',
                     'metadata': {},
-                    'data': { 'text/html': HTML('<div class="sos_hint">{}</div>'.format(msg)).data}
+                    'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                 })
         except Exception as e:
-            self.warn('Failed to send {}: {}'.format(', '.join(args.items), e))
+            self.warn(f'Failed to send {", ".join(args.items)}: {e}')
 
     def _interpolate_text(self, text, quiet=False):
         # interpolate command
@@ -1603,12 +1604,11 @@ Available subkernels:\n{}'''.format(
                         'source': 'SoS',
                         'metadata': {},
                         'data': {
-                            'text/html': HTML('<div class="sos_hint">> {}</div>'.format(
-                            new_text.strip() + '<br>')).data }
+                            'text/html': HTML(f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data }
                         })
             return new_text
         except Exception as e:
-            self.warn('Failed to interpolate {}: {}\n'.format(short_repr(text), e))
+            self.warn(f'Failed to interpolate {short_repr(text)}: {e}\n')
             return None
 
     def handle_magic_preview(self, items, kernel=None, style=None):
@@ -1629,7 +1629,7 @@ Available subkernels:\n{}'''.format(
                         handled[idx] = True
                         continue
             except Exception as e:
-                self.warn('\n> Failed to preview file {}: {}'.format(item, e))
+                self.warn(f'\n> Failed to preview file {item}: {e}')
                 continue
 
         # all are files
@@ -1662,8 +1662,7 @@ Available subkernels:\n{}'''.format(
                         self.send_frontend_msg('display_data',
                             {'metadata': {},
                             'data': {'text/plain': '>>> ' + item + ':\n',
-                                'text/html': HTML('<div class="sos_hint">> {}: {}</div>'
-                                    .format(item, obj_desc)).data
+                                'text/html': HTML(f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
                                 }
                             })
                         self.send_frontend_msg('display_data',
@@ -1673,7 +1672,7 @@ Available subkernels:\n{}'''.format(
                         self.send_frontend_msg('display_data',
                             {'metadata': {},
                             'data': {'text/plain': '>>> ' + item + ':\n',
-                                'text/html': HTML('<div class="sos_hint">> {}:</div>'.format(item)).data
+                                'text/html': HTML(f'<div class="sos_hint">> {item}:</div>').data
                                 }
                             })
                         # evaluate
@@ -1682,8 +1681,9 @@ Available subkernels:\n{}'''.format(
                             self.send_frontend_msg(response[0], response[1])
                 except Exception as e:
                     self.send_frontend_msg('stream',
-                        {'name': 'stderr', 'text': '> Failed to preview file or expression {}{}'.format(item,
-                            ': {}'.format(e) if self._debug_mode else '')})
+                                           dict(name='stderr',
+                                                text='> Failed to preview file or expression {}{}'.format(
+                                                    item, f': {e}' if self._debug_mode else '')))
         finally:
             self.switch_kernel(orig_kernel)
 
@@ -1696,7 +1696,7 @@ Available subkernels:\n{}'''.format(
             self.send_response(self.iopub_socket, 'stream',
                 {'name': 'stdout', 'text': os.getcwd()})
         except Exception as e:
-            self.warn('Failed to change dir to {}: {}'.format(os.path.expanduser(to_dir), e))
+            self.warn(f'Failed to change dir to {os.path.expanduser(to_dir)}: {e}')
 
     def handle_shell_command(self, cmd):
         # interpolate command
@@ -1772,7 +1772,7 @@ Available subkernels:\n{}'''.format(
             # use a table to list input and/or output file if exist
             if output_files:
                 self.send_frontend_msg('preview-input',
-                       '%preview {}'.format(' '.join(output_files)))
+                                       f'%preview {" ".join(output_files)}')
                 if hasattr(self, 'in_sandbox') and self.in_sandbox:
                     # if in sand box, do not link output to their files because these
                     # files will be removed soon.
@@ -1793,8 +1793,8 @@ Available subkernels:\n{}'''.format(
                             'metadata': {},
                             'data': { 'text/html':
                                 HTML('''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
-                                ', '.join('<a target="_blank" href="{0}">{0}</a>'.format(x) for x in input_files),
-                                ', '.join('<a target="_blank" href="{0}">{0}</a>'.format(x) for x in output_files))).data
+                                ', '.join(f'<a target="_blank" href="{x}">{x}</a>' for x in input_files),
+                                ', '.join(f'<a target="_blank" href="{x}">{x}</a>' for x in output_files))).data
                             }
                         })
                 for filename in output_files:
@@ -1810,9 +1810,9 @@ Available subkernels:\n{}'''.format(
         # we could potentially check the shape of data frame and matrix
         # but then we will need to import the numpy and pandas libraries
         if hasattr(obj, 'shape') and getattr(obj, 'shape') is not None:
-            txt += ' of shape {}'.format(getattr(obj, 'shape'))
+            txt += f' of shape {getattr(obj, "shape")}'
         elif isinstance(obj, Sized):
-            txt += ' of length {}'.format(obj.__len__())
+            txt += f' of length {obj.__len__()}'
         if isinstance(obj, ModuleType):
             return txt, ({'text/plain': pydoc.render_doc(obj, title='SoS Documentation: %s')}, {})
         elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
@@ -1826,9 +1826,9 @@ Available subkernels:\n{}'''.format(
                 elif result is None:
                     return txt, None
                 else:
-                    raise ValueError('Unrecognized return value from visualizer: {}.'.format(short_repr(result)))
+                    raise ValueError(f'Unrecognized return value from visualizer: {short_repr(result)}.')
             except Exception as e:
-                self.warn('Failed to preview variable: {}'.format(e))
+                self.warn(f'Failed to preview variable: {e}')
                 return txt, self.format_obj(obj)
         else:
             return txt, self.format_obj(obj)
@@ -1840,8 +1840,9 @@ Available subkernels:\n{}'''.format(
         self.send_frontend_msg('display_data',
              {'metadata': {},
              'data': {
-                 'text/plain': '\n> {} ({}):'.format(filename, pretty_size(os.path.getsize(filename))),
-                 'text/html': HTML('<div class="sos_hint">> {} ({}):</div>'.format(filename, pretty_size(os.path.getsize(filename)))).data,
+                 'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
+                 'text/html': HTML(
+                     f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
                 }
              })
         previewer_func = None
@@ -1865,9 +1866,8 @@ Available subkernels:\n{}'''.format(
                         try:
                             previewer_func = y.load()
                         except Exception as e:
-                            self.send_frontend_msg('stream', {
-                                'name': 'stderr',
-                                'text': 'Failed to load previewer {}: {}'.format(y, e) })
+                            self.send_frontend_msg('stream', dict(name='stderr',
+                                                                  text=f'Failed to load previewer {y}: {e}'))
                             continue
                         break
                 except Exception as e:
@@ -1893,26 +1893,24 @@ Available subkernels:\n{}'''.format(
                 self.send_frontend_msg('display_data',
                     {'source': filename, 'data': result[0], 'metadata': result[1]})
             else:
-                self.send_frontend_msg('stream', {
-                    'name': 'stderr',
-                    'text': 'Unrecognized preview content: {}'.format(result)})
+                self.send_frontend_msg('stream',
+                                       dict(name='stderr', text=f'Unrecognized preview content: {result}'))
         except Exception as e:
             if self._debug_mode:
-                self.send_frontend_msg('stream', {
-                    'name': 'stderr',
-                    'text': 'Failed to preview {}: {}'.format(filename, e)})
+                self.send_frontend_msg('stream',
+                                       dict(name='stderr', text=f'Failed to preview {filename}: {e}'))
 
     def render_result(self, res):
         if self._render_result is False:
             return res
         if not isinstance(res, str):
-            self.warn('Cannot render result {} in type {} as {}.'.format(short_repr(res),
-                res.__class__.__name__, self._render_result))
+            self.warn(
+                f'Cannot render result {short_repr(res)} in type {res.__class__.__name__} as {self._render_result}.')
         else:
             # import the object from IPython.display
             mod = __import__('IPython.display')
             if not hasattr(mod.display, self._render_result):
-                self.warn('Unrecognized render format {}'.format(self._render_result))
+                self.warn(f'Unrecognized render format {self._render_result}')
             else:
                 func = getattr(mod.display, self._render_result)
                 res = func(res)
@@ -1968,8 +1966,8 @@ Available subkernels:\n{}'''.format(
                     self.find_kernel(name, kernel, lan, color, notify_frontend=False)
                 except Exception as e:
                     # otherwise do not worry about it.
-                    env.logger.warning('Failed to locate subkernel {} with kernerl "{}" and language "{}": {}'.format(
-                        name, kernel, lan, e))
+                    env.logger.warning(
+                        f'Failed to locate subkernel {name} with kernerl "{kernel}" and language "{lan}": {e}')
         # sort kernel list by name to avoid unnecessary change of .ipynb files
         self._kernel_list.sort(key=lambda x: x[0])
         return self._kernel_list
@@ -2004,7 +2002,7 @@ Available subkernels:\n{}'''.format(
                 value = SoS_eval(expr)
                 value = self.shell._format_user_obj(value)
             except Exception as e:
-                self.warn('Failed to evaluate user expression {}: {}'.format(expr, e))
+                self.warn(f'Failed to evaluate user expression {expr}: {e}')
                 value = self.shell._user_obj_error()
             out[key] = value
         ret['user_expressions'] = out
@@ -2160,7 +2158,7 @@ Available subkernels:\n{}'''.format(
                 if self.find_kernel(args.cell_kernel)[0] != self.find_kernel(self.kernel)[0]:
                     self.switch_kernel(args.cell_kernel)
             except Exception as e:
-                self.warn('Failed to switch to language "{}": {}\n'.format(args.cell_kernel, e))
+                self.warn(f'Failed to switch to language "{args.cell_kernel}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2184,7 +2182,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2198,8 +2196,8 @@ Available subkernels:\n{}'''.format(
                 self.switch_kernel(args.name, args.in_vars, args.out_vars,
                     args.kernel, args.language, args.color)
             except Exception as e:
-                self.warn('Failed to switch to subkernel {} (kernel {}, language {}): {}'.format(args.name,
-                    args.kernel, args.language, e))
+                self.warn(
+                    f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2219,7 +2217,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'abort',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2228,15 +2226,15 @@ Available subkernels:\n{}'''.format(
                    }
             if args.restart and args.name in self.kernels:
                 self.shutdown_kernel(args.name)
-                self.warn('{} is shutdown'.format(args.name))
+                self.warn(f'{args.name} is shutdown')
             try:
                 self.switch_kernel(args.name, args.in_vars, args.out_vars,
                     args.kernel, args.language, args.color)
                 self.hard_switch_kernel = True
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
-                self.warn('Failed to switch to subkernel {} (kernel {}, language {}): {}'.format(args.name,
-                    args.kernel, args.language, e))
+                self.warn(
+                    f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2252,7 +2250,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2270,7 +2268,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2288,7 +2286,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2306,7 +2304,7 @@ Available subkernels:\n{}'''.format(
                 except SystemExit:
                     return
             except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
+                self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2325,7 +2323,7 @@ Available subkernels:\n{}'''.format(
                 except ClipboardEmpty:
                     raise UsageError("The clipboard appears to be empty")
                 except Exception as e:
-                    env.logger.warn('Failed to get text from the clipboard: {}'.format(e))
+                    env.logger.warn(f'Failed to get text from the clipboard: {e}')
                     return
                 #
                 self.send_response(self.iopub_socket, 'stream',
@@ -2346,7 +2344,7 @@ Available subkernels:\n{}'''.format(
             # if there are more magics after %run, they will be ignored so a warning
             # is needed.
             if run_code.lstrip().startswith('%'):
-                self.warn('Magic {} after magic %run will be ignored.'.format(run_code.split()[0]))
+                self.warn(f'Magic {run_code.split()[0]} after magic %run will be ignored.')
 
             # find the global sections of the workflow
             global_sections = ''
@@ -2370,10 +2368,10 @@ Available subkernels:\n{}'''.format(
                     self._reset_dict()
                     self._workflow_mode = True
                     if self._debug_mode:
-                        self.warn('Executing\n{}'.format(global_sections + run_code))
+                        self.warn(f'Executing\n{global_sections + run_code}')
                     ret = self._do_execute(global_sections + run_code, silent, store_history, user_expressions, allow_stdin)
                 except Exception as e:
-                    self.warn('Failed to execute workflow: {}'.format(e))
+                    self.warn(f'Failed to execute workflow: {e}')
                     raise
                 finally:
                     old_dict.quick_update(env.sos_dict._dict)
@@ -2396,7 +2394,7 @@ Available subkernels:\n{}'''.format(
                 else:
                     self._do_execute(self._workflow, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
-                self.warn('Failed to execute workflow: {}'.format(e))
+                self.warn(f'Failed to execute workflow: {e}')
                 raise
             finally:
                 old_dict.quick_update(env.sos_dict._dict)
@@ -2418,7 +2416,7 @@ Available subkernels:\n{}'''.format(
                     return
                 filename = os.path.expanduser(args.filename)
                 if os.path.isfile(filename) and not args.force:
-                    raise ValueError('Cannot overwrite existing output file {}'.format(filename))
+                    raise ValueError(f'Cannot overwrite existing output file {filename}')
 
                 with open(filename, 'a' if args.append else 'w') as script:
                     script.write('\n'.join(remaining_code.splitlines()).rstrip() + '\n')
@@ -2429,12 +2427,13 @@ Available subkernels:\n{}'''.format(
                 self.send_response(self.iopub_socket, 'display_data',
                     {'source': 'SoS', 'metadata': {},
                      'data': {
-                         'text/plain': 'Cell content saved to {}\n'.format(filename),
-                         'text/html': HTML('<div class="sos_hint">Cell content saved to <a href="{0}" target="_blank">{0}</a></div>'.format(filename)).data
+                         'text/plain': f'Cell content saved to {filename}\n',
+                         'text/html': HTML(
+                             f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
                           }
                      })
             except Exception as e:
-                self.warn('Failed to save cell: {}'.format(e))
+                self.warn(f'Failed to save cell: {e}')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2457,7 +2456,7 @@ Available subkernels:\n{}'''.format(
                         if args.__to__ is None:
                             ftype = 'html'
                         else:
-                            self.warn('%sossave to an .html file in {} format'.format(args.__to__))
+                            self.warn(f'%sossave to an .html file in {args.__to__} format')
                     else:
                         ftype = 'sos'
                 else:
@@ -2467,7 +2466,7 @@ Available subkernels:\n{}'''.format(
                 filename = os.path.expanduser(filename)
 
                 if os.path.isfile(filename) and not args.force:
-                    raise ValueError('Cannot overwrite existing output file {}'.format(filename))
+                    raise ValueError(f'Cannot overwrite existing output file {filename}')
                 #self.send_frontend_msg('preview-workflow', self._workflow)
                 if ftype == 'sos':
                     if not args.all:
@@ -2500,18 +2499,19 @@ Available subkernels:\n{}'''.format(
                 self.send_response(self.iopub_socket, 'display_data',
                     {'source': 'SoS', 'metadata': {},
                      'data': {
-                         'text/plain': 'Workflow saved to {}\n'.format(filename),
-                         'text/html': HTML('<div class="sos_hint">Workflow saved to <a href="{0}" target="_blank">{0}</a></div>'.format(filename)).data
+                         'text/plain': f'Workflow saved to {filename}\n',
+                         'text/html': HTML(
+                             f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
                           }
                      })
                 #
                 if args.commit:
-                    self.handle_shell_command(['git', 'commit', filename, '-m',
-                        args.message if args.message else 'save {}'.format(filename)])
+                    self.handle_shell_command({'git', 'commit', filename, '-m',
+                                               args.message if args.message else f'save {filename}'})
                 if args.push:
                     self.handle_shell_command(['git', 'push'])
             except Exception as e:
-                self.warn('Failed to save workflow: {}'.format(e))
+                self.warn(f'Failed to save workflow: {e}')
                 return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2532,7 +2532,7 @@ Available subkernels:\n{}'''.format(
                     self.last_executed_code = ''
                 return self._do_execute(self.last_executed_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
-                self.warn('Failed to execute workflow: {}'.format(e))
+                self.warn(f'Failed to execute workflow: {e}')
                 raise
             finally:
                 old_dict.quick_update(env.sos_dict._dict)
@@ -2618,13 +2618,13 @@ Available subkernels:\n{}'''.format(
                         {'metadata': {},
                          'data':
                             {'text/plain': self._workflow,
-                             'text/html': HTML('<textarea id="{}">{}</textarea>'.format(ta_id, self._workflow)).data
+                             'text/html': HTML(f'<textarea id="{ta_id}">{self._workflow}</textarea>').data
                       }})
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:
                         if not args.keep_output and self._use_panel:
-                            self.send_frontend_msg('preview-input', '%preview {}'.format(' '.join(args.items)))
+                            self.send_frontend_msg('preview-input', f'%preview {" ".join(args.items)}')
                         self.handle_magic_preview(args.items, args.kernel, style)
                     elif args.workflow:
                         self.warn('Invalid option --kernel with -r (--host)')
@@ -2638,13 +2638,13 @@ Available subkernels:\n{}'''.format(
                             rargs = ['sos', 'preview', '--html'] + options
                             rargs = [x for x in rargs if x not in ('-n', '--notebook', '-p', '--panel')]
                             if self._debug_mode:
-                                self.warn('Running "{}"'.format(' '.join(rargs)))
-                            self.send_frontend_msg('preview-input', '%preview {} -r {}'.format(' '.join(args.items), args.host))
+                                self.warn(f'Running "{" ".join(rargs)}"')
+                            self.send_frontend_msg('preview-input', f'%preview {" ".join(args.items)} -r {args.host}')
                             for msg in eval(subprocess.check_output(rargs)):
                                 self.send_frontend_msg(msg[0], msg[1])
                         except Exception as e:
                             self.warn('Failed to preview {} on remote host {}{}'.format(
-                                args.items, args.host, ': {}'.format(e) if self._debug_mode else ''))
+                                args.items, args.host, f': {e}' if self._debug_mode else ''))
         elif self.MAGIC_CD.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             self.handle_magic_cd(options)
@@ -2734,7 +2734,7 @@ Available subkernels:\n{}'''.format(
             try:
                 km.shutdown_kernel(restart=restart)
             except Exception as e:
-                self.warn('Failed to shutdown kernel {}: {}'.format(name, e))
+                self.warn(f'Failed to shutdown kernel {name}: {e}')
 
     def __del__(self):
         # upon releasing of sos kernel, kill all subkernels. This I thought would be

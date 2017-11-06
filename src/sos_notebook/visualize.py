@@ -57,7 +57,7 @@ class Visualizer:
         elif self.style == 'scatterplot':
             return self._handle_scatterplot(df)
         else:
-            raise ValueError('Unknown style {}'.format(self.style))
+            raise ValueError(f'Unknown style {self.style}')
 
     def get_tid(self, vis_type):
         if not self.kernel:
@@ -105,11 +105,13 @@ class Visualizer:
 
         # if the user already specified a value other than 200, we do not display the warning
         if args.limit >= 0 and df.shape[0] > args.limit and args.limit == 200 and self.kernel:
-                self.kernel.warn("Only the first {} of the {} records are previewed. Use option --limit to set a new limit.".format(args.limit, df.shape[0]))
+                self.kernel.warn(
+                    f"Only the first {args.limit} of the {df.shape[0]} records are previewed. Use option --limit to set a new limit.")
         if args.limit >= 0:
-            code = df.head(args.limit).to_html(index=True).replace('class="', 'id="dataframe_{}" class="sos_dataframe '.format(tid), 1)
+            code = df.head(args.limit).to_html(index=True).replace('class="',
+                                                                   f'id="dataframe_{tid}" class="sos_dataframe ', 1)
         else:
-            code = df.to_html(index=True).replace('class="', 'id="dataframe_{}" class="sos_dataframe '.format(tid), 1)
+            code = df.to_html(index=True).replace('class="', f'id="dataframe_{tid}" class="sos_dataframe ', 1)
 
         hr, rest = code.split('</tr>', 1)
         index_type = 'numeric' if isinstance(df.index, pandas.RangeIndex) else 'alphabetic'
@@ -120,10 +122,10 @@ class Visualizer:
 
         # we put max-height 400px here because the notebook could be exported without using sos template
         # and associated css, resulting in very long table.
-        code = """
+        code = f"""
     <div class='dataframe_container' style="max-height:400px">
-    <input type="text" class='dataframe_input' id="search_{}" """.format(tid) + \
-    """onkeyup="filterDataFrame('{}""".format(tid) + """')" placeholder="Search for names..">
+    <input type="text" class='dataframe_input' id="search_{tid}" """ + \
+               f"""onkeyup="filterDataFrame('{tid}""" + """')" placeholder="Search for names..">
     """ + code + '''</div>'''
         return {'text/html': HTML(code).data}
 
@@ -183,7 +185,8 @@ class Visualizer:
         tid = str(self.get_tid('scatterplot'))
 
         if df.shape[0] > args.limit and self.kernel:
-            self.kernel.warn("Only the first {} of the {} records are plotted. Use option --limit to set a new limit.".format(args.limit, df.shape[0]))
+            self.kernel.warn(
+                f"Only the first {args.limit} of the {df.shape[0]} records are plotted. Use option --limit to set a new limit.")
 
         # replacing ' ' with &nbsp and '-' with unicode hyphen will disallow webpage to separate words
         # into lines
@@ -198,8 +201,7 @@ class Visualizer:
             elif df.shape[1] == 2:
                 args.cols = list(df.columns)
             else:
-                raise ValueError('Please specify columns for plot. Available columns are {}'.format(
-                    ' '.join(df.columns)))
+                raise ValueError(f'Please specify columns for plot. Available columns are {" ".join(df.columns)}')
 
         if len(args.cols) == 1:
             args.cols = ['_index', args.cols[0]]
@@ -214,14 +216,14 @@ class Visualizer:
             if col == '_index':
                 continue
             if col not in data.columns:
-                raise ValueError("Invalid column name {}".format(col))
+                raise ValueError(f"Invalid column name {col}")
 
         # tooltip and --by columns does not have to be numeric
         for col in args.cols:
             if col == '_index':
                 continue
             if not self._is_numeric_type(data[col].dtype):
-                raise ValueError("Column {} is not of numeric type".format(col))
+                raise ValueError(f"Column {col} is not of numeric type")
 
         if args.cols[0] == '_index':
             val_x = list(range(0, nrow))
@@ -249,8 +251,8 @@ class Visualizer:
             else:
                 val_y = self._to_list(data[col])
 
-            tooltip = ['<br>'.join(['{}: {}'.format('index' if t == '_index' else t,
-                idxvalue if t == '_index' else df[t][idx] ) for t in args.tooltip])
+            tooltip = ['<br>'.join([f'{"index" if t == "_index" else t}: {idxvalue if t == "_index" else df[t][idx]}'
+                                    for t in args.tooltip])
                 for idx,idxvalue in enumerate(indexes)]
 
             all_data = [(x, y, z) for x, y, z in zip(val_x, val_y, tooltip)]
@@ -258,7 +260,7 @@ class Visualizer:
             if args.by:
                 for cat in categories:
                     series = {}
-                    series['label'] = col + ' (' + ' '.join('{}={}'.format(x,y) for x,y in zip(args.by, cat)) + ')'
+                    series['label'] = col + ' (' + ' '.join(f'{x}={y}' for x, y in zip(args.by, cat)) + ')'
                     # find index of values that falls into the category
                     series['data'] = [
                             all_data[i] for i in range(len(all_data)) if
@@ -301,9 +303,9 @@ class Visualizer:
             '''
             ticks = self._natural_ticks(range_x)
             if ticks:
-                optfunc += '''
-                    options['xaxis']['ticks'] = {!r};
-                    '''.format(ticks)
+                optfunc += f'''
+                    options['xaxis']['ticks'] = {ticks!r};
+                    '''
             if not args.xlim:
                 options['xaxis']['min'] = range_x[0]
                 options['xaxis']['max'] = range_x[1]
@@ -316,9 +318,9 @@ class Visualizer:
             '''
             ticks = self._natural_ticks(range_y)
             if ticks:
-                optfunc += '''
-                    options['yaxis']['ticks'] = {!r};
-                    '''.format(ticks)
+                optfunc += f'''
+                    options['yaxis']['ticks'] = {ticks!r};
+                    '''
             # flot does not seems to scale correctly without min/max
             if not args.ylim:
                 options['yaxis']['min'] = range_y[0]

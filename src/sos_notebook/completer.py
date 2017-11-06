@@ -113,7 +113,7 @@ class SoS_Completer(object):
                 if matched[1]:
                     return matched
             else:
-                raise RuntimeError('Unrecognized completer return type {}'.format(matched))
+                raise RuntimeError(f'Unrecognized completer return type {matched}')
         # No match
         return '', []
 

@@ -37,7 +37,7 @@ def get_previewers():
             name, priority = entrypoint.name.split(',', 1)
             priority = int(priority)
         except Exception as e:
-            env.logger.warning('Ignore incorrect previewer entry point {}: {}'.format(entrypoint, e))
+            env.logger.warning(f'Ignore incorrect previewer entry point {entrypoint}: {e}')
             continue
         # If name points to a function in a module. Let us try to import the module
         if ':' in name:
@@ -47,7 +47,7 @@ def get_previewers():
                 imported = importlib.import_module(mod)
                 result.append((getattr(imported, func), entrypoint, priority))
             except ImportError:
-                env.logger.warning('Failed to load function {}:{}'.format(mod, func))
+                env.logger.warning(f'Failed to load function {mod}:{func}')
         else:
             result.append((name, entrypoint, priority))
     #
@@ -89,7 +89,7 @@ def preview_pdf(filename, kernel=None, style=None):
     if style is not None and 'style' in style:
         if style['style'] != 'png':
             if kernel is not None and style['style'] is not None:
-                kernel.warn('Option --style of PDF preview only accept parameter png: {} provided'.format(style['style']))
+                kernel.warn(f'Option --style of PDF preview only accept parameter png: {style["style"]} provided')
         else:
             use_png = True
     if use_png:
@@ -112,7 +112,7 @@ def preview_pdf(filename, kernel=None, style=None):
                     for p in pages:
                         if p >= nPages:
                             if kernel is not None:
-                                kernel.warn('Page {} out of range of the pdf file ({} pages)'.format(p, nPages))
+                                kernel.warn(f'Page {p} out of range of the pdf file ({nPages} pages)')
                             pages = list(range(nPages))
                             break
             # single page PDF
@@ -137,7 +137,7 @@ def preview_pdf(filename, kernel=None, style=None):
             if kernel is not None:
                 kernel.warn(e)
             return { 'text/html':
-                HTML('<iframe src={0} width="100%"></iframe>'.format(filename)).data}
+                HTML(f'<iframe src={filename} width="100%"></iframe>').data}
     else:
         # by default use iframe, because PDF figure can have multiple pages (#693)
         # try to get width and height
@@ -145,11 +145,11 @@ def preview_pdf(filename, kernel=None, style=None):
             from wand.image import Image
             img = Image(filename=filename)
             return { 'text/html':
-                HTML('<iframe src={} width="800px" height="{}px"></iframe>'.format(filename, img.height/img.width * 800)).data}
+                HTML(f'<iframe src={filename} width="800px" height="{img.height/img.width * 800}px"></iframe>').data}
         except Exception as e:
             kernel.warn(e)
             return { 'text/html':
-                HTML('<iframe src={} width="100%"></iframe>'.format(filename)).data}
+                HTML(f'<iframe src={filename} width="100%"></iframe>').data}
 
 def preview_html(filename, kernel=None, style=None):
     with open(filename) as html:
@@ -199,14 +199,14 @@ def preview_xls(filename, kernel=None, style=None):
 def preview_zip(filename, kernel=None, style=None):
     import zipfile
     names = zipfile.ZipFile(filename).namelist()
-    return '{} files\n'.format(len(names)) + '\n'.join(names[:5]) + ('\n...' if len(names) > 5 else '')
+    return f'{len(names)} files\n' + '\n'.join(names[:5]) + ('\n...' if len(names) > 5 else '')
 
 def preview_tar(filename, kernel=None, style=None):
     import tarfile
     with tarfile.open(filename, 'r:*') as tar:
         # only extract files
         names = [x.name for x in tar.getmembers() if x.isfile()]
-    return '{} files\n'.format(len(names)) + '\n'.join(names[:5]) + ('\n...' if len(names) > 5 else '')
+    return f'{len(names)} files\n' + '\n'.join(names[:5]) + ('\n...' if len(names) > 5 else '')
 
 def preview_gz(filename, kernel=None, style=None):
     import tarfile

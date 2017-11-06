@@ -50,13 +50,13 @@ class Interactive_Executor(Base_Executor):
         if env.config['sig_mode'] != 'ignore':
             # We append to existing workflow files because some files are ignored and we
             # still wants their information.
-            with open(os.path.join(env.exec_dir, '.sos', '{}.sig'.format(self.md5)), 'a') as sig:
-                sig.write('# workflow: {}\n'.format(self.workflow.name))
+            with open(os.path.join(env.exec_dir, '.sos', f'{self.md5}.sig'), 'a') as sig:
+                sig.write(f'# workflow: {self.workflow.name}\n')
                 # script is None because it is entered from notebook
                 sig.write('# script: __interactive__\n')
-                sig.write('# included: {}\n'.format(','.join([x[1] for x in self.workflow.content.included])))
-                sig.write('# configuration: {}\n'.format(self.config.get('config_file', '')))
-                sig.write('# start time: {}\n'.format(time.strftime('%a, %d %b %Y %H:%M:%S +0000', time.gmtime())))
+                sig.write(f'# included: {",".join([x[1] for x in self.workflow.content.included])}\n')
+                sig.write(f'# configuration: {self.config.get("config_file", "")}\n')
+                sig.write(f'# start time: {time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())}\n')
                 sig.write(self.sig_content)
                 sig.write('# runtime signatures\n')
 
@@ -65,7 +65,7 @@ class Interactive_Executor(Base_Executor):
         env.sos_dict.set('SOS_VERSION', __version__)
         env.sos_dict.set('__args__', self.args)
         if self.md5:
-            env.sos_dict.set('__workflow_sig__', os.path.join(env.exec_dir, '.sos', '{}.sig'.format(self.md5)))
+            env.sos_dict.set('__workflow_sig__', os.path.join(env.exec_dir, '.sos', f'{self.md5}.sig'))
 
         self._base_symbols = set(dir(__builtins__)) | set(env.sos_dict['sos_symbols_']) | set(SOS_KEYWORDS) | set(keyword.kwlist)
         self._base_symbols -= {'dynamic'}
@@ -75,7 +75,8 @@ class Interactive_Executor(Base_Executor):
         # if check_readonly is set to True, allow checking readonly vars
         if cfg.get('sos', {}).get('change_all_cap_vars', None) is not None:
             if cfg['sos']['change_all_cap_vars'] not in ('warning', 'error'):
-                env.logger.error('Configuration sos.change_all_cap_vars can only be warning or error: {} provided'.format(cfg['sos']['change_all_cap_vars']))
+                env.logger.error(
+                    f'Configuration sos.change_all_cap_vars can only be warning or error: {cfg["sos"]["change_all_cap_vars"]} provided')
             else:
                 env.sos_dict._change_all_cap_vars = cfg['sos']['change_all_cap_vars']
         env.sos_dict.set('CONFIG', cfg)
@@ -121,10 +122,10 @@ class Interactive_Executor(Base_Executor):
         if targets:
             for t in targets:
                 if not FileTarget(t).exists('target') and FileTarget(t).exists('signature'):
-                    env.logger.debug('Re-generating {}'.format(t))
+                    env.logger.debug(f'Re-generating {t}')
                     FileTarget(t).remove('signature')
                 else:
-                    env.logger.debug('Target {} already exists'.format(t))
+                    env.logger.debug(f'Target {t} already exists')
         #
         while True:
             # find any step that can be executed and run it, and update the DAT
@@ -147,8 +148,7 @@ class Interactive_Executor(Base_Executor):
             except Exception as e:
                 if env.verbosity > 2:
                     sys.stderr.write(get_traceback())
-                raise RuntimeError('Failed to execute statements\n"{}"\n{}'.format(
-                    section.global_def, e))
+                raise RuntimeError(f'Failed to execute statements\n"{section.global_def}"\n{e}')
 
             # clear existing keys, otherwise the results from some random result
             # might mess with the execution of another step that does not define input
@@ -186,24 +186,26 @@ class Interactive_Executor(Base_Executor):
                     #
                     cycle = dag.circular_dependencies()
                     if cycle:
-                        raise RuntimeError('Circular dependency detected {} after regeneration. It is likely a later step produces input of a previous step.'.format(cycle))
+                        raise RuntimeError(
+                            f'Circular dependency detected {cycle} after regeneration. It is likely a later step produces input of a previous step.')
 
                 else:
                     if self.resolve_dangling_targets(dag, [target]) == 0:
-                        raise RuntimeError('Failed to regenerate or resolve {}{}.'
-                            .format(target, dag.steps_depending_on(target, self.workflow)))
+                        raise RuntimeError(
+                            f'Failed to regenerate or resolve {target}{dag.steps_depending_on(target, self.workflow)}.')
                     runnable._depends_targets.append(target)
                     dag._all_dependent_files[target].append(runnable)
                     dag.build(self.workflow.auxiliary_sections)
                     #
                     cycle = dag.circular_dependencies()
                     if cycle:
-                        raise RuntimeError('Circular dependency detected {}. It is likely a later step produces input of a previous step.'.format(cycle))
+                        raise RuntimeError(
+                            f'Circular dependency detected {cycle}. It is likely a later step produces input of a previous step.')
                 self.save_dag(dag)
             except UnavailableLock as e:
                 runnable._status = 'pending'
                 runnable._signature = (e.output, e.sig_file)
-                env.logger.debug('Waiting on another process for step {}'.format(section.step_name()))
+                env.logger.debug(f'Waiting on another process for step {section.step_name()}')
             except PendingTasks as e:
                 self.record_quit_status(e.tasks)
                 raise
@@ -213,14 +215,14 @@ class Interactive_Executor(Base_Executor):
                 raise
         if self.md5:
             self.save_workflow_signature(dag)
-            env.logger.debug('Workflow {} (ID={}) is executed successfully.'.format(self.workflow.name, self.md5))
+            env.logger.debug(f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
         # remove task pending status if the workflow is completed normally
         try:
             wf_status = os.path.join(os.path.expanduser('~'), '.sos', self.md5 + '.status')
             if os.path.isfile(wf_status):
                 os.remove(wf_status)
         except Exception as e:
-            env.logger.warning('Failed to clear workflow status file: {}'.format(e))
+            env.logger.warning(f'Failed to clear workflow status file: {e}')
         return last_res
 
 #
@@ -301,7 +303,8 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                     realtime=True)
             if ret:
                kernel.send_response(kernel.iopub_socket, 'stream',
-                    {'name': 'stderr', 'text': 'remote execution of workflow exited with code {}'.format(ret)})
+                                    dict(name='stderr',
+                                         text=f'remote execution of workflow exited with code {ret}'))
         except Exception as e:
             if kernel:
                 kernel.send_response(kernel.iopub_socket, 'stream',
@@ -315,7 +318,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                 with fasteners.InterProcessLock(os.path.join(tempfile.gettempdir(), 'sos_lock_bin')):
                     os.makedirs(os.path.expanduser(d))
             elif not os.path.isdir(os.path.expanduser(d)):
-                raise ValueError('directory does not exist: {}'.format(d))
+                raise ValueError(f'directory does not exist: {d}')
         os.environ['PATH'] = os.pathsep.join([os.path.expanduser(x) for x in args.__bin_dirs__]) + os.pathsep + os.environ['PATH']
 
     # clear __step_input__, __step_output__ etc because there is

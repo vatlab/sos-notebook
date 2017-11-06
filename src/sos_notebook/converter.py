@@ -63,12 +63,12 @@ class SoS_Exporter(Exporter):
 
     def from_notebook_cell(self, cell, fh, idx = 0):
         if self.export_all:
-            meta = ' '.join('{}={}'.format(x,y) for x,y in cell.metadata.items())
+            meta = ' '.join(f'{x}={y}' for x, y in cell.metadata.items())
             if not hasattr(cell, 'execution_count') or cell.execution_count is None:
-                fh.write('%cell {} {}\n'.format(cell.cell_type, meta))
+                fh.write(f'%cell {cell.cell_type} {meta}\n')
             else:
                 idx += 1
-                fh.write('%cell {} {} {}\n'.format(cell.cell_type, cell.execution_count, meta))
+                fh.write(f'%cell {cell.cell_type} {cell.execution_count} {meta}\n')
             if cell.cell_type == 'code':
                 fh.write(cell.source.strip() + '\n')
             elif cell.cell_type == "markdown":
@@ -113,7 +113,7 @@ def notebook_to_script(notebook_file, sos_file, args=None, unknown_args=None):
     Convert a ipython notebook to sos format.
     '''
     if unknown_args:
-        raise ValueError('Unrecognized parameter {}'.format(unknown_args))
+        raise ValueError(f'Unrecognized parameter {unknown_args}')
     if args:
         exporter = SoS_Exporter(export_all=args.__all__)
     else:
@@ -125,7 +125,7 @@ def notebook_to_script(notebook_file, sos_file, args=None, unknown_args=None):
     elif isinstance(sos_file, str):
         with open(sos_file, 'w') as sos:
             sos.write(output)
-        env.logger.info('SoS script saved to {}'.format(sos_file))
+        env.logger.info(f'SoS script saved to {sos_file}')
     else:
         sos_file.write(output)
 
@@ -146,7 +146,7 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
     if not content:
         return
     if cell_type not in ('code', 'markdown'):
-        env.logger.warning('Unrecognized cell type {}, code assumed.'.format(cell_type))
+        env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
     if cell_type == 'markdown' and any(x.strip() and not x.startswith('#! ') for x in content):
         env.logger.warning('Markdown lines not starting with #!, code cell assumed.')
         cell_type = 'code'
@@ -185,7 +185,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
     by Jupyter notebook.
     '''
     if unknown_args:
-        raise ValueError('Unrecognized parameter {}'.format(unknown_args))
+        raise ValueError(f'Unrecognized parameter {unknown_args}')
     cells = []
     cell_count = 1
     cell_type = 'code'
@@ -203,7 +203,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                     continue
                 if line.startswith('#fileformat='):
                     if not line[12:].startswith('SOS'):
-                        raise RuntimeError('{} is not a SoS script according to #fileformat line.'.format(script_file))
+                        raise RuntimeError(f'{script_file} is not a SoS script according to #fileformat line.')
                     continue
 
             first_block = False
@@ -230,7 +230,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                     pieces = [piece.split('=',1) for piece in metainfo.split()]
                     for idx,piece in enumerate(pieces):
                         if len(piece) == 1:
-                            env.logger.warning('Incorrect metadata {}'.format(piece))
+                            env.logger.warning(f'Incorrect metadata {piece}')
                             pieces[idx].append('')
                         if piece[1] == 'True':
                             pieces[idx][1] = True
@@ -316,7 +316,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
     else:
         with open(notebook_file, 'w') as notebook:
             nbformat.write(nb, notebook, 4)
-        env.logger.info('Jupyter notebook saved to {}'.format(notebook_file))
+        env.logger.info(f'Jupyter notebook saved to {notebook_file}')
     #if err:
     #    raise RuntimeError(repr(err))
 
@@ -330,7 +330,7 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
     import os
     import subprocess
     if not os.path.isfile(notebook_file):
-        raise RuntimeError('{} does not exist'.format(notebook_file))
+        raise RuntimeError(f'{notebook_file} does not exist')
     if not output_file:
         import tempfile
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.' + to_format).name
@@ -342,7 +342,7 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
             err_msg = err.read()
         if ret != 0:
             env.logger.error(err_msg)
-            env.logger.error('Failed to convert {} to {} format'.format(notebook_file, to_format))
+            env.logger.error(f'Failed to convert {notebook_file} to {to_format} format')
         else:
             # identify output files
             dest_file = err_msg.rsplit()[-1]
@@ -360,9 +360,9 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
         ret = subprocess.call(['jupyter', 'nbconvert', os.path.abspath(notebook_file), '--to', to_format,
             '--output', os.path.abspath(output_file)] + ([] if unknown_args is None else unknown_args))
         if ret != 0:
-            env.logger.error('Failed to convert {} to {} format'.format(notebook_file, to_format))
+            env.logger.error(f'Failed to convert {notebook_file} to {to_format} format')
         else:
-            env.logger.info('Output saved to {}'.format(output_file))
+            env.logger.info(f'Output saved to {output_file}')
 
 
 def get_notebook_to_html_parser():
@@ -499,13 +499,13 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
     if sargs.inplace:
         with open(notebook_file, 'w') as new_nb:
             nbformat.write(nb, new_nb, 4)
-        env.logger.info('Jupyter notebook saved to {}'.format(notebook_file))
+        env.logger.info(f'Jupyter notebook saved to {notebook_file}')
     elif not output_file:
         nbformat.write(nb, sys.stdout, 4)
     else:
         with open(output_file, 'w') as new_nb:
             nbformat.write(nb, new_nb, 4)
-        env.logger.info('Jupyter notebook saved to {}'.format(output_file))
+        env.logger.info(f'Jupyter notebook saved to {output_file}')
 
 
 def get_Rmarkdown_to_notebook_parser():
@@ -597,4 +597,4 @@ def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=
     else:
         with open(output_file, 'w') as new_nb:
             nbformat.write(nb, new_nb, 4)
-        env.logger.info('Jupyter notebook saved to {}'.format(output_file))
+        env.logger.info(f'Jupyter notebook saved to {output_file}')
