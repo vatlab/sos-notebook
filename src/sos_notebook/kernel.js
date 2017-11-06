@@ -673,22 +673,54 @@ define([
                 alert(data);
             } else if (msg_type === 'clear-output') {
                 // if remove output of all cells
+                console.log(data)
                 var active = nb.get_selected_cells_indices();
+                var clear_task = function(cell, status) {
+                    var status_element = cell.element[0].getElementsByClassName(status);
+                    if (status_element.length > 0) {
+                        var table_element = status_element[0].parentNode.parentNode.parentNode.parentNode;
+                        // remove the table
+                        if (table_element.className == 'task_table') {
+                            table_element.parentElement.remove(table_element);
+                        }
+                    }
+                }
                 if (data[1]) {
                     var cells = nb.get_cells();
                     var i;
+                    var j;
                     for (i = 0; i < cells.length ; ++i) {
-                        cells[i].clear_output();
+                        if (data[2]) {
+                            for (j = 0; j < data[2].length; ++j) {
+                                clear_task(cells[i], data[2][j]);
+                            }
+                        } else {
+                            cells[i].clear_output();
+                        }
                     }
                 } else if (data[0] === -1) {
                     // clear output of selected cells
                     var i;
+                    var j;
                     for (i = 0; i < active.length ; ++ i) {
-                        nb.get_cell(active[i]).clear_output();
+                        if (data[2]) {
+                            for (j = 0; j < data[2].length; ++j) {
+                                clear_task(nb.get_cell(active[i]), data[2][j]);
+                            }
+                        } else {
+                            nb.get_cell(active[i]).clear_output();
+                        }
                     }
                 } else {
                     // clear current cell
-                    nb.get_cell(data[0]).clear_output();
+                    if (data[2]) {
+                        var j;
+                        for (j = 0; j < data[2].length; ++j) {
+                            clear_task(nb.get_cell(data[0]), data[2][j]);
+                        }
+                    } else {
+                        nb.get_cell(data[0]).clear_output();
+                    }
                 }
                 if (active.length > 0) {
                     nb.select(active[0]);

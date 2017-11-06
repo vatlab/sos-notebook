@@ -525,6 +525,8 @@ class SoS_Kernel(IPythonKernel):
             active cell if executed in the sidepanel.''')
         parser.add_argument('-a', '--all', action='store_true',
             help='''Clear all output of the current notebook.''')
+        parser.add_argument('-s', '--status', nargs='+',
+            help='''Clear tasks that match specifie status (e.g. completed).''')
         parser.error = self._parse_error
         return parser
 
@@ -935,8 +937,7 @@ class SoS_Kernel(IPythonKernel):
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
 
-    def notify_task_status(self, task_status):
-        status_class = {
+    status_class = {
             'pending': 'fa-square-o',
             'submitted': 'fa-spinner',
             'running': 'fa-spinner fa-pulse fa-spin',
@@ -948,6 +949,7 @@ class SoS_Kernel(IPythonKernel):
             'unknown': 'fa-question',
             }
 
+    def notify_task_status(self, task_status):
         action_class = {
             'pending': 'fa-stop',
             'submitted': 'fa-stop',
@@ -982,9 +984,9 @@ class SoS_Kernel(IPythonKernel):
                         HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
                         <td style="border: 0px">
                         <i id="status_{tqu}_{tid}"
-                            class="fa fa-2x fa-fw {status_class[tst]}"
-                            onmouseover="$('#status_{tqu}_{tid}').addClass('{action_class[tst]} task_hover').removeClass('{status_class[tst]}')"
-                            onmouseleave="$('#status_{tqu}_{tid}').addClass('{status_class[tst]}').removeClass('{action_class[tst]} task_hover')"
+                            class="fa fa-2x fa-fw {self.status_class[tst]}"
+                            onmouseover="$('#status_{tqu}_{tid}').addClass('{action_class[tst]} task_hover').removeClass('{self.status_class[tst]}')"
+                            onmouseleave="$('#status_{tqu}_{tid}').addClass('{self.status_class[tst]}').removeClass('{action_class[tst]} task_hover')"
                             onclick="{action_func[tst]}('{tid}', '{tqu}')"
                         ></i> </td>
                         <td style="border:0px"><a onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
@@ -1007,7 +1009,7 @@ class SoS_Kernel(IPythonKernel):
             if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
                     'failed', 'aborted', 'signature-mismatch'):
                 tst = 'unknown'
-            self.send_frontend_msg('task-status', [tqu, tid, tst, status_class[tst], action_class[tst], action_func[tst]])
+            self.send_frontend_msg('task-status', [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
             self.my_tasks[(tqu, tid)] = time.time()
         elif task_status[0] == 'pulse-status':
             tqu, tid, tst = task_status[1:]
@@ -1019,7 +1021,7 @@ class SoS_Kernel(IPythonKernel):
                     # if it has been within the first 20 seconds of new or updated message
                     # can confirm to verify it has been successfully delivered. Otherwise
                     # ignore such message
-                    self.send_frontend_msg('task-status', [tqu, tid, tst, status_class[tst], action_class[tst], action_func[tst]])
+                    self.send_frontend_msg('task-status', [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
         else:
             raise RuntimeError(f'Unrecognized status change message {task_status}')
 
@@ -2114,7 +2116,11 @@ Available subkernels:\n{}'''.format(
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
-                self.send_frontend_msg('clear-output', [cell_idx, args.all])
+                if args.status:
+                    status_style = [self.status_class[x] for x in args.status]
+                else:
+                    status_style = None
+                self.send_frontend_msg('clear-output', [cell_idx, args.all, status_style])
         elif self.MAGIC_FRONTEND.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:
