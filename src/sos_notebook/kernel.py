@@ -311,9 +311,9 @@ class SoS_Kernel(IPythonKernel):
         parser = argparse.ArgumentParser(prog='%expand',
             description='''Expand the script in the current cell with default ({}) or
                 specified sigil.''')
-        parser.add_argument('sigil', help='''Sigil to be used to interpolated the
+        parser.add_argument('sigil', nargs='?', help='''Sigil to be used to interpolated the
             texts. It can be quoted, or be specified as two options.''')
-        parser.add_argument('right_sigil', help='''Right sigil if the sigil is
+        parser.add_argument('right_sigil', nargs='?', help='''Right sigil if the sigil is
             specified as two pieces.''')
         parser.error = self._parse_error
         return parser
@@ -2106,11 +2106,12 @@ Available subkernels:\n{}'''.format(
             self.handle_magic_set(options)
             # self.options will be set to inflence the execution of remaing_code
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
-        elif self.MAGIC_EXPAND(code):
-            options, remaining_code = self.get_magic_and_code(code, False)
+        elif self.MAGIC_EXPAND.match(code):
+            lines = code.splitlines() 
+            options = lines[0]
             parser = self.get_expand_parser()
             try:
-                args = parser.parse_args(options)
+                args = parser.parse_args(options.split()[1:])
             except SystemExit:
                 return
             if args.sigil in ('None', None):
@@ -2118,15 +2119,24 @@ Available subkernels:\n{}'''.format(
             if args.right_sigil is not None:
                 sigil = f'{args.sigil} {args.right_sigil}'
             # now we need to expand the text, but separate the magics first
-            lines = remaing_code.splitlines()
+            lines = lines[1:]
             line_start = 0
             for idx, line in enumerate(lines):
                 if line.strip() and not line.startswith('%') and not line.startswith('!'):
-                    start_line = line
-            interpolated = interpolate('\n'.join(lines[start_line:]), local_dict=env.sos_dict._dict)
-            remaining_code = '\n'.join(lines[:start_line] + [interpolated]) + '\n' 
-            # self.options will be set to inflence the execution of remaing_code
-            return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+                    start_line = idx
+                    break
+            text = '\n'.join(lines[start_line:])
+            if sigil is not None and sigil != '{ }':
+                from sos.sos_script import replace_sigil
+                text = replace_sigil(text, sigil)
+            try:
+                interpolated = interpolate(text, local_dict=env.sos_dict._dict)
+                remaining_code = '\n'.join(lines[:start_line] + [interpolated]) + '\n'
+                # self.options will be set to inflence the execution of remaing_code
+                return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            except Exception as e:
+                self.warn(e)
+                return
         elif self.MAGIC_SHUTDOWN.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_shutdown_parser()
