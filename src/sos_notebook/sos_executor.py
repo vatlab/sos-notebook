@@ -33,7 +33,7 @@ from sos.sos_script import SoS_Script
 from sos.sos_syntax import SOS_KEYWORDS
 from sos.sos_executor import Base_Executor, __null_func__
 from sos.sos_syntax import SOS_SECTION_HEADER
-from sos.target import FileTarget, UnknownTarget, RemovedTarget, UnavailableLock
+from sos.target import file_target, UnknownTarget, RemovedTarget, UnavailableLock
 from sos.sos_step import PendingTasks
 from .sos_step import Interactive_Step_Executor
 
@@ -81,7 +81,7 @@ class Interactive_Executor(Base_Executor):
                 env.sos_dict._change_all_cap_vars = cfg['sos']['change_all_cap_vars']
         env.sos_dict.set('CONFIG', cfg)
         # set config to CONFIG
-        FileTarget('config.yml').remove('both')
+        file_target('config.yml').remove('both')
 
         # remove some variables because they would interfere with step analysis
         for key in ('_input', 'input'):
@@ -121,9 +121,9 @@ class Interactive_Executor(Base_Executor):
         # to remove the signature and really generate them
         if targets:
             for t in targets:
-                if not FileTarget(t).exists('target') and FileTarget(t).exists('signature'):
+                if not file_target(t).exists('target') and file_target(t).exists('signature'):
                     env.logger.debug(f'Re-generating {t}')
-                    FileTarget(t).remove('signature')
+                    file_target(t).remove('signature')
                 else:
                     env.logger.debug(f'Target {t} already exists')
         #

@@ -32,7 +32,7 @@ import unittest
 import subprocess
 from ipykernel.tests.utils import execute, wait_for_idle
 from sos_notebook.test_utils import sos_kernel, get_result, get_std_output
-from sos.target import FileTarget
+from sos.target import file_target
 
 class TestJupyterSoS(unittest.TestCase):
     #
@@ -119,7 +119,7 @@ sos_run('a')
 
     def testTarget(self):
         for f in ['A1.txt', 'A2.txt', 'C2.txt', 'B2.txt', 'B1.txt', 'B3.txt', 'C1.txt', 'C3.txt', 'C4.txt']:
-            FileTarget(f).remove('both')
+            file_target(f).remove('both')
         #
         #  A1 <- B1 <- B2 <- B3
         #   |
@@ -195,7 +195,7 @@ fail
 
     def testReverseSharedVariable(self):
         '''Test shared variables defined in auxiliary steps'''
-        FileTarget('a.txt').remove('both')
+        file_target('a.txt').remove('both')
         script = r'''
 %run B
 [A: shared='b', provides='a.txt']
