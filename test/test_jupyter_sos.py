@@ -49,22 +49,6 @@ class TestJupyterSoS(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.olddir)
 
-    def testInterpolation(self):
-        with sos_kernel() as kc:
-            iopub = kc.iopub_channel
-            execute(kc=kc, code='''
-%run
-[a]
-b=10
-
-[default]
-sos_run('a')
-''')
-            wait_for_idle(kc)
-            execute(kc=kc, code="b")
-            res = get_result(iopub)
-            self.assertEqual(res, 10)
-
     def testRerun(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
