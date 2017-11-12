@@ -121,7 +121,7 @@ class Interactive_Executor(Base_Executor):
         # to remove the signature and really generate them
         if targets:
             for t in targets:
-                if not file_target(t).exists('target') and file_target(t).exists('signature'):
+                if not file_target(t).target_exists('target') and file_target(t).target_exists('signature'):
                     env.logger.debug(f'Re-generating {t}')
                     file_target(t).remove('signature')
                 else:
