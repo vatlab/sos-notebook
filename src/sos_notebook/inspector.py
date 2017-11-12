@@ -22,7 +22,7 @@
 
 import pydoc
 from sos.utils import env
-from sos.sos_syntax import SOS_USAGES
+from sos.syntax import SOS_USAGES
 
 class SoS_VariableInspector(object):
     def __init__(self, kernel):

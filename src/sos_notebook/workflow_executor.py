@@ -26,16 +26,16 @@ import keyword
 import tempfile
 import time
 from sos.utils import env, _parse_error, get_traceback, load_config_files
-from sos.sos_eval import SoS_exec
+from sos.eval import SoS_exec
 from sos._version import __version__
 from sos.__main__ import get_run_parser
-from sos.sos_script import SoS_Script
-from sos.sos_syntax import SOS_KEYWORDS
-from sos.sos_executor import Base_Executor, __null_func__
-from sos.sos_syntax import SOS_SECTION_HEADER
+from sos.parser import SoS_Script
+from sos.syntax import SOS_KEYWORDS
+from sos.workflow_executor import Base_Executor, __null_func__
+from sos.syntax import SOS_SECTION_HEADER
 from sos.target import file_target, UnknownTarget, RemovedTarget, UnavailableLock
-from sos.sos_step import PendingTasks
-from .sos_step import Interactive_Step_Executor
+from sos.step_executor import PendingTasks
+from .step_executor import Interactive_Step_Executor
 
 
 class Interactive_Executor(Base_Executor):

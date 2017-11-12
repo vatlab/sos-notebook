@@ -31,7 +31,7 @@ from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 from nbconvert.exporters import Exporter
 
 from sos.utils import env
-from sos.sos_syntax import SOS_SECTION_HEADER, SOS_CELL_LINE
+from sos.syntax import SOS_SECTION_HEADER, SOS_CELL_LINE
 
 #
 # Converter from Notebook

@@ -38,8 +38,8 @@ from collections import Sized, defaultdict, OrderedDict
 from types import ModuleType
 from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
 from sos._version import __sos_version__, __version__
-from sos.sos_eval import SoS_exec, SoS_eval, interpolate
-from sos.sos_syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
+from sos.eval import SoS_exec, SoS_eval, interpolate
+from sos.syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
 
 from IPython.lib.clipboard import ClipboardEmpty, osx_clipboard_get, tkinter_clipboard_get
 from IPython.core.error import UsageError
@@ -52,8 +52,8 @@ from textwrap import dedent
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 
-from .sos_executor import runfile
-from .sos_step import PendingTasks
+from .workflow_executor import runfile
+from .step_executor import PendingTasks
 
 class FlushableStringIO:
     '''This is a string buffer for output, but it will only
@@ -2129,7 +2129,7 @@ Available subkernels:\n{}'''.format(
                     break
             text = '\n'.join(lines[start_line:])
             if sigil is not None and sigil != '{ }':
-                from sos.sos_script import replace_sigil
+                from sos.parser import replace_sigil
                 text = replace_sigil(text, sigil)
             try:
                 interpolated = interpolate(text, local_dict=env.sos_dict._dict)
