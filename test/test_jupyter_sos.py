@@ -32,7 +32,7 @@ import unittest
 import subprocess
 from ipykernel.tests.utils import execute, wait_for_idle
 from sos_notebook.test_utils import sos_kernel, get_result, get_std_output
-from sos.target import file_target
+from sos.targets import file_target
 
 class TestJupyterSoS(unittest.TestCase):
     #
