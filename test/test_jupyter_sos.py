@@ -70,7 +70,6 @@ b = a
             self.assertEqual(res, 20)
 
 
-    @unittest.skipIf('TRAVIS_PYTHON_VERSION' in os.environ, 'Temporarily disable this test for travis')
     def testDAG(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
