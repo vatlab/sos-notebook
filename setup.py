@@ -144,7 +144,7 @@ tarfile:is_tarfile,1 = sos_notebook.preview:preview_tar
 *,0 = sos_notebook.preview:preview_txt
 
 [sos_functions]
-runfile = sos_notebook.sos_executor:runfile
+runfile = sos_notebook.workflow_executor:runfile
 
 [sos_converters]
 sos-ipynb.parser = sos_notebook.converter:get_script_to_notebook_parser
