@@ -1420,7 +1420,7 @@ Available subkernels:\n{}'''.format(
                 return
             else:
                 if explicit:
-                    self.warn(f'Language {self.kernel} does not support magic %get.')
+                    self.warn(f'Magic %get failed because the language module for {self.kernel} is not properly installed. Please install it according to language specific instructions on the Running SoS section of the SoS homepage and restart Jupyter server.')
                 return
         elif self.kernel.lower() == 'sos':
             # if another kernel is specified and the current kernel is sos
