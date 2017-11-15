@@ -1157,6 +1157,10 @@ class SoS_Kernel(IPythonKernel):
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
+                if self._debug_mode:
+                    from sos.utils import log_to_file
+                    log_to_file(f'MSG TYPE {msg_type}')
+                    log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
