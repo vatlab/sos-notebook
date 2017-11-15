@@ -36,7 +36,7 @@ from ipykernel.ipkernel import IPythonKernel
 from collections import Sized, defaultdict, OrderedDict
 
 from types import ModuleType
-from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime
+from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime, log_to_file
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_exec, SoS_eval, interpolate
 from sos.syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
@@ -936,14 +936,14 @@ class SoS_Kernel(IPythonKernel):
                             self.notify_task_status(['change-status', tqu, tid, tst])
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
-                    from sos.utils import log_to_file
                     try:
                         import pandas as pd
                         from tabulate import tabulate
                         df = pd.read_clipboard()
                         tbl = tabulate(df, headers='keys', tablefmt='pipe')
                         self.send_frontend_msg('paste-table', tbl)
-                        log_to_file(tbl)
+                        if self._debug_mode:
+                            log_to_file(tbl)
                     except Exception as e:
                         self.send_frontend_msg('alert', f'Failed to paste clipboard as table: {e}')
                 else:
@@ -1158,7 +1158,6 @@ class SoS_Kernel(IPythonKernel):
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    from sos.utils import log_to_file
                     log_to_file(f'MSG TYPE {msg_type}')
                     log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
@@ -1462,19 +1461,18 @@ Available subkernels:\n{}'''.format(
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    from sos.utils import log_to_file
-                    log_to_file(f'MSG TYPE {msg_type}')
-                    log_to_file(f'CONTENT  {sub_msg["content"]}')
+                    log_to_file(f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
                     if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name):
+                        if self._debug_mode:
+                            log_to_file(f'Capture response: {msg_type}: {sub_msg["content"]}')
                         responses.append([msg_type, sub_msg['content']])
                     else:
                         if self._debug_mode:
-                            self.warn(f'{msg_type}: {sub_msg["content"]}')
-                        self.send_response(self.iopub_socket, msg_type,
-                            sub_msg['content'])
+                            log_to_file(f'Non-response: {msg_type}: {sub_msg["content"]}')
+                        self.send_response(self.iopub_socket, msg_type, sub_msg['content'])
         if not responses and self._debug_mode:
             self.warn(f'Failed to get a response from message type {msg_types}')
 
