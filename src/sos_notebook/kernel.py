@@ -710,7 +710,7 @@ class SoS_Kernel(IPythonKernel):
                     entrypoint.load()
             # if nothing is triggerred, kernel is not defined, return a general message
             raise ValueError(
-                f'No pre-defined subkernel named {name} is found. Please define it with one or both of parameters --kernel and --language')
+                f'No subkernel named {name} is found. Please make sure that you have the kernel installed (listed in the output of "jupyter kernelspec list" and usable in jupyter by itself), install appropriate language module (e.g. "pip install sos-r"), restart jupyter notebook and try again.')
 
     def get_supported_languages(self):
         if self._supported_languages is not None:
