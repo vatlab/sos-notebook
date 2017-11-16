@@ -101,7 +101,7 @@ def get_result(iopub):
             # other output, ignored
             pass
     # text/plain can have fronzen dict, this is ok,
-    from numpy import array, matrix
+    from numpy import array, matrix, uint8
     # suppress pyflakes warning
     array
     matrix
