@@ -2507,8 +2507,9 @@ Available subkernels:\n{}'''.format(
                     if filename.lower().endswith('.html'):
                         if args.__to__ is None:
                             ftype = 'html'
-                        else:
+                        elif args.__to__ != 'html':
                             self.warn(f'%sossave to an .html file in {args.__to__} format')
+                            ftype = args.__to__
                     else:
                         ftype = 'sos'
                 else:
