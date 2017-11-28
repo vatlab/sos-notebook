@@ -2240,7 +2240,7 @@ table.task_table {
                 }
 
                 function tokenStringFactory(delimiter) {
-                    while ("rub".indexOf(delimiter.charAt(0).toLowerCase()) >= 0)
+                    while ("rubf".indexOf(delimiter.charAt(0).toLowerCase()) >= 0)
                         delimiter = delimiter.substr(1);
 
                     var singleline = delimiter.length === 1;
