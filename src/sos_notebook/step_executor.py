@@ -87,9 +87,9 @@ class Interactive_Step_Executor(Step_Executor):
             env.logger.debug('{} ``{}``: {}'.format('Checking' if self.run_mode == 'dryrun' else 'Executing',
                 self.step.step_name(), self.step.comment.strip()))
         elif stage == 'input':
-            if env.sos_dict['input'] is not None:
-                env.logger.debug('input:    ``{}``'.format(short_repr(env.sos_dict['input'])))
+            if env.sos_dict['step_input'] is not None:
+                env.logger.debug('input:    ``{}``'.format(short_repr(env.sos_dict['step_input'])))
         elif stage == 'output':
-            if env.sos_dict['output'] is not None:
-                env.logger.debug('output:   ``{}``'.format(short_repr(env.sos_dict['output'])))
+            if env.sos_dict['step_output'] is not None:
+                env.logger.debug('output:   ``{}``'.format(short_repr(env.sos_dict['step_output'])))
 
