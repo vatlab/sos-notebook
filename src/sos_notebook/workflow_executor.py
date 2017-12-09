@@ -84,7 +84,7 @@ class Interactive_Executor(Base_Executor):
         file_target('config.yml').remove('both')
 
         # remove some variables because they would interfere with step analysis
-        for key in ('_input', 'input'):
+        for key in ('_input', 'step_input'):
             if key in env.sos_dict:
                 env.sos_dict.pop(key)
 
@@ -324,8 +324,8 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     # clear __step_input__, __step_output__ etc because there is
     # no concept of passing input/outputs across cells.
     env.sos_dict.set('__step_output__', [])
-    for k in ['__step_input__', '__default_output__', 'input', 'output', \
-        'depends', '_input', '_output', '_depends']:
+    for k in ['__step_input__', '__default_output__', 'step_input', 'step_output', \
+        'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
 
     try:

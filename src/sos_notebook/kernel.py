@@ -1771,7 +1771,7 @@ Available subkernels:\n{}'''.format(
             #            })
             #
             if 'input' in env.sos_dict:
-                input_files = env.sos_dict['input']
+                input_files = env.sos_dict['step_input']
                 if input_files is None:
                     input_files = []
                 else:
@@ -1779,7 +1779,7 @@ Available subkernels:\n{}'''.format(
             else:
                 input_files = []
             if 'output' in env.sos_dict:
-                output_files = env.sos_dict['output']
+                output_files = env.sos_dict['step_output']
                 if output_files is None:
                     output_files = []
                 else:
