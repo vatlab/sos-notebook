@@ -672,8 +672,7 @@ define([
             } else if (msg_type === 'alert') {
                 alert(data);
             } else if (msg_type === 'clear-output') {
-                // if remove output of all cells
-                console.log(data)
+                // console.log(data)
                 var active = nb.get_selected_cells_indices();
                 var clear_task = function(cell, status) {
                     var status_element = cell.element[0].getElementsByClassName(status);
@@ -690,6 +689,8 @@ define([
                     var i;
                     var j;
                     for (i = 0; i < cells.length ; ++i) {
+                        if (cells[i].cell_type != "code")
+                            continue;
                         if (data[2]) {
                             for (j = 0; j < data[2].length; ++j) {
                                 clear_task(cells[i], data[2][j]);
@@ -703,6 +704,8 @@ define([
                     var i;
                     var j;
                     for (i = 0; i < active.length ; ++ i) {
+                        if (active[i].cell_type != "code")
+                            continue;
                         if (data[2]) {
                             for (j = 0; j < data[2].length; ++j) {
                                 clear_task(nb.get_cell(active[i]), data[2][j]);
@@ -711,7 +714,7 @@ define([
                             nb.get_cell(active[i]).clear_output();
                         }
                     }
-                } else {
+                } else if (nb.get_cell(data[0]).cell_type === "code") {
                     // clear current cell
                     if (data[2]) {
                         var j;
