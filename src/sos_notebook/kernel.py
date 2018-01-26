@@ -32,6 +32,7 @@ import argparse
 import pkg_resources
 import pydoc
 
+from io import StringIO
 from ipykernel.ipkernel import IPythonKernel
 from collections import Sized, defaultdict, OrderedDict
 
@@ -114,6 +115,7 @@ class SoS_Kernel(IPythonKernel):
 
     ALL_MAGICS = {
         'cd',
+        'capture',
         'clear',
         'debug',
         'dict',
@@ -142,6 +144,7 @@ class SoS_Kernel(IPythonKernel):
         'with',
     }
     MAGIC_CD = re.compile('^%cd(\s|$)')
+    MAGIC_CAPTURE = re.compile('^%capture(\s|$)')
     MAGIC_CLEAR = re.compile('^%clear(\s|$)')
     MAGIC_CONNECT_INFO = re.compile('^%connect_info(\s|$)')
     MAGIC_DEBUG = re.compile('^%debug(\s|$)')
@@ -171,6 +174,22 @@ class SoS_Kernel(IPythonKernel):
     MAGIC_TOC = re.compile('^%toc(\s|$)')
     MAGIC_USE = re.compile('^%use(\s|$)')
     MAGIC_WITH = re.compile('^%with(\s|$)')
+
+    def get_capture_parser(self):
+        parser = argparse.ArgumentParser(prog='%capture',
+                                         description='''Capture output (stdout) or output file from a subkernel
+                                         as variable in SoS''')
+        parser.add_argument('format', default='text', nargs='?', choices=('text', 'json', 'csv', 'tsv'),
+                            help='''How to interpret the captured text. By default the captured content will 
+                            be saved plain text. Otherwise SoS will try to parse the text as json, csv (comma
+                            separated text), tsv (tab separated text), and store dictionary or Pandas DataFrame
+                            to the variable.''')
+        parser.add_argument('-f', '--from',  dest='__from__',
+                            help='''File from which the content is captured, default to standard output''')
+        parser.add_argument('-t', '--to', dest='__to__', required=True,
+                            help='''Name of variable to which the captured content will be saved''')
+        parser.error = self._parse_error
+        return parser
 
     def get_clear_parser(self):
         parser = argparse.ArgumentParser(prog='%clear',
@@ -800,6 +819,7 @@ class SoS_Kernel(IPythonKernel):
         #
         self._workflow_mode = False
         self._render_result = False
+        self._capture_result = None
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
 
@@ -1191,9 +1211,12 @@ class SoS_Kernel(IPythonKernel):
                     # NOTE: we do not send status of sub kernel alone because
                     # these are generated automatically during the execution of
                     # "this cell" in SoS kernel
-                    if self._render_result and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
-                        format_dict, md_dict = self.format_obj(self.render_result(sub_msg['content']['text']))
-                        self.send_response(self.iopub_socket, 'display_data',
+                    if (self._capture_result is not None or self._render_result) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
+                        if self._capture_result is not None:
+                            self._capture_result += sub_msg['content']['text']
+                        else:
+                            format_dict, md_dict = self.format_obj(self.render_result(sub_msg['content']['text']))
+                            self.send_response(self.iopub_socket, 'display_data',
                                            {'source': 'SoS', 'metadata': md_dict,
                                             'data': format_dict
                                             })
@@ -2103,6 +2126,83 @@ Available subkernels:\n{}'''.format(
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
                 self._render_result = False
+        elif self.MAGIC_CAPTURE.match(code):
+            options, remaining_code = self.get_magic_and_code(code, False)
+            parser = self.get_capture_parser()
+            try:
+                args = parser.parse_args(shlex.split(options))
+            except SystemExit:
+                return
+            try:
+                if not args.__from__:
+                    self._capture_result = ''
+                return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            finally:
+                if not args.__to__.isidentifier():
+                    self.warn(f'Invalid variable name {args.__to__}')
+                    self._capture_result = None
+                    return
+                if self._debug_mode:
+                    self.warn(f'Captured {self._capture_result[:40]}')
+                if not args.format or args.format == 'text':
+                    if args.__from__:
+                        # get content from a file
+                        try:
+                            with open(args.__from__) as ifile:
+                                env.sos_dict.set(args.__to__, ifile.read())
+                        except Exception as e:
+                            self.warn(f'Failed to capture {args.format} from output file {args.__from__}: {e}')
+                    else:
+                        env.sos_dict.set(args.__to__, self._capture_result)
+                elif args.format == 'json':
+                    import json
+                    try:
+                        if args.__from__:
+                            # get content from a file
+                            try:
+                                with open(args.__from__) as ifile:
+                                    env.sos_dict.set(args.__to__, json.load(ifile))
+                            except Exception as e:
+                                self.warn(f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
+                        else:
+                            env.sos_dict.set(args.__to__, json.loads(self._capture_result))
+                    except Exception as e:
+                        self.warn(f'Failed to capture output in JSON format, text returned: {e}')
+                        env.sos_dict.set(args.__to__, self._capture_result)
+                elif args.format == 'csv':
+                    import pandas
+                    try:
+                        if args.__from__:
+                            # get content from a file
+                            try:
+                                with open(args.__from__) as ifile:
+                                    env.sos_dict.set(args.__to__, pandas.read_csv(ifile))
+                            except Exception as e:
+                                self.warn(f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
+                        else:
+                            with StringIO(self._capture_result) as ifile:
+                                env.sos_dict.set(args.__to__, pandas.read_csv(ifile))
+                    except Exception as e:
+                        self.warn(f'Failed to capture output in {args.format} format, text returned: {e}')
+                        env.sos_dict.set(args.__to__, self._capture_result)
+                elif args.format == 'tsv':
+                    import pandas
+                    try:
+                        if args.__from__:
+                            # get content from a file
+                            try:
+                                with open(args.__from__) as ifile:
+                                    env.sos_dict.set(args.__to__, pandas.read_csv(ifile, sep='\t'))
+                            except Exception as e:
+                                self.warn(
+                                    f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
+                        else:
+                            with StringIO(self._capture_result) as ifile:
+                                env.sos_dict.set(args.__to__, pandas.read_csv(ifile, sep='\t'))
+                    except Exception as e:
+                        self.warn(f'Failed to capture output in {args.format} format, text returned: {e}')
+                        env.sos_dict.set(args.__to__, self._capture_result)
+            self._capture_result = None
         elif self.MAGIC_SESSIONINFO.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_sessioninfo_parser()
