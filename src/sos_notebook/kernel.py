@@ -76,6 +76,8 @@ class FlushableStringIO:
                                               f'<div class="sos_hint">{content[10:].strip()}</div>').data}
                                       })
         else:
+            if self.name == 'stdout' and self.kernel._capture_result is not None:
+                self.kernel._capture_result += content
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
                                       {'name': self.name, 'text': content})
 
