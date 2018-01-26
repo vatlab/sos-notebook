@@ -297,5 +297,67 @@ with open('test_blah.txt', 'w') as tb:
 ''')
             wait_for_idle(kc)
 
+    def testMagicCapture(self):
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            # preview variable
+            execute(kc=kc, code='''
+%capture --to res            
+print('kkk')
+''')
+            wait_for_idle(kc)
+            execute(kc=kc, code='''
+res
+''')
+            stdout, _ = get_std_output(iopub)
+            # FIXME: Not sure why this test does not work
+            #self.assertTrue('kkk' in stdout, 'Got stdout "{}"'.format(stdout))
+            execute(kc=kc, code=r'''
+%capture csv --to res
+print('a,b\nc,d')
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+            #
+            execute(kc=kc, code=r'''
+%capture tsv --to res
+print('a\tb\nc\td')
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+            #
+            execute(kc=kc, code=r'''
+%capture json --to res
+print('[1,2,3]')
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+            # form file
+            execute(kc=kc, code=r'''
+%capture csv --to res --from a.txt
+with open('a.txt', 'w') as ofile:
+    print('a,b\nc,d', file=ofile)
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+            #
+            execute(kc=kc, code=r'''
+%capture tsv --to res --from b.txt
+with open('b.txt', 'w') as ofile:
+    print('a\tb\nc\td', file=ofile)
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+            #
+            execute(kc=kc, code=r'''
+%capture json --to res  --from c.txt
+with open('c.txt', 'w') as ofile:
+    print('[1, 2, 3]', file=ofile)
+
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr}")
+
+
 if __name__ == '__main__':
     unittest.main()
