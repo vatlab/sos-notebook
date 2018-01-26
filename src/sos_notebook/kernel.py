@@ -55,10 +55,12 @@ from .inspector import SoS_Inspector
 from .workflow_executor import runfile
 from .step_executor import PendingTasks
 
+
 class FlushableStringIO:
     '''This is a string buffer for output, but it will only
     keep the first 200 lines and the last 10 lines.
     '''
+
     def __init__(self, kernel, name, *args, **kwargs):
         self.kernel = kernel
         self.name = name
@@ -66,19 +68,22 @@ class FlushableStringIO:
     def write(self, content):
         if content.startswith('!sos_hint:'):
             self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
-                {
-                        'source': 'SoS',
-                        'metadata': {},
-                        'data': { 'text/html': HTML(f'<div class="sos_hint">{content[10:].strip()}</div>').data}
-                })
+                                      {
+                                          'source': 'SoS',
+                                          'metadata': {},
+                                          'data': {'text/html': HTML(
+                                              f'<div class="sos_hint">{content[10:].strip()}</div>').data}
+                                      })
         else:
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
-                {'name': self.name, 'text': content})
+                                      {'name': self.name, 'text': content})
 
     def flush(self):
         pass
 
+
 __all__ = ['SoS_Kernel']
+
 
 def clipboard_get():
     """ Get text from the clipboard.
@@ -167,149 +172,28 @@ class SoS_Kernel(IPythonKernel):
     MAGIC_USE = re.compile('^%use(\s|$)')
     MAGIC_WITH = re.compile('^%with(\s|$)')
 
-    def get_use_parser(self):
-        parser = argparse.ArgumentParser(prog='%use',
-            description='''Switch to a specified subkernel.''')
-        parser.add_argument('name', nargs='?', default='',
-            help='''Displayed name of kernel to start (if no kernel with name is
-            specified) or switch to (if a kernel with this name is already started).
-            The name is usually a kernel name (e.g. %%use ir) or a language name
-            (e.g. %%use R) in which case the language name will be used. One or
-            more parameters --language or --kernel will need to be specified
-            if a new name is used to start a separate instance of a kernel.''')
-        parser.add_argument('-k', '--kernel',
-            help='''kernel name as displayed in the output of jupyter kernelspec
-            list. Default to the default kernel of selected language (e.g. ir for
-            language R.''')
-        parser.add_argument('-l', '--language',
-            help='''Language extension that enables magics such as %%get and %%put
-            for the kernel, which should be in the name of a registered language
-            (e.g. R), or a specific language module in the format of
-            package.module:class. SoS maitains a list of languages and kernels
-            so this option is only needed for starting a new instance of a kernel.
-            ''')
-        parser.add_argument('-c', '--color',
-            help='''Background color of new or existing kernel, which overrides
-            the default color of the language. A special value "default" can be
-            used to reset color to default.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-            help='''Restart the kernel if it is running.''')
-        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
-            help='Input variables (variables to get from SoS kernel)')
-        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
-            help='''Output variables (variables to put back to SoS kernel
-            before switching back to the SoS kernel''')
+    def get_clear_parser(self):
+        parser = argparse.ArgumentParser(prog='%clear',
+                                         description='''Clear the output of the current cell, or the current
+            active cell if executed in the sidepanel.''')
+        parser.add_argument('-a', '--all', action='store_true',
+                            help='''Clear all output of the current notebook.''')
+        parser.add_argument('-s', '--status', nargs='+',
+                            help='''Clear tasks that match specifie status (e.g. completed).''')
         parser.error = self._parse_error
         return parser
 
-    def get_with_parser(self):
-        parser = argparse.ArgumentParser(prog='%with',
-            description='''Use specified the subkernel to evaluate current
-            cell''')
-        parser.add_argument('name', nargs='?', default='',
-            help='''Displayed name of kernel to start (if no kernel with name is
-            specified) or switch to (if a kernel with this name is already started).
-            The name is usually a kernel name (e.g. %use ir) or a language name
-            (e.g. %use R) in which case the language name will be used. One or
-            more parameters --language or --kernel will need to be specified
-            if a new name is used to start a separate instance of a kernel.''')
-        parser.add_argument('-k', '--kernel',
-            help='''kernel name as displayed in the output of jupyter kernelspec
-            list. Default to the default kernel of selected language (e.g. ir for
-            language R.''')
-        parser.add_argument('-l', '--language',
-            help='''Language extension that enables magics such as %get and %put
-            for the kernel, which should be in the name of a registered language
-            (e.g. R), or a specific language module in the format of
-            package.module:class. SoS maitains a list of languages and kernels
-            so this option is only needed for starting a new instance of a kernel.
-            ''')
-        parser.add_argument('-c', '--color',
-            help='''Background color of existing or new kernel, which overrides
-            the default color of the language. A special value "default" can be
-            used to reset color to default.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-            help='''Restart the kernel if it is running.''')
-        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
-            help='Input variables (variables to get from SoS kernel)')
-        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
-            help='''Output variables (variables to put back to SoS kernel
-            before switching back to the SoS kernel''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_frontend_parser(self):
-        parser = argparse.ArgumentParser(prog='%frontend',
-            description='''Use specified the subkernel to evaluate current
-            cell. soft with tells the start kernel of the cell. If no other
-            switch happens the kernel will switch back. However, a %use inside
-            the cell will still switch the global kernel. In contrast, a hard
-            %with magic will absorb the effect of %use.''')
-        parser.add_argument('--list-kernel', action='store_true',
-            help='List kernels')
-        parser.add_argument('--default-kernel',
-            help='Default global kernel')
-        parser.add_argument('--cell-kernel',
-            help='Kernel to switch to.')
-        parser.add_argument('--use-panel', action='store_true',
-            help='If panel is open')
-        # pass cell index from notebook so that we know which cell fired
-        # the command. Use to set metadata of cell through frontend message
-        parser.add_argument('--resume', action='store_true',
-            help='''If the cell is automatically reresumed by frontend, in which
-            case -s force should be handled differently.''')
-        parser.add_argument('--cell', dest='cell_idx', type=int,
-            help='Index of cell')
-        parser.add_argument('--workflow', const='', nargs='?',
-            help='Workflow defined in the notebook')
-        parser.add_argument('--filename',
-            help='filename of the current notebook')
-        parser.error = self._parse_error
-        return parser
-
-    def get_preview_parser(self):
-        parser = argparse.ArgumentParser(prog='%preview',
-            description='''Preview files, sos variables, or expressions in the
-                side panel, or notebook if side panel is not opened, unless
-                options --panel or --notebook is specified.''')
-        parser.add_argument('items', nargs='*',
-            help='''Filename, variable name, or expression. Wildcard characters
-                such as '*' and '?' are allowed for filenames.''')
-        parser.add_argument('-k', '--kernel',
-            help='''kernel in which variables will be previewed. By default
-            the variable will be previewed in the current kernel of the cell.''')
-        parser.add_argument('-w', '--workflow', action='store_true',
-            help='''Preview notebook workflow''')
-        parser.add_argument('-o', '--keep-output', action='store_true',
-            help='''Do not clear the output of the side panel.''')
-        # this option is currently hidden
-        parser.add_argument('-s', '--style', choices=['table', 'scatterplot', 'png'],
-            help='''Option for preview file or variable, which by default is "table"
-            for Pandas DataFrame. The %%preview magic also accepts arbitrary additional
-            keyword arguments, which would be interpreted by individual style. Passing
-            '-h' with '--style' would display the usage information of particular
-            style.''')
-        parser.add_argument('-r', '--host', dest='host', metavar='HOST', nargs='?', const='',
-            help='''Preview files on specified remote host, which should
-            be defined under key host of sos configuration files (preferrably
-            in ~/.sos/hosts.yml). If this option is specified without
-            value, SoS will list all configured queues and stop.''')
-        parser.add_argument('--off', action='store_true',
-            help='''Turn off file preview''')
-        loc = parser.add_mutually_exclusive_group()
-        loc.add_argument('-p', '--panel', action='store_true',
-            help='''Preview in side panel even if the panel is currently closed''')
-        loc.add_argument('-n', '--notebook', action='store_true',
-            help='''Preview in the main notebook.''')
-        parser.add_argument('-c', '--config', help='''A configuration file with host
-            definitions, in case the definitions are not defined in global or local
-            sos config.yml files.''')
+    def get_debug_parser(self):
+        parser = argparse.ArgumentParser(prog='%debug',
+                                         description='''Turn on or off debug information''')
+        parser.add_argument('status', choices=['on', 'off'],
+                            help='''Turn on or off debugging''')
         parser.error = self._parse_error
         return parser
 
     def get_expand_parser(self):
         parser = argparse.ArgumentParser(prog='%expand',
-            description='''Expand the script in the current cell with default ({}) or
+                                         description='''Expand the script in the current cell with default ({}) or
                 specified sigil.''')
         parser.add_argument('sigil', nargs='?', help='''Sigil to be used to interpolated the
             texts. It can be quoted, or be specified as two options.''')
@@ -318,173 +202,251 @@ class SoS_Kernel(IPythonKernel):
         parser.error = self._parse_error
         return parser
 
-    def get_set_parser(self):
-        parser = argparse.ArgumentParser(prog='%set',
-            description='''Set persistent command line options for SoS runs.''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_shutdown_parser(self):
-        parser = argparse.ArgumentParser(prog='%shutdown',
-            description='''Shutdown or restart specified subkernel''')
-        parser.add_argument('kernel', nargs='?',
-            help='''Name of the kernel to be restarted, default to the
-            current running kernel.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-            help='''Restart the kernel''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_run_parser(self):
-        parser = argparse.ArgumentParser(prog='%run',
-            description='''Execute the current cell with specified command line
-            arguments. Arguments set by magic %set will be appended at the
-            end of command line''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_sosrun_parser(self):
-        parser = argparse.ArgumentParser(prog='%sosrun',
-            description='''Execute the entire notebook with steps consisting of SoS
-            cells (cells with SoS kernel) with section header, with specified command
-            line arguments. Arguments set by magic %set will be appended at the
-            end of command line''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_save_parser(self):
-        parser = argparse.ArgumentParser(prog='%save',
-            description='''Save the jupyter notebook as workflow (consisting of all sos
-            steps defined in cells starting with section header) or a HTML report to
-            specified file.''')
-        parser.add_argument('filename',
-            help='''Filename of saved report or script.''')
-        parser.add_argument('-f', '--force', action='store_true',
-            help='''If destination file already exists, overwrite it.''')
-        parser.add_argument('-a', '--append', action='store_true',
-            help='''If destination file already exists, append to it.''')
-        parser.add_argument('-x', '--set-executable', dest = "setx", action='store_true',
-            help='''Set `executable` permission to saved script.''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_sossave_parser(self):
-        parser = argparse.ArgumentParser(prog='%sossave',
-            description='''Save the jupyter notebook as workflow (consisting of all sos
-            steps defined in cells starting with section header) or a HTML report to
-            specified file.''')
-        parser.add_argument('filename', nargs='?',
-            help='''Filename of saved report or script. Default to notebookname with file
-            extension determined by option --to.''')
-        parser.add_argument('-t', '--to', dest='__to__', choices=['sos', 'html'],
-            help='''Destination format, default to sos.''')
-        parser.add_argument('-c', '--commit', action='store_true',
-            help='''Commit the saved file to git directory using command
-            git commit FILE''')
-        parser.add_argument('-a', '--all', action='store_true',
-            help='''The --all option for sos convert script.ipynb script.sos, which
-            saves all cells and their metadata to a .sos file, that contains all input
-            information of the notebook but might not be executable in batch mode.''')
-        parser.add_argument('-m', '--message',
-            help='''Message for git commit. Default to "save FILENAME"''')
-        parser.add_argument('-p', '--push', action='store_true',
-            help='''Push the commit with command "git push"''')
-        parser.add_argument('-f', '--force', action='store_true',
-            help='''If destination file already exists, overwrite it.''')
-        parser.add_argument('-x', '--set-executable', dest = "setx", action='store_true',
-            help='''Set `executable` permission to saved script.''')
-        parser.add_argument('--template', default='default-sos-template',
-            help='''Template to generate HTML output. The default template is a
-            template defined by configuration key default-sos-template, or
-            sos-report if such a key does not exist.''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_rerun_parser(self):
-        parser = argparse.ArgumentParser(prog='%rerun',
-            description='''Re-execute the last executed code, most likely with
-            different command line options''')
+    def get_frontend_parser(self):
+        parser = argparse.ArgumentParser(prog='%frontend',
+                                         description='''Use specified the subkernel to evaluate current
+            cell. soft with tells the start kernel of the cell. If no other
+            switch happens the kernel will switch back. However, a %use inside
+            the cell will still switch the global kernel. In contrast, a hard
+            %with magic will absorb the effect of %use.''')
+        parser.add_argument('--list-kernel', action='store_true',
+                            help='List kernels')
+        parser.add_argument('--default-kernel',
+                            help='Default global kernel')
+        parser.add_argument('--cell-kernel',
+                            help='Kernel to switch to.')
+        parser.add_argument('--use-panel', action='store_true',
+                            help='If panel is open')
+        # pass cell index from notebook so that we know which cell fired
+        # the command. Use to set metadata of cell through frontend message
+        parser.add_argument('--resume', action='store_true',
+                            help='''If the cell is automatically reresumed by frontend, in which
+            case -s force should be handled differently.''')
+        parser.add_argument('--cell', dest='cell_idx', type=int,
+                            help='Index of cell')
+        parser.add_argument('--workflow', const='', nargs='?',
+                            help='Workflow defined in the notebook')
+        parser.add_argument('--filename',
+                            help='filename of the current notebook')
         parser.error = self._parse_error
         return parser
 
     def get_get_parser(self):
         parser = argparse.ArgumentParser(prog='%get',
-            description='''Get specified variables from another kernel, which is
+                                         description='''Get specified variables from another kernel, which is
                 by default the SoS kernel.''')
         parser.add_argument('--from', dest='__from__',
-            help='''Name of kernel from which the variables will be obtained.
+                            help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
         parser.add_argument('vars', nargs='*',
-            help='''Names of SoS variables''')
+                            help='''Names of SoS variables''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_preview_parser(self):
+        parser = argparse.ArgumentParser(prog='%preview',
+                                         description='''Preview files, sos variables, or expressions in the
+                side panel, or notebook if side panel is not opened, unless
+                options --panel or --notebook is specified.''')
+        parser.add_argument('items', nargs='*',
+                            help='''Filename, variable name, or expression. Wildcard characters
+                such as '*' and '?' are allowed for filenames.''')
+        parser.add_argument('-k', '--kernel',
+                            help='''kernel in which variables will be previewed. By default
+            the variable will be previewed in the current kernel of the cell.''')
+        parser.add_argument('-w', '--workflow', action='store_true',
+                            help='''Preview notebook workflow''')
+        parser.add_argument('-o', '--keep-output', action='store_true',
+                            help='''Do not clear the output of the side panel.''')
+        # this option is currently hidden
+        parser.add_argument('-s', '--style', choices=['table', 'scatterplot', 'png'],
+                            help='''Option for preview file or variable, which by default is "table"
+            for Pandas DataFrame. The %%preview magic also accepts arbitrary additional
+            keyword arguments, which would be interpreted by individual style. Passing
+            '-h' with '--style' would display the usage information of particular
+            style.''')
+        parser.add_argument('-r', '--host', dest='host', metavar='HOST', nargs='?', const='',
+                            help='''Preview files on specified remote host, which should
+            be defined under key host of sos configuration files (preferrably
+            in ~/.sos/hosts.yml). If this option is specified without
+            value, SoS will list all configured queues and stop.''')
+        parser.add_argument('--off', action='store_true',
+                            help='''Turn off file preview''')
+        loc = parser.add_mutually_exclusive_group()
+        loc.add_argument('-p', '--panel', action='store_true',
+                         help='''Preview in side panel even if the panel is currently closed''')
+        loc.add_argument('-n', '--notebook', action='store_true',
+                         help='''Preview in the main notebook.''')
+        parser.add_argument('-c', '--config', help='''A configuration file with host
+            definitions, in case the definitions are not defined in global or local
+            sos config.yml files.''')
         parser.error = self._parse_error
         return parser
 
     def get_pull_parser(self):
         parser = argparse.ArgumentParser('pull',
-            description='''Pull files or directories from remote host to local host''')
+                                         description='''Pull files or directories from remote host to local host''')
         parser.add_argument('items', nargs='+', help='''Files or directories to be
             retrieved from remote host. The files should be relative to local file
             system. The files to retrieve are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
         parser.add_argument('-f', '--from', dest='host', nargs='?', const='',
-            help='''Remote host to which the files will be sent. SoS will list all
+                            help='''Remote host to which the files will be sent. SoS will list all
             configured queues and stop''')
         parser.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
 
     def get_push_parser(self):
         parser = argparse.ArgumentParser('push',
-            description='''Push local files or directory to a remote host''')
+                                         description='''Push local files or directory to a remote host''')
         parser.add_argument('items', nargs='+', help='''Files or directories to be sent
             to remote host. The location of remote files are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
         parser.add_argument('-t', '--to', dest='host', nargs='?', const='',
-            help='''Remote host to which the files will be sent. SoS will list all
+                            help='''Remote host to which the files will be sent. SoS will list all
             configured queues if no such key is defined''')
         parser.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
 
     def get_put_parser(self):
         parser = argparse.ArgumentParser(prog='%put',
-            description='''Put specified variables in the subkernel to another
+                                         description='''Put specified variables in the subkernel to another
             kernel, which is by default the SoS kernel.''')
         parser.add_argument('--to', dest='__to__',
-            help='''Name of kernel from which the variables will be obtained.
+                            help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
         parser.add_argument('vars', nargs='*',
-            help='''Names of SoS variables''')
+                            help='''Names of SoS variables''')
         parser.error = self._parse_error
         return parser
 
-    def get_debug_parser(self):
-        parser = argparse.ArgumentParser(prog='%debug',
-            description='''Turn on or off debug information''')
-        parser.add_argument('status', choices=['on', 'off'],
-            help='''Turn on or off debugging''')
+    def get_render_parser(self):
+        parser = argparse.ArgumentParser(prog='%render',
+                                         description='''Treat the output of a SoS cell as another format, default to markdown.''')
+        parser.add_argument('format', default='Markdown', nargs='?',
+                            help='''Format to render output of cell, default to Markdown, but can be any
+            format that is supported by the IPython.display module such as HTML, Math, JSON,
+            JavaScript and SVG.''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_rerun_parser(self):
+        parser = argparse.ArgumentParser(prog='%rerun',
+                                         description='''Re-execute the last executed code, most likely with
+            different command line options''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_run_parser(self):
+        parser = argparse.ArgumentParser(prog='%run',
+                                         description='''Execute the current cell with specified command line
+            arguments. Arguments set by magic %set will be appended at the
+            end of command line''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_save_parser(self):
+        parser = argparse.ArgumentParser(prog='%save',
+                                         description='''Save the jupyter notebook as workflow (consisting of all sos
+            steps defined in cells starting with section header) or a HTML report to
+            specified file.''')
+        parser.add_argument('filename',
+                            help='''Filename of saved report or script.''')
+        parser.add_argument('-f', '--force', action='store_true',
+                            help='''If destination file already exists, overwrite it.''')
+        parser.add_argument('-a', '--append', action='store_true',
+                            help='''If destination file already exists, append to it.''')
+        parser.add_argument('-x', '--set-executable', dest="setx", action='store_true',
+                            help='''Set `executable` permission to saved script.''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_set_parser(self):
+        parser = argparse.ArgumentParser(prog='%set',
+                                         description='''Set persistent command line options for SoS runs.''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_sessioninfo_parser(self):
+        parser = argparse.ArgumentParser(prog='%sessioninfo',
+                                         description='''List the session info of all subkernels, and information
+            stored in variable sessioninfo''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_shutdown_parser(self):
+        parser = argparse.ArgumentParser(prog='%shutdown',
+                                         description='''Shutdown or restart specified subkernel''')
+        parser.add_argument('kernel', nargs='?',
+                            help='''Name of the kernel to be restarted, default to the
+            current running kernel.''')
+        parser.add_argument('-r', '--restart', action='store_true',
+                            help='''Restart the kernel''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_sosrun_parser(self):
+        parser = argparse.ArgumentParser(prog='%sosrun',
+                                         description='''Execute the entire notebook with steps consisting of SoS
+            cells (cells with SoS kernel) with section header, with specified command
+            line arguments. Arguments set by magic %set will be appended at the
+            end of command line''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_sossave_parser(self):
+        parser = argparse.ArgumentParser(prog='%sossave',
+                                         description='''Save the jupyter notebook as workflow (consisting of all sos
+            steps defined in cells starting with section header) or a HTML report to
+            specified file.''')
+        parser.add_argument('filename', nargs='?',
+                            help='''Filename of saved report or script. Default to notebookname with file
+            extension determined by option --to.''')
+        parser.add_argument('-t', '--to', dest='__to__', choices=['sos', 'html'],
+                            help='''Destination format, default to sos.''')
+        parser.add_argument('-c', '--commit', action='store_true',
+                            help='''Commit the saved file to git directory using command
+            git commit FILE''')
+        parser.add_argument('-a', '--all', action='store_true',
+                            help='''The --all option for sos convert script.ipynb script.sos, which
+            saves all cells and their metadata to a .sos file, that contains all input
+            information of the notebook but might not be executable in batch mode.''')
+        parser.add_argument('-m', '--message',
+                            help='''Message for git commit. Default to "save FILENAME"''')
+        parser.add_argument('-p', '--push', action='store_true',
+                            help='''Push the commit with command "git push"''')
+        parser.add_argument('-f', '--force', action='store_true',
+                            help='''If destination file already exists, overwrite it.''')
+        parser.add_argument('-x', '--set-executable', dest="setx", action='store_true',
+                            help='''Set `executable` permission to saved script.''')
+        parser.add_argument('--template', default='default-sos-template',
+                            help='''Template to generate HTML output. The default template is a
+            template defined by configuration key default-sos-template, or
+            sos-report if such a key does not exist.''')
         parser.error = self._parse_error
         return parser
 
     def get_taskinfo_parser(self):
         parser = argparse.ArgumentParser(prog='%taskinfo',
-            description='''Get information on specified task. By default
+                                         description='''Get information on specified task. By default
             sos would query against all running task queues but it would
             start a task queue and query status if option -q is specified.
             ''')
         parser.add_argument('task', help='ID of task')
         parser.add_argument('-q', '--queue',
-            help='''Task queue on which the task is executed.''')
+                            help='''Task queue on which the task is executed.''')
         parser.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
@@ -493,12 +455,12 @@ class SoS_Kernel(IPythonKernel):
 
     def get_tasks_parser(self):
         parser = argparse.ArgumentParser(prog='%tasks',
-            description='''Show a list of tasks from specified queue''')
+                                         description='''Show a list of tasks from specified queue''')
         parser.add_argument('tasks', nargs='*', help='ID of tasks')
         parser.add_argument('-s', '--status', nargs='*',
-            help='''Display tasks of specified status. Default to all.''')
+                            help='''Display tasks of specified status. Default to all.''')
         parser.add_argument('-q', '--queue',
-            help='''Task queue on which the tasks are retrived.''')
+                            help='''Task queue on which the tasks are retrived.''')
         parser.add_argument('--age', help='''Limit to tasks that is created more than
             (default) or within specified age. Value of this parameter can be in units
             s (second), m (minute), h (hour), or d (day, default), with optional
@@ -511,35 +473,78 @@ class SoS_Kernel(IPythonKernel):
 
     def get_toc_parser(self):
         parser = argparse.ArgumentParser(prog='%toc',
-            description='''Display toc in the side panel''')
+                                         description='''Display toc in the side panel''')
         parser.error = self._parse_error
         return parser
 
-    def get_render_parser(self):
-        parser = argparse.ArgumentParser(prog='%render',
-            description='''Treat the output of a SoS cell as another format, default to markdown.''')
-        parser.add_argument('format', default='Markdown', nargs='?',
-            help='''Format to render output of cell, default to Markdown, but can be any
-            format that is supported by the IPython.display module such as HTML, Math, JSON,
-            JavaScript and SVG.''')
+    def get_use_parser(self):
+        parser = argparse.ArgumentParser(prog='%use',
+                                         description='''Switch to a specified subkernel.''')
+        parser.add_argument('name', nargs='?', default='',
+                            help='''Displayed name of kernel to start (if no kernel with name is
+            specified) or switch to (if a kernel with this name is already started).
+            The name is usually a kernel name (e.g. %%use ir) or a language name
+            (e.g. %%use R) in which case the language name will be used. One or
+            more parameters --language or --kernel will need to be specified
+            if a new name is used to start a separate instance of a kernel.''')
+        parser.add_argument('-k', '--kernel',
+                            help='''kernel name as displayed in the output of jupyter kernelspec
+            list. Default to the default kernel of selected language (e.g. ir for
+            language R.''')
+        parser.add_argument('-l', '--language',
+                            help='''Language extension that enables magics such as %%get and %%put
+            for the kernel, which should be in the name of a registered language
+            (e.g. R), or a specific language module in the format of
+            package.module:class. SoS maitains a list of languages and kernels
+            so this option is only needed for starting a new instance of a kernel.
+            ''')
+        parser.add_argument('-c', '--color',
+                            help='''Background color of new or existing kernel, which overrides
+            the default color of the language. A special value "default" can be
+            used to reset color to default.''')
+        parser.add_argument('-r', '--restart', action='store_true',
+                            help='''Restart the kernel if it is running.''')
+        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
+                            help='Input variables (variables to get from SoS kernel)')
+        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
+                            help='''Output variables (variables to put back to SoS kernel
+            before switching back to the SoS kernel''')
         parser.error = self._parse_error
         return parser
 
-    def get_sessioninfo_parser(self):
-        parser = argparse.ArgumentParser(prog='%sessioninfo',
-            description='''List the session info of all subkernels, and information
-            stored in variable sessioninfo''')
-        parser.error = self._parse_error
-        return parser
-
-    def get_clear_parser(self):
-        parser = argparse.ArgumentParser(prog='%clear',
-            description='''Clear the output of the current cell, or the current
-            active cell if executed in the sidepanel.''')
-        parser.add_argument('-a', '--all', action='store_true',
-            help='''Clear all output of the current notebook.''')
-        parser.add_argument('-s', '--status', nargs='+',
-            help='''Clear tasks that match specifie status (e.g. completed).''')
+    def get_with_parser(self):
+        parser = argparse.ArgumentParser(prog='%with',
+                                         description='''Use specified the subkernel to evaluate current
+            cell''')
+        parser.add_argument('name', nargs='?', default='',
+                            help='''Displayed name of kernel to start (if no kernel with name is
+            specified) or switch to (if a kernel with this name is already started).
+            The name is usually a kernel name (e.g. %use ir) or a language name
+            (e.g. %use R) in which case the language name will be used. One or
+            more parameters --language or --kernel will need to be specified
+            if a new name is used to start a separate instance of a kernel.''')
+        parser.add_argument('-k', '--kernel',
+                            help='''kernel name as displayed in the output of jupyter kernelspec
+            list. Default to the default kernel of selected language (e.g. ir for
+            language R.''')
+        parser.add_argument('-l', '--language',
+                            help='''Language extension that enables magics such as %get and %put
+            for the kernel, which should be in the name of a registered language
+            (e.g. R), or a specific language module in the format of
+            package.module:class. SoS maitains a list of languages and kernels
+            so this option is only needed for starting a new instance of a kernel.
+            ''')
+        parser.add_argument('-c', '--color',
+                            help='''Background color of existing or new kernel, which overrides
+            the default color of the language. A special value "default" can be
+            used to reset color to default.''')
+        parser.add_argument('-r', '--restart', action='store_true',
+                            help='''Restart the kernel if it is running.''')
+        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
+                            help='Input variables (variables to get from SoS kernel)')
+        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
+                            help='''Output variables (variables to put back to SoS kernel
+            before switching back to the SoS kernel''')
         parser.error = self._parse_error
         return parser
 
@@ -552,7 +557,8 @@ class SoS_Kernel(IPythonKernel):
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx][2]:
-                        self._kernel_list[idx][3] = self._supported_languages[self._kernel_list[idx][2]].background_color
+                        self._kernel_list[idx][3] = self._supported_languages[
+                            self._kernel_list[idx][2]].background_color
                     else:
                         self._kernel_list[idx][3] = ''
                 else:
@@ -564,7 +570,7 @@ class SoS_Kernel(IPythonKernel):
         if name in self._failed_languages:
             raise self._failed_languages[name]
         # find from language name (subkernel name, which is usually language name)
-        for idx,x in enumerate(self.get_kernel_list()):
+        for idx, x in enumerate(self.get_kernel_list()):
             if x[0] == name:
                 if x[0] == 'SoS' or x[2] or language is None:
                     update_existing(idx)
@@ -574,7 +580,7 @@ class SoS_Kernel(IPythonKernel):
                         kernel = name
                     break
         # find from kernel name
-        for idx,x in enumerate(self._kernel_list):
+        for idx, x in enumerate(self._kernel_list):
             if x[1] == name:
                 # if exist language or no new language defined.
                 if x[2] or language is None:
@@ -584,6 +590,7 @@ class SoS_Kernel(IPythonKernel):
                     # otherwise, try to use the new language
                     kernel = name
                     break
+
         # now, no kernel is found, name has to be a new name and we need some definition
         # if kernel is defined
         def add_or_replace(kdef):
@@ -609,7 +616,8 @@ class SoS_Kernel(IPythonKernel):
                     else:
                         color = kdef[3]
                 new_def = add_or_replace([name, kdef[1], kdef[2], kdef[3] if color is None else color,
-                    getattr(self._supported_languages[kdef[2]], 'options', {}) if kdef[2] else {}])
+                                          getattr(self._supported_languages[kdef[2]], 'options', {}) if kdef[
+                                              2] else {}])
                 if notify_frontend:
                     self.send_frontend_msg('kernel-list', self.get_kernel_list())
                 return new_def
@@ -637,7 +645,7 @@ class SoS_Kernel(IPythonKernel):
                     if color == 'default':
                         color = plugin.background_color
                     new_def = add_or_replace([name, kdef[1], kernel, kdef[3] if color is None else color,
-                        getattr(plugin, 'options', {})])
+                                              getattr(plugin, 'options', {})])
                 else:
                     # if should be defined ...
                     if language not in self._supported_languages:
@@ -648,7 +656,7 @@ class SoS_Kernel(IPythonKernel):
                     if color == 'default':
                         color = self._supported_languages[name].background_color
                     new_def = add_or_replace([name, kdef[1], language, kdef[3] if color is None else color,
-                        getattr(self._supported_languages[name], 'options', {})])
+                                              getattr(self._supported_languages[name], 'options', {})])
                 if notify_frontend:
                     self.send_frontend_msg('kernel-list', self.get_kernel_list())
                 return new_def
@@ -666,21 +674,25 @@ class SoS_Kernel(IPythonKernel):
                     raise RuntimeError(f'Failed to load language {language}: {e}')
                 if name in plugin.supported_kernels:
                     # if name is defined in the module, only search kernels for this language
-                    avail_kernels = [x for x in plugin.supported_kernels[name] if x in [y[1] for y in self._kernel_list]]
+                    avail_kernels = [x for x in plugin.supported_kernels[name] if
+                                     x in [y[1] for y in self._kernel_list]]
                 else:
                     # otherwise we search all supported kernels
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if x in [y[1] for y in self._kernel_list]]
+                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
+                                     x in [y[1] for y in self._kernel_list]]
 
                 if not avail_kernels:
-                    raise ValueError('Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
-                        ', '.join(sum(plugin.supported_kernels.values(), [])), language))
+                    raise ValueError(
+                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
+                            ', '.join(sum(plugin.supported_kernels.values(), [])), language))
                 # use the first available kernel
                 if color == 'default':
                     color = plugin.background_color
                 # find the language that has the kernel
-                lan_name = list({x:y for x,y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
-                new_def = add_or_replace([name, avail_kernels[0], lan_name, plugin.background_color if color is None else color,
-                    getattr(plugin, 'options', {})])
+                lan_name = list({x: y for x, y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
+                new_def = add_or_replace(
+                    [name, avail_kernels[0], lan_name, plugin.background_color if color is None else color,
+                     getattr(plugin, 'options', {})])
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
                 if language not in self._supported_languages:
@@ -688,17 +700,22 @@ class SoS_Kernel(IPythonKernel):
                 #
                 plugin = self._supported_languages[language]
                 if language in plugin.supported_kernels:
-                    avail_kernels = [x for x in plugin.supported_kernels[language] if x in [y[1] for y in self._kernel_list]]
+                    avail_kernels = [x for x in plugin.supported_kernels[language] if
+                                     x in [y[1] for y in self._kernel_list]]
                 else:
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if x in [y[1] for y in self._kernel_list]]
+                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
+                                     x in [y[1] for y in self._kernel_list]]
                 if not avail_kernels:
-                    raise ValueError('Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
-                        ', '.join(sum(self._supported_languages[language].supported_kernels.values(), [])), language))
+                    raise ValueError(
+                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
+                            ', '.join(sum(self._supported_languages[language].supported_kernels.values(), [])),
+                            language))
 
                 new_def = add_or_replace([
                     name, avail_kernels[0], language,
-                        self._supported_languages[language].background_color if color is None or color == 'default' else color,
-                        getattr(self._supported_languages[language], 'options', {})])
+                    self._supported_languages[
+                        language].background_color if color is None or color == 'default' else color,
+                    getattr(self._supported_languages[language], 'options', {})])
 
             self.send_frontend_msg('kernel-list', self.get_kernel_list())
             return new_def
@@ -727,21 +744,21 @@ class SoS_Kernel(IPythonKernel):
                 self._failed_languages[name] = e
         return self._supported_languages
 
-    supported_languages = property(lambda self:self.get_supported_languages())
+    supported_languages = property(lambda self: self.get_supported_languages())
 
     def get_completer(self):
         if self._completer is None:
             self._completer = SoS_Completer(self)
         return self._completer
 
-    completer = property(lambda self:self.get_completer())
+    completer = property(lambda self: self.get_completer())
 
     def get_inspector(self):
         if self._inspector is None:
             self._inspector = SoS_Inspector(self)
         return self._inspector
 
-    inspector = property(lambda self:self.get_inspector())
+    inspector = property(lambda self: self.get_inspector())
 
     def __init__(self, **kwargs):
         super(SoS_Kernel, self).__init__(**kwargs)
@@ -759,7 +776,7 @@ class SoS_Kernel(IPythonKernel):
         # '#FFEEAABB' is the background color
         #
         self.kernels = {}
-        #self.shell = InteractiveShell.instance()
+        # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
         self.previewers = None
@@ -791,27 +808,26 @@ class SoS_Kernel(IPythonKernel):
         from sos.hosts import Host
         host = Host(task_queue)
         result = host._task_engine.query_tasks([task_id], verbosity=2, html=True)
-        #log_to_file(result)
+        # log_to_file(result)
         if side_panel is True:
             self.send_frontend_msg('display_data',
-                {'metadata': {},
-                 'data': {'text/plain': result,
-                 'text/html': HTML(result).data
-                 }})
+                                   {'metadata': {},
+                                    'data': {'text/plain': result,
+                                             'text/html': HTML(result).data
+                                             }})
         else:
             self.send_response(self.iopub_socket, 'display_data',
-                {'metadata': {},
-                 'data': {'text/plain': result,
-                 'text/html': HTML(result).data
-                 }})
+                               {'metadata': {},
+                                'data': {'text/plain': result,
+                                         'text/html': HTML(result).data
+                                         }})
         # now, there is a possibility that the status of the task is different from what
         # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
         # already get the status, we should update the task engine...
         #
         # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
-        status = result.split('>Status<', 1)[-1].split('</div',1)[0].split('>')[-1]
+        status = result.split('>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
         host._task_engine.update_task_status(task_id, status)
-
 
     def handle_tasks(self, tasks, queue='localhost', status=None, age=None):
         from sos.hosts import Host
@@ -839,8 +855,8 @@ class SoS_Kernel(IPythonKernel):
                 kinfo = self.find_kernel(kernel)
                 self.switch_kernel(kernel)
                 result[kernel] = [
-                        ('Kernel', kinfo[1]),
-                        ('Language', kinfo[2])
+                    ('Kernel', kinfo[1]),
+                    ('Language', kinfo[2])
                 ]
                 if kernel not in self.supported_languages:
                     continue
@@ -881,8 +897,8 @@ class SoS_Kernel(IPythonKernel):
                 res += '</tr>\n'
             res += '</table>\n'
         self.send_response(self.iopub_socket, 'display_data',
-            { 'source': 'SoS', 'metadata': {},
-              'data': {'text/html': HTML(res).data} })
+                           {'source': 'SoS', 'metadata': {},
+                            'data': {'text/html': HTML(res).data}})
 
     def sos_comm(self, comm, msg):
         # record frontend_comm to send messages
@@ -891,8 +907,8 @@ class SoS_Kernel(IPythonKernel):
         @comm.on_msg
         def handle_frontend_msg(msg):
             content = msg['content']['data']
-            #log_to_file(msg)
-            for k,v in content.items():
+            # log_to_file(msg)
+            for k, v in content.items():
                 if k == 'list-kernel':
                     self.send_frontend_msg('kernel-list', self.get_kernel_list(v))
                 elif k == 'kill-task':
@@ -923,7 +939,7 @@ class SoS_Kernel(IPythonKernel):
                             # incorrect ID...
                             continue
                         host_status[tqu].append(tid)
-                    #log_to_file(host_status)
+                    # log_to_file(host_status)
                     #
                     from sos.hosts import Host
                     for tqu, tids in host_status.items():
@@ -951,16 +967,16 @@ class SoS_Kernel(IPythonKernel):
                     self.warn(f'Unknown message {k}: {v}')
 
     status_class = {
-            'pending': 'fa-square-o',
-            'submitted': 'fa-spinner',
-            'running': 'fa-spinner fa-pulse fa-spin',
-            'result-ready': 'fa-files-o',
-            'completed': 'fa-check-square-o',
-            'failed': 'fa-times-circle-o',
-            'aborted': 'fa-frown-o',
-            'signature-mismatch': 'fa-question',
-            'unknown': 'fa-question',
-            }
+        'pending': 'fa-square-o',
+        'submitted': 'fa-spinner',
+        'running': 'fa-spinner fa-pulse fa-spin',
+        'result-ready': 'fa-files-o',
+        'completed': 'fa-check-square-o',
+        'failed': 'fa-times-circle-o',
+        'aborted': 'fa-frown-o',
+        'signature-mismatch': 'fa-question',
+        'unknown': 'fa-question',
+    }
 
     def notify_task_status(self, task_status):
         action_class = {
@@ -969,8 +985,8 @@ class SoS_Kernel(IPythonKernel):
             'running': 'fa-stop',
             'result-ready': 'fa-play',
             'completed': 'fa-play',
-            'failed':  'fa-play',
-            'aborted':  'fa-play',
+            'failed': 'fa-play',
+            'aborted': 'fa-play',
             'signature-mismatch': 'fa-play',
             'unknown': 'fa-question',
         }
@@ -981,8 +997,8 @@ class SoS_Kernel(IPythonKernel):
             'running': 'kill_task',
             'result-ready': 'resume_task',
             'completed': 'resume_task',
-            'failed':  'resume_task',
-            'aborted':  'resume_task',
+            'failed': 'resume_task',
+            'aborted': 'resume_task',
             'signature-mismatch': 'resume_task',
             'unknown': 'function(){}',
         }
@@ -990,11 +1006,11 @@ class SoS_Kernel(IPythonKernel):
         if task_status[0] == 'new-status':
             tqu, tid, tst, tdt = task_status[1:]
             self.send_response(self.iopub_socket, 'display_data',
-                {
-                    'source': 'SoS',
-                    'metadata': {},
-                    'data': { 'text/html':
-                        HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
+                               {
+                                   'source': 'SoS',
+                                   'metadata': {},
+                                   'data': {'text/html':
+                                                HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
                         <td style="border: 0px">
                         <i id="status_{tqu}_{tid}"
                             class="fa fa-2x fa-fw {self.status_class[tst]}"
@@ -1008,8 +1024,8 @@ class SoS_Kernel(IPythonKernel):
                         <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{PrettyRelativeTime(time.time() - tdt)}</time></pre></td>
                         </tr>
                         </table>''').data
-                        }
-                })
+                                            }
+                               })
             # keep tracks of my tasks to avoid updating status of
             # tasks that does not belong to the notebook
             self.my_tasks[(tqu, tid)] = time.time()
@@ -1020,21 +1036,23 @@ class SoS_Kernel(IPythonKernel):
         elif task_status[0] == 'change-status':
             tqu, tid, tst = task_status[1:]
             if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
-                    'failed', 'aborted', 'signature-mismatch'):
+                           'failed', 'aborted', 'signature-mismatch'):
                 tst = 'unknown'
-            self.send_frontend_msg('task-status', [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+            self.send_frontend_msg('task-status',
+                                   [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
             self.my_tasks[(tqu, tid)] = time.time()
         elif task_status[0] == 'pulse-status':
             tqu, tid, tst = task_status[1:]
             if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
-                    'failed', 'aborted', 'signature-mismatch'):
+                           'failed', 'aborted', 'signature-mismatch'):
                 tst = 'unknown'
             if (tqu, tid) in self.my_tasks:
                 if time.time() - self.my_tasks[(tqu, tid)] < 20:
                     # if it has been within the first 20 seconds of new or updated message
                     # can confirm to verify it has been successfully delivered. Otherwise
                     # ignore such message
-                    self.send_frontend_msg('task-status', [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+                    self.send_frontend_msg('task-status',
+                                           [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
         else:
             raise RuntimeError(f'Unrecognized status change message {task_status}')
 
@@ -1045,11 +1063,11 @@ class SoS_Kernel(IPythonKernel):
                 self.send_response(self.iopub_socket, msg_type, {} if msg is None else msg)
             elif msg_type == 'preview-input':
                 self.send_response(self.iopub_socket, 'display_data',
-                    {
-                        'source': 'SoS',
-                        'metadata': {},
-                        'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                    })
+                                   {
+                                       'source': 'SoS',
+                                       'metadata': {},
+                                       'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                                   })
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {'msg_type': msg_type})
         else:
@@ -1061,7 +1079,8 @@ class SoS_Kernel(IPythonKernel):
         SoS_exec('from sos.runtime import *', None)
         SoS_exec("run_mode = 'interactive'", None)
         self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG', \
-            'step_name', '__builtins__', 'input', 'output', 'depends'}
+                                                               'step_name', '__builtins__', 'input', 'output',
+                                                               'depends'}
 
     @contextlib.contextmanager
     def redirect_sos_io(self):
@@ -1085,7 +1104,7 @@ class SoS_Kernel(IPythonKernel):
         lines = code.split('\n')
         if lines[-1].startswith(' ') or lines[-1].startswith('\t'):
             # if it is a new line, complte
-            empty = [idx for idx,x in enumerate(lines[-1]) if x not in (' ', '\t')][0]
+            empty = [idx for idx, x in enumerate(lines[-1]) if x not in (' ', '\t')][0]
             return {'status': 'incomplete', 'indent': lines[-1][:empty]}
         #
         if SOS_SECTION_HEADER.match(lines[-1]):
@@ -1093,13 +1112,12 @@ class SoS_Kernel(IPythonKernel):
         #
         return {'status': 'incomplete', 'indent': ''}
 
-
     def do_inspect(self, code, cursor_pos, detail_level=0):
         line, offset = line_at_cursor(code, cursor_pos)
         name = token_at_cursor(code, cursor_pos)
         data = self.inspector.inspect(name, line, cursor_pos - offset)
 
-        reply_content = {'status' : 'ok'}
+        reply_content = {'status': 'ok'}
         reply_content['metadata'] = {}
         reply_content['found'] = True if data else False
         reply_content['data'] = data
@@ -1107,17 +1125,17 @@ class SoS_Kernel(IPythonKernel):
 
     def do_complete(self, code, cursor_pos):
         text, matches = self.completer.complete_text(code, cursor_pos)
-        return {'matches' : matches,
-                'cursor_end' : cursor_pos,
-                'cursor_start' : cursor_pos - len(text),
-                'metadata' : {},
-                'status' : 'ok'}
+        return {'matches': matches,
+                'cursor_end': cursor_pos,
+                'cursor_start': cursor_pos - len(text),
+                'metadata': {},
+                'status': 'ok'}
 
     def warn(self, message):
         message = str(message).rstrip() + '\n'
         if message.strip():
             self.send_response(self.iopub_socket, 'stream',
-                {'name': 'stderr', 'text': message})
+                               {'name': 'stderr', 'text': message})
 
     def get_magic_and_code(self, code, warn_remaining=False):
         if code.startswith('%') or code.startswith('!'):
@@ -1176,9 +1194,9 @@ class SoS_Kernel(IPythonKernel):
                     if self._render_result and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
                         format_dict, md_dict = self.format_obj(self.render_result(sub_msg['content']['text']))
                         self.send_response(self.iopub_socket, 'display_data',
-                            {'source': 'SoS', 'metadata': md_dict,
-                             'data': format_dict
-                            })
+                                           {'source': 'SoS', 'metadata': md_dict,
+                                            'data': format_dict
+                                            })
                     elif msg_type == 'error':
                         if on_error and not self._debug_mode:
                             self.warn(on_error)
@@ -1248,7 +1266,7 @@ Available subkernels:\n{}'''.format(
                 # start a new kernel
                 try:
                     self.kernels[kinfo[0]] = manager.start_new_kernel(
-                            startup_timeout=60, kernel_name=kinfo[1], cwd=os.getcwd())
+                        startup_timeout=60, kernel_name=kinfo[1], cwd=os.getcwd())
                     new_kernel = True
                 except Exception as e:
                     # try toget error message
@@ -1312,31 +1330,31 @@ Available subkernels:\n{}'''.format(
 
     def get_dict_parser(self):
         parser = argparse.ArgumentParser(prog='%dict',
-            description='Inspect or reset SoS dictionary')
+                                         description='Inspect or reset SoS dictionary')
         parser.add_argument('vars', nargs='*')
         parser.add_argument('-k', '--keys', action='store_true',
-            help='Return only keys')
+                            help='Return only keys')
         parser.add_argument('-r', '--reset', action='store_true',
-            help='Rest SoS dictionary (clear all user variables)')
+                            help='Rest SoS dictionary (clear all user variables)')
         parser.add_argument('-a', '--all', action='store_true',
-            help='Return all variales, including system functions and variables')
+                            help='Return all variales, including system functions and variables')
         parser.add_argument('-d', '--del', nargs='+', metavar='VAR', dest='__del__',
-            help='Remove specified variables from SoS dictionary')
+                            help='Remove specified variables from SoS dictionary')
         parser.error = self._parse_error
         return parser
 
     def get_sandbox_parser(self):
         parser = argparse.ArgumentParser(prog='%sandbox',
-            description='''Execute content of a cell in a temporary directory
+                                         description='''Execute content of a cell in a temporary directory
                 with fresh dictionary (by default).''')
         parser.add_argument('-d', '--dir',
-            help='''Execute workflow in specified directory. The directory
+                            help='''Execute workflow in specified directory. The directory
                 will be created if does not exist, and will not be removed
                 after the completion. ''')
         parser.add_argument('-k', '--keep-dict', action='store_true',
-            help='''Keep current sos dictionary.''')
+                            help='''Keep current sos dictionary.''')
         parser.add_argument('-e', '--expect-error', action='store_true',
-            help='''If set, expect error from the excution and report
+                            help='''If set, expect error from the excution and report
                 success if an error occurs.''')
         parser.error = self._parse_error
         return parser
@@ -1376,13 +1394,14 @@ Available subkernels:\n{}'''.format(
             if args.all:
                 self.send_result(env.sos_dict._dict)
             elif args.vars:
-                self.send_result({x:y for x,y in env.sos_dict._dict.items() if x in args.vars})
+                self.send_result({x: y for x, y in env.sos_dict._dict.items() if x in args.vars})
             else:
-                self.send_result({x:y for x,y in env.sos_dict._dict.items() if x not in self.original_keys and not x.startswith('__')})
+                self.send_result({x: y for x, y in env.sos_dict._dict.items() if
+                                  x not in self.original_keys and not x.startswith('__')})
 
     def handle_magic_set(self, options):
         if options.strip():
-            #self.send_response(self.iopub_socket, 'stream',
+            # self.send_response(self.iopub_socket, 'stream',
             #    {'name': 'stdout', 'text': 'sos options set to "{}"\n'.format(options)})
             if not options.strip().startswith('-'):
                 self.warn(f'Magic %set cannot set positional argument, {options} provided.\n')
@@ -1397,7 +1416,8 @@ Available subkernels:\n{}'''.format(
                 self.options = ''
             else:
                 self.send_response(self.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': 'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'})
+                                   {'name': 'stdout',
+                                    'text': 'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'})
 
     def handle_magic_get(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
@@ -1423,7 +1443,8 @@ Available subkernels:\n{}'''.format(
                 return
             else:
                 if explicit:
-                    self.warn(f'Magic %get failed because the language module for {self.kernel} is not properly installed. Please install it according to language specific instructions on the Running SoS section of the SoS homepage and restart Jupyter server.')
+                    self.warn(
+                        f'Magic %get failed because the language module for {self.kernel} is not properly installed. Please install it according to language specific instructions on the Running SoS section of the SoS homepage and restart Jupyter server.')
                 return
         elif self.kernel.lower() == 'sos':
             # if another kernel is specified and the current kernel is sos
@@ -1573,14 +1594,15 @@ Available subkernels:\n{}'''.format(
             received = host.receive_from_host(args.items)
             #
             msg = '{} item{} received from {}:<br>{}'.format(len(received),
-                ' is' if len(received) <= 1 else 's are', args.host,
-                '<br>'.join([f'{x} <= {received[x]}' for x in sorted(received.keys())]))
+                                                             ' is' if len(received) <= 1 else 's are', args.host,
+                                                             '<br>'.join([f'{x} <= {received[x]}' for x in
+                                                                          sorted(received.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
-                {
-                    'source': 'SoS',
-                    'metadata': {},
-                    'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                })
+                               {
+                                   'source': 'SoS',
+                                   'metadata': {},
+                                   'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                               })
         except Exception as e:
             self.warn(f'Failed to retrieve {", ".join(args.items)}: {e}')
 
@@ -1600,14 +1622,14 @@ Available subkernels:\n{}'''.format(
             sent = host.send_to_host(args.items)
             #
             msg = '{} item{} sent to {}:<br>{}'.format(len(sent),
-                ' is' if len(sent) <= 1 else 's are', args.host,
-                '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
+                                                       ' is' if len(sent) <= 1 else 's are', args.host,
+                                                       '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
-                {
-                    'source': 'SoS',
-                    'metadata': {},
-                    'data': { 'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                })
+                               {
+                                   'source': 'SoS',
+                                   'metadata': {},
+                                   'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                               })
         except Exception as e:
             self.warn(f'Failed to send {", ".join(args.items)}: {e}')
 
@@ -1617,12 +1639,13 @@ Available subkernels:\n{}'''.format(
             new_text = interpolate(text, local_dict=env.sos_dict._dict)
             if new_text != text and not quiet:
                 self.send_response(self.iopub_socket, 'display_data',
-                    {
-                        'source': 'SoS',
-                        'metadata': {},
-                        'data': {
-                            'text/html': HTML(f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data }
-                        })
+                                   {
+                                       'source': 'SoS',
+                                       'metadata': {},
+                                       'data': {
+                                           'text/html': HTML(
+                                               f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data}
+                                   })
             return new_text
         except Exception as e:
             self.warn(f'Failed to interpolate {short_repr(text)}: {e}\n')
@@ -1661,11 +1684,11 @@ Available subkernels:\n{}'''.format(
         if self._use_panel:
             self.send_frontend_msg('preview-kernel', self.kernel)
         try:
-            for item in (x for x,y in zip(items, handled) if not y):
+            for item in (x for x, y in zip(items, handled) if not y):
                 try:
                     # quoted
                     if (item.startswith('"') and item.endswith('"')) or \
-                        (item.startswith("'") and item.endswith("'")):
+                            (item.startswith("'") and item.endswith("'")):
                         try:
                             item = eval(item)
                         except Exception:
@@ -1677,21 +1700,23 @@ Available subkernels:\n{}'''.format(
                         else:
                             format_dict, md_dict = preview
                         self.send_frontend_msg('display_data',
-                            {'metadata': {},
-                            'data': {'text/plain': '>>> ' + item + ':\n',
-                                'text/html': HTML(f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
-                                }
-                            })
+                                               {'metadata': {},
+                                                'data': {'text/plain': '>>> ' + item + ':\n',
+                                                         'text/html': HTML(
+                                                             f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
+                                                         }
+                                                })
                         self.send_frontend_msg('display_data',
-                            {'execution_count': self._execution_count, 'data': format_dict,
-                            'metadata': md_dict})
+                                               {'execution_count': self._execution_count, 'data': format_dict,
+                                                'metadata': md_dict})
                     else:
                         self.send_frontend_msg('display_data',
-                            {'metadata': {},
-                            'data': {'text/plain': '>>> ' + item + ':\n',
-                                'text/html': HTML(f'<div class="sos_hint">> {item}:</div>').data
-                                }
-                            })
+                                               {'metadata': {},
+                                                'data': {'text/plain': '>>> ' + item + ':\n',
+                                                         'text/html': HTML(
+                                                             f'<div class="sos_hint">> {item}:</div>').data
+                                                         }
+                                                })
                         # evaluate
                         responses = self.get_response(item, ['stream', 'display_data', 'execution_result'])
                         for response in responses:
@@ -1711,7 +1736,7 @@ Available subkernels:\n{}'''.format(
         try:
             os.chdir(os.path.expanduser(to_dir))
             self.send_response(self.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': os.getcwd()})
+                               {'name': 'stdout', 'text': os.getcwd()})
         except Exception as e:
             self.warn(f'Failed to change dir to {os.path.expanduser(to_dir)}: {e}')
 
@@ -1722,7 +1747,8 @@ Available subkernels:\n{}'''.format(
         from sos.utils import pexpect_run
         try:
             with self.redirect_sos_io():
-                pexpect_run(cmd, shell=True, win_width=40 if isinstance(self.cell_idx, int) and self.cell_idx < 0 else 80)
+                pexpect_run(cmd, shell=True,
+                            win_width=40 if isinstance(self.cell_idx, int) and self.cell_idx < 0 else 80)
         except Exception as e:
             self.warn(e)
 
@@ -1741,7 +1767,7 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 sys.stderr.flush()
                 sys.stdout.flush()
-                #self.send_response(self.iopub_socket, 'display_data',
+                # self.send_response(self.iopub_socket, 'display_data',
                 #    {
                 #        'source': 'SoS',
                 #        'metadata': {},
@@ -1757,11 +1783,11 @@ Available subkernels:\n{}'''.format(
         #
         if not silent and (not hasattr(self, 'preview_output') or self.preview_output):
             # Send standard output
-            #if os.path.isfile('.sos/report.md'):
+            # if os.path.isfile('.sos/report.md'):
             #    with open('.sos/report.md') as sr:
             #        sos_report = sr.read()
-                #with open(self.report_file, 'a') as summary_report:
-                #    summary_report.write(sos_report + '\n\n')
+            # with open(self.report_file, 'a') as summary_report:
+            #    summary_report.write(sos_report + '\n\n')
             #    if sos_report.strip():
             #        self.send_response(self.iopub_socket, 'display_data',
             #            {
@@ -1794,26 +1820,32 @@ Available subkernels:\n{}'''.format(
                     # if in sand box, do not link output to their files because these
                     # files will be removed soon.
                     self.send_frontend_msg('display_data',
-                        {
-                            'source': 'SoS',
-                            'metadata': {},
-                            'data': { 'text/html':
-                                HTML('''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
-                                ', '.join(x for x in input_files),
-                                ', '.join(x for x in output_files))).data
-                            }
-                        })
+                                           {
+                                               'source': 'SoS',
+                                               'metadata': {},
+                                               'data': {'text/html':
+                                                            HTML(
+                                                                '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
+                                                                    ', '.join(x for x in input_files),
+                                                                    ', '.join(x for x in output_files))).data
+                                                        }
+                                           })
                 else:
                     self.send_frontend_msg('display_data',
-                        {
-                            'source': 'SoS',
-                            'metadata': {},
-                            'data': { 'text/html':
-                                HTML('''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
-                                ', '.join(f'<a target="_blank" href="{x}">{x}</a>' for x in input_files),
-                                ', '.join(f'<a target="_blank" href="{x}">{x}</a>' for x in output_files))).data
-                            }
-                        })
+                                           {
+                                               'source': 'SoS',
+                                               'metadata': {},
+                                               'data': {'text/html':
+                                                            HTML(
+                                                                '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
+                                                                    ', '.join(
+                                                                        f'<a target="_blank" href="{x}">{x}</a>' for x
+                                                                        in input_files),
+                                                                    ', '.join(
+                                                                        f'<a target="_blank" href="{x}">{x}</a>' for x
+                                                                        in output_files))).data
+                                                        }
+                                           })
                 for filename in output_files:
                     self.preview_file(filename, style=None)
 
@@ -1855,13 +1887,13 @@ Available subkernels:\n{}'''.format(
             self.warn('\n> ' + filename + ' does not exist')
             return
         self.send_frontend_msg('display_data',
-             {'metadata': {},
-             'data': {
-                 'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
-                 'text/html': HTML(
-                     f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
-                }
-             })
+                               {'metadata': {},
+                                'data': {
+                                    'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
+                                    'text/html': HTML(
+                                        f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
+                                }
+                                })
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
@@ -1889,8 +1921,8 @@ Available subkernels:\n{}'''.format(
                         break
                 except Exception as e:
                     self.send_frontend_msg('stream', {
-                                'name': 'stderr',
-                                'text': str(e)})
+                        'name': 'stderr',
+                        'text': str(e)})
                     continue
         #
         # if no previewer can be found
@@ -1902,13 +1934,13 @@ Available subkernels:\n{}'''.format(
                 return
             if isinstance(result, str):
                 self.send_frontend_msg('stream',
-                    {'name': 'stdout', 'text': result})
+                                       {'name': 'stdout', 'text': result})
             elif isinstance(result, dict):
                 self.send_frontend_msg('display_data',
-                    {'source': filename, 'data': result, 'metadata': {}})
+                                       {'source': filename, 'data': result, 'metadata': {}})
             elif isinstance(result, [list, tuple]) and len(result) == 2:
                 self.send_frontend_msg('display_data',
-                    {'source': filename, 'data': result[0], 'metadata': result[1]})
+                                       {'source': filename, 'data': result[0], 'metadata': result[1]})
             else:
                 self.send_frontend_msg('stream',
                                        dict(name='stderr', text=f'Unrecognized preview content: {result}'))
@@ -1938,8 +1970,8 @@ Available subkernels:\n{}'''.format(
         if not silent and res is not None:
             format_dict, md_dict = self.format_obj(self.render_result(res))
             self.send_response(self.iopub_socket, 'execute_result',
-                {'execution_count': self._execution_count, 'data': format_dict,
-                'metadata': md_dict})
+                               {'execution_count': self._execution_count, 'data': format_dict,
+                                'metadata': md_dict})
 
     def get_kernel_list(self, notebook_kernel_list=None):
         if not hasattr(self, '_kernel_list'):
@@ -1954,7 +1986,7 @@ Available subkernels:\n{}'''.format(
                     for kname in knames:
                         if x != kname:
                             lan_map[kname] = (lname, self.supported_languages[x].background_color,
-                                getattr(self._supported_languages[x], 'options', {}))
+                                              getattr(self._supported_languages[x], 'options', {}))
             # kernel_list has the following items
             #
             # 1. displayed name
@@ -1970,7 +2002,7 @@ Available subkernels:\n{}'''.format(
                 elif spec in lan_map:
                     # e.g. ir ==> R
                     self._kernel_list.append([lan_map[spec][0], spec, lan_map[spec][0], lan_map[spec][1],
-                        lan_map[spec][2]])
+                                              lan_map[spec][2]])
                 else:
                     # undefined language also use default theme color
                     self._kernel_list.append([spec, spec, '', '', {}])
@@ -1998,14 +2030,14 @@ Available subkernels:\n{}'''.format(
         # evaluate user expression
         try:
             ret = self._do_execute(code=code, silent=silent, store_history=store_history,
-                user_expressions=user_expressions, allow_stdin=allow_stdin)
+                                   user_expressions=user_expressions, allow_stdin=allow_stdin)
         except Exception as e:
             return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
                     'traceback': [],
                     'execution_count': self._execution_count,
-                   }
+                    }
 
         if ret is None:
             ret = {'status': 'ok',
@@ -2015,7 +2047,7 @@ Available subkernels:\n{}'''.format(
         out = {}
         for key, expr in (user_expressions or {}).items():
             try:
-                #value = self.shell._format_user_obj(SoS_eval(expr))
+                # value = self.shell._format_user_obj(SoS_eval(expr))
                 value = SoS_eval(expr)
                 value = self.shell._format_user_obj(value)
             except Exception as e:
@@ -2046,7 +2078,7 @@ Available subkernels:\n{}'''.format(
             return ''
 
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
-                   allow_stdin=False):
+                    allow_stdin=False):
         # if the kernel is SoS, remove comments and newlines
         code = self.remove_leading_comments(code)
 
@@ -2095,7 +2127,7 @@ Available subkernels:\n{}'''.format(
             with open(cfile) as conn:
                 conn_info = conn.read()
             self.send_response(self.iopub_socket, 'stream',
-                  {'name': 'stdout', 'text': 'Connection file: {}\n{}'.format(cfile, conn_info)})
+                               {'name': 'stdout', 'text': 'Connection file: {}\n{}'.format(cfile, conn_info)})
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_MATPLOTLIB.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
@@ -2111,7 +2143,7 @@ Available subkernels:\n{}'''.format(
             # self.options will be set to inflence the execution of remaing_code
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_EXPAND.match(code):
-            lines = code.splitlines() 
+            lines = code.splitlines()
             options = lines[0]
             parser = self.get_expand_parser()
             try:
@@ -2183,11 +2215,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn('Invalid option "{}": {}\n'.format(options, e))
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             self._use_panel = args.use_panel is True
             if args.list_kernel:
                 # https://github.com/jupyter/help/issues/153#issuecomment-289026056
@@ -2212,11 +2244,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Failed to switch to language "{args.cell_kernel}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             try:
                 if args.resume:
                     self._resume_execution = True
@@ -2236,26 +2268,26 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             original_kernel = self.kernel
             if args.restart and args.name in self.kernels:
                 self.shutdown_kernel(args.name)
             try:
                 self.switch_kernel(args.name, args.in_vars, args.out_vars,
-                    args.kernel, args.language, args.color)
+                                   args.kernel, args.language, args.color)
             except Exception as e:
                 self.warn(
                     f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
@@ -2271,28 +2303,28 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'abort',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             if args.restart and args.name in self.kernels:
                 self.shutdown_kernel(args.name)
                 self.warn(f'{args.name} is shutdown')
             try:
                 self.switch_kernel(args.name, args.in_vars, args.out_vars,
-                    args.kernel, args.language, args.color)
+                                   args.kernel, args.language, args.color)
                 self.hard_switch_kernel = True
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn(
                     f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
         elif self.MAGIC_GET.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:
@@ -2304,11 +2336,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             self.handle_magic_get(args.vars, args.__from__, explicit=True)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_PUT.match(code):
@@ -2322,11 +2354,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             self.handle_magic_put(args.vars, args.__to__, explicit=True)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_PUSH.match(code):
@@ -2340,11 +2372,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             self.handle_magic_push(args)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_PULL.match(code):
@@ -2358,11 +2390,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Invalid option "{options}": {e}\n')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             self.handle_magic_pull(args)
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_PASTE.match(code):
@@ -2379,7 +2411,7 @@ Available subkernels:\n{}'''.format(
                     return
                 #
                 self.send_response(self.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': code.strip() + '\n## -- End pasted text --\n'})
+                                   {'name': 'stdout', 'text': code.strip() + '\n## -- End pasted text --\n'})
                 return self._do_execute(code, silent, store_history, user_expressions, allow_stdin)
             finally:
                 self.options = old_options
@@ -2421,7 +2453,8 @@ Available subkernels:\n{}'''.format(
                     self._workflow_mode = True
                     if self._debug_mode:
                         self.warn(f'Executing\n{global_sections + run_code}')
-                    ret = self._do_execute(global_sections + run_code, silent, store_history, user_expressions, allow_stdin)
+                    ret = self._do_execute(global_sections + run_code, silent, store_history, user_expressions,
+                                           allow_stdin)
                 except Exception as e:
                     self.warn(f'Failed to execute workflow: {e}')
                     raise
@@ -2440,7 +2473,7 @@ Available subkernels:\n{}'''.format(
                 old_dict = env.sos_dict
                 self._reset_dict()
                 self._workflow_mode = True
-                #self.send_frontend_msg('preview-workflow', self._workflow)
+                # self.send_frontend_msg('preview-workflow', self._workflow)
                 if not self._workflow:
                     self.warn('Nothing to execute (notebook workflow is empty).')
                 else:
@@ -2477,21 +2510,21 @@ Available subkernels:\n{}'''.format(
                     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
                 self.send_response(self.iopub_socket, 'display_data',
-                    {'source': 'SoS', 'metadata': {},
-                     'data': {
-                         'text/plain': f'Cell content saved to {filename}\n',
-                         'text/html': HTML(
-                             f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
-                          }
-                     })
+                                   {'source': 'SoS', 'metadata': {},
+                                    'data': {
+                                        'text/plain': f'Cell content saved to {filename}\n',
+                                        'text/html': HTML(
+                                            f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
+                                    }
+                                    })
             except Exception as e:
                 self.warn(f'Failed to save cell: {e}')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SOSSAVE.match(code):
             # get the saved filename
@@ -2520,7 +2553,7 @@ Available subkernels:\n{}'''.format(
 
                 if os.path.isfile(filename) and not args.force:
                     raise ValueError(f'Cannot overwrite existing output file {filename}')
-                #self.send_frontend_msg('preview-workflow', self._workflow)
+                # self.send_frontend_msg('preview-workflow', self._workflow)
                 if ftype == 'sos':
                     if not args.all:
                         with open(filename, 'w') as script:
@@ -2550,13 +2583,13 @@ Available subkernels:\n{}'''.format(
                     notebook_to_html(self._notebook_name + '.ipynb', filename, sargs=arg, unknown_args=[])
 
                 self.send_response(self.iopub_socket, 'display_data',
-                    {'source': 'SoS', 'metadata': {},
-                     'data': {
-                         'text/plain': f'Workflow saved to {filename}\n',
-                         'text/html': HTML(
-                             f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
-                          }
-                     })
+                                   {'source': 'SoS', 'metadata': {},
+                                    'data': {
+                                        'text/plain': f'Workflow saved to {filename}\n',
+                                        'text/html': HTML(
+                                            f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
+                                    }
+                                    })
                 #
                 if args.commit:
                     self.handle_shell_command({'git', 'commit', filename, '-m',
@@ -2566,11 +2599,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(f'Failed to save workflow: {e}')
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_RERUN.match(code):
             options, remaining_code = self.get_magic_and_code(code, True)
@@ -2619,10 +2652,10 @@ Available subkernels:\n{}'''.format(
                     self._reset_dict()
                 ret = self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
                 if args.expect_error and ret['status'] == 'error':
-                    #self.warn('\nSandbox execution failed.')
+                    # self.warn('\nSandbox execution failed.')
                     return {'status': 'ok',
-                        'payload': [], 'user_expressions': {},
-                        'execution_count': self._execution_count}
+                            'payload': [], 'user_expressions': {},
+                            'execution_count': self._execution_count}
                 else:
                     return ret
             finally:
@@ -2632,7 +2665,7 @@ Available subkernels:\n{}'''.format(
                 if not args.dir:
                     shutil.rmtree(new_dir)
                 self.in_sandbox = False
-                #env.exec_dir = old_dir
+                # env.exec_dir = old_dir
         elif self.MAGIC_PREVIEW.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_preview_parser()
@@ -2648,7 +2681,7 @@ Available subkernels:\n{}'''.format(
                 return
             #
             style_options.extend(help_option)
-            style = {'style': args.style, 'options': style_options }
+            style = {'style': args.style, 'options': style_options}
             #
             if args.off:
                 self.preview_output = False
@@ -2668,11 +2701,12 @@ Available subkernels:\n{}'''.format(
                     import random
                     ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
                     self.send_response(self.iopub_socket, 'display_data',
-                        {'metadata': {},
-                         'data':
-                            {'text/plain': self._workflow,
-                             'text/html': HTML(f'<textarea id="{ta_id}">{self._workflow}</textarea>').data
-                      }})
+                                       {'metadata': {},
+                                        'data':
+                                            {'text/plain': self._workflow,
+                                             'text/html': HTML(
+                                                 f'<textarea id="{ta_id}">{self._workflow}</textarea>').data
+                                             }})
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:
@@ -2745,7 +2779,7 @@ Available subkernels:\n{}'''.format(
             # handle string interpolation before sending to the underlying kernel
             if code:
                 self.last_executed_code = code
-            #code = self._interpolate_text(code, quiet=False)
+            # code = self._interpolate_text(code, quiet=False)
             if self.cell_idx is not None:
                 self.send_frontend_msg('cell-kernel', [self.cell_idx, self.kernel])
                 self.cell_idx = None
@@ -2770,11 +2804,11 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 self.warn(str(e))
                 return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                   }
+                        'ename': e.__class__.__name__,
+                        'evalue': str(e),
+                        'traceback': [],
+                        'execution_count': self._execution_count,
+                        }
             finally:
                 # even if something goes wrong, we clear output so that the "preview"
                 # will not be viewed by a later step.
@@ -2795,6 +2829,8 @@ Available subkernels:\n{}'''.format(
         # but they are not.
         self.do_shutdown(False)
 
+
 if __name__ == '__main__':
     from ipykernel.kernelapp import IPKernelApp
+
     IPKernelApp.launch_instance(kernel_class=SoS_Kernel)
