@@ -76,8 +76,16 @@ class FlushableStringIO:
                                               f'<div class="sos_hint">{content[10:].strip()}</div>').data}
                                       })
         else:
-            if self.name == 'stdout' and self.kernel._capture_result is not None:
-                self.kernel._capture_result += content
+            if self.name == 'stdout':
+                if self.kernel._capture_result is not None:
+                    self.kernel._capture_result += content
+                if self.kernel._render_result:
+                    format_dict, md_dict = self.kernel.format_obj(self.kernel.render_result(content))
+                    self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
+                                           {'source': 'SoS', 'metadata': md_dict,
+                                            'data': format_dict
+                                            })
+                    return
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
                                       {'name': self.name, 'text': content})
 
