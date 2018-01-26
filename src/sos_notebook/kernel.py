@@ -194,9 +194,9 @@ class SoS_Kernel(IPythonKernel):
                             be saved plain text. Otherwise SoS will try to parse the text as json, csv (comma
                             separated text), tsv (tab separated text), and store dictionary or Pandas DataFrame
                             to the variable.''')
-        parser.add_argument('-f', '--from',  dest='__from__',
+        parser.add_argument('-f', '--from',  dest='__from__', metavar='SOURCE',
                             help='''File from which the content is captured, default to standard output''')
-        parser.add_argument('-t', '--to', dest='__to__', required=True,
+        parser.add_argument('-t', '--to', dest='__to__', required=True, metavar='VAR',
                             help='''Name of variable to which the captured content will be saved''')
         parser.error = self._parse_error
         return parser
@@ -1224,6 +1224,8 @@ class SoS_Kernel(IPythonKernel):
                     if (self._capture_result is not None or self._render_result) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
                         if self._capture_result is not None:
                             self._capture_result += sub_msg['content']['text']
+                            self.send_response(self.iopub_socket, 'stream',
+                                    {'name': 'stdout', 'text': sub_msg['content']['text']})
                         else:
                             format_dict, md_dict = self.format_obj(self.render_result(sub_msg['content']['text']))
                             self.send_response(self.iopub_socket, 'display_data',
