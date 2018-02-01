@@ -261,8 +261,6 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         parser.error = _parse_error
         args, workflow_args = parser.parse_known_args(args)
 
-    # no multi-processing in interactive mode
-    env.max_jobs = 1
     env.verbosity = args.verbosity
 
     if args.__queue__ == '':
@@ -364,7 +362,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             'verbosity': args.verbosity,
 
             # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
-            'max_procs': 1,
+            'max_procs': args.__max_procs__,
             'max_running_jobs': args.__max_running_jobs__,
             # for infomration and resume only
             'workdir': os.getcwd(),
