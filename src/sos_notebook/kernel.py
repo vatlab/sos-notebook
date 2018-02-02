@@ -2266,11 +2266,11 @@ Available subkernels:\n{}'''.format(
                 sigil = None
             if args.right_sigil is not None:
                 sigil = f'{args.sigil} {args.right_sigil}'
-            # now we need to expand the text, but separate the magics first
+            # now we need to expand the text, but separate the SoS magics first
             lines = lines[1:]
             line_start = 0
             for idx, line in enumerate(lines):
-                if line.strip() and not line.startswith('%') and not line.startswith('!'):
+                if line.strip() and not any(line.startswith(f'%{x} ') for x in self.ALL_MAGICS) and not line.startswith('!'):
                     start_line = idx
                     break
             text = '\n'.join(lines[start_line:])
