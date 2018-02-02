@@ -2811,8 +2811,10 @@ Available subkernels:\n{}'''.format(
                 # preview workflow
                 if args.workflow:
                     import random
+                    if self._use_panel:
+                        self.send_frontend_msg('preview-input', '%preview --workflow')
                     ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
-                    self.send_response(self.iopub_socket, 'display_data',
+                    self.send_frontend_msg('display_data',
                                        {'metadata': {},
                                         'data':
                                             {'text/plain': self._workflow,
