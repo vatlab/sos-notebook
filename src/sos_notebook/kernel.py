@@ -2322,7 +2322,7 @@ Available subkernels:\n{}'''.format(
                 self.cell_idx = args.cell_idx
                 # for panel cell, we return a non-informative execution count
                 if self.cell_idx is None or self.cell_idx < 0:
-                    self._execution_count = '-'
+                    self._execution_count = 1
                 self._notebook_name = args.filename if args.filename else 'Untitled'
             except Exception as e:
                 self.warn('Invalid option "{}": {}\n'.format(options, e))

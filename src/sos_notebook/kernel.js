@@ -1815,6 +1815,7 @@ table.task_table {
 #panel-wrapper #panel .output_prompt,
 #panel-wrapper #panel .output_prompt_overplay {
  min-width: 0px;
+ display: none;
 }
 
 #panel-wrapper #panel div.output_area {
