@@ -1426,6 +1426,10 @@ define([
         var cell = evt.notebook.get_selected_cell();
         if (cell.cell_type !== "code")
             return false;
+        // if the current cell does not has focus, ignore this shortcut
+        if (!nb.get_selected_cell().element[0].contains(document.activeElement))
+            return false;
+
         var text = cell.code_mirror.getSelection();
         if (text === "") {
             // get current line and move the cursor to the next line
