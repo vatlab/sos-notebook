@@ -24,7 +24,11 @@ import sys, os
 import shutil
 from setuptools import find_packages, setup
 from distutils import log
-from setuptools.command.install import install
+
+_py_ver = sys.version_info
+if _py_ver.major == 2 or (_py_ver.major == 3 and (_py_ver.minor, _py_ver.micro) < (6, 0)):
+    raise SystemError('sos-notebook requires Python 3.6 or higher. Please upgrade your Python {}.{}.{}.'
+        .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
 
 # obtain version of SoS
 with open('src/sos_notebook/_version.py') as version:
@@ -39,34 +43,6 @@ kernel_json = {
     "language":     "sos",
 }
 
-class InstallWithConfigurations(install):
-    def run(self):
-        # Regular installation
-        install.do_egg_install(self)
-
-        # at this point, jupyter and ipython should have been installed.
-        import json
-        try:
-            from jupyter_client.kernelspec import KernelSpecManager as KS
-        except ImportError:
-            from ipykernel.kernelspec import KernelSpecManager as KS
-        from IPython.utils.tempdir import TemporaryDirectory
-        # Now write the kernelspec
-        with TemporaryDirectory() as td:
-            os.chmod(td, 0o755)  # Starts off as 700, not user readable
-            shutil.copy('src/sos_notebook/kernel.js', os.path.join(td, 'kernel.js'))
-            shutil.copy('src/sos_notebook/logo-64x64.png', os.path.join(td, 'logo-64x64.png'))
-            with open(os.path.join(td, 'kernel.json'), 'w') as f:
-                json.dump(kernel_json, f, sort_keys=True)
-            try:
-                KS().install_kernel_spec(td, 'sos', user=self.user, replace=True, prefix=sys.exec_prefix)
-                log.info('Use "jupyter notebook" to create or open SoS notebooks.')
-            except Exception:
-                log.error("\nWARNING: Could not install SoS Kernel as %s user." % self.user)
-        #log.info('Run "python misc/patch_spyder.py" to patch spyder with sos support.')
-        log.info('\nSoS is installed and configured to use with Jupyter.')
-        log.info('Use "set syntax=sos" to enable syntax highlighting.')
-        log.info('And "sos -h" to start using Script of Scripts.')
 
 dest = '''\
 Complex bioinformatic data analysis workflows involving multiple scripts
@@ -115,7 +91,6 @@ setup(name = "sos-notebook",
         ],
     packages = find_packages('src'),
     package_dir = {'': 'src'},
-    cmdclass={'install': InstallWithConfigurations},
     install_requires=[
           'sos>=0.9.11.0',
           'nbformat',
