@@ -92,7 +92,7 @@ setup(name = "sos-notebook",
     packages = find_packages('src'),
     package_dir = {'': 'src'},
     install_requires=[
-          'sos>=0.9.11.0',
+          'sos>=0.9.11.1',
           'nbformat',
           'nbconvert>=5.1.1',
           'ipython',
