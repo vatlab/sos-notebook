@@ -36,49 +36,28 @@ kernel_json = {
     "language":     "sos",
 }
 
-def install_sos_kernel_spec(user=True, prefix=None):
-    with TemporaryDirectory() as td:
-        os.chmod(td, 0o755) # Starts off as 700, not user readable
-        with open(os.path.join(td, 'kernel.json'), 'w') as f:
-            json.dump(kernel_json, f, sort_keys=True)
-        # Copy resources once they're specified
-        shutil.copy(os.path.join(os.path.split(__file__)[0], 'kernel.js'), os.path.join(td, 'kernel.js'))
-        shutil.copy(os.path.join(os.path.split(__file__)[0], 'logo-64x64.png'), os.path.join(td, 'logo-64x64.png'))
-
-        print('Installing jupyter kernel spec')
-        KS().install_kernel_spec(td, 'sos', user=user, replace=True, prefix=prefix)
-
 def _is_root():
     try:
         return os.geteuid() == 0
     except AttributeError:
         return False # assume not an admin on non-Unix platforms
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description='Install KernelSpec for sos Kernel'
-    )
+def get_install_sos_kernel_spec_parser():
+    parser = argparse.ArgumentParser(description='Install KernelSpec for sos Kernel')
     prefix_locations = parser.add_mutually_exclusive_group()
-
-    prefix_locations.add_argument(
-        '--user',
+    prefix_locations.add_argument('--user',
         help='Install KernelSpec in user homedirectory',
-        action='store_true'
-    )
-    prefix_locations.add_argument(
-        '--sys-prefix',
+        action='store_true')
+    prefix_locations.add_argument('--sys-prefix',
         help='Install KernelSpec in sys.prefix. Useful in conda / virtualenv',
         action='store_true',
-        dest='sys_prefix'
-    )
-    prefix_locations.add_argument(
-        '--prefix',
+        dest='sys_prefix')
+    prefix_locations.add_argument('--prefix',
         help='Install KernelSpec in this prefix',
-        default=None
-    )
+        default=None) 
+    return parser
 
-    args = parser.parse_args(argv)
-
+def install_sos_kernel_spec(args):
     user = False
     prefix = None
     if args.sys_prefix:
@@ -88,7 +67,19 @@ def main(argv=None):
     elif args.user or not _is_root():
         user = True
 
-    install_sos_kernel_spec(user=user, prefix=prefix)
+    with TemporaryDirectory() as td:
+        os.chmod(td, 0o755) # Starts off as 700, not user readable
+        with open(os.path.join(td, 'kernel.json'), 'w') as f:
+            json.dump(kernel_json, f, sort_keys=True)
+        # Copy resources once they're specified
+        shutil.copy(os.path.join(os.path.split(__file__)[0], 'kernel.js'), os.path.join(td, 'kernel.js'))
+        shutil.copy(os.path.join(os.path.split(__file__)[0], 'logo-64x64.png'), os.path.join(td, 'logo-64x64.png'))
+
+        KS().install_kernel_spec(td, 'sos', user=user, replace=True, prefix=prefix)
+        print('sos jupyter kernel spec is installed')
+
 
 if __name__ == '__main__':
-    main()
+    parser = get_install_sos_kernel_spec_parser()
+    args = parser.parse_args()
+    install_sos_kernel_spec(args)
