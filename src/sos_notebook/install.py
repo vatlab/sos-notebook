@@ -26,8 +26,9 @@ import os
 import sys
 import argparse
 import shutil
+import logging
 
-from jupyter_client.kernelspec import KernelSpecManager as KS
+from jupyter_client.kernelspec import KernelSpecManager
 from IPython.utils.tempdir import TemporaryDirectory
 
 kernel_json = {
@@ -75,7 +76,9 @@ def install_sos_kernel_spec(args):
         shutil.copy(os.path.join(os.path.split(__file__)[0], 'kernel.js'), os.path.join(td, 'kernel.js'))
         shutil.copy(os.path.join(os.path.split(__file__)[0], 'logo-64x64.png'), os.path.join(td, 'logo-64x64.png'))
 
-        KS().install_kernel_spec(td, 'sos', user=user, replace=True, prefix=prefix)
+        KS = KernelSpecManager()
+        KS.log.setLevel(logging.ERROR)
+        KS.install_kernel_spec(td, 'sos', user=user, replace=True, prefix=prefix)
         print('sos jupyter kernel spec is installed')
 
 

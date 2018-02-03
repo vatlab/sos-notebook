@@ -143,7 +143,7 @@ ipynb-ipynb.func = sos_notebook.converter:notebook_to_notebook
 rmd-ipynb.parser = sos_notebook.converter:get_Rmarkdown_to_notebook_parser
 rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
 
-[sos_install]
+[sos_installers]
 kernel.parser = sos_notebook.install:get_install_sos_kernel_spec_parser
 kernel.func = sos_notebook.install:install_sos_kernel_spec
 ''',
