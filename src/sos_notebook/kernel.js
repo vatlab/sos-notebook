@@ -22,7 +22,6 @@
 //
 define([
     "jquery",
-    "base/js/utils",
     "codemirror/lib/codemirror",
     "codemirror/addon/selection/active-line",
     "codemirror/addon/fold/foldcode",
@@ -38,7 +37,6 @@ define([
     window.KernelList = [];
     window.KernelOptions = {};
     window.events = require("base/js/events");
-    window.utils = require("base/js/utils");
     window.Jupyter = require("base/js/namespace");
     window.CodeCell = require("notebook/js/codecell").CodeCell;
 
@@ -1299,7 +1297,7 @@ define([
         // from other channels (update kernel list etc), wrap it now.
         wrap_execute();
 
-        if (utils.is_focused(this.cell.element)) {
+        if (this.cell.element[0].contains(document.activeElement)) {
             this.cell.execute();
         } else {
             this.notebook.execute_cell_and_select_below();
@@ -1311,7 +1309,7 @@ define([
         // from other channels (update kernel list etc), wrap it now.
         wrap_execute();
 
-        if (utils.is_focused(this.cell.element)) {
+        if (this.cell.element[0].contains(document.activeElement)) {
             this.cell.execute();
         } else {
             this.notebook.execute_selected_cells();
