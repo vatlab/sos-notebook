@@ -25,51 +25,10 @@ import sys
 from sos.step_executor import Step_Executor, Base_Step_Executor, PendingTasks
 from sos.hosts import Host
 from sos.utils import env, short_repr, StopInputGroup, TerminateExecution
-from sos.eval import SoS_exec
+from sos.eval import SoS_exec, stmtHash
 from io import StringIO
 import time
-import contextlib
 from sos.targets import UnknownTarget, RemovedTarget, UnavailableLock
-
-# overwrite concurrent_execute defined in Base_Step_Executor because sos notebook
-# can only handle stdout/stderr from the master process
-#
-@contextlib.contextmanager
-def stdoutIO():
-    oldout = sys.stdout
-    olderr = sys.stderr
-    stdout = StringIO()
-    stderr = StringIO()
-    sys.stdout = stdout
-    sys.stderr = stderr
-    yield stdout, stderr
-    sys.stdout = oldout
-    sys.stderr = olderr
-
-def concurrent_execute(stmt, proc_vars={}, sig=None):
-    env.sos_dict.quick_update(proc_vars)
-    outmsg = ''
-    errmsg = ''
-    try:
-        if sig:
-            sig.lock()
-        with stdoutIO() as (out, err):
-            SoS_exec(stmt, return_result=False)
-            outmsg = out.getvalue()
-            errmsg = err.getvalue()
-        if sig:
-            sig.release()
-            sig.write()
-        return {'ret_code': 0, 'stdout': outmsg, 'stderr': errmsg}
-    except (StopInputGroup, TerminateExecution, UnknownTarget, RemovedTarget, UnavailableLock, PendingTasks) as e:
-        return {'ret_code': 1, 'exception': e, 'stdout': outmsg, 'stderr': errmsg}
-    except Exception as e:
-        error_class = e.__class__.__name__
-        detail = e.args[0] if e.args else ''
-        return {'ret_code': 1, 'exception': RuntimeError(f'{error_class}: {detail}'), 'stdout': outmsg, 'stderr': errmsg}
-
-import sos.step_executor
-sos.step_executor.concurrent_execute = concurrent_execute 
 
 class Interactive_Step_Executor(Step_Executor):
     def __init__(self, step):
