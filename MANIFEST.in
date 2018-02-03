@@ -5,6 +5,7 @@ recursive-include src *.py *.js *.tpl *.png
 recursive-include test *.vim *.py *.js
 prune */.sos
 global-exclude *~
+global-exclude *.bak
 global-exclude *.pyc
 global-exclude *.pyo
 global-exclude .ipynb_checkpoints
