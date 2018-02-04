@@ -44,6 +44,7 @@ install:
  
     - pip install pytest
     - python setup.py install
+    - python -m sos_notebook.install
 
 test_script:
     - cd test
