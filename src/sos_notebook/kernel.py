@@ -31,6 +31,7 @@ import subprocess
 import argparse
 import pkg_resources
 import pydoc
+import pandas as pd
 
 from io import StringIO
 from ipykernel.ipkernel import IPythonKernel
@@ -192,12 +193,20 @@ class SoS_Kernel(IPythonKernel):
         parser.add_argument('format', default='text', nargs='?', choices=('text', 'json', 'csv', 'tsv'),
                             help='''How to interpret the captured text. By default the captured content will 
                             be saved plain text. Otherwise SoS will try to parse the text as json, csv (comma
-                            separated text), tsv (tab separated text), and store dictionary or Pandas DataFrame
-                            to the variable.''')
+                            separated text), tsv (tab separated text), and store text (from text), Pandas DataFrame
+                            (from csv or tsv), dict or other types (from json) to the variable.''')
         parser.add_argument('-f', '--from',  dest='__from__', metavar='SOURCE',
                             help='''File from which the content is captured, default to standard output''')
-        parser.add_argument('-t', '--to', dest='__to__', required=True, metavar='VAR',
+        grp = parser.add_mutually_exclusive_group(required=True)
+        grp.add_argument('-t', '--to', dest='__to__', metavar='VAR',
                             help='''Name of variable to which the captured content will be saved''')
+        grp.add_argument('-a', '--append', dest='__append__', metavar='VAR',
+                            help='''Name of variable to which the captured content will be appended.
+                            This option is equivalent to --to if VAR does not exist. If VAR exists
+                            and is of the same type of new content (str or dict or DataFrame), the
+                            new content will be appended to VAR if VAR is of str (str concatenation),
+                            dict (dict update), or DataFrame (DataFrame.append) types. If VAR is of
+                            list type, the new content will be appended to the end of the list.''')
         parser.error = self._parse_error
         return parser
 
@@ -983,7 +992,6 @@ class SoS_Kernel(IPythonKernel):
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
                     try:
-                        import pandas as pd
                         from tabulate import tabulate
                         df = pd.read_clipboard()
                         tbl = tabulate(df, headers='keys', tablefmt='pipe')
@@ -2067,6 +2075,7 @@ Available subkernels:\n{}'''.format(
             ret = self._do_execute(code=code, silent=silent, store_history=store_history,
                                    user_expressions=user_expressions, allow_stdin=allow_stdin)
         except Exception as e:
+            self.warn(e)
             return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
@@ -2150,8 +2159,12 @@ Available subkernels:\n{}'''.format(
                     self._capture_result = ''
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
-                if not args.__to__.isidentifier():
+                if args.__to__ and not args.__to__.isidentifier():
                     self.warn(f'Invalid variable name {args.__to__}')
+                    self._capture_result = None
+                    return
+                if args.__append__ and not args.__append__.isidentifier():
+                    self.warn(f'Invalid variable name {args.__append__}')
                     self._capture_result = None
                     return
                 if self._debug_mode:
@@ -2161,11 +2174,11 @@ Available subkernels:\n{}'''.format(
                         # get content from a file
                         try:
                             with open(args.__from__) as ifile:
-                                env.sos_dict.set(args.__to__, ifile.read())
+                                new_var = ifile.read()
                         except Exception as e:
                             self.warn(f'Failed to capture {args.format} from output file {args.__from__}: {e}')
                     else:
-                        env.sos_dict.set(args.__to__, self._capture_result)
+                        new_var = self._capture_result
                 elif args.format == 'json':
                     import json
                     try:
@@ -2173,47 +2186,69 @@ Available subkernels:\n{}'''.format(
                             # get content from a file
                             try:
                                 with open(args.__from__) as ifile:
-                                    env.sos_dict.set(args.__to__, json.load(ifile))
+                                    new_var = json.load(ifile)
                             except Exception as e:
                                 self.warn(f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
-                            env.sos_dict.set(args.__to__, json.loads(self._capture_result))
+                            new_var = json.loads(self._capture_result)
                     except Exception as e:
                         self.warn(f'Failed to capture output in JSON format, text returned: {e}')
-                        env.sos_dict.set(args.__to__, self._capture_result)
+                        new_var = self._capture_result
                 elif args.format == 'csv':
-                    import pandas
                     try:
                         if args.__from__:
                             # get content from a file
                             try:
                                 with open(args.__from__) as ifile:
-                                    env.sos_dict.set(args.__to__, pandas.read_csv(ifile))
+                                    new_var = pd.read_csv(ifile)
                             except Exception as e:
                                 self.warn(f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
                             with StringIO(self._capture_result) as ifile:
-                                env.sos_dict.set(args.__to__, pandas.read_csv(ifile))
+                                new_var = pd.read_csv(ifile)
                     except Exception as e:
                         self.warn(f'Failed to capture output in {args.format} format, text returned: {e}')
-                        env.sos_dict.set(args.__to__, self._capture_result)
+                        new_var = self._capture_result
                 elif args.format == 'tsv':
-                    import pandas
                     try:
                         if args.__from__:
                             # get content from a file
                             try:
                                 with open(args.__from__) as ifile:
-                                    env.sos_dict.set(args.__to__, pandas.read_csv(ifile, sep='\t'))
+                                    new_var = pd.read_csv(ifile, sep='\t')
                             except Exception as e:
                                 self.warn(
                                     f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
                             with StringIO(self._capture_result) as ifile:
-                                env.sos_dict.set(args.__to__, pandas.read_csv(ifile, sep='\t'))
+                                new_var = pd.read_csv(ifile, sep='\t')
                     except Exception as e:
                         self.warn(f'Failed to capture output in {args.format} format, text returned: {e}')
-                        env.sos_dict.set(args.__to__, self._capture_result)
+                        new_var = self._capture_result
+                if args.__to__:
+                    env.sos_dict.set(args.__to__, new_var)
+                else:
+                    if args.__append__ not in env.sos_dict:
+                        env.sos_dict.set(args.__append__, new_var)
+                    elif isinstance(env.sos_dict[args.__append__], str):
+                        if isinstance(new_var, str):
+                            env.sos_dict[args.__append__] += new_var
+                        else:
+                            self.warn(f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                    elif isinstance(env.sos_dict[args.__append__], dict):
+                        if isinstance(new_var, dict):
+                            env.sos_dict[args.__append__].update(new_var)
+                        else:
+                            self.warn(f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                    elif isinstance(env.sos_dict[args.__append__], pd.DataFrame):
+                        if isinstance(new_var, pd.DataFrame):
+                            env.sos_dict.set(args.__append__, env.sos_dict[args.__append__].append(new_var))
+                        else:
+                            self.warn(f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                    elif isinstance(env.sos_dict[args.__append__], list):
+                        env.sos_dict[args.__append__].append(new_var)
+                    else:
+                        self.warn(f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
             self._capture_result = None
         elif self.MAGIC_SESSIONINFO.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
