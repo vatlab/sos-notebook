@@ -687,7 +687,7 @@ define([
                     var i;
                     var j;
                     for (i = 0; i < cells.length ; ++i) {
-                        if (cells[i].cell_type != "code")
+                        if (nb.get_cell(cells[i]).cell_type != "code")
                             continue;
                         if (data[2]) {
                             for (j = 0; j < data[2].length; ++j) {
@@ -702,7 +702,7 @@ define([
                     var i;
                     var j;
                     for (i = 0; i < active.length ; ++ i) {
-                        if (active[i].cell_type != "code")
+                        if (nb.get_cell(active[i]).cell_type != "code")
                             continue;
                         if (data[2]) {
                             for (j = 0; j < data[2].length; ++j) {
