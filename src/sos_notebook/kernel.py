@@ -1091,6 +1091,11 @@ class SoS_Kernel(IPythonKernel):
                     # ignore such message
                     self.send_frontend_msg('task-status',
                                            [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+            else:
+                # perhaps the pulse one does not have an initial value yet
+                self.send_frontend_msg('task-status',
+                                   [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+                self.my_tasks[(tqu, tid)] = time.time()
         else:
             raise RuntimeError(f'Unrecognized status change message {task_status}')
 
