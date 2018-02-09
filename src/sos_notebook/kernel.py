@@ -1914,7 +1914,7 @@ Available subkernels:\n{}'''.format(
             return txt, ({'text/plain': pydoc.render_doc(obj, title='SoS Documentation: %s')}, {})
         elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
-                from .visualize import Visualizer
+                from sos.visualize import Visualizer
                 result = Visualizer(self, style).preview(obj)
                 if isinstance(result, (list, tuple)) and len(result) == 2:
                     return txt, result
