@@ -1940,7 +1940,7 @@ Available subkernels:\n{}'''.format(
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
-            from .preview import get_previewers
+            from sos.preview import get_previewers
             self.previewers = get_previewers()
         for x, y, _ in self.previewers:
             if isinstance(x, str):

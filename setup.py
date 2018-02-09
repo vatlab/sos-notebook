@@ -92,7 +92,7 @@ setup(name = "sos-notebook",
     packages = find_packages('src'),
     package_dir = {'': 'src'},
     install_requires=[
-          'sos>=0.9.11.1',
+          'sos>=0.9.11.3',
           'nbformat',
           'nbconvert>=5.1.1',
           'ipython',
@@ -103,21 +103,6 @@ setup(name = "sos-notebook",
           'markdown',
       ],
     entry_points= '''
-[sos_previewers]
-*.pdf,1 = sos_notebook.preview:preview_pdf
-*.html,1 = sos_notebook.preview:preview_html
-*.csv,1 = sos_notebook.preview:preview_csv
-*.xls,1 = sos_notebook.preview:preview_xls
-*.xlsx,1 = sos_notebook.preview:preview_xls
-*.gz,1 = sos_notebook.preview:preview_gz
-*.txt,1 = sos_notebook.preview:preview_txt
-*.md,1 = sos_notebook.preview:preview_md
-*.dot,1 = sos_notebook.preview:preview_dot [dot]
-imghdr:what,1 = sos_notebook.preview:preview_img
-zipfile:is_zipfile,1 = sos_notebook.preview:preview_zip
-tarfile:is_tarfile,1 = sos_notebook.preview:preview_tar
-*,0 = sos_notebook.preview:preview_txt
-
 [sos_functions]
 runfile = sos_notebook.workflow_executor:runfile
 
