@@ -674,7 +674,7 @@ define([
                 var active = nb.get_selected_cells_indices();
                 var clear_task = function(cell, status) {
                     var status_element = cell.element[0].getElementsByClassName(status);
-                    if (status_element.length > 0) {
+                    while (status_element.length > 0) {
                         var table_element = status_element[0].parentNode.parentNode.parentNode.parentNode;
                         // remove the table
                         if (table_element.className == 'task_table') {
