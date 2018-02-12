@@ -1979,6 +1979,7 @@ table.task_table {
 
         // setting up frontend using existing metadata (without executing anything)
         load_select_kernel();
+        changeCellStyle();
         // if we reload the page, the cached sos_comm will be removed so we will
         // have to re-register sos_comm. In addition, we will need to notify the
         // kernel that the frontend has been refreshed so that it will create
@@ -2005,10 +2006,7 @@ table.task_table {
         // burden to run show_toc twice but hopefully this provides a more consistent
         // user experience.
         //
-        events.on("notebook_loaded.Notebook", function() {
-            show_toc();
-            changeCellStyle();
-        });
+        events.on("notebook_loaded.Notebook", show_toc);
         // restart kernel does not clear existing side panel.
         events.on("kernel_connected.Kernel", function() {
             // Issue #1: need to re-register sos_comm after kernel is restarted.
