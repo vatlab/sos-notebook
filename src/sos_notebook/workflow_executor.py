@@ -350,7 +350,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                         return
         else:
             script = SoS_Script(filename=script)
-        workflow = script.workflow(args.workflow)
+        workflow = script.workflow(args.workflow, use_default=not args.__targets__)
         executor = Interactive_Executor(workflow, args=workflow_args, config={
             'config_file': args.__config__,
             'output_dag': args.__dag__,
