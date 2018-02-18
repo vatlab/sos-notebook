@@ -47,6 +47,9 @@ class Interactive_Executor(Base_Executor):
             env.config['sig_mode'] = 'ignore'
         Base_Executor.__init__(self, workflow=workflow, args=args, shared=shared, config=config)
         self.md5 = self.create_signature()
+        # the md5 of the master workflow would be passed from master workflow...
+        if 'master_md5' not in env.config:
+            env.config['master_md5'] = self.md5
         if env.config['sig_mode'] != 'ignore':
             # We append to existing workflow files because some files are ignored and we
             # still wants their information.
