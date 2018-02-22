@@ -1013,7 +1013,10 @@ class SoS_Kernel(IPythonKernel):
         'failed': 'fa-times-circle-o',
         'aborted': 'fa-frown-o',
         'signature-mismatch': 'fa-question',
+        'missing': 'fa-question',
+        # obsolete
         'unknown': 'fa-question',
+        'non-exist': 'fa-question',
     }
 
     def notify_task_status(self, task_status):
@@ -1026,7 +1029,10 @@ class SoS_Kernel(IPythonKernel):
             'failed': 'fa-play',
             'aborted': 'fa-play',
             'signature-mismatch': 'fa-play',
+            'missing': 'fa-question',
+            # obsolete
             'unknown': 'fa-question',
+            'non-exist': 'fa-question',
         }
 
         action_func = {
@@ -1038,7 +1044,10 @@ class SoS_Kernel(IPythonKernel):
             'failed': 'resume_task',
             'aborted': 'resume_task',
             'signature-mismatch': 'resume_task',
+            'missing': 'function(){}',
+            # obsolete
             'unknown': 'function(){}',
+            'non-exist': 'function(){}',
         }
 
         if task_status[0] == 'new-status':
