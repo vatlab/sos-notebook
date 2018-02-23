@@ -34,7 +34,7 @@ install:
     - conda info -a
     # 
     # add docker
-    - pip install docker
+    #- pip install docker
     # packages required by SoS
     - pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm 
     - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose 
