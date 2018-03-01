@@ -77,6 +77,8 @@ class SoS_Exporter(Exporter):
         else:
             # in non-all mode, markdown cells are ignored because they can be mistakenly
             # treated as markdown content of an action or script #806
+            if cell.cell_type != "code":
+                return
             #
             # Non-sos code cells are also ignored
             if 'kernel' in cell.metadata and cell.metadata['kernel'] not in ('sos', 'SoS', None):
