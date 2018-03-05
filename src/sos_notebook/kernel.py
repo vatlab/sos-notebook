@@ -117,6 +117,242 @@ class subkernel(object):
         self.color = color
         self.options = options
 
+class Subkernels(object):
+    # a collection of subkernels
+    def __init__(self, kernel):
+        self.sos_kernel = kernel
+        from jupyter_client.kernelspec import KernelSpecManager
+        km = KernelSpecManager()
+        specs = km.find_kernel_specs()
+        # get supported languages
+        self._kernel_list = []
+        lan_map = {}
+        for x in kernel.supported_languages.keys():
+            for lname, knames in kernel.supported_languages[x].supported_kernels.items():
+                for kname in knames:
+                    if x != kname:
+                        lan_map[kname] = (lname, self.sos_kernel.supported_languages[x].background_color,
+                                          getattr(self.sos_kernel._supported_languages[x], 'options', {}))
+        # kernel_list has the following items
+        #
+        # 1. displayed name
+        # 2. kernel name
+        # 3. language name
+        # 4. color
+        for spec in specs.keys():
+            if spec == 'sos':
+                # the SoS kernel will be default theme color.
+                self._kernel_list.append(
+                    subkernel(name='SoS', kernel='sos', options={
+                    'variable_pattern': r'^[_A-Za-z0-9\.]+\s*$',
+                    'assignment_pattern': r'^([_A-Za-z0-9\.]+)\s*=.*$'}))
+            elif spec in lan_map:
+                # e.g. ir ==> R
+                self._kernel_list.append(
+                        subkernel(name=lan_map[spec][0], kernel=spec, language=lan_map[spec][0],
+                            color=lan_map[spec][1], options=lan_map[spec][2]))
+            else:
+                # undefined language also use default theme color
+                self._kernel_list.append(subkernel(name=spec, kernel=spec))
+
+    # now, no kernel is found, name has to be a new name and we need some definition
+    # if kernel is defined
+    def add_or_replace(self, kdef):
+        for idx, x in enumerate(self._kernel_list):
+            if x.name == kdef.name:
+                self._kernel_list[idx] = kdef
+                return self._kernel_list[idx]
+            else:
+                self._kernel_list.append(kdef)
+                return self._kernel_list[-1]
+
+    def find_kernel(self, name, kernel=None, language=None, color=None, notify_frontend=True):
+        # find from subkernel name
+        def update_existing(idx):
+            x = self._kernel_list[idx]
+            if (kernel is not None and kernel != x.kernel) or (language is not None and language != x.language):
+                raise ValueError(f'Cannot change kernel or language of predefined subkernel {name}')
+            if color is not None:
+                if color == 'default':
+                    if self._kernel_list[idx].language:
+                        self._kernel_list[idx].color = self.sos_kernel._supported_languages[
+                            self._kernel_list[idx].color].background_color
+                    else:
+                        self._kernel_list[idx].color = ''
+                else:
+                    self._kernel_list[idx].color = color
+                if notify_frontend:
+                    self.notify_frontend()
+
+        # if the language module cannot be loaded for some reason
+        if name in self.sos_kernel._failed_languages:
+            raise self.sos_kernel._failed_languages[name]
+        # find from language name (subkernel name, which is usually language name)
+        for idx, x in enumerate(self._kernel_list):
+            if x.name == name:
+                if x.name == 'SoS' or x.language or language is None:
+                    update_existing(idx)
+                    return x
+                else:
+                    if not kernel:
+                        kernel = name
+                    break
+        # find from kernel name
+        for idx, x in enumerate(self._kernel_list):
+            if x.kernel == name:
+                # if exist language or no new language defined.
+                if x.language or language is None:
+                    update_existing(idx)
+                    return x
+                else:
+                    # otherwise, try to use the new language
+                    kernel = name
+                    break
+
+
+
+        if kernel is not None:
+            # in this case kernel should have been defined in kernel list
+            if kernel not in [x.kernel for x in self._kernel_list]:
+                raise ValueError(
+                    f'Unrecognized Jupyter kernel name {kernel}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"')
+            # now this a new instance for an existing kernel
+            kdef = [x for x in self._kernel_list if x.kernel == kernel][0]
+            if not language:
+                if color == 'default':
+                    if kdef.language:
+                        color = self.sos_kernel._supported_languages[kdef.language].background_color
+                    else:
+                        color = kdef.color
+                new_def = self.add_or_replace(subkernel(name, kdef.kernel, kdef.language, kdef.color if color is None else color,
+                                          getattr(self.sos_kernel._supported_languages[kdef.language], 'options', {}) if kdef.language else {}))
+                if notify_frontend:
+                    self.notify_frontend()
+                return new_def
+            else:
+                # if language is defined,
+                if ':' in language:
+                    # if this is a new module, let us create an entry point and load
+                    from pkg_resources import EntryPoint
+                    mn, attr = language.split(':', 1)
+                    ep = EntryPoint(name=kernel, module_name=mn, attrs=tuple(attr.split('.')))
+                    try:
+                        plugin = ep.resolve()
+                        self.sos_kernel._supported_languages[name] = plugin
+                        # for convenience, we create two entries for, e.g. R and ir
+                        # but only if there is no existing definition
+                        for supported_lan, supported_kernels in plugin.supported_kernels.items():
+                            for supported_kernel in supported_kernels:
+                                if name != supported_kernel and supported_kernel not in self.sos_kernel._supported_languages:
+                                    self.sos_kernel._supported_languages[supported_kernel] = plugin
+                            if supported_lan not in self.sos_kernel._supported_languages:
+                                self.sos_kernel._supported_languages[supported_lan] = plugin
+                    except Exception as e:
+                        raise RuntimeError(f'Failed to load language {language}: {e}')
+                    #
+                    if color == 'default':
+                        color = plugin.background_color
+                    new_def = self.add_or_replace(subkernel(name, kdef.kernel, kernel, kdef.color if color is None else color,
+                                              getattr(plugin, 'options', {})))
+                else:
+                    # if should be defined ...
+                    if language not in self.sos_kernel._supported_languages:
+                        raise RuntimeError(
+                            f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class')
+                    #
+                    self.sos_kernel._supported_languages[name] = self.sos_kernel._supported_languages[language]
+                    if color == 'default':
+                        color = self.sos_kernel._supported_languages[name].background_color
+                    new_def = self.add_or_replace(subkernel(name, kdef.kernel, language, kdef.color if color is None else color,
+                                              getattr(self.sos_kernel._supported_languages[name], 'options', {})))
+                if notify_frontend:
+                    self.notify_frontend()
+                return new_def
+        elif language is not None:
+            # kernel is not defined and we only have language
+            if ':' in language:
+                # if this is a new module, let us create an entry point and load
+                from pkg_resources import EntryPoint
+                mn, attr = language.split(':', 1)
+                ep = EntryPoint(name='__unknown__', module_name=mn, attrs=tuple(attr.split('.')))
+                try:
+                    plugin = ep.resolve()
+                    self.sos_kernel._supported_languages[name] = plugin
+                except Exception as e:
+                    raise RuntimeError(f'Failed to load language {language}: {e}')
+                if name in plugin.supported_kernels:
+                    # if name is defined in the module, only search kernels for this language
+                    avail_kernels = [x for x in plugin.supported_kernels[name] if
+                                     x in [y.kernel for y in self._kernel_list]]
+                else:
+                    # otherwise we search all supported kernels
+                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
+                                     x in [y.kernel for y in self._kernel_list]]
+
+                if not avail_kernels:
+                    raise ValueError(
+                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
+                            ', '.join(sum(plugin.supported_kernels.values(), [])), language))
+                # use the first available kernel
+                if color == 'default':
+                    color = plugin.background_color
+                # find the language that has the kernel
+                lan_name = list({x: y for x, y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
+                new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, plugin.background_color if color is None else color,
+                     getattr(plugin, 'options', {})))
+            else:
+                # if a language name is specified (not a path to module), if should be defined in setup.py
+                if language not in self.sos_kernel._supported_languages:
+                    raise RuntimeError(f'Unrecognized language definition {language}')
+                #
+                plugin = self.sos_kernel._supported_languages[language]
+                if language in plugin.supported_kernels:
+                    avail_kernels = [x for x in plugin.supported_kernels[language] if
+                                     x in [y.kernel for y in self._kernel_list]]
+                else:
+                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
+                                     x in [y.kernel for y in self._kernel_list]]
+                if not avail_kernels:
+                    raise ValueError(
+                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
+                            ', '.join(sum(self.sos_kernel._supported_languages[language].supported_kernels.values(), [])),
+                            language))
+
+                new_def = self.add_or_replace(subkernel(
+                    name, avail_kernels[0], language,
+                    self.sos_kernel._supported_languages[
+                        language].background_color if color is None or color == 'default' else color,
+                    getattr(self.sos_kernel._supported_languages[language], 'options', {})))
+
+            self.notify_frontend()
+            return new_def
+        else:
+            # let us check if there is something wrong with the pre-defined language
+            for entrypoint in pkg_resources.iter_entry_points(group='sos_languages'):
+                if entrypoint.name == name:
+                    # there must be something wrong, let us trigger the exception here
+                    entrypoint.load()
+            # if nothing is triggerred, kernel is not defined, return a general message
+            raise ValueError(
+                f'No subkernel named {name} is found. Please make sure that you have the kernel installed (listed in the output of "jupyter kernelspec list" and usable in jupyter by itself), install appropriate language module (e.g. "pip install sos-r"), restart jupyter notebook and try again.')
+
+
+    def update(self, notebook_kernel_list):
+        for [name, kernel, lan, color] in notebook_kernel_list:
+            try:
+                # if we can find the kernel, fine...
+                self.find_kernel(name, kernel, lan, color, notify_frontend=False)
+            except Exception as e:
+                # otherwise do not worry about it.
+                env.logger.warning(
+                    f'Failed to locate subkernel {name} with kernerl "{kernel}" and language "{lan}": {e}')
+
+    def notify_frontend(self):
+        self._kernel_list.sort(key=lambda x: x.name)
+        self.sos_kernel.send_frontend_msg('kernel-list',
+                [[x.name, x.kernel, x.language, x.color, x.options] for x in self._kernel_list])
+
+
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
     implementation_version = __version__
@@ -594,186 +830,6 @@ class SoS_Kernel(IPythonKernel):
         parser.error = self._parse_error
         return parser
 
-    def find_kernel(self, name, kernel=None, language=None, color=None, notify_frontend=True):
-        # find from subkernel name
-        def update_existing(idx):
-            x = self._kernel_list[idx]
-            if (kernel is not None and kernel != x.kernel) or (language is not None and language != x.language):
-                raise ValueError(f'Cannot change kernel or language of predefined subkernel {name}')
-            if color is not None:
-                if color == 'default':
-                    if self._kernel_list[idx].language:
-                        self._kernel_list[idx]color = self._supported_languages[
-                            self._kernel_list[idx].color].background_color
-                    else:
-                        self._kernel_list[idx].color = ''
-                else:
-                    self._kernel_list[idx].color = color
-                if notify_frontend:
-                    self.send_frontend_msg('kernel-list', self.get_kernel_list())
-
-        # if the language module cannot be loaded for some reason
-        if name in self._failed_languages:
-            raise self._failed_languages[name]
-        # find from language name (subkernel name, which is usually language name)
-        for idx, x in enumerate(self.get_kernel_list()):
-            if x.name == name:
-                if x.name == 'SoS' or x.language or language is None:
-                    update_existing(idx)
-                    return x
-                else:
-                    if not kernel:
-                        kernel = name
-                    break
-        # find from kernel name
-        for idx, x in enumerate(self._kernel_list):
-            if x.kernel == name:
-                # if exist language or no new language defined.
-                if x.language or language is None:
-                    update_existing(idx)
-                    return x
-                else:
-                    # otherwise, try to use the new language
-                    kernel = name
-                    break
-
-        # now, no kernel is found, name has to be a new name and we need some definition
-        # if kernel is defined
-        def add_or_replace(kdef):
-            for idx, x in enumerate(self._kernel_list):
-                if x.name == kdef.name:
-                    self._kernel_list[idx] = kdef
-                    return self._kernel_list[idx]
-                else:
-                    self._kernel_list.append(kdef)
-                    return self._kernel_list[-1]
-
-        if kernel is not None:
-            # in this case kernel should have been defined in kernel list
-            if kernel not in [x.kernel for x in self._kernel_list]:
-                raise ValueError(
-                    f'Unrecognized Jupyter kernel name {kernel}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"')
-            # now this a new instance for an existing kernel
-            kdef = [x for x in self._kernel_list if x.kernel == kernel][0]
-            if not language:
-                if color == 'default':
-                    if kdef.language:
-                        color = self._supported_languages[kdef.language].background_color
-                    else:
-                        color = kdef[3]
-                new_def = add_or_replace([name, kdef.kernel, kdef.language, kdef.color if color is None else color,
-                                          getattr(self._supported_languages[kdef.language], 'options', {}) if kdef.language else {}])
-                if notify_frontend:
-                    self.send_frontend_msg('kernel-list', self.get_kernel_list())
-                return new_def
-            else:
-                # if language is defined,
-                if ':' in language:
-                    # if this is a new module, let us create an entry point and load
-                    from pkg_resources import EntryPoint
-                    mn, attr = language.split(':', 1)
-                    ep = EntryPoint(name=kernel, module_name=mn, attrs=tuple(attr.split('.')))
-                    try:
-                        plugin = ep.resolve()
-                        self._supported_languages[name] = plugin
-                        # for convenience, we create two entries for, e.g. R and ir
-                        # but only if there is no existing definition
-                        for supported_lan, supported_kernels in plugin.supported_kernels.items():
-                            for supported_kernel in supported_kernels:
-                                if name != supported_kernel and supported_kernel not in self._supported_languages:
-                                    self._supported_languages[supported_kernel] = plugin
-                            if supported_lan not in self._supported_languages:
-                                self._supported_languages[supported_lan] = plugin
-                    except Exception as e:
-                        raise RuntimeError(f'Failed to load language {language}: {e}')
-                    #
-                    if color == 'default':
-                        color = plugin.background_color
-                    new_def = add_or_replace([name, kdef.kernel, kernel, kdef.color if color is None else color,
-                                              getattr(plugin, 'options', {})])
-                else:
-                    # if should be defined ...
-                    if language not in self._supported_languages:
-                        raise RuntimeError(
-                            f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class')
-                    #
-                    self._supported_languages[name] = self._supported_languages[language]
-                    if color == 'default':
-                        color = self._supported_languages[name].background_color
-                    new_def = add_or_replace([name, kdef.kernel, language, kdef.color if color is None else color,
-                                              getattr(self._supported_languages[name], 'options', {})])
-                if notify_frontend:
-                    self.send_frontend_msg('kernel-list', self.get_kernel_list())
-                return new_def
-        elif language is not None:
-            # kernel is not defined and we only have language
-            if ':' in language:
-                # if this is a new module, let us create an entry point and load
-                from pkg_resources import EntryPoint
-                mn, attr = language.split(':', 1)
-                ep = EntryPoint(name='__unknown__', module_name=mn, attrs=tuple(attr.split('.')))
-                try:
-                    plugin = ep.resolve()
-                    self._supported_languages[name] = plugin
-                except Exception as e:
-                    raise RuntimeError(f'Failed to load language {language}: {e}')
-                if name in plugin.supported_kernels:
-                    # if name is defined in the module, only search kernels for this language
-                    avail_kernels = [x for x in plugin.supported_kernels[name] if
-                                     x in [y.kernel for y in self._kernel_list]]
-                else:
-                    # otherwise we search all supported kernels
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
-
-                if not avail_kernels:
-                    raise ValueError(
-                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
-                            ', '.join(sum(plugin.supported_kernels.values(), [])), language))
-                # use the first available kernel
-                if color == 'default':
-                    color = plugin.background_color
-                # find the language that has the kernel
-                lan_name = list({x: y for x, y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
-                new_def = add_or_replace(
-                    [name, avail_kernels[0], lan_name, plugin.background_color if color is None else color,
-                     getattr(plugin, 'options', {})])
-            else:
-                # if a language name is specified (not a path to module), if should be defined in setup.py
-                if language not in self._supported_languages:
-                    raise RuntimeError(f'Unrecognized language definition {language}')
-                #
-                plugin = self._supported_languages[language]
-                if language in plugin.supported_kernels:
-                    avail_kernels = [x for x in plugin.supported_kernels[language] if
-                                     x in [y.kernel for y in self._kernel_list]]
-                else:
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
-                if not avail_kernels:
-                    raise ValueError(
-                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
-                            ', '.join(sum(self._supported_languages[language].supported_kernels.values(), [])),
-                            language))
-
-                new_def = add_or_replace([
-                    name, avail_kernels[0], language,
-                    self._supported_languages[
-                        language].background_color if color is None or color == 'default' else color,
-                    getattr(self._supported_languages[language], 'options', {})])
-
-            self.send_frontend_msg('kernel-list', self.get_kernel_list())
-            return new_def
-        else:
-            # let us check if there is something wrong with the pre-defined language
-            for entrypoint in pkg_resources.iter_entry_points(group='sos_languages'):
-                if entrypoint.name == name:
-                    # there must be something wrong, let us trigger the exception here
-                    entrypoint.load()
-            # if nothing is triggerred, kernel is not defined, return a general message
-            raise ValueError(
-                f'No subkernel named {name} is found. Please make sure that you have the kernel installed (listed in the output of "jupyter kernelspec list" and usable in jupyter by itself), install appropriate language module (e.g. "pip install sos-r"), restart jupyter notebook and try again.')
-
     def get_supported_languages(self):
         if self._supported_languages is not None:
             return self._supported_languages
@@ -956,7 +1012,8 @@ class SoS_Kernel(IPythonKernel):
             # log_to_file(msg)
             for k, v in content.items():
                 if k == 'list-kernel':
-                    self.send_frontend_msg('kernel-list', self.get_kernel_list(v))
+                    kl = self.get_kernel_list(v)
+                    kl.notify_frontend()
                 elif k == 'kill-task':
                     # kill specified task
                     from sos.hosts import Host
@@ -1285,12 +1342,12 @@ class SoS_Kernel(IPythonKernel):
 Current subkernel: {} (kernel={}, language={}, color="{}")
 Active subkernels: {}
 Available subkernels:\n{}'''.format(
-                                   kinfo[0], kinfo[1], kinfo[2] if kinfo[2] else "undefined", kinfo[3],
+                                   kinfo.name, kinfo.kernel, kinfo.language if kinfo.language else "undefined", kinfo.color,
                                    ', '.join(self.kernels.keys()),
                                    '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.get_kernel_list()]))))
             return
         kinfo = self.find_kernel(kernel, kernel_name, language, color)
-        if kinfo[0] == self.kernel:
+        if kinfo.name == self.kernel:
             # the same kernel, do nothing?
             # but the senario can be
             #
@@ -1308,10 +1365,10 @@ Available subkernels:\n{}'''.format(
 
             # or, when we randomly jump cells, we should more aggreessively return
             # automatically shared variables to sos (done by the following) (#375)
-            if kinfo[0] != 'SoS':
+            if kinfo.name != 'SoS':
                 self.switch_kernel('SoS')
-                self.switch_kernel(kinfo[0], in_vars, ret_vars)
-        elif kinfo[0] == 'SoS':
+                self.switch_kernel(kinfo.name, in_vars, ret_vars)
+        elif kinfo.name == 'SoS':
             # switch from non-sos to sos kernel
             self.handle_magic_put(self.RET_VARS)
             self.RET_VARS = []
@@ -1319,18 +1376,18 @@ Available subkernels:\n{}'''.format(
         elif self.kernel != 'SoS':
             # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
             self.switch_kernel('SoS', in_vars, ret_vars)
-            self.switch_kernel(kinfo[0], in_vars, ret_vars)
+            self.switch_kernel(kinfo.name, in_vars, ret_vars)
         else:
             if self._debug_mode:
                 self.warn(f'Switch from {self.kernel} to {kinfo[0]}')
             # case when self.kernel == 'sos', kernel != 'sos'
             # to a subkernel
             new_kernel = False
-            if kinfo[0] not in self.kernels:
+            if kinfo.name not in self.kernels:
                 # start a new kernel
                 try:
-                    self.kernels[kinfo[0]] = manager.start_new_kernel(
-                        startup_timeout=60, kernel_name=kinfo[1], cwd=os.getcwd())
+                    self.kernels[kinfo.name] = manager.start_new_kernel(
+                        startup_timeout=60, kernel_name=kinfo.kernel, cwd=os.getcwd())
                     new_kernel = True
                 except Exception as e:
                     # try toget error message
@@ -1339,24 +1396,24 @@ Available subkernels:\n{}'''.format(
                         try:
                             # this should fail
                             manager.start_new_kernel(
-                                startup_timeout=60, kernel_name=kinfo[1], cwd=os.getcwd(),
+                                startup_timeout=60, kernel_name=kinfo.kernel, cwd=os.getcwd(),
                                 stdout=subprocess.DEVNULL, stderr=ferr)
                         except:
                             ferr.seek(0)
                             self.warn(f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
-            self.KM, self.KC = self.kernels[kinfo[0]]
+            self.KM, self.KC = self.kernels[kinfo.name]
             self.RET_VARS = [] if ret_vars is None else ret_vars
-            self.kernel = kinfo[0]
+            self.kernel = kinfo.name
             if new_kernel and self.kernel in self.supported_languages:
-                init_stmts = self.supported_languages[self.kernel](self, kinfo[1]).init_statements
+                init_stmts = self.supported_languages[self.kernel](self, kinfo.kernel).init_statements
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             #
             self.handle_magic_get(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
-        kernel = self.find_kernel(kernel)[0]
+        kernel = self.find_kernel(kernel).name
         if kernel == 'SoS':
             # cannot restart myself ...
             self.warn('Cannot restart SoS kernel from within SoS.')
@@ -1498,7 +1555,7 @@ Available subkernels:\n{}'''.format(
                 lan = self.supported_languages[self.kernel]
                 kinfo = self.find_kernel(self.kernel)
                 try:
-                    lan(self, kinfo[1]).get_vars(items)
+                    lan(self, kinfo.kernel).get_vars(items)
                 except Exception as e:
                     self.warn(f'Failed to get variable: {e}\n')
                     return
@@ -1593,9 +1650,9 @@ Available subkernels:\n{}'''.format(
             kinfo = self.find_kernel(self.kernel)
             # pass language name to to_kernel
             if to_kernel:
-                objects = lan(self, kinfo[1]).put_vars(items, to_kernel=self.find_kernel(to_kernel)[2])
+                objects = lan(self, kinfo.kernel).put_vars(items, to_kernel=self.find_kernel(to_kernel).language)
             else:
-                objects = lan(self, kinfo[1]).put_vars(items, to_kernel='SoS')
+                objects = lan(self, kinfo.kernel).put_vars(items, to_kernel='SoS')
             if isinstance(objects, dict):
                 # returns a SOS dictionary
                 try:
@@ -1743,7 +1800,7 @@ Available subkernels:\n{}'''.format(
         # non-sos kernel
         use_sos = kernel in ('sos', 'SoS') or (kernel is None and self.kernel == 'SoS')
         orig_kernel = self.kernel
-        if kernel is not None and self.kernel != self.find_kernel(kernel)[0]:
+        if kernel is not None and self.kernel != self.find_kernel(kernel).name:
             self.switch_kernel(kernel)
         if self._use_panel:
             self.send_frontend_msg('preview-kernel', self.kernel)
@@ -2039,53 +2096,18 @@ Available subkernels:\n{}'''.format(
 
     def get_kernel_list(self, notebook_kernel_list=None):
         if not hasattr(self, '_kernel_list'):
-            from jupyter_client.kernelspec import KernelSpecManager
-            km = KernelSpecManager()
-            specs = km.find_kernel_specs()
-            # get supported languages
-            self._kernel_list = []
-            lan_map = {}
-            for x in self.supported_languages.keys():
-                for lname, knames in self.supported_languages[x].supported_kernels.items():
-                    for kname in knames:
-                        if x != kname:
-                            lan_map[kname] = (lname, self.supported_languages[x].background_color,
-                                              getattr(self._supported_languages[x], 'options', {}))
-            # kernel_list has the following items
-            #
-            # 1. displayed name
-            # 2. kernel name
-            # 3. language name
-            # 4. color
-            for spec in specs.keys():
-                if spec == 'sos':
-                    # the SoS kernel will be default theme color.
-                    self._kernel_list.append(
-                        subkernel(name='SoS', kernel='sos', options={
-                        'variable_pattern': r'^[_A-Za-z0-9\.]+\s*$',
-                        'assignment_pattern': r'^([_A-Za-z0-9\.]+)\s*=.*$'}))
-                elif spec in lan_map:
-                    # e.g. ir ==> R
-                    self._kernel_list.append(
-                            subkernel(name=lan_map[spec][0], kernel=spec, language=lan_map[spec][0],
-                                color=lan_map[spec][1], options=;an_map[spec][2]))
-                else:
-                    # undefined language also use default theme color
-                    self._kernel_list.append(subkernel(name=spec, kernel=spec))
+            self._kernel_list = Subkernels(self)
         # now, using a list of kernels sent from the kernel, we might need to adjust
         # our list or create new kernels.
         if notebook_kernel_list is not None:
-            for [name, kernel, lan, color] in notebook_kernel_list:
-                try:
-                    # if we can find the kernel, fine...
-                    self.find_kernel(name, kernel, lan, color, notify_frontend=False)
-                except Exception as e:
-                    # otherwise do not worry about it.
-                    env.logger.warning(
-                        f'Failed to locate subkernel {name} with kernerl "{kernel}" and language "{lan}": {e}')
+            self._kernel_list.update(notebook_kernel_list)
+
         # sort kernel list by name to avoid unnecessary change of .ipynb files
-        self._kernel_list.sort(key=lambda x: x.name)
         return self._kernel_list
+
+    def find_kernel(self, name, kernel=None, language=None, color=None, notify_frontend=True):
+        kl = self.get_kernel_list()
+        return kl.find_kernel(name=name, kernel=kernel, language=language, color=color, notify_frontend=notify_frontend)
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
@@ -2401,7 +2423,7 @@ Available subkernels:\n{}'''.format(
                 self.comm_manager.register_target('sos_comm', self.sos_comm)
 
             # args.default_kernel should be valid
-            if self.find_kernel(args.default_kernel)[0] != self.find_kernel(self.kernel)[0]:
+            if self.find_kernel(args.default_kernel).name != self.find_kernel(self.kernel).name:
                 self.switch_kernel(args.default_kernel)
             #
             if args.cell_kernel == 'undefined':
@@ -2409,7 +2431,7 @@ Available subkernels:\n{}'''.format(
             #
             original_kernel = self.kernel
             try:
-                if self.find_kernel(args.cell_kernel)[0] != self.find_kernel(self.kernel)[0]:
+                if self.find_kernel(args.cell_kernel).name != self.find_kernel(self.kernel).name:
                     self.switch_kernel(args.cell_kernel)
             except Exception as e:
                 self.warn(f'Failed to switch to language "{args.cell_kernel}": {e}\n')
