@@ -121,6 +121,8 @@ class Subkernels(object):
     # a collection of subkernels
     def __init__(self, kernel):
         self.sos_kernel = kernel
+        self.supported_languages = kernel._supported_languages
+
         from jupyter_client.kernelspec import KernelSpecManager
         km = KernelSpecManager()
         specs = km.find_kernel_specs()
@@ -166,7 +168,7 @@ class Subkernels(object):
                 self._kernel_list.append(kdef)
                 return self._kernel_list[-1]
 
-    def find_kernel(self, name, kernel=None, language=None, color=None, notify_frontend=True):
+    def find(self, name, kernel=None, language=None, color=None, notify_frontend=True):
         # find from subkernel name
         def update_existing(idx):
             x = self._kernel_list[idx]
@@ -208,8 +210,6 @@ class Subkernels(object):
                     # otherwise, try to use the new language
                     kernel = name
                     break
-
-
 
         if kernel is not None:
             # in this case kernel should have been defined in kernel list
@@ -341,7 +341,7 @@ class Subkernels(object):
         for [name, kernel, lan, color] in notebook_kernel_list:
             try:
                 # if we can find the kernel, fine...
-                self.find_kernel(name, kernel, lan, color, notify_frontend=False)
+                self.find(name, kernel, lan, color, notify_frontend=False)
             except Exception as e:
                 # otherwise do not worry about it.
                 env.logger.warning(
@@ -847,6 +847,15 @@ class SoS_Kernel(IPythonKernel):
 
     supported_languages = property(lambda self: self.get_supported_languages())
 
+    def get_kernel_list(self):
+        if not hasattr(self, '_subkernels'):
+            self._subkernels = Subkernels(self)
+
+        # sort kernel list by name to avoid unnecessary change of .ipynb files
+        return self._subkernels
+
+    subkernels = property(lambda self: self.get_kernel_list())
+
     def get_completer(self):
         if self._completer is None:
             self._completer = SoS_Completer(self)
@@ -954,7 +963,7 @@ class SoS_Kernel(IPythonKernel):
         cur_kernel = self.kernel
         try:
             for kernel in self.kernels.keys():
-                kinfo = self.find_kernel(kernel)
+                kinfo = self.subkernels.find(kernel)
                 self.switch_kernel(kernel)
                 result[kernel] = [
                     ('Kernel', kinfo[1]),
@@ -1012,8 +1021,9 @@ class SoS_Kernel(IPythonKernel):
             # log_to_file(msg)
             for k, v in content.items():
                 if k == 'list-kernel':
-                    kl = self.get_kernel_list(v)
-                    kl.notify_frontend()
+                    if v:
+                        self.subkernels.update(v)
+                    self.subkernels.notify_frontend()
                 elif k == 'kill-task':
                     # kill specified task
                     from sos.hosts import Host
@@ -1336,7 +1346,7 @@ class SoS_Kernel(IPythonKernel):
     def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
         if not kernel:
-            kinfo = self.find_kernel(self.kernel)
+            kinfo = self.subkernels.find(self.kernel)
             self.send_response(self.iopub_socket, 'stream',
                                dict(name='stdout', text='''\
 Current subkernel: {} (kernel={}, language={}, color="{}")
@@ -1344,9 +1354,9 @@ Active subkernels: {}
 Available subkernels:\n{}'''.format(
                                    kinfo.name, kinfo.kernel, kinfo.language if kinfo.language else "undefined", kinfo.color,
                                    ', '.join(self.kernels.keys()),
-                                   '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.get_kernel_list()]))))
+                                   '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.subkernels]))))
             return
-        kinfo = self.find_kernel(kernel, kernel_name, language, color)
+        kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
             # the same kernel, do nothing?
             # but the senario can be
@@ -1413,7 +1423,7 @@ Available subkernels:\n{}'''.format(
             self.handle_magic_get(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
-        kernel = self.find_kernel(kernel).name
+        kernel = self.subkernels.find(kernel).name
         if kernel == 'SoS':
             # cannot restart myself ...
             self.warn('Cannot restart SoS kernel from within SoS.')
@@ -1553,7 +1563,7 @@ Available subkernels:\n{}'''.format(
                 return
             if self.kernel in self.supported_languages:
                 lan = self.supported_languages[self.kernel]
-                kinfo = self.find_kernel(self.kernel)
+                kinfo = self.subkernels.find(self.kernel)
                 try:
                     lan(self, kinfo.kernel).get_vars(items)
                 except Exception as e:
@@ -1647,10 +1657,10 @@ Available subkernels:\n{}'''.format(
                 return
             #
             lan = self.supported_languages[self.kernel]
-            kinfo = self.find_kernel(self.kernel)
+            kinfo = self.subkernels.find(self.kernel)
             # pass language name to to_kernel
             if to_kernel:
-                objects = lan(self, kinfo.kernel).put_vars(items, to_kernel=self.find_kernel(to_kernel).language)
+                objects = lan(self, kinfo.kernel).put_vars(items, to_kernel=self.subkernels.find(to_kernel).language)
             else:
                 objects = lan(self, kinfo.kernel).put_vars(items, to_kernel='SoS')
             if isinstance(objects, dict):
@@ -1800,7 +1810,7 @@ Available subkernels:\n{}'''.format(
         # non-sos kernel
         use_sos = kernel in ('sos', 'SoS') or (kernel is None and self.kernel == 'SoS')
         orig_kernel = self.kernel
-        if kernel is not None and self.kernel != self.find_kernel(kernel).name:
+        if kernel is not None and self.kernel != self.subkernels.find(kernel).name:
             self.switch_kernel(kernel)
         if self._use_panel:
             self.send_frontend_msg('preview-kernel', self.kernel)
@@ -2094,20 +2104,6 @@ Available subkernels:\n{}'''.format(
                                {'execution_count': self._execution_count, 'data': format_dict,
                                 'metadata': md_dict})
 
-    def get_kernel_list(self, notebook_kernel_list=None):
-        if not hasattr(self, '_kernel_list'):
-            self._kernel_list = Subkernels(self)
-        # now, using a list of kernels sent from the kernel, we might need to adjust
-        # our list or create new kernels.
-        if notebook_kernel_list is not None:
-            self._kernel_list.update(notebook_kernel_list)
-
-        # sort kernel list by name to avoid unnecessary change of .ipynb files
-        return self._kernel_list
-
-    def find_kernel(self, name, kernel=None, language=None, color=None, notify_frontend=True):
-        kl = self.get_kernel_list()
-        return kl.find_kernel(name=name, kernel=kernel, language=language, color=color, notify_frontend=notify_frontend)
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
@@ -2423,7 +2419,7 @@ Available subkernels:\n{}'''.format(
                 self.comm_manager.register_target('sos_comm', self.sos_comm)
 
             # args.default_kernel should be valid
-            if self.find_kernel(args.default_kernel).name != self.find_kernel(self.kernel).name:
+            if self.subkernels.find(args.default_kernel).name != self.subkernels.find(self.kernel).name:
                 self.switch_kernel(args.default_kernel)
             #
             if args.cell_kernel == 'undefined':
@@ -2431,7 +2427,7 @@ Available subkernels:\n{}'''.format(
             #
             original_kernel = self.kernel
             try:
-                if self.find_kernel(args.cell_kernel).name != self.find_kernel(self.kernel).name:
+                if self.subkernels.find(args.cell_kernel).name != self.subkernels.find(self.kernel).name:
                     self.switch_kernel(args.cell_kernel)
             except Exception as e:
                 self.warn(f'Failed to switch to language "{args.cell_kernel}": {e}\n')
