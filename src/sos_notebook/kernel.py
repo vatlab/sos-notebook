@@ -121,7 +121,7 @@ class Subkernels(object):
     # a collection of subkernels
     def __init__(self, kernel):
         self.sos_kernel = kernel
-        self.supported_languages = kernel._supported_languages
+        self.language_info = kernel.supported_languages
 
         from jupyter_client.kernelspec import KernelSpecManager
         km = KernelSpecManager()
@@ -129,12 +129,12 @@ class Subkernels(object):
         # get supported languages
         self._kernel_list = []
         lan_map = {}
-        for x in kernel.supported_languages.keys():
+        for x in self.language_info.keys():
             for lname, knames in kernel.supported_languages[x].supported_kernels.items():
                 for kname in knames:
                     if x != kname:
-                        lan_map[kname] = (lname, self.sos_kernel.supported_languages[x].background_color,
-                                          getattr(self.sos_kernel._supported_languages[x], 'options', {}))
+                        lan_map[kname] = (lname, self.language_info[x].get_background_color(lname),
+                                          getattr(self.language_info[x], 'options', {}))
         # kernel_list has the following items
         #
         # 1. displayed name
@@ -177,8 +177,8 @@ class Subkernels(object):
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx].language:
-                        self._kernel_list[idx].color = self.sos_kernel._supported_languages[
-                            self._kernel_list[idx].color].background_color
+                        self._kernel_list[idx].color = self.language_info[
+                            self._kernel_list[idx].language].get_background_color(self._kernel_list[idx].language)
                     else:
                         self._kernel_list[idx].color = ''
                 else:
@@ -221,11 +221,11 @@ class Subkernels(object):
             if not language:
                 if color == 'default':
                     if kdef.language:
-                        color = self.sos_kernel._supported_languages[kdef.language].background_color
+                        color = self.language_info[kdef.language].get_background_color(kdef.language)
                     else:
                         color = kdef.color
                 new_def = self.add_or_replace(subkernel(name, kdef.kernel, kdef.language, kdef.color if color is None else color,
-                                          getattr(self.sos_kernel._supported_languages[kdef.language], 'options', {}) if kdef.language else {}))
+                                          getattr(self.language_info[kdef.language], 'options', {}) if kdef.language else {}))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -238,33 +238,33 @@ class Subkernels(object):
                     ep = EntryPoint(name=kernel, module_name=mn, attrs=tuple(attr.split('.')))
                     try:
                         plugin = ep.resolve()
-                        self.sos_kernel._supported_languages[name] = plugin
+                        self.language_info[name] = plugin
                         # for convenience, we create two entries for, e.g. R and ir
                         # but only if there is no existing definition
                         for supported_lan, supported_kernels in plugin.supported_kernels.items():
                             for supported_kernel in supported_kernels:
-                                if name != supported_kernel and supported_kernel not in self.sos_kernel._supported_languages:
-                                    self.sos_kernel._supported_languages[supported_kernel] = plugin
-                            if supported_lan not in self.sos_kernel._supported_languages:
-                                self.sos_kernel._supported_languages[supported_lan] = plugin
+                                if name != supported_kernel and supported_kernel not in self.language_info:
+                                    self.language_info[supported_kernel] = plugin
+                            if supported_lan not in self.language_info:
+                                self.language_info[supported_lan] = plugin
                     except Exception as e:
                         raise RuntimeError(f'Failed to load language {language}: {e}')
                     #
                     if color == 'default':
-                        color = plugin.background_color
+                        color = plugin.get_background_color(kernel)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, kernel, kdef.color if color is None else color,
                                               getattr(plugin, 'options', {})))
                 else:
                     # if should be defined ...
-                    if language not in self.sos_kernel._supported_languages:
+                    if language not in self.language_info:
                         raise RuntimeError(
                             f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class')
                     #
-                    self.sos_kernel._supported_languages[name] = self.sos_kernel._supported_languages[language]
+                    self.language_info[name] = self.language_info[language]
                     if color == 'default':
-                        color = self.sos_kernel._supported_languages[name].background_color
+                        color = self.language_info[name].get_background_color(language)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, language, kdef.color if color is None else color,
-                                              getattr(self.sos_kernel._supported_languages[name], 'options', {})))
+                                              getattr(self.language_info[name], 'options', {})))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -277,7 +277,7 @@ class Subkernels(object):
                 ep = EntryPoint(name='__unknown__', module_name=mn, attrs=tuple(attr.split('.')))
                 try:
                     plugin = ep.resolve()
-                    self.sos_kernel._supported_languages[name] = plugin
+                    self.language_info[name] = plugin
                 except Exception as e:
                     raise RuntimeError(f'Failed to load language {language}: {e}')
                 if name in plugin.supported_kernels:
@@ -294,18 +294,18 @@ class Subkernels(object):
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
                             ', '.join(sum(plugin.supported_kernels.values(), [])), language))
                 # use the first available kernel
-                if color == 'default':
-                    color = plugin.background_color
                 # find the language that has the kernel
                 lan_name = list({x: y for x, y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
-                new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, plugin.background_color if color is None else color,
+                if color == 'default':
+                    color = plugin.get_background_color(lan_name)
+                new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, plugin.get_background_color(lan_name) if color is None else color,
                      getattr(plugin, 'options', {})))
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
-                if language not in self.sos_kernel._supported_languages:
+                if language not in self.language_info:
                     raise RuntimeError(f'Unrecognized language definition {language}')
                 #
-                plugin = self.sos_kernel._supported_languages[language]
+                plugin = self.language_info[language]
                 if language in plugin.supported_kernels:
                     avail_kernels = [x for x in plugin.supported_kernels[language] if
                                      x in [y.kernel for y in self._kernel_list]]
@@ -315,14 +315,14 @@ class Subkernels(object):
                 if not avail_kernels:
                     raise ValueError(
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
-                            ', '.join(sum(self.sos_kernel._supported_languages[language].supported_kernels.values(), [])),
+                            ', '.join(sum(self.language_info[language].supported_kernels.values(), [])),
                             language))
 
                 new_def = self.add_or_replace(subkernel(
                     name, avail_kernels[0], language,
-                    self.sos_kernel._supported_languages[
-                        language].background_color if color is None or color == 'default' else color,
-                    getattr(self.sos_kernel._supported_languages[language], 'options', {})))
+                    self.language_info[
+                        language].get_background_color(language) if color is None or color == 'default' else color,
+                    getattr(self.language_info[language], 'options', {})))
 
             self.notify_frontend()
             return new_def
@@ -840,7 +840,17 @@ class SoS_Kernel(IPythonKernel):
             name = entrypoint.name
             try:
                 plugin = entrypoint.load()
+                # if a single color is defined, it is used for all supported
+                # languages
+                if isinstance(plugin.background_color, str):
+                    # return the same background color for all inquiry
+                    plugin.get_background_color = lambda lan: plugin.background_color
+                else:
+                    # return color for specified, or any color if unknown inquiry is made
+                    plugin.get_background_color = lambda lan: plugin.background_color.get(lan, next(iter(plugin.background_color.values())))
+
                 self._supported_languages[name] = plugin
+
             except Exception as e:
                 self._failed_languages[name] = e
         return self._supported_languages
