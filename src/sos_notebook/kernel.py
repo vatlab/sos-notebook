@@ -350,7 +350,7 @@ class Subkernels(object):
 
 
     def update(self, notebook_kernel_list):
-        for [name, kernel, lan, color] in notebook_kernel_list:
+        for [name, kernel, lan, color, _] in notebook_kernel_list:
             try:
                 # if we can find the kernel, fine...
                 self.find(name, kernel, lan, color, notify_frontend=False)
