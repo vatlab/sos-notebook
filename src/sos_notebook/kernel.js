@@ -106,6 +106,11 @@ define([
         window.KernelList.push([data[i][0], data[i][0]]);
     }
 
+    // if not defined sos version, remove extra kernels saved by
+    // sos-notebook 0.9.12.7 or earlier
+    if (!nb.metadata["sos"]["version"]) {
+        save_kernel_info();
+    }
     window.filterDataFrame = function(id) {
         var input = document.getElementById("search_" + id);
         var filter = input.value.toUpperCase();
@@ -522,14 +527,14 @@ define([
                         if (nb.metadata["sos"]["kernels"][k_idx][1] !== data[i][1]) {
                             r = confirm("This notebook used Jupyter kernel " + nb.metadata["sos"]["kernels"][k_idx][1] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][1] + " instead?");
                             if (!r) {
-								window.KernelName[data[i][0]] = nb.metadata["sos"]["kernels"][k_idx][1];
+                                window.KernelName[data[i][0]] = nb.metadata["sos"]["kernels"][k_idx][1];
                             }
                         }
                         if (nb.metadata["sos"]["kernels"][k_idx][2] !== data[i][2]) {
                             if (data[i][2] !== "") {
                                 r = confirm("This notebook used language definition " + nb.metadata["sos"]["kernels"][k_idx][2] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][2] + " instead?");
                                 if (!r) {
-									window.LanguageName[data[i]][0] = nb.metadata["sos"]["kernels"][k_idx][2];
+                                    window.LanguageName[data[i]][0] = nb.metadata["sos"]["kernels"][k_idx][2];
                                 }
                             }
                         } 
