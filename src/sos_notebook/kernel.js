@@ -190,9 +190,9 @@ define([
         nb.metadata["sos"]["kernels"] = Array.from(used_kernels).sort().map(
             function(x) {
                 return [window.DisplayName[x], window.KernelName[x],
-                    window.LanguageName[x] || "", window.BackgroundColor[x] || "",
-					window.KernelOptions[x] || {}]
-        }); 
+                    window.LanguageName[x] || "", window.BackgroundColor[x] || ""],
+            }
+        ); 
         // if some kernel is not registered add them
     }
 
