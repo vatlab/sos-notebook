@@ -56,7 +56,7 @@ from .inspector import SoS_Inspector
 
 from .workflow_executor import runfile
 from .step_executor import PendingTasks
-
+from ._version import __version__ as __notebook_version__
 
 class FlushableStringIO:
     '''This is a string buffer for output, but it will only
@@ -186,7 +186,7 @@ class Subkernels(object):
         # find from subkernel name
         def update_existing(idx):
             x = self._kernel_list[idx]
-            if (kernel is not None and kernel != x.kernel) or (language not in (None, '')  and language != x.language):
+            if (kernel is not None and kernel != x.kernel) or (language not in (None, '') and language != x.language):
                 raise ValueError(f'Cannot change kernel or language of predefined subkernel {name} {x}')
             if color is not None:
                 if color == 'default':
@@ -1087,6 +1087,10 @@ class SoS_Kernel(IPythonKernel):
                             log_to_file(tbl)
                     except Exception as e:
                         self.send_frontend_msg('alert', f'Failed to paste clipboard as table: {e}')
+                elif k == 'notebook-version':
+                    # send the version of notebook, right now we will not do anything to it, but
+                    # we will send the version of sos-notebook there
+                    self.send_frontend_msg('notebook-version', __notebook_version__)
                 else:
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')

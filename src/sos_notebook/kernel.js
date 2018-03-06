@@ -670,6 +670,9 @@ define([
                 cm.replaceRange(data, cm.getCursor());
             } else if (msg_type === 'alert') {
                 alert(data);
+            } else if (msg_type === 'notebook-version') {
+                // right now no upgrade, just save version to notebook
+                nb.metadata["sos"]["version"] = data;
             } else if (msg_type === 'clear-output') {
                 // console.log(data)
                 var active = nb.get_selected_cells_indices();
@@ -739,6 +742,7 @@ define([
         window.sos_comm.send({
             "list-kernel": nb.metadata["sos"]["kernels"],
             "update-task-status": window.unknown_tasks,
+            "notebook-version": nb.metadata["sos"]["version"] || "undefined",
         });
         console.log("sos comm registered");
     }
