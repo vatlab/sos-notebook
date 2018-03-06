@@ -117,6 +117,9 @@ class subkernel(object):
         self.color = color
         self.options = options
 
+    def __repr__(self):
+        return f'subkernel {self.name} with kernel {self.kernel} for language {self.language} with color {self.color}'
+
 class Subkernels(object):
     # a collection of subkernels
     def __init__(self, kernel):
@@ -133,7 +136,7 @@ class Subkernels(object):
             for lname, knames in kernel.supported_languages[x].supported_kernels.items():
                 for kname in knames:
                     if x != kname:
-                        lan_map[kname] = (lname, self.language_info[x].get_background_color(lname),
+                        lan_map[kname] = (lname, self.get_background_color(self.language_info[x], lname),
                                           getattr(self.language_info[x], 'options', {}))
         # kernel_list has the following items
         #
@@ -168,6 +171,17 @@ class Subkernels(object):
                 self._kernel_list.append(kdef)
                 return self._kernel_list[-1]
 
+    def get_background_color(self, plugin, lan):
+        # if a single color is defined, it is used for all supported
+        # languages
+        if isinstance(plugin.background_color, str):
+            # return the same background color for all inquiry
+            return plugin.background_color
+        else:
+            # return color for specified, or any color if unknown inquiry is made
+            return plugin.background_color.get(lan, next(iter(plugin.background_color.values())))
+
+
     def find(self, name, kernel=None, language=None, color=None, notify_frontend=True):
         # find from subkernel name
         def update_existing(idx):
@@ -177,8 +191,7 @@ class Subkernels(object):
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx].language:
-                        self._kernel_list[idx].color = self.language_info[
-                            self._kernel_list[idx].language].get_background_color(self._kernel_list[idx].language)
+                        self._kernel_list[idx].color = self.get_background_color(self.language_info[self._kernel_list[idx].language], self._kernel_list[idx].language)
                     else:
                         self._kernel_list[idx].color = ''
                 else:
@@ -221,7 +234,7 @@ class Subkernels(object):
             if not language:
                 if color == 'default':
                     if kdef.language:
-                        color = self.language_info[kdef.language].get_background_color(kdef.language)
+                        color = self.get_background_color(self.language_info[kdef.language], kdef.language)
                     else:
                         color = kdef.color
                 new_def = self.add_or_replace(subkernel(name, kdef.kernel, kdef.language, kdef.color if color is None else color,
@@ -251,7 +264,7 @@ class Subkernels(object):
                         raise RuntimeError(f'Failed to load language {language}: {e}')
                     #
                     if color == 'default':
-                        color = plugin.get_background_color(kernel)
+                        color = self.get_background_color(plugin, kernel)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, kernel, kdef.color if color is None else color,
                                               getattr(plugin, 'options', {})))
                 else:
@@ -262,7 +275,7 @@ class Subkernels(object):
                     #
                     self.language_info[name] = self.language_info[language]
                     if color == 'default':
-                        color = self.language_info[name].get_background_color(language)
+                        color = self.get_background_color(self.language_info[name], language)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, language, kdef.color if color is None else color,
                                               getattr(self.language_info[name], 'options', {})))
                 if notify_frontend:
@@ -297,8 +310,8 @@ class Subkernels(object):
                 # find the language that has the kernel
                 lan_name = list({x: y for x, y in plugin.supported_kernels.items() if avail_kernels[0] in y}.keys())[0]
                 if color == 'default':
-                    color = plugin.get_background_color(lan_name)
-                new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, plugin.get_background_color(lan_name) if color is None else color,
+                    color = self.get_background_color(plugin, lan_name)
+                new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, self.get_background_color(plugin, lan_name) if color is None else color,
                      getattr(plugin, 'options', {})))
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
@@ -320,8 +333,7 @@ class Subkernels(object):
 
                 new_def = self.add_or_replace(subkernel(
                     name, avail_kernels[0], language,
-                    self.language_info[
-                        language].get_background_color(language) if color is None or color == 'default' else color,
+                    self.get_background_color(self.language_info[language], language) if color is None or color == 'default' else color,
                     getattr(self.language_info[language], 'options', {})))
 
             self.notify_frontend()
@@ -835,22 +847,13 @@ class SoS_Kernel(IPythonKernel):
             return self._supported_languages
         group = 'sos_languages'
         self._supported_languages = {}
+
         for entrypoint in pkg_resources.iter_entry_points(group=group):
             # Grab the function that is the actual plugin.
             name = entrypoint.name
             try:
                 plugin = entrypoint.load()
-                # if a single color is defined, it is used for all supported
-                # languages
-                if isinstance(plugin.background_color, str):
-                    # return the same background color for all inquiry
-                    plugin.get_background_color = lambda lan: plugin.background_color
-                else:
-                    # return color for specified, or any color if unknown inquiry is made
-                    plugin.get_background_color = lambda lan: plugin.background_color.get(lan, next(iter(plugin.background_color.values())))
-
                 self._supported_languages[name] = plugin
-
             except Exception as e:
                 self._failed_languages[name] = e
         return self._supported_languages
