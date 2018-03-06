@@ -350,14 +350,15 @@ class Subkernels(object):
 
 
     def update(self, notebook_kernel_list):
-        for [name, kernel, lan, color, _] in notebook_kernel_list:
+        log_to_file(notebook_kernel_list)
+        for kinfo in notebook_kernel_list:
             try:
                 # if we can find the kernel, fine...
-                self.find(name, kernel, lan, color, notify_frontend=False)
+                self.find(kinfo[0], kinfo[1], kinfo[2], kinfo[3], notify_frontend=False)
             except Exception as e:
                 # otherwise do not worry about it.
                 env.logger.warning(
-                    f'Failed to locate subkernel {name} with kernerl "{kernel}" and language "{lan}": {e}')
+                    f'Failed to locate subkernel {kinfo[0]} with kernerl "{kinfo[1]}" and language "{kinfo[2]}": {e}')
 
     def notify_frontend(self):
         self._kernel_list.sort(key=lambda x: x.name)
