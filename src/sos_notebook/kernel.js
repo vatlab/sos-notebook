@@ -190,7 +190,8 @@ define([
         nb.metadata["sos"]["kernels"] = Array.from(used_kernels).sort().map(
             function(x) {
                 return [window.DisplayName[x], window.KernelName[x],
-                    window.KernelList[x], window.BackgroundColor[x], window.KernelOptions[x]]
+                    window.LanguageName[x] || "", window.BackgroundColor[x] || "",
+					window.KernelOptions[x] || {}]
         }); 
         // if some kernel is not registered add them
     }
@@ -524,13 +525,13 @@ define([
                         var r;
                         // if kernel exist update the rest of the information, but warn users first on
                         // inconsistency
-                        if (nb.metadata["sos"]["kernels"][k_idx][1] !== data[i][1]) {
+                        if (nb.metadata["sos"]["kernels"][k_idx][1] !== data[i][1] && nb.metadata["sos"]["kernels"][k_idx][1]) {
                             r = confirm("This notebook used Jupyter kernel " + nb.metadata["sos"]["kernels"][k_idx][1] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][1] + " instead?");
                             if (!r) {
                                 window.KernelName[data[i][0]] = nb.metadata["sos"]["kernels"][k_idx][1];
                             }
                         }
-                        if (nb.metadata["sos"]["kernels"][k_idx][2] !== data[i][2]) {
+                        if (nb.metadata["sos"]["kernels"][k_idx][2] !== data[i][2] && nb.metadata["sos"]["kernels"][k_idx][2]) {
                             if (data[i][2] !== "") {
                                 r = confirm("This notebook used language definition " + nb.metadata["sos"]["kernels"][k_idx][2] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][2] + " instead?");
                                 if (!r) {
