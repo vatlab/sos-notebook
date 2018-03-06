@@ -34,6 +34,7 @@ define([
     window.BackgroundColor = {};
     window.DisplayName = {};
     window.KernelName = {};
+    window.LanguageName = {};
     window.KernelList = [];
     window.KernelOptions = {};
     window.events = require("base/js/events");
@@ -75,17 +76,6 @@ define([
         nb.metadata["sos"]["default_kernel"] = "SoS";
     }
 
-    var used_kernels = new Set();
-    var cells = nb.get_cells();
-    for (var i = cells.length - 1; i >= 0; --i) {
-        if (cells[i].cell_type === "code" && cells[i].metadata.kernel) {
-            used_kernels.add(cells[i].metadata.kernel);
-        }
-    }
-    nb.metadata["sos"]["kernels"] = nb.metadata["sos"]["kernels"].filter(function(x) {
-        return used_kernels.has(x[0]);
-    });
-
     var data = nb.metadata["sos"]["kernels"];
     // upgrade existing meta data if it uses the old 3 item format
     if (nb.metadata["sos"]["kernels"].length > 0 &&
@@ -96,6 +86,7 @@ define([
             // new format, name, kenel, lan, color
             nb.metadata["sos"]["kernels"][j] = [def[1], def[0], def[1], def[2]];
         }
+        data = nb.metadata["sos"]["kernels"];
     }
 
     for (var i = 0; i < data.length; i++) {
@@ -108,6 +99,9 @@ define([
         // Name
         window.KernelName[data[i][0]] = data[i][1];
         window.KernelName[data[i][1]] = data[i][1];
+        // LanguageName
+        window.LanguageName[data[i][0]] = data[i][2];
+        window.LanguageName[data[i][1]] = data[i][2];
         // KernelList, use displayed name
         window.KernelList.push([data[i][0], data[i][0]]);
     }
@@ -180,6 +174,21 @@ define([
         }
     };
 
+    function save_kernel_info() {
+        var used_kernels = new Set();
+        var cells = nb.get_cells();
+        for (var i = cells.length - 1; i >= 0; --i) {
+            if (cells[i].cell_type === "code" && cells[i].metadata.kernel) {
+                used_kernels.add(cells[i].metadata.kernel);
+            }
+        }
+        nb.metadata["sos"]["kernels"] = Array.from(used_kernels).sort().map(
+            function(x) {
+                return [window.DisplayName[x], window.KernelName[x],
+                    window.KernelList[x], window.BackgroundColor[x], window.KernelOptions[x]]
+        }); 
+        // if some kernel is not registered add them
+    }
 
     function get_workflow_from_cell(cell) {
         var lines = cell.get_text().split("\n");
@@ -460,17 +469,6 @@ define([
             var cell;
 
             if (msg_type === "kernel-list") {
-                // upgrade existing meta data if it uses the old 3 item format
-                if (nb.metadata["sos"]["kernels"].length > 0 &&
-                    nb.metadata["sos"]["kernels"][0].length === 3) {
-                    for (j = 0; j < nb.metadata["sos"]["kernels"].length; j++) {
-                        var def = nb.metadata["sos"]["kernels"][j];
-                        // original format, kernel, name, color
-                        // new format, name, kenel, lan, color
-                        nb.metadata["sos"]["kernels"][j] = [def[1], def[0], def[1], def[2]];
-                    }
-                }
-
                 /*
                 for (j = 0; j < nb.metadata["sos"]["kernels"].length; j++) {
                     var kdef = nb.metadata["sos"]["kernels"][j];
@@ -501,6 +499,10 @@ define([
                     if (!(data[i][1] in window.KernelName)) {
                         window.KernelName[data[i][1]] = data[i][1];
                     }
+                    // Language Name
+                    window.LanguageName[data[i][0]] = data[i][2];
+                    if (!(data[i][2] in window.LanguageName)) {
+                        window.LanguageName[data[i][2]] = data[i][2];
                     // KernelList, use displayed name
                     if (window.KernelList.findIndex((item) => item[0] === data[i][0]) === -1) {
                         window.KernelList.push([data[i][0], data[i][0]]);
@@ -510,11 +512,10 @@ define([
                         window.KernelOptions[data[i][0]] = data[i][4];
                     }
 
-                    // if the kernel is not in metadata, push it in
+                    // if the kernel is in metadata, check conflict
+                    /*
                     k_idx = nb.metadata["sos"]["kernels"].findIndex((item) => item[0] === data[i][0]);
-                    if (k_idx === -1) {
-                        nb.metadata["sos"]["kernels"].push(data[i].slice(0,4));
-                    } else {
+                    if (k_idx !== -1) {
                         var r;
                         // if kernel exist update the rest of the information, but warn users first on
                         // inconsistency
@@ -540,6 +541,7 @@ define([
                         }
                         nb.metadata["sos"]["kernels"][k_idx][3] = data[i][3];
                     }
+                    */
                 }
                 //add dropdown menu of kernels in frontend
                 load_select_kernel();
@@ -558,6 +560,7 @@ define([
                     cell.metadata.kernel = window.DisplayName[data[1]];
                     // set meta information
                     changeStyleOnKernel(cell, data[1]);
+                    save_kernel_info();
                 } else if (cell.metadata.tags && cell.metadata.tags.indexOf("report_output") >= 0) {
                     // #639
                     // if kernel is different, changeStyleOnKernel would set report_output.
