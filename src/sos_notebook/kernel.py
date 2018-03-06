@@ -186,8 +186,8 @@ class Subkernels(object):
         # find from subkernel name
         def update_existing(idx):
             x = self._kernel_list[idx]
-            if (kernel is not None and kernel != x.kernel) or (language is not None and language != x.language):
-                raise ValueError(f'Cannot change kernel or language of predefined subkernel {name}')
+            if (kernel is not None and kernel != x.kernel) or (language not in (None, '')  and language != x.language):
+                raise ValueError(f'Cannot change kernel or language of predefined subkernel {name} {x}')
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx].language:
