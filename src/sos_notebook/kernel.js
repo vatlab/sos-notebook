@@ -503,6 +503,7 @@ define([
                     window.LanguageName[data[i][0]] = data[i][2];
                     if (!(data[i][2] in window.LanguageName)) {
                         window.LanguageName[data[i][2]] = data[i][2];
+                    }
                     // KernelList, use displayed name
                     if (window.KernelList.findIndex((item) => item[0] === data[i][0]) === -1) {
                         window.KernelList.push([data[i][0], data[i][0]]);
@@ -513,7 +514,6 @@ define([
                     }
 
                     // if the kernel is in metadata, check conflict
-                    /*
                     k_idx = nb.metadata["sos"]["kernels"].findIndex((item) => item[0] === data[i][0]);
                     if (k_idx !== -1) {
                         var r;
@@ -521,27 +521,19 @@ define([
                         // inconsistency
                         if (nb.metadata["sos"]["kernels"][k_idx][1] !== data[i][1]) {
                             r = confirm("This notebook used Jupyter kernel " + nb.metadata["sos"]["kernels"][k_idx][1] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][1] + " instead?");
-                            if (r) {
-                                nb.metadata["sos"]["kernels"][k_idx][1] = data[i][1];
+                            if (!r) {
+								window.KernelName[data[i][0]] = nb.metadata["sos"]["kernels"][k_idx][1];
                             }
-                        } else {
-                            nb.metadata["sos"]["kernels"][k_idx][1] = data[i][1];
                         }
                         if (nb.metadata["sos"]["kernels"][k_idx][2] !== data[i][2]) {
-                            if (nb.metadata["sos"]["kernels"][k_idx][2] === "") {
-                                nb.metadata["sos"]["kernels"][k_idx][2] = data[i][2];
-                            } else if (data[i][2] !== "") {
+                            if (data[i][2] !== "") {
                                 r = confirm("This notebook used language definition " + nb.metadata["sos"]["kernels"][k_idx][2] + " for subkernel " + data[i][0] + ". Do you want to switch to " + data[i][2] + " instead?");
-                                if (r) {
-                                    nb.metadata["sos"]["kernels"][k_idx][2] = data[i][2];
+                                if (!r) {
+									window.LanguageName[data[i]][0] = nb.metadata["sos"]["kernels"][k_idx][2];
                                 }
                             }
-                        } else {
-                            nb.metadata["sos"]["kernels"][k_idx][2] = data[i][2];
-                        }
-                        nb.metadata["sos"]["kernels"][k_idx][3] = data[i][3];
+                        } 
                     }
-                    */
                 }
                 //add dropdown menu of kernels in frontend
                 load_select_kernel();
@@ -555,6 +547,7 @@ define([
             } else if (msg_type === "cell-kernel") {
                 // get cell from passed cell index, which was sent through the
                 // %frontend magic
+
                 cell = data[0] === -1 ? window.my_panel.cell : nb.get_cell(data[0]);
                 if (cell.metadata.kernel !== window.DisplayName[data[1]]) {
                     cell.metadata.kernel = window.DisplayName[data[1]];
