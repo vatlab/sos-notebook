@@ -30,7 +30,10 @@ before_install:
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown
     - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz
-    - pip install pygments ipython wand graphviz sos sos-bash sos-python
+    - pip install pygments ipython wand graphviz
+    - pip install git+https://github.com/vatlab/sos.git
+    - pip install git+https://github.com/vatlab/sos-bash.git
+    - pip install git+https://github.com/vatlab/sos-python.git
 
 sudo: required
 services:
