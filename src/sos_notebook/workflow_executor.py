@@ -162,6 +162,7 @@ class Interactive_Executor(Base_Executor):
             env.sos_dict.quick_update(runnable._context)
             # execute section with specified input
             runnable._status = 'running'
+            dag.save(self.config['output_dag'])
             try:
                 executor = Interactive_Step_Executor(section)
                 res = executor.run()
@@ -179,8 +180,10 @@ class Interactive_Executor(Base_Executor):
                             | {'_input', '__step_output__', '__default_output__', '__args__'}))
                     node._context['__completed__'].append(res['__step_name__'])
                 runnable._status = 'completed'
+                dag.save(self.config['output_dag'])
             except (UnknownTarget, RemovedTarget) as e:
                 runnable._status = None
+                dag.save(self.config['output_dag'])
                 target = e.target
                 if dag.regenerate_target(target):
                     #runnable._depends_targets.append(target)
@@ -204,9 +207,10 @@ class Interactive_Executor(Base_Executor):
                     if cycle:
                         raise RuntimeError(
                             f'Circular dependency detected {cycle}. It is likely a later step produces input of a previous step.')
-                self.save_dag(dag)
+                dag.save(self.config['output_dag'])
             except UnavailableLock as e:
                 runnable._status = 'pending'
+                dag.save(self.config['output_dag'])
                 runnable._signature = (e.output, e.sig_file)
                 env.logger.debug(f'Waiting on another process for step {section.step_name()}')
             except PendingTasks as e:
@@ -215,6 +219,7 @@ class Interactive_Executor(Base_Executor):
             # if the job is failed
             except Exception as e:
                 runnable._status = 'failed'
+                dag.save(self.config['output_dag'])
                 raise
         if self.md5:
             self.save_workflow_signature(dag)
