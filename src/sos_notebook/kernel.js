@@ -1428,8 +1428,6 @@ define([
     var execute_in_panel = function(evt) {
         //var cell = nb.get_selected_cell();
         var cell = evt.notebook.get_selected_cell();
-        if (cell.cell_type !== "code")
-            return false;
         // if the current cell does not has focus, ignore this shortcut
         if (!nb.get_selected_cell().element[0].contains(document.activeElement))
             return false;
@@ -1454,14 +1452,19 @@ define([
             toggle_panel();
         //
         var panel_cell = window.my_panel.cell;
-        // set the kernel of the panel cell as the sending cell
-        var col = cell.element[0].getElementsByClassName("input_prompt")[0].style.backgroundColor;
-        if (panel_cell.metadata.kernel !== cell.metadata.kernel) {
-            panel_cell.metadata.kernel = cell.metadata.kernel;
-            col = changeStyleOnKernel(panel_cell, panel_cell.metadata.kernel);
+        // change cell kernel to sending cell if sending cell is code
+        if (cell.cell_type === "code") {
+            // set the kernel of the panel cell as the sending cell
+            var col = cell.element[0].getElementsByClassName("input_prompt")[0].style.backgroundColor;
+            if (panel_cell.metadata.kernel !== cell.metadata.kernel) {
+                panel_cell.metadata.kernel = cell.metadata.kernel;
+                col = changeStyleOnKernel(panel_cell, panel_cell.metadata.kernel);
+            }
+            // if in sos mode and is single line, enable automatic preview
+            var cell_kernel = cell.metadata.kernel ? cell.metadata.kernel : nb.metadata["sos"].default_kernel;
+        } else {
+            var cell_kernel = panel_cell.metadata.kernel ? panel_cell.metadata.kernel : nb.metadata["sos"].default_kernel;
         }
-        // if in sos mode and is single line, enable automatic preview
-        var cell_kernel = cell.metadata.kernel ? cell.metadata.kernel : nb.metadata["sos"].default_kernel;
         if (KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
             text = "%preview " + text;
         } else if (KernelOptions[cell_kernel]["assignment_pattern"]) {
