@@ -472,9 +472,12 @@ class SoS_Kernel(IPythonKernel):
                                          description='''Clear the output of the current cell, or the current
             active cell if executed in the sidepanel.''')
         parser.add_argument('-a', '--all', action='store_true',
-                            help='''Clear all output of the current notebook.''')
-        parser.add_argument('-s', '--status', nargs='+',
+                            help='''Clear all output or selected status or class of the current notebook.''')
+        grp = parser.add_mutually_exclusive_group()
+        grp.add_argument('-s', '--status', nargs='+',
                             help='''Clear tasks that match specifie status (e.g. completed).''')
+        grp.add_argument('-c', '--class', nargs='+', dest='elem_class',
+                            help='''Clear all HTML elements with specified classes (e.g. sos_hint)''')
         parser.error = self._parse_error
         return parser
 
@@ -2404,7 +2407,7 @@ Available subkernels:\n{}'''.format(
                     status_style = [self.status_class[x] for x in args.status]
                 else:
                     status_style = None
-                self.send_frontend_msg('clear-output', [cell_idx, args.all, status_style])
+                self.send_frontend_msg('clear-output', [cell_idx, args.all, status_style, args.elem_class])
         elif self.MAGIC_FRONTEND.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:

@@ -687,16 +687,28 @@ define([
                         }
                     }
                 }
+                var clear_class = function(cell, element_class) {
+                    var elements = cell.element[0].getElementsByClassName(element_class);
+                    while (elements.length > 0) {
+                        elements[0].parentNode.removeChild(elements[0]);
+                        elements = cell.element[0].getElementsByClassName(element_class);
+                    }
+                }
+                // if remove all
                 if (data[1]) {
                     var cells = nb.get_cells();
                     var i;
                     var j;
                     for (i = 0; i < cells.length ; ++i) {
-                        if (nb.get_cell(cells[i]).cell_type != "code")
+                        if (cells[i].cell_type != "code")
                             continue;
                         if (data[2]) {
                             for (j = 0; j < data[2].length; ++j) {
                                 clear_task(cells[i], data[2][j]);
+                            }
+                        } else if (data[3]) {
+                            for (j = 0; j < data[3].length; ++j) {
+                                clear_class(cells[i], data[3][j]);
                             }
                         } else {
                             cells[i].clear_output();
@@ -713,16 +725,24 @@ define([
                             for (j = 0; j < data[2].length; ++j) {
                                 clear_task(nb.get_cell(active[i]), data[2][j]);
                             }
+                        } else if (data[3]) {
+                            for (j = 0; j < data[3].length; ++j) {
+                                clear_class(nb.get_cell(active[i]), data[3][j]);
+                            }
                         } else {
                             nb.get_cell(active[i]).clear_output();
                         }
                     }
                 } else if (nb.get_cell(data[0]).cell_type === "code") {
                     // clear current cell
+                    var j;
                     if (data[2]) {
-                        var j;
                         for (j = 0; j < data[2].length; ++j) {
                             clear_task(nb.get_cell(data[0]), data[2][j]);
+                        }
+                    } else if (data[3]) {
+                        for (j = 0; j < data[3].length; ++j) {
+                            clear_class(nb.get_cell(data[0]), data[3][j]);
                         }
                     } else {
                         nb.get_cell(data[0]).clear_output();
