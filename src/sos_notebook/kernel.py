@@ -1808,6 +1808,7 @@ Available subkernels:\n{}'''.format(
         handled = [False for x in items]
         for idx, item in enumerate(items):
             try:
+                item = os.path.expanduser(item)
                 if os.path.isfile(item):
                     handled[idx] = True
                     self.preview_file(item, style)
