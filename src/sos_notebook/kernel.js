@@ -2124,7 +2124,7 @@ table.task_table {
             CodeMirror.registerHelper("hintWords", "sos", hintWords);
 
             var modeMap = {
-                'run': 'bash',
+                'run': 'shell',
                 'python': {
                     name: 'python',
                     version: 3
@@ -2143,6 +2143,7 @@ table.task_table {
                 'download': 'markdown',
                 // from kernel named, r, ruby, sas, javascript etc are fine
                 'bash': 'shell',
+                'sh': 'shell',
                 'typescript': {
                     name: "javascript",
                     typescript: true
