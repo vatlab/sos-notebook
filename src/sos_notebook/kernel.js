@@ -25,6 +25,12 @@ define([
     "codemirror/lib/codemirror",
     "codemirror/mode/python/python",
     "codemirror/mode/r/r",
+    "codemirror/mode/octave/octave",
+    "codemirror/mode/ruby/ruby",
+    "codemirror/mode/sas/sas",
+    "codemirror/mode/javascript/javascript",
+    "codemirror/mode/shell/shell",
+    "codemirror/mode/julia/julia",
     "codemirror/mode/markdown/markdown",
     "codemirror/addon/selection/active-line",
     "codemirror/addon/fold/foldcode",
@@ -2006,7 +2012,7 @@ table.task_table {
             // https://github.com/jupyter/notebook/blob/master/notebook/static/notebook/js/cell.js#L722
             cell.code_mirror.setOption('mode', {
                 name: 'sos',
-                base_mode: window.KernelName[this.value]
+                base_mode: window.LanguageName[this.value],
             });
         });
 
@@ -2135,8 +2141,13 @@ table.task_table {
                 'report': 'markdown',
                 'pandoc': 'markdown',
                 'download': 'markdown',
-                // from kernel named
-                'ir': 'r',
+                // from kernel named, r, ruby, sas, javascript etc are fine
+                'bash': 'shell',
+                'typescript': {
+                    name: "javascript",
+                    typescript: true
+                },
+                'matlab': 'octave',
             }
 
             function findMode(mode) {
