@@ -2245,20 +2245,10 @@ Available subkernels:\n{}'''.format(
             self.send_frontend_msg('default-kernel', self.kernel)
         return ret
 
-    def remove_leading_comments(self, code):
-        lines = code.splitlines()
-        try:
-            idx = [x.startswith('#') or not x.strip()
-                   for x in lines].index(False)
-            return '\n'.join(lines[idx:])
-        except Exception:
-            # if all line is empty
-            return ''
-
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
                     allow_stdin=False):
-        # if the kernel is SoS, remove comments and newlines
-        code = self.remove_leading_comments(code)
+        # handles windows/unix newline
+        code = '\n'.join(code.splitlines())
 
         if self.original_keys is None:
             self._reset_dict()
@@ -3106,7 +3096,10 @@ Available subkernels:\n{}'''.format(
             if code is None:
                 return
             try:
-                return self.run_cell(code, silent, store_history)
+                # We remove leading new line in case that users have a SoS
+                # magic and a cell magic, separated by newline.
+                # issue #58 and #33
+                return self.run_cell(code.lstrip(), silent, store_history)
             except KeyboardInterrupt:
                 self.warn('Keyboard Interrupt\n')
                 self.KM.interrupt_kernel()
