@@ -52,7 +52,7 @@ class TestJupyterSoS(unittest.TestCase):
     def testRerun(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %run
 parameter: a=10
 
@@ -61,7 +61,7 @@ b = a
 ''')
             wait_for_idle(kc)
             #
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %rerun --a 20
 ''')
             wait_for_idle(kc)
@@ -73,7 +73,7 @@ b = a
     def testDAG(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %run
 [a]
 b=10
@@ -144,7 +144,7 @@ run:
     touch C4.txt
 
         '''
-        script2 = '''
+        script2 = '''\
 import os
 fail = 0
 for f in ['A1.txt', 'A2.txt']:
@@ -165,7 +165,7 @@ fail
     def testReverseSharedVariable(self):
         '''Test shared variables defined in auxiliary steps'''
         file_target('a.txt').remove('both')
-        script = r'''
+        script = r'''\
 %run B
 [A: shared='b', provides='a.txt']
 b = 1

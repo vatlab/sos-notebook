@@ -48,7 +48,7 @@ class TestSoSMagics(unittest.TestCase):
     def testMagicMatplotlib(self):
         with sos_kernel() as kc:
             # create a data frame
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %matplotlib inline
 In [59]:
 import matplotlib.pyplot as plt
@@ -63,7 +63,7 @@ plt.show()''')
         with sos_kernel() as kc:
             if os.path.isfile('test.txt'):
                 os.remove('test.txt')
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview ~/test.txt
 %save ~/test.txt
 a=1
@@ -74,14 +74,14 @@ a=1
 
     def testMagicSoSSave(self):
         with sos_kernel() as kc:
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %frontend --cell 0 --workflow --default-kernel SoS --cell-kernel SoS --filename ~/test.ipynb
 %sossave ~/test.sos
 [10]
 a=1
 ''')
             wait_for_idle(kc)
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %frontend --cell 0 --workflow --default-kernel SoS --cell-kernel SoS --filename ~/test1
 %sossave --to sos
 [10]
@@ -94,7 +94,7 @@ a=1
         with sos_kernel() as kc:
             # preview variable
             iopub = kc.iopub_channel
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a
 a=1
 ''')
@@ -102,7 +102,7 @@ a=1
             self.assertEqual(stderr, '')
 
             # preview csv file
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview a.csv
 with open('a.csv', 'w') as csv:
     csv.write("""\
@@ -114,7 +114,7 @@ a,b,c
             res = get_display_data(iopub, 'text/html')
             self.assertTrue('dataframe_container' in res, 'Expect preview {}'.format(res))
             # preview txt file
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview a.txt
 with open('a.txt', 'w') as txt:
     txt.write("""\
@@ -126,7 +126,7 @@ world
             self.assertEqual(stderr, '')
             self.assertTrue('world' in stdout, 'Expect preview {}'.format(stdout))
             # preview zip
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.zip
 import zipfile
 
@@ -137,7 +137,7 @@ with zipfile.ZipFile('a.zip', 'w') as zfile:
             self.assertEqual(stderr, '')
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             # preview tar
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.tar
 import tarfile
 
@@ -149,7 +149,7 @@ with tarfile.open('a.tar', 'w') as tar:
             self.assertEqual(stderr, '')
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             # preview tar.gz
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.tar.gz
 import tarfile
 
@@ -161,7 +161,7 @@ with tarfile.open('a.tar.gz', 'w:gz') as tar:
             self.assertTrue('a.csv' in stdout, 'Expect preview {}'.format(stdout))
             #
             # preview regular .gz
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.gz
 import gzip
 
@@ -175,7 +175,7 @@ world
             self.assertEqual(stderr, '')
             self.assertTrue('world' in stdout, 'Expect preview {}'.format(stdout))
             # preview md
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.md
 with open('a.md', 'w') as md:
     md.write("""\
@@ -188,7 +188,7 @@ with open('a.md', 'w') as md:
             res = get_display_data(iopub, 'text/html')
             self.assertTrue('<li>item</li>' in res, 'Expect preview {}'.format(res))
             # preview html
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.html
 with open('a.html', 'w') as dot:
     dot.write("""\
@@ -208,7 +208,7 @@ with open('a.html', 'w') as dot:
             # preview dot, needs imagemagick, which is unavailable under windows.
             if sys.platform == 'win32':
                 return
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n a.dot
 with open('a.dot', 'w') as dot:
     dot.write("""\
@@ -226,7 +226,7 @@ graph graphname {
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %set
 %set -v2
 %set
@@ -243,7 +243,7 @@ graph graphname {
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %preview -n abc.txt -c ~/docker.yml -r docker
 %run -r docker -c ~/docker.yml
 run:
@@ -256,7 +256,7 @@ run:
     def testMagicSandbox(self):
         with sos_kernel() as kc:
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %sandbox
 with open('test_blah.txt', 'w') as tb:
     tb.write('a')
@@ -267,7 +267,7 @@ with open('test_blah.txt', 'w') as tb:
     def testMagicDebug(self):
         with sos_kernel() as kc:
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %debug on
 %debug off
 ''')
@@ -276,7 +276,7 @@ with open('test_blah.txt', 'w') as tb:
     def testMagicSessioninfo(self):
         with sos_kernel() as kc:
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %use Python3
 %use SoS
 %sessioninfo
@@ -286,7 +286,7 @@ with open('test_blah.txt', 'w') as tb:
     def testMagicRender(self):
         with sos_kernel() as kc:
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %render
 """
 # header
@@ -301,39 +301,39 @@ with open('test_blah.txt', 'w') as tb:
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
             # preview variable
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 %capture --to res            
 print('kkk')
 ''')
             wait_for_idle(kc)
-            execute(kc=kc, code='''
+            execute(kc=kc, code='''\
 res
 ''')
             stdout, _ = get_std_output(iopub)
             # FIXME: Not sure why this test does not work
             #self.assertTrue('kkk' in stdout, 'Got stdout "{}"'.format(stdout))
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture csv --to res
 print('a,b\nc,d')
 ''')
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
             #
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture tsv --to res
 print('a\tb\nc\td')
 ''')
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
             #
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture json --to res
 print('[1,2,3]')
 ''')
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
             # form file
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture csv --to res --from a.txt
 with open('a.txt', 'w') as ofile:
     print('a,b\nc,d', file=ofile)
@@ -341,7 +341,7 @@ with open('a.txt', 'w') as ofile:
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
             #
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture tsv --to res --from b.txt
 with open('b.txt', 'w') as ofile:
     print('a\tb\nc\td', file=ofile)
@@ -349,7 +349,7 @@ with open('b.txt', 'w') as ofile:
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
             #
-            execute(kc=kc, code=r'''
+            execute(kc=kc, code=r'''\
 %capture json --to res  --from c.txt
 with open('c.txt', 'w') as ofile:
     print('[1, 2, 3]', file=ofile)

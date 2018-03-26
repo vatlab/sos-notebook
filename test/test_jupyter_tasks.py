@@ -75,7 +75,7 @@ class TestJupyterTasks(unittest.TestCase):
         with sos_kernel() as kc:
             # the cell will actually be executed several times
             # with automatic-reexecution
-            code = """
+            code = """\
 %set -v1
 %run -s force
 [10]
@@ -102,7 +102,7 @@ run: expand=True
         with sos_kernel() as kc:
             # the cell will actually be executed several times
             # with automatic-reexecution
-            code = """
+            code = """\
 %run -s force -W
 [10]
 input: for_each={'i': range(2)}
