@@ -2085,6 +2085,7 @@ table.task_table {
             //else // Plain browser env
             mod(CodeMirror);
         })(function(CodeMirror) {
+
             "use strict";
 
             var sosKeywords = ["input", "output", "depends", "parameter"];
@@ -2136,6 +2137,87 @@ table.task_table {
                 }
                 return null;
             }
+
+            function markExpr(sigil, python_mode) {
+                return {
+                    startState: function() {
+                        return {
+                            in_python: false,
+                            end_pos: null,
+                            python_state: CodeMirror.startState(python_mode),
+                        };
+                    },
+
+                    copyState: function(state) {
+                        return {
+                            in_python: state.in_python,
+                            end_pos: state.end_pos,
+                            python_state: CodeMirror.copyState(python_mode, state.python_state)
+                        };
+                    },
+
+                    token: function(stream, state) {
+                        if (state.in_python) {
+                            if (stream.pos == state.end_pos - sigil.right.length) {
+                                state.in_python = false;
+                                stream.pos += sigil.right.length;
+                                return "searching";
+                            }
+
+                            let it = null;
+                            try {
+                                it = python_mode.token(stream, state);
+                            } catch (error) {
+                                console.log(error);
+                                state.in_python = false;
+                                stream.pos = state.end_pos;
+                                return "searching";
+                            }
+                            if (stream.pos >= state.end_pos)
+                                state.in_python = false;
+                            if (it == 'variable' || it == 'builtin') {
+                                let ct = stream.current();
+                                // warn users in the use of input and output in {}
+                                if (ct === 'input' || ct === 'output')
+                                    it += ' error';
+                            }
+                            return it ? ("searching " + it) : "searching";
+                        } else {
+                            if (sigil.left === '{' && sigil.right === '}') {
+                                // remove the double brace case
+                                if (stream.match(/\{\{[^{}}]*\}\}/))
+                                    return null;
+                                if (stream.match(/\{[^{}}]*\}/)) {
+                                    state.in_python = true;
+                                    state.end_pos = stream.pos;
+                                    stream.backUp(stream.current().length - 1);
+                                    return "searching";
+                                }
+                            } else if (sigil.left === '${' && sigil.right === '}') {
+                                if (stream.match(/\$\{[^}]*\}/)) {
+                                    state.in_python = true;
+                                    state.end_pos = stream.pos;
+                                    stream.backUp(stream.current().length - 2);
+                                    return "searching";
+                                }
+                            } else {
+                                // string search
+                                if (stream.match(sigil.left)) {
+                                    stream.eatWhile(x => x !== sigil.right);
+                                    stream.pos += sigil.right.length;
+                                    state.end_pos = stream.pos;
+                                    state.in_python = true;
+                                    stream.backUp(stream.current().length - 2);
+                                    return "searching";
+                                }
+                            }
+                            while (stream.next() && !stream.match(sigil.left, false)) {}
+                            return null;
+                        }
+                    }
+                }
+            }
+
             CodeMirror.defineMode("sos", function(conf, parserConf) {
                 let sosPythonConf = {};
                 for (let prop in parserConf) {
@@ -2147,184 +2229,329 @@ table.task_table {
                 sosPythonConf.version = 3;
                 sosPythonConf.extra_keywords = sosActionWords.concat(sosFunctionWords);
                 // this is the SoS flavored python mode with more identifiers
-                var base_mode = CodeMirror.getMode(conf, sosPythonConf);
-
-                function markExpr(sigil) {
-                    return {
-                        token: function(stream) {
-                            if (sigil.left === '{' && sigil.right === '}') {
-                                if (stream.match(/\{[^}]*\}/))
-                                    return "searching";
-                            } else if (sigil.left === '${' && sigil.right === '}') {
-                                if (stream.match(/\$\{[^}]*\}/))
-                                    return "searching";
-                            } else {
-                                // string search
-                                if (stream.match(sigil.left)) {
-                                    stream.eatWhile(x => x !== sigil.right);
-                                    stream.pos += sigil.right.length;
-                                    return "searching";
-                                }
-                            }
-                            return null;
-                        }
+                var base_mode = null;
+                if ('base_mode' in conf) {
+                    let mode = findMode(conf.base_mode.toLowerCase());
+                    if (mode) {
+                        base_mode = CodeMirror.getMode(conf, mode);
+                    } else {
+                        console.log(`No base mode is found for ${conf.base_mode}. Python mode used.`);
                     }
                 }
+                // if there is a user specified base mode, this is the single cell mode
+                if (base_mode) {
+                    var python_mode = CodeMirror.getMode({}, {
+                        name: 'python',
+                        version: 3
+                    });
+                    return {
+                        startState: function() {
+                            return {
+                                sos_sigil: null,
+                                sos_mode: true,
+                                base_state: CodeMirror.startState(base_mode),
+                                overlay_state: CodeMirror.startState(base_mode),
+                                // for overlay
+                                basePos: 0,
+                                baseCur: null,
+                                overlayPos: 0,
+                                overlayCur: null,
+                                streamSeen: null
+                            };
+                        },
 
-                return {
-                    startState: function() {
-                        return {
-                            sos_state: null,
-                            sos_sigil: null,
-                            base_state: CodeMirror.startState(base_mode),
-                            inner_mode: null,
-                            inner_state: null
-                        };
-                    },
+                        copyState: function(state) {
+                            return {
+                                sos_sigil: state.sos_sigil,
+                                sos_mode: state.sos_mode,
+                                base_state: CodeMirror.copyState(base_mode, state.base_state),
+                                overlay_state: CodeMirror.copyState(base_mode, state.overlay_state),
+                                // for overlay
+                                basePos: state.basePos,
+                                baseCur: null,
+                                overlayPos: state.overlayPos,
+                                overlayCur: null
+                            };
+                        },
 
-                    copyState: function(state) {
-                        var copied = {
-                            sos_state: state.sos_state,
-                            sos_sigil: state.sos_sigil,
-                            base_state: CodeMirror.copyState(base_mode, state.base_state),
-                            inner_mode: state.inner_mode,
-                            inner_state: state.inner_mode && CodeMirror.copyState(state.inner_mode, state.inner_state)
-                        };
-                        return copied;
-                    },
+                        token: function(stream, state) {
+                            if (state.sos_mode) {
+                                if (stream.sol()) {
+                                    let sl = stream.peek();
+                                    if (sl == '!') {
+                                        stream.skipToEnd();
+                                        return "meta";
+                                    } else if (sl == '#') {
+                                        stream.skipToEnd();
+                                        return 'comment'
+                                    }
+                                    for (var i = 0; i < sosMagics.length; i++) {
+                                        if (stream.match(sosMagics[i])) {
+                                            if (sosMagics[i] === "%expand") {
+                                                // if there is no :, the easy case
+                                                if (stream.eol() || stream.match(/\s*$/, false)) {
+                                                    state.sos_sigil = {
+                                                        'left': '{',
+                                                        'right': '}'
+                                                    }
+                                                } else {
+                                                    let found = stream.match(/\s+(\S+)\s+(\S+)$/, false);
+                                                    if (found) {
+                                                        state.sos_sigil = {
+                                                            'left': found[1],
+                                                            'right': found[2]
+                                                        }
+                                                    } else {
+                                                        state.sos_sigil = null;
+                                                    }
+                                                }
+                                            }
+                                            // the rest of the lines will be processed as Python code
+                                            return "meta strong";
+                                        }
+                                    }
+                                    state.sos_mode = false;
+                                } else {
+                                    stream.skipToEnd();
+                                    return null;
+                                }
+                            }
 
-                    token: function(stream, state) {
-                        if (stream.sol()) {
-                            let sl = stream.peek();
-                            if (sl == '[') {
-                                // header, move to the end
-                                if (stream.match(/^\[.*\]$/, false)) {
-                                    // if there is no :, the easy case
-                                    if (stream.match(/^\[[^:]*\]$/)) {
-                                        // reset state
+                            if (state.sos_sigil) {
+                                if (stream != state.streamSeen ||
+                                    Math.min(state.basePos, state.overlayPos) < stream.start) {
+                                    state.streamSeen = stream;
+                                    state.basePos = state.overlayPos = stream.start;
+                                }
+
+                                if (stream.start == state.basePos) {
+                                    state.baseCur = base_mode.token(stream, state.base_state);
+                                    state.basePos = stream.pos;
+                                }
+                                if (stream.start == state.overlayPos) {
+                                    stream.pos = stream.start;
+                                    state.overlayCur = markExpr(state.sos_sigil, python_mode).token(stream, state.overlay_state);
+                                    state.overlayPos = stream.pos;
+                                }
+                                stream.pos = Math.min(state.basePos, state.overlayPos);
+
+                                // state.overlay.combineTokens always takes precedence over combine,
+                                // unless set to null
+                                return state.overlayCur ? state.overlayCur : state.baseCur;
+                            } else {
+                                return base_mode.token(stream, state.base_state);
+                            }
+                        },
+
+                        indent: function(state, textAfter) {
+                            // inner indent
+                            if (!state.sos_mode) {
+                                if (!base_mode.indent) return CodeMirror.Pass;
+                                // inner mode will autoamtically indent + 4
+                                return base_mode.indent(state.base_state, textAfter);
+                            } else {
+                                // sos mode has no indent
+                                return 0;
+                            }
+                        },
+
+                        innerMode: function(state) {
+                            return state.sos_mode ? {
+                                state: state.base_state,
+                                mode: base_mode
+                            } : null;
+                        },
+
+                        lineComment: "#",
+                        fold: "indent"
+                    };
+                } else {
+                    // this is SoS mode
+                    base_mode = CodeMirror.getMode(conf, sosPythonConf);
+                    return {
+                        startState: function() {
+                            return {
+                                sos_state: null,
+                                sos_sigil: null,
+                                base_state: CodeMirror.startState(base_mode),
+                                overlay_state: CodeMirror.startState(base_mode),
+                                inner_mode: null,
+                                inner_state: null,
+                                // for overlay
+                                basePos: 0,
+                                baseCur: null,
+                                overlayPos: 0,
+                                overlayCur: null,
+                                streamSeen: null
+                            };
+                        },
+
+                        copyState: function(state) {
+                            return {
+                                sos_state: state.sos_state,
+                                sos_sigil: state.sos_sigil,
+                                base_state: CodeMirror.copyState(base_mode, state.base_state),
+                                overlay_state: CodeMirror.copyState(base_mode, state.overlay_state),
+                                inner_mode: state.inner_mode,
+                                inner_state: state.inner_mode && CodeMirror.copyState(state.inner_mode, state.inner_state),
+                                // for overlay
+                                basePos: state.basePos,
+                                baseCur: null,
+                                overlayPos: state.overlayPos,
+                                overlayCur: null
+                            };
+                        },
+
+                        token: function(stream, state) {
+                            if (stream.sol()) {
+                                let sl = stream.peek();
+                                if (sl == '[') {
+                                    // header, move to the end
+                                    if (stream.match(/^\[.*\]$/, false)) {
+                                        // if there is no :, the easy case
+                                        if (stream.match(/^\[[^:]*\]$/)) {
+                                            // reset state
+                                            state.sos_state = null;
+                                            return "header";
+                                        } else {
+                                            // match up to :
+                                            stream.match(/^\[[^:]*:/);
+                                            state.sos_state = 'header_option';
+                                            return "header";
+                                        }
+                                    }
+                                } else if (sl == '!') {
+                                    stream.skipToEnd();
+                                    return "meta";
+                                } else if (sl == '%') {
+                                    stream.skipToEnd();
+                                    return "meta";
+                                }
+                                for (var i = 0; i < sosDirectives.length; i++) {
+                                    if (stream.match(sosDirectives[i]))
+                                        // the rest of the lines will be processed as Python code
+                                        return "keyword strong";
+                                }
+                                for (var i = 0; i < sosActions.length; i++) {
+                                    if (stream.match(sosActions[i])) {
+                                        // switch to submode?
+                                        state.sos_state = 'start ' + stream.current().slice(0, -1);
+                                        state.sos_sigil = null;
+                                        return "builtin strong";
+                                    }
+                                }
+                            } else if (state.sos_state == 'header_option') {
+                                // stuff after :
+                                if (stream.peek() == ']') {
+                                    // move next
+                                    stream.next();
+                                    // ] is the last char
+                                    if (stream.eol()) {
                                         state.sos_state = null;
                                         return "header";
                                     } else {
-                                        // match up to :
-                                        stream.match(/^\[[^:]*:/);
-                                        state.sos_state = 'header_option';
-                                        return "header";
+                                        stream.backUp(1);
+                                        return base_mode.token(stream, state.base_state);
+                                    }
+                                } else {
+                                    return base_mode.token(stream, state.base_state);
+                                }
+                            } else if (state.sos_state && state.sos_state.startsWith("start ")) {
+                                let sl = stream.peek();
+                                let token = base_mode.token(stream, state.base_state);
+
+                                // try to understand option expand=
+                                if (stream.match(/expand\s*=\s*True/, false)) {
+                                    // highlight {}
+                                    state.sos_sigil = {
+                                        'left': '{',
+                                        'right': '}'
+                                    }
+                                } else {
+                                    let found = stream.match(/expand\s*=\s*"(\S+) (\S+)"/, false);
+                                    if (!found)
+                                        found = stream.match(/expand\s*=\s*'(\S+) (\S+)'/, false);
+                                    if (found)
+                                        state.sos_sigil = {
+                                            'left': found[1],
+                                            'right': found[2]
+                                        }
+                                }
+                                // if it is end of line, ending the starting switch mode
+                                if (stream.eol() && sl !== ',') {
+                                    // really
+                                    let mode = findMode(state.sos_state.slice(6).toLowerCase());
+                                    if (mode) {
+                                        state.sos_state = null;
+                                        state.inner_mode = CodeMirror.getMode(conf, mode);
+                                        state.inner_state = CodeMirror.startState(state.inner_mode);
+                                    } else {
+                                        state.sos_state = 'nomanland';
                                     }
                                 }
-                            } else if (sl == '!') {
+                                return token;
+                            }
+                            // can be start of line but not special
+                            if (state.sos_state == 'nomanland') {
                                 stream.skipToEnd();
-                                return "meta";
-                            }
-                            for (var i = 0; i < sosDirectives.length; i++) {
-                                if (stream.match(sosDirectives[i]))
-                                    // the rest of the lines will be processed as Python code
-                                    return "keyword strong";
-                            }
-                            for (var i = 0; i < sosMagics.length; i++) {
-                                if (stream.match(sosMagics[i]))
-                                    // the rest of the lines will be processed as Python code
-                                    return "meta strong";
-                            }
-                            for (var i = 0; i < sosActions.length; i++) {
-                                if (stream.match(sosActions[i])) {
-                                    // switch to submode?
-                                    state.sos_state = 'start ' + stream.current().slice(0, -1);
-                                    state.sos_sigil = null;
-                                    return "builtin strong";
-                                }
-                            }
-                        } else if (state.sos_state == 'header_option') {
-                            // stuff after :
-                            if (stream.peek() == ']') {
-                                // move next
-                                stream.next();
-                                // ] is the last char
-                                if (stream.eol()) {
-                                    state.sos_state = null;
-                                    return "header";
+                                return null;
+                            } else if (state.inner_mode) {
+                                let it = 'em ';
+                                if (!state.sos_sigil) {
+                                    let st = state.inner_mode.token(stream, state.inner_state);
+                                    return st ? it + st : null;
                                 } else {
-                                    stream.backUp(1);
-                                    return base_mode.token(stream, state.base_state);
+                                    // overlay mode, more complicated
+                                    if (stream != state.streamSeen ||
+                                        Math.min(state.basePos, state.overlayPos) < stream.start) {
+                                        state.streamSeen = stream;
+                                        state.basePos = state.overlayPos = stream.start;
+                                    }
+
+                                    if (stream.start == state.basePos) {
+                                        state.baseCur = state.inner_mode.token(stream, state.inner_state);
+                                        state.basePos = stream.pos;
+                                    }
+                                    if (stream.start == state.overlayPos) {
+                                        stream.pos = stream.start;
+                                        state.overlayCur = markExpr(state.sos_sigil, base_mode).token(stream, state.overlay_state);
+                                        state.overlayPos = stream.pos;
+                                    }
+                                    stream.pos = Math.min(state.basePos, state.overlayPos);
+                                    console.log(stream.current())
+                                    // state.overlay.combineTokens always takes precedence over combine,
+                                    // unless set to null
+                                    return (state.overlayCur ? state.overlayCur : state.baseCur) + " em";
                                 }
                             } else {
                                 return base_mode.token(stream, state.base_state);
                             }
-                        } else if (state.sos_state && state.sos_state.startsWith("start ")) {
-                            let sl = stream.peek();
-                            let token = base_mode.token(stream, state.base_state);
+                        },
 
-                            // try to understand option expand=
-                            if (stream.match(/expand\s*=\s*True/, false)) {
-                                // highlight {}
-                                state.sos_sigil = {
-                                    'left': '{',
-                                    'right': '}'
-                                }
+                        indent: function(state, textAfter) {
+                            // inner indent
+                            if (state.inner_mode) {
+                                return state.inner_mode.indent(state.inner_mode, textAfter) + 4;
                             } else {
-                                let found = stream.match(/expand\s*=\s*"(\S+) (\S+)"/, false);
-                                if (!found)
-                                    found = stream.match(/expand\s*=\s*'(\S+) (\S+)'/, false);
-                                if (found)
-                                    state.sos_sigil = {
-                                        'left': found[1],
-                                        'right': found[2]
-                                    }
+                                return 0;
                             }
-                            // if it is end of line, ending the starting switch mode
-                            if (stream.eol() && sl !== ',') {
-                                // really
-                                let mode = findMode(state.sos_state.slice(6).toLowerCase());
-                                if (mode) {
-                                    state.sos_state = null;
-                                    state.inner_mode = CodeMirror.getMode(conf, mode);
-                                    state.inner_state = CodeMirror.startState(state.inner_mode);
-                                } else {
-                                    state.sos_state = 'nomanland';
-                                }
-                            }
-                            return token;
-                        }
-                        // can be start of line but not special
-                        if (state.sos_state == 'nomanland') {
-                            stream.skipToEnd();
-                            return null;
-                        } else if (state.inner_mode) {
-                            let it = state.sos_sigil ? markExpr(state.sos_sigil).token(stream) : '';
-                            if (!it)
-                                it = state.inner_mode.token(stream, state.inner_state);
-                            return "em" + (it ? " " + it : "");
-                        } else {
-                            return base_mode.token(stream, state.base_state);
-                        }
-                    },
+                        },
 
-                    indent: function(state, textAfter) {
-                        // inner indent
-                        if (state.inner_mode) {
-                            var mode = state.inner_mode.mode;
-                            if (!mode.indent) return CodeMirror.Pass;
-                            // inner mode will autoamtically indent + 4
-                            return mode.indent(state.inner_mode ? state.inner : state.outer, textAfter) + 4;
-                        } else {
-                            return 0;
-                        }
-                    },
+                        innerMode: function(state) {
+                            return state.inner_mode ? null : {
+                                state: state.base_state,
+                                mode: base_mode
+                            };
+                        },
 
-                    innerMode: function(state) {
-                        return state.inner_mode ? null : {
-                            state: state.base_state,
-                            mode: base_mode
-                        };
-                    },
-
-                    lineComment: "#",
-                    fold: "indent"
+                        lineComment: "#",
+                        fold: "indent"
+                    };
                 };
             }, "python");
 
             CodeMirror.defineMIME("text/x-sos", "sos");
         });
-
     }
 
     return {
