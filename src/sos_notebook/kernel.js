@@ -372,7 +372,7 @@ define([
             cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = col;
             cell.user_highlight = {
                 name: 'sos',
-                base_mode: window.LanguageName[type],
+                base_mode: window.LanguageName[type] || window.KernelName[type],
             };
             //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
             cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -394,7 +394,7 @@ define([
         }
         cell.user_highlight = {
             name: 'sos',
-            base_mode: window.LanguageName[type],
+            base_mode: window.LanguageName[type] || window.KernelName[type],
         };
         //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
         cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -2021,7 +2021,7 @@ table.task_table {
             // https://github.com/vatlab/sos-notebook/issues/55
             cell.user_highlight = {
                 name: 'sos',
-                base_mode: window.LanguageName[this.value],
+                base_mode: window.LanguageName[this.value] || window.KernelName[this.value],
             };
             //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
             cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -2152,6 +2152,7 @@ table.task_table {
                 'report': 'markdown',
                 'pandoc': 'markdown',
                 'download': 'markdown',
+                'markdown': 'markdown',
                 'ruby': 'ruby',
                 'sas': 'sas',
                 'bash': 'shell',
