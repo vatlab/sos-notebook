@@ -2136,7 +2136,6 @@ table.task_table {
 
             var modeMap = {
                 'sos': null,
-                'run': 'shell',
                 'python': {
                     name: 'python',
                     version: 3
@@ -2153,13 +2152,17 @@ table.task_table {
                 'report': 'markdown',
                 'pandoc': 'markdown',
                 'download': 'markdown',
-                // from kernel named, r, ruby, sas, javascript etc are fine
+                'ruby': 'ruby',
+                'sas': 'sas',
                 'bash': 'shell',
                 'sh': 'shell',
+                'run': 'shell',
+                'javascript': 'javascript',
                 'typescript': {
                     name: "javascript",
                     typescript: true
                 },
+                'octave': 'octave',
                 'matlab': 'octave',
             }
 
@@ -2262,7 +2265,7 @@ table.task_table {
                 sosPythonConf.extra_keywords = sosActionWords.concat(sosFunctionWords);
                 // this is the SoS flavored python mode with more identifiers
                 var base_mode = null;
-                if ('base_mode' in parserConf) {
+                if ('base_mode' in parserConf && parserConf.base_mode) {
                     let mode = findMode(parserConf.base_mode.toLowerCase());
                     if (mode) {
                         base_mode = CodeMirror.getMode(conf, mode);
@@ -2582,6 +2585,8 @@ table.task_table {
             }, "python");
 
             CodeMirror.defineMIME("text/x-sos", "sos");
+            // bug vatlab / sos - notebook #55
+            CodeMirror.autoLoadMode = function() {};
         });
     }
 
