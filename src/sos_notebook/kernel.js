@@ -370,9 +370,14 @@ define([
                 col = window.BackgroundColor[type];
             }
             cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = col;
+            cell.user_highlight = {
+                name: 'sos',
+                base_mode: window.LanguageName[type],
+            };
+            //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+            cell.code_mirror.setOption('mode', cell.user_highlight);
             return col;
         }
-
 
         if (type === "sos" && get_workflow_from_cell(cell)) {
             col = "#F0F0F0";
@@ -387,6 +392,12 @@ define([
         if (op.length > 0) {
             op[0].style.backgroundColor = col;
         }
+        cell.user_highlight = {
+            name: 'sos',
+            base_mode: window.LanguageName[type],
+        };
+        //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+        cell.code_mirror.setOption('mode', cell.user_highlight);
         return col;
     }
 
@@ -2007,13 +2018,13 @@ table.task_table {
                 ip[0].style.backgroundColor = "";
                 op[0].style.backgroundColor = "";
             }
-            // this mode will be reset as soon as jupyter find that it
-            // is different from default_mode
-            // https://github.com/jupyter/notebook/blob/master/notebook/static/notebook/js/cell.js#L722
-            cell.code_mirror.setOption('mode', {
+            // https://github.com/vatlab/sos-notebook/issues/55
+            cell.user_highlight = {
                 name: 'sos',
                 base_mode: window.LanguageName[this.value],
-            });
+            };
+            //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+            cell.code_mirror.setOption('mode', cell.user_highlight);
         });
 
         cell.element.find("div.input_area").prepend(select);
@@ -2124,6 +2135,7 @@ table.task_table {
             CodeMirror.registerHelper("hintWords", "sos", hintWords);
 
             var modeMap = {
+                'sos': null,
                 'run': 'shell',
                 'python': {
                     name: 'python',
