@@ -2426,6 +2426,8 @@ Available subkernels:\n{}'''.format(
             # self.options will be set to inflence the execution of remaing_code
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_EXPAND.match(code):
+            if self.kernel.lower() == 'sos':
+                self.warn('Use of %expand magic in SoS cells is deprecated.')
             lines = code.splitlines()
             options = lines[0]
             parser = self.get_expand_parser()
