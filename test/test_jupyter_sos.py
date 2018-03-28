@@ -183,6 +183,7 @@ print(b)
             iopub = kc.iopub_channel
             execute(kc=kc, code=script)
             wait_for_idle(kc)
+            self.assertTrue(os.path.isfile('a.txt'))
             execute(kc=kc, code="b")
             res = get_result(iopub)
             self.assertEqual(res, 1)
