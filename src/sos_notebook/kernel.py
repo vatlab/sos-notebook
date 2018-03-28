@@ -2016,7 +2016,7 @@ Available subkernels:\n{}'''.format(
             #                'data': {'text/markdown': sos_report}
             #            })
             #
-            if 'input' in env.sos_dict:
+            if 'step_input' in env.sos_dict:
                 input_files = env.sos_dict['step_input']
                 if input_files is None:
                     input_files = []
@@ -2025,7 +2025,7 @@ Available subkernels:\n{}'''.format(
                         x for x in input_files if isinstance(x, str)]
             else:
                 input_files = []
-            if 'output' in env.sos_dict:
+            if 'step_output' in env.sos_dict:
                 output_files = env.sos_dict['step_output']
                 if output_files is None:
                     output_files = []

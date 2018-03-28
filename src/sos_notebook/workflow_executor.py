@@ -33,7 +33,7 @@ from sos.parser import SoS_Script
 from sos.syntax import SOS_KEYWORDS
 from sos.workflow_executor import Base_Executor, __null_func__
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import file_target, UnknownTarget, RemovedTarget, UnavailableLock
+from sos.targets import path, file_target, UnknownTarget, RemovedTarget, UnavailableLock
 from sos.step_executor import PendingTasks
 from .step_executor import Interactive_Step_Executor
 
@@ -88,8 +88,7 @@ class Interactive_Executor(Base_Executor):
 
         # remove some variables because they would interfere with step analysis
         for key in ('_input', 'step_input'):
-            if key in env.sos_dict:
-                env.sos_dict.pop(key)
+            env.sos_dict.pop(key, None)
 
         env.sos_dict.quick_update(self.shared)
 
@@ -118,18 +117,19 @@ class Interactive_Executor(Base_Executor):
         # process step of the pipelinp
         if isinstance(targets, str):
             targets = [targets]
-        dag = self.initialize_dag(targets=targets)
         #
         # if targets are specified and there are only signatures for them, we need
         # to remove the signature and really generate them
         if targets:
             for t in targets:
-                if not file_target(t).target_exists('target') and file_target(t).target_exists('signature'):
+                if file_target(t).target_exists('target'):
+                    env.logger.debug(f'Target {t} already exists')
+                elif file_target(t).target_exists('signature'):
                     env.logger.debug(f'Re-generating {t}')
                     file_target(t).remove('signature')
-                else:
-                    env.logger.debug(f'Target {t} already exists')
+            targets = [x for x in targets if not file_target(x).target_exists('target')]
         #
+        dag = self.initialize_dag(targets=targets)
         while True:
             # find any step that can be executed and run it, and update the DAT
             # with status.
@@ -156,8 +156,7 @@ class Interactive_Executor(Base_Executor):
             # clear existing keys, otherwise the results from some random result
             # might mess with the execution of another step that does not define input
             for k in ['__step_input__', '__default_output__', '__step_output__']:
-                if k in env.sos_dict:
-                    env.sos_dict.pop(k)
+                env.sos_dict.pop(k, None)
             # if the step has its own context
             env.sos_dict.quick_update(runnable._context)
             # execute section with specified input
@@ -185,6 +184,8 @@ class Interactive_Executor(Base_Executor):
                 runnable._status = None
                 dag.save(self.config['output_dag'])
                 target = e.target
+                if isinstance(target, path):
+                    target = str(target)
                 if dag.regenerate_target(target):
                     #runnable._depends_targets.append(target)
                     #dag._all_dependent_files[target].append(runnable)
@@ -194,13 +195,14 @@ class Interactive_Executor(Base_Executor):
                     if cycle:
                         raise RuntimeError(
                             f'Circular dependency detected {cycle} after regeneration. It is likely a later step produces input of a previous step.')
-
                 else:
                     if self.resolve_dangling_targets(dag, [target]) == 0:
                         raise RuntimeError(
                             f'Failed to regenerate or resolve {target}{dag.steps_depending_on(target, self.workflow)}.')
-                    runnable._depends_targets.append(target)
-                    dag._all_dependent_files[target].append(runnable)
+                    if not isinstance(runnable._depends_targets, Undetermined):
+                        runnable._depends_targets.append(target)
+                    if runnable not in dag._all_dependent_files[target]:
+                        dag._all_dependent_files[target].append(runnable)
                     dag.build(self.workflow.auxiliary_sections)
                     #
                     cycle = dag.circular_dependencies()
