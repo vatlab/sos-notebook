@@ -3107,6 +3107,19 @@ Available subkernels:\n{}'''.format(
         else:
             if code:
                 self.last_executed_code = code
+
+            # if the cell starts with comment, and newline, remove it
+            lines = code.splitlines()
+            empties = [x.startswith('#') or not x.strip() for x in lines]
+            if all(empties):
+                return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
+            else:
+                idx = empties.index(False)
+                if idx != 0:
+                    # not start from empty, but might have magic etc
+                    return self._do_execute('\n'.join(lines[idx:]), silent, store_history, user_expressions, allow_stdin)
+
+            # if there is no more empty, magic etc, enter workflow mode
             # run sos
             try:
                 self.run_sos_code(code, silent)

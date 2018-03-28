@@ -165,7 +165,7 @@ fail
     def testReverseSharedVariable(self):
         '''Test shared variables defined in auxiliary steps'''
         file_target('a.txt').remove('both')
-        script = r'''\
+        script = r'''
 %run B
 [A: shared='b', provides='a.txt']
 b = 1
