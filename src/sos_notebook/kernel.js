@@ -2108,7 +2108,6 @@ table.task_table {
             //else // Plain browser env
             mod(CodeMirror);
         })(function(CodeMirror) {
-
             "use strict";
 
             var sosKeywords = ["input", "output", "depends", "parameter"];
@@ -2197,7 +2196,7 @@ table.task_table {
                             if (stream.pos == state.end_pos - sigil.right.length) {
                                 state.in_python = false;
                                 stream.pos += sigil.right.length;
-                                return "searching";
+                                return "searching sos-interpolated";
                             }
 
                             let it = null;
@@ -2207,7 +2206,7 @@ table.task_table {
                                 console.log(error);
                                 state.in_python = false;
                                 stream.pos = state.end_pos;
-                                return "searching";
+                                return "searching sos-interpolated";
                             }
                             if (stream.pos >= state.end_pos)
                                 state.in_python = false;
@@ -2217,7 +2216,7 @@ table.task_table {
                                 if (ct === 'input' || ct === 'output')
                                     it += ' error';
                             }
-                            return it ? ("searching " + it) : "searching";
+                            return it ? ("searching sos-interpolated " + it) : "searching sos-interpolated";
                         } else {
                             if (sigil.left === '{' && sigil.right === '}') {
                                 // remove the double brace case
@@ -2227,14 +2226,14 @@ table.task_table {
                                     state.in_python = true;
                                     state.end_pos = stream.pos;
                                     stream.backUp(stream.current().length - 1);
-                                    return "searching";
+                                    return "searching sos-interpolated";
                                 }
                             } else if (sigil.left === '${' && sigil.right === '}') {
                                 if (stream.match(/\$\{[^}]*\}/)) {
                                     state.in_python = true;
                                     state.end_pos = stream.pos;
                                     stream.backUp(stream.current().length - 2);
-                                    return "searching";
+                                    return "searching sos-interpolated";
                                 }
                             } else {
                                 // string search
@@ -2244,7 +2243,7 @@ table.task_table {
                                     state.end_pos = stream.pos;
                                     state.in_python = true;
                                     stream.backUp(stream.current().length - 2);
-                                    return "searching";
+                                    return "searching sos-interpolated";
                                 }
                             }
                             while (stream.next() && !stream.match(sigil.left, false)) {}
@@ -2266,12 +2265,12 @@ table.task_table {
                 sosPythonConf.extra_keywords = sosActionWords.concat(sosFunctionWords);
                 // this is the SoS flavored python mode with more identifiers
                 var base_mode = null;
-                if ('base_mode' in parserConf && parserConf.base_mode) {
-                    let mode = findMode(parserConf.base_mode.toLowerCase());
+                if ('base_mode' in conf) {
+                    let mode = findMode(conf.base_mode.toLowerCase());
                     if (mode) {
                         base_mode = CodeMirror.getMode(conf, mode);
                     } else {
-                        console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);
+                        console.log(`No base mode is found for ${conf.base_mode}. Python mode used.`);
                     }
                 }
                 // if there is a user specified base mode, this is the single cell mode
@@ -2465,9 +2464,11 @@ table.task_table {
                                     return "meta";
                                 }
                                 for (var i = 0; i < sosDirectives.length; i++) {
-                                    if (stream.match(sosDirectives[i]))
+                                    if (stream.match(sosDirectives[i])) {
                                         // the rest of the lines will be processed as Python code
+                                        state.sos_state = 'directive_option'
                                         return "keyword strong";
+                                    }
                                 }
                                 for (var i = 0; i < sosActions.length; i++) {
                                     if (stream.match(sosActions[i])) {
@@ -2489,10 +2490,29 @@ table.task_table {
                                         return "header";
                                     } else {
                                         stream.backUp(1);
-                                        return base_mode.token(stream, state.base_state);
+                                        let it = base_mode.token(stream, state.base_state);
+                                        return it ? it + ' sos-option' : null;
                                     }
                                 } else {
-                                    return base_mode.token(stream, state.base_state);
+                                    let it = base_mode.token(stream, state.base_state);
+                                    return it ? it + ' sos-option' : null;
+                                }
+                            } else if (state.sos_state == 'directive_option') {
+                                // stuff after input:, R: etc
+                                if (stream.peek() == ',') {
+                                    // move next
+                                    stream.next();
+                                    // , is not the last char, end option line
+                                    if (!stream.eol()) {
+                                        state.sos_state = null;
+                                        state.inner_mode = null;
+                                    }
+                                    stream.backUp(1);
+                                    let it = base_mode.token(stream, state.base_state);
+                                    return it ? it + ' sos-option' : null;
+                                } else {
+                                    let it = base_mode.token(stream, state.base_state);
+                                    return it ? it + ' sos-option' : null;
                                 }
                             } else if (state.sos_state && state.sos_state.startsWith("start ")) {
                                 let sl = stream.peek();
@@ -2527,14 +2547,14 @@ table.task_table {
                                         state.sos_state = 'nomanland';
                                     }
                                 }
-                                return token;
+                                return token + ' sos-option';
                             }
                             // can be start of line but not special
                             if (state.sos_state == 'nomanland') {
                                 stream.skipToEnd();
                                 return null;
                             } else if (state.inner_mode) {
-                                let it = 'em ';
+                                let it = 'em sos_script ';
                                 if (!state.sos_sigil) {
                                     let st = state.inner_mode.token(stream, state.inner_state);
                                     return st ? it + st : null;
@@ -2558,7 +2578,7 @@ table.task_table {
                                     stream.pos = Math.min(state.basePos, state.overlayPos);
                                     // state.overlay.combineTokens always takes precedence over combine,
                                     // unless set to null
-                                    return (state.overlayCur ? state.overlayCur : state.baseCur) + " em";
+                                    return (state.overlayCur ? state.overlayCur : state.baseCur) + " em sos-script";
                                 }
                             } else {
                                 return base_mode.token(stream, state.base_state);
