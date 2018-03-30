@@ -2502,18 +2502,20 @@ table.task_table {
                                 if (stream.peek() == ',') {
                                     // move next
                                     stream.next();
-                                    // , is not the last char, end option line
-                                    if (!stream.eol()) {
-                                        state.sos_state = null;
-                                        state.inner_mode = null;
+                                    // , is the last char, continue option line
+                                    if (stream.eol()) {
+                                        stream.backUp(1);
+                                        let it = base_mode.token(stream, state.base_state);
+                                        return it ? it + ' sos-option' : null;
                                     }
                                     stream.backUp(1);
-                                    let it = base_mode.token(stream, state.base_state);
-                                    return it ? it + ' sos-option' : null;
-                                } else {
-                                    let it = base_mode.token(stream, state.base_state);
-                                    return it ? it + ' sos-option' : null;
+                                } else if (stream.eol()) {
+                                    // end of line stops option mode
+                                    state.sos_state = null;
+                                    state.inner_mode = null;
                                 }
+                                let it = base_mode.token(stream, state.base_state);
+                                return it ? it + ' sos-option' : null;
                             } else if (state.sos_state && state.sos_state.startsWith("start ")) {
                                 let sl = stream.peek();
                                 let token = base_mode.token(stream, state.base_state);
