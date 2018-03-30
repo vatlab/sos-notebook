@@ -1886,12 +1886,12 @@ table.task_table {
   height: auto;
 }
 
-/* .cm-sos-interpolated {
-	 text-decoration: underline;
-} */
+.cm-sos-interpolated {
+	 background-color: #f9f2f4;
+}
+
 .cm-sos-sigil {
-	color: blue;
-	font-weight:bold;
+	background-color: #f9f2f4;
 }
 /*
 .cm-sos-script {
@@ -2189,12 +2189,16 @@ table.task_table {
                 return null;
             }
 
-            function markExpr(sigil, python_mode) {
+            function markExpr(python_mode) {
                 return {
                     startState: function() {
                         return {
                             in_python: false,
-                            end_pos: null,
+                            sigil: {
+                                left: '{',
+                                right: '}'
+                            },
+                            matched: true,
                             python_state: CodeMirror.startState(python_mode),
                         };
                     },
@@ -2202,67 +2206,48 @@ table.task_table {
                     copyState: function(state) {
                         return {
                             in_python: state.in_python,
-                            end_pos: state.end_pos,
+                            sigil: state.sigil,
+                            matched: state.matched,
                             python_state: CodeMirror.copyState(python_mode, state.python_state)
                         };
                     },
 
                     token: function(stream, state) {
                         if (state.in_python) {
-                            if (stream.pos == state.end_pos - sigil.right.length) {
+                            if (stream.match(state.sigil.right)) {
                                 state.in_python = false;
-                                stream.pos += sigil.right.length;
                                 return "sos-sigil";
                             }
-
                             let it = null;
                             try {
-                                it = python_mode.token(stream, state);
+                                it = python_mode.token(stream, state.python_state);
                             } catch (error) {
-                                console.log(error);
-                                state.in_python = false;
-                                stream.pos = state.end_pos;
-                                return "sos-interpolated";
+                                return "sos-interpolated error" + (state.matched ? "" : " sos-unmatched");
                             }
-                            if (stream.pos >= state.end_pos)
-                                state.in_python = false;
                             if (it == 'variable' || it == 'builtin') {
                                 let ct = stream.current();
                                 // warn users in the use of input and output in {}
                                 if (ct === 'input' || ct === 'output')
                                     it += ' error';
                             }
-                            return it ? ("sos-interpolated " + it) : "sos-interpolated";
+                            return (it ? ("sos-interpolated " + it) : "sos-interpolated") + (state.matched ? "" : " sos-unmatched");
                         } else {
-                            if (sigil.left === '{' && sigil.right === '}') {
-                                // remove the double brace case
-                                if (stream.match(/\{\{[^{}}]*\}\}/))
-                                    return null;
-                                if (stream.match(/\{[^{}}]*\}/)) {
-                                    state.in_python = true;
-                                    state.end_pos = stream.pos;
-                                    stream.backUp(stream.current().length - 1);
-                                    return "sos-sigil";
+                            // remove the double brace case, the syntax highlighter
+                            // does not have to worry (highlight) }}, although it would
+                            // probably mark an error for single }
+                            if (state.sigil.left === '{' && stream.match(/\{\{/))
+                                return null;
+                            if (stream.match(state.sigil.left)) {
+                                state.in_python = true;
+                                // let us see if there is any right sigil till the end of the editor.
+                                try {
+                                    state.matched = stream.lookAhead(5).includes(state.sigil.right);
+                                } catch (error) {
+                                    // only codemirror 5.27.0 supports this function
                                 }
-                            } else if (sigil.left === '${' && sigil.right === '}') {
-                                if (stream.match(/\$\{[^}]*\}/)) {
-                                    state.in_python = true;
-                                    state.end_pos = stream.pos;
-                                    stream.backUp(stream.current().length - 2);
-                                    return "sos-sigil";
-                                }
-                            } else {
-                                // string search
-                                if (stream.match(sigil.left)) {
-                                    stream.eatWhile(x => x !== sigil.right);
-                                    stream.pos += sigil.right.length;
-                                    state.end_pos = stream.pos;
-                                    state.in_python = true;
-                                    stream.backUp(stream.current().length - 2);
-                                    return "sos-sigil";
-                                }
+                                return "sos-sigil" + (state.matched ? "" : " sos-unmatched");
                             }
-                            while (stream.next() && !stream.match(sigil.left, false)) {}
+                            while (stream.next() && !stream.match(state.sigil.left, false)) {}
                             return null;
                         }
                     }
@@ -2295,13 +2280,13 @@ table.task_table {
                         name: 'python',
                         version: 3
                     });
+                    var overlay_mode = markExpr(python_mode);
                     return {
                         startState: function() {
                             return {
-                                sos_sigil: null,
                                 sos_mode: true,
                                 base_state: CodeMirror.startState(base_mode),
-                                overlay_state: CodeMirror.startState(base_mode),
+                                overlay_state: CodeMirror.startState(overlay_mode),
                                 // for overlay
                                 basePos: 0,
                                 baseCur: null,
@@ -2313,10 +2298,9 @@ table.task_table {
 
                         copyState: function(state) {
                             return {
-                                sos_sigil: state.sos_sigil,
                                 sos_mode: state.sos_mode,
                                 base_state: CodeMirror.copyState(base_mode, state.base_state),
-                                overlay_state: CodeMirror.copyState(base_mode, state.overlay_state),
+                                overlay_state: CodeMirror.copyState(overlay_mode, state.overlay_state),
                                 // for overlay
                                 basePos: state.basePos,
                                 baseCur: null,
@@ -2341,19 +2325,19 @@ table.task_table {
                                             if (sosMagics[i] === "%expand") {
                                                 // if there is no :, the easy case
                                                 if (stream.eol() || stream.match(/\s*$/, false)) {
-                                                    state.sos_sigil = {
+                                                    state.overlay_state.sigil = {
                                                         'left': '{',
                                                         'right': '}'
                                                     }
                                                 } else {
                                                     let found = stream.match(/\s+(\S+)\s+(\S+)$/, false);
                                                     if (found) {
-                                                        state.sos_sigil = {
+                                                        state.overlay_state.sigil = {
                                                             'left': found[1],
                                                             'right': found[2]
                                                         }
                                                     } else {
-                                                        state.sos_sigil = null;
+                                                        state.overlay_state.sigil = null;
                                                     }
                                                 }
                                             }
@@ -2368,7 +2352,7 @@ table.task_table {
                                 }
                             }
 
-                            if (state.sos_sigil) {
+                            if (state.overlay_state.sigil) {
                                 if (stream != state.streamSeen ||
                                     Math.min(state.basePos, state.overlayPos) < stream.start) {
                                     state.streamSeen = stream;
@@ -2381,7 +2365,7 @@ table.task_table {
                                 }
                                 if (stream.start == state.overlayPos) {
                                     stream.pos = stream.start;
-                                    state.overlayCur = markExpr(state.sos_sigil, python_mode).token(stream, state.overlay_state);
+                                    state.overlayCur = overlay_mode.token(stream, state.overlay_state);
                                     state.overlayPos = stream.pos;
                                 }
                                 stream.pos = Math.min(state.basePos, state.overlayPos);
@@ -2398,7 +2382,6 @@ table.task_table {
                             // inner indent
                             if (!state.sos_mode) {
                                 if (!base_mode.indent) return CodeMirror.Pass;
-                                // inner mode will autoamtically indent + 4
                                 return base_mode.indent(state.base_state, textAfter);
                             } else {
                                 // sos mode has no indent
@@ -2419,13 +2402,13 @@ table.task_table {
                 } else {
                     // this is SoS mode
                     base_mode = CodeMirror.getMode(conf, sosPythonConf);
+                    overlay_mode = markExpr(base_mode);
                     return {
                         startState: function() {
                             return {
                                 sos_state: null,
-                                sos_sigil: null,
                                 base_state: CodeMirror.startState(base_mode),
-                                overlay_state: CodeMirror.startState(base_mode),
+                                overlay_state: CodeMirror.startState(overlay_mode),
                                 inner_mode: null,
                                 inner_state: null,
                                 // for overlay
@@ -2440,9 +2423,8 @@ table.task_table {
                         copyState: function(state) {
                             return {
                                 sos_state: state.sos_state,
-                                sos_sigil: state.sos_sigil,
                                 base_state: CodeMirror.copyState(base_mode, state.base_state),
-                                overlay_state: CodeMirror.copyState(base_mode, state.overlay_state),
+                                overlay_state: CodeMirror.copyState(overlay_mode, state.overlay_state),
                                 inner_mode: state.inner_mode,
                                 inner_state: state.inner_mode && CodeMirror.copyState(state.inner_mode, state.inner_state),
                                 // for overlay
@@ -2489,8 +2471,20 @@ table.task_table {
                                 for (var i = 0; i < sosActions.length; i++) {
                                     if (stream.match(sosActions[i])) {
                                         // switch to submode?
-                                        state.sos_state = 'start ' + stream.current().slice(0, -1);
-                                        state.sos_sigil = null;
+                                        if (stream.eol()) {
+                                            // really
+                                            let mode = findMode(stream.current().slice(0, -1).toLowerCase());
+                                            if (mode) {
+                                                state.sos_state = null;
+                                                state.inner_mode = CodeMirror.getMode(conf, mode);
+                                                state.inner_state = CodeMirror.startState(state.inner_mode);
+                                            } else {
+                                                state.sos_state = 'nomanland';
+                                            }
+                                        } else {
+                                            state.sos_state = 'start ' + stream.current().slice(0, -1);
+                                            state.overlay_state.sigil = null;
+                                        }
                                         return "builtin strong";
                                     }
                                 }
@@ -2539,7 +2533,7 @@ table.task_table {
                                 // try to understand option expand=
                                 if (stream.match(/expand\s*=\s*True/, false)) {
                                     // highlight {}
-                                    state.sos_sigil = {
+                                    state.overlay_state.sigil = {
                                         'left': '{',
                                         'right': '}'
                                     }
@@ -2547,11 +2541,15 @@ table.task_table {
                                     let found = stream.match(/expand\s*=\s*"(\S+) (\S+)"/, false);
                                     if (!found)
                                         found = stream.match(/expand\s*=\s*'(\S+) (\S+)'/, false);
-                                    if (found)
-                                        state.sos_sigil = {
+                                    if (found) {
+                                        state.overlay_state.sigil = {
                                             'left': found[1],
                                             'right': found[2]
                                         }
+                                    } else {
+                                        state.overlay_state.sigil = null;
+                                    }
+
                                 }
                                 // if it is end of line, ending the starting switch mode
                                 if (stream.eol() && sl !== ',') {
@@ -2573,7 +2571,7 @@ table.task_table {
                                 return null;
                             } else if (state.inner_mode) {
                                 let it = 'sos_script ';
-                                if (!state.sos_sigil) {
+                                if (!state.overlay_state.sigil) {
                                     let st = state.inner_mode.token(stream, state.inner_state);
                                     return st ? it + st : null;
                                 } else {
@@ -2590,7 +2588,7 @@ table.task_table {
                                     }
                                     if (stream.start == state.overlayPos) {
                                         stream.pos = stream.start;
-                                        state.overlayCur = markExpr(state.sos_sigil, base_mode).token(stream, state.overlay_state);
+                                        state.overlayCur = overlay_mode.token(stream, state.overlay_state);
                                         state.overlayPos = stream.pos;
                                     }
                                     stream.pos = Math.min(state.basePos, state.overlayPos);
@@ -2606,9 +2604,10 @@ table.task_table {
                         indent: function(state, textAfter) {
                             // inner indent
                             if (state.inner_mode) {
-                                return state.inner_mode.indent(state.inner_mode, textAfter) + 4;
+                                if (!state.inner_mode.indent) return CodeMirror.Pass;
+                                return state.inner_mode.indent(state.inner_mode, textAfter) + 2;
                             } else {
-                                return 0;
+                                return base_mode.indent(state.base_state, textAfter);
                             }
                         },
 
@@ -2620,7 +2619,8 @@ table.task_table {
                         },
 
                         lineComment: "#",
-                        fold: "indent"
+                        fold: "indent",
+                        electricInput: /^\s*[\}\]\)]$/,
                     };
                 };
             }, "python");
