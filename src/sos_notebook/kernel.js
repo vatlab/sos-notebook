@@ -2215,12 +2215,14 @@ table.task_table {
                         if (state.in_python) {
                             if (stream.match(state.sigil.right)) {
                                 state.in_python = false;
+                                state.python_state = CodeMirror.startState(python_mode);
                                 return "sos-sigil";
                             }
                             let it = null;
                             try {
                                 it = python_mode.token(stream, state.python_state);
                             } catch (error) {
+
                                 return "sos-interpolated error" + (state.matched ? "" : " sos-unmatched");
                             }
                             if (it == 'variable' || it == 'builtin') {
