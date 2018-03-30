@@ -2196,7 +2196,7 @@ table.task_table {
                             if (stream.pos == state.end_pos - sigil.right.length) {
                                 state.in_python = false;
                                 stream.pos += sigil.right.length;
-                                return "searching sos-interpolated";
+                                return "sos-sigil";
                             }
 
                             let it = null;
@@ -2206,7 +2206,7 @@ table.task_table {
                                 console.log(error);
                                 state.in_python = false;
                                 stream.pos = state.end_pos;
-                                return "searching sos-interpolated";
+                                return "sos-interpolated";
                             }
                             if (stream.pos >= state.end_pos)
                                 state.in_python = false;
@@ -2216,7 +2216,7 @@ table.task_table {
                                 if (ct === 'input' || ct === 'output')
                                     it += ' error';
                             }
-                            return it ? ("searching sos-interpolated " + it) : "searching sos-interpolated";
+                            return it ? ("sos-interpolated " + it) : "sos-interpolated";
                         } else {
                             if (sigil.left === '{' && sigil.right === '}') {
                                 // remove the double brace case
@@ -2226,14 +2226,14 @@ table.task_table {
                                     state.in_python = true;
                                     state.end_pos = stream.pos;
                                     stream.backUp(stream.current().length - 1);
-                                    return "searching sos-interpolated";
+                                    return "sos-sigil";
                                 }
                             } else if (sigil.left === '${' && sigil.right === '}') {
                                 if (stream.match(/\$\{[^}]*\}/)) {
                                     state.in_python = true;
                                     state.end_pos = stream.pos;
                                     stream.backUp(stream.current().length - 2);
-                                    return "searching sos-interpolated";
+                                    return "sos-sigil";
                                 }
                             } else {
                                 // string search
@@ -2243,7 +2243,7 @@ table.task_table {
                                     state.end_pos = stream.pos;
                                     state.in_python = true;
                                     stream.backUp(stream.current().length - 2);
-                                    return "searching sos-interpolated";
+                                    return "sos-sigil";
                                 }
                             }
                             while (stream.next() && !stream.match(sigil.left, false)) {}
@@ -2556,7 +2556,7 @@ table.task_table {
                                 stream.skipToEnd();
                                 return null;
                             } else if (state.inner_mode) {
-                                let it = 'em sos_script ';
+                                let it = 'sos_script ';
                                 if (!state.sos_sigil) {
                                     let st = state.inner_mode.token(stream, state.inner_state);
                                     return st ? it + st : null;
@@ -2580,7 +2580,7 @@ table.task_table {
                                     stream.pos = Math.min(state.basePos, state.overlayPos);
                                     // state.overlay.combineTokens always takes precedence over combine,
                                     // unless set to null
-                                    return (state.overlayCur ? state.overlayCur : state.baseCur) + " em sos-script";
+                                    return (state.overlayCur ? state.overlayCur : state.baseCur) + " sos-script";
                                 }
                             } else {
                                 return base_mode.token(stream, state.base_state);
