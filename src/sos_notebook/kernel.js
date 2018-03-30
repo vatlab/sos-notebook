@@ -1885,6 +1885,22 @@ table.task_table {
 #panel-wrapper #panel .output_scroll {
   height: auto;
 }
+
+/* .cm-sos-interpolated {
+	 text-decoration: underline;
+} */
+.cm-sos-sigil {
+	color: blue;
+	font-weight:bold;
+}
+/*
+.cm-sos-script {
+	font-style: normal;
+}
+
+.cm-sos-option {
+	font-style: italic;
+} */
 `;
             document.body.appendChild(css);
         };
