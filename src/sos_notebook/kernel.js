@@ -2546,10 +2546,7 @@ table.task_table {
                                             'left': found[1],
                                             'right': found[2]
                                         }
-                                    } else {
-                                        state.overlay_state.sigil = null;
                                     }
-
                                 }
                                 // if it is end of line, ending the starting switch mode
                                 if (stream.eol() && sl !== ',') {
