@@ -1894,11 +1894,11 @@ table.task_table {
 }
 /*
 .cm-sos-script {
-	font-style: normal;
+  font-style: normal;
 }
 
 .cm-sos-option {
-	font-style: italic;
+  font-style: italic;
 } */
 `;
             document.body.appendChild(css);
@@ -2101,17 +2101,23 @@ table.task_table {
         $("#to_markdown").click(function() {
             adjustPanel();
         });
-        setTimeout(function() {
+        events.on("kernel_ready.Kernel", function() {
             adjustPanel();
-            /* #524. syntax highlighting would be disabled after page reload. Note quite sure if this is
-               a correct fix but it seems to work. */
+            /* #524. After kernel ready, jupyter would broad cast
+             * codemirror mode to all cells, which will overwrite the
+             * user mode we have just set. We have no choice but to
+             * set codemirror mode again.
+             * */
             //nb.set_codemirror_mode("sos");
             var cells = nb.get_cells();
             var i;
             for (i = cells.length - 1; i >= 0; --i) {
                 enable_fold_gutter(cells[i]);
+                if (cells[i].cell_type === 'code' && cells[i].user_highlight) {
+                    cells[i].code_mirror.setOption('mode', cells[i].user_highlight);
+                }
             }
-        }, 1000);
+        });
 
 
         // define SOS CodeMirror syntax highlighter
