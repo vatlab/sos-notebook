@@ -2222,7 +2222,6 @@ table.task_table {
                             try {
                                 it = python_mode.token(stream, state.python_state);
                             } catch (error) {
-
                                 return "sos-interpolated error" + (state.matched ? "" : " sos-unmatched");
                             }
                             if (it == 'variable' || it == 'builtin') {
@@ -2480,12 +2479,18 @@ table.task_table {
                                                 state.inner_mode = CodeMirror.getMode(conf, mode);
                                                 state.inner_state = CodeMirror.startState(state.inner_mode);
                                             } else {
-                                                state.sos_state = 'nomanland';
+                                                state.sos_state = 'unknown_language';
                                             }
                                         } else {
                                             state.sos_state = 'start ' + stream.current().slice(0, -1);
-                                            state.overlay_state.sigil = null;
                                         }
+                                        state.overlay_state.sigil = null;
+                                        return "builtin strong";
+                                    }
+                                    // if unknown action
+                                    if (stream.match(/\w+:/)) {
+                                        state.overlay_state.sigil = null;
+                                        state.sos_state = 'start ' + stream.current().slice(0, -1);
                                         return "builtin strong";
                                     }
                                 }
@@ -2558,15 +2563,20 @@ table.task_table {
                                         state.inner_mode = CodeMirror.getMode(conf, mode);
                                         state.inner_state = CodeMirror.startState(state.inner_mode);
                                     } else {
-                                        state.sos_state = 'nomanland';
+                                        state.sos_state = 'unknown_language';
                                     }
                                 }
                                 return token + ' sos-option';
                             }
                             // can be start of line but not special
-                            if (state.sos_state == 'nomanland') {
-                                stream.skipToEnd();
-                                return null;
+                            if (state.sos_state == 'unknown_language') {
+                                // we still handle {} in no man unknown_language
+                                if (state.overlay_state.sigil) {
+                                    return overlay_mode.token(stream, state.overlay_state);
+                                } else {
+                                    stream.skipToEnd();
+                                    return null;
+                                }
                             } else if (state.inner_mode) {
                                 let it = 'sos_script ';
                                 if (!state.overlay_state.sigil) {
