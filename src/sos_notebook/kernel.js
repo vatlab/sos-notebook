@@ -396,7 +396,7 @@ define([
             name: 'sos',
             base_mode: window.LanguageName[type] || window.KernelName[type] || type,
         };
-        //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+        //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
         cell.code_mirror.setOption('mode', cell.user_highlight);
         return col;
     }
@@ -2038,7 +2038,7 @@ table.task_table {
                 name: 'sos',
                 base_mode: window.LanguageName[this.value] || window.KernelName[this.value] || this.value,
             };
-            //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+            //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
             cell.code_mirror.setOption('mode', cell.user_highlight);
         });
 
@@ -2105,7 +2105,7 @@ table.task_table {
             adjustPanel();
             /* #524. syntax highlighting would be disabled after page reload. Note quite sure if this is
                a correct fix but it seems to work. */
-            nb.set_codemirror_mode("sos");
+            //nb.set_codemirror_mode("sos");
             var cells = nb.get_cells();
             var i;
             for (i = cells.length - 1; i >= 0; --i) {
