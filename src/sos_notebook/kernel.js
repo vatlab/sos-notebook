@@ -1887,10 +1887,10 @@ table.task_table {
 }
 
 .cm-sos-interpolated {
-	 background-color: #ebf9e8;
+  background-color: #c8eec0;
 }
 .cm-sos-sigil {
-	background-color: #ebf9e8;
+  background-color: #c8eec0;
 }
 /*
 .cm-sos-script {
