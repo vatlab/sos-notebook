@@ -372,7 +372,7 @@ define([
             cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = col;
             cell.user_highlight = {
                 name: 'sos',
-                base_mode: window.LanguageName[type] || window.KernelName[type],
+                base_mode: window.LanguageName[type] || window.KernelName[type] || type,
             };
             //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
             cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -394,7 +394,7 @@ define([
         }
         cell.user_highlight = {
             name: 'sos',
-            base_mode: window.LanguageName[type] || window.KernelName[type],
+            base_mode: window.LanguageName[type] || window.KernelName[type] || type,
         };
         //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
         cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -2036,7 +2036,7 @@ table.task_table {
             // https://github.com/vatlab/sos-notebook/issues/55
             cell.user_highlight = {
                 name: 'sos',
-                base_mode: window.LanguageName[this.value] || window.KernelName[this.value],
+                base_mode: window.LanguageName[this.value] || window.KernelName[this.value] || this.value,
             };
             //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
             cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -2266,12 +2266,12 @@ table.task_table {
                 sosPythonConf.extra_keywords = sosActionWords.concat(sosFunctionWords);
                 // this is the SoS flavored python mode with more identifiers
                 var base_mode = null;
-                if ('base_mode' in conf) {
-                    let mode = findMode(conf.base_mode.toLowerCase());
+                if ('base_mode' in parserConf && parserConf.base_mode) {
+                    let mode = findMode(parserConf.base_mode.toLowerCase());
                     if (mode) {
                         base_mode = CodeMirror.getMode(conf, mode);
                     } else {
-                        console.log(`No base mode is found for ${conf.base_mode}. Python mode used.`);
+                        console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);
                     }
                 }
                 // if there is a user specified base mode, this is the single cell mode
