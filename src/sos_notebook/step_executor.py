@@ -21,14 +21,10 @@
 #
 
 
-import sys
 from sos.step_executor import Step_Executor, Base_Step_Executor, PendingTasks
 from sos.hosts import Host
-from sos.utils import env, short_repr, StopInputGroup, TerminateExecution
-from sos.eval import SoS_exec, stmtHash
-from io import StringIO
+from sos.utils import env, short_repr
 import time
-from sos.targets import UnknownTarget, RemovedTarget, UnavailableLock
 
 class Interactive_Step_Executor(Step_Executor):
     def __init__(self, step):

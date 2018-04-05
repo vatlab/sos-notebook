@@ -30,7 +30,6 @@ from sos.eval import SoS_exec
 from sos._version import __version__
 from sos.__main__ import get_run_parser
 from sos.parser import SoS_Script
-from sos.syntax import SOS_KEYWORDS
 from sos.workflow_executor import Base_Executor, __null_func__
 from sos.syntax import SOS_SECTION_HEADER
 from sos.targets import path, file_target, UnknownTarget, RemovedTarget, UnavailableLock, Undetermined
