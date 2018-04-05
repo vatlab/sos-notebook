@@ -33,7 +33,7 @@ from sos.parser import SoS_Script
 from sos.syntax import SOS_KEYWORDS
 from sos.workflow_executor import Base_Executor, __null_func__
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import path, file_target, UnknownTarget, RemovedTarget, UnavailableLock
+from sos.targets import path, file_target, UnknownTarget, RemovedTarget, UnavailableLock, Undetermined
 from sos.step_executor import PendingTasks
 from .step_executor import Interactive_Step_Executor
 
