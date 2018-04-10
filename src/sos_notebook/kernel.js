@@ -2472,7 +2472,7 @@ table.task_table {
                 } else if (sl == '%') {
                   stream.skipToEnd();
                   return "meta";
-                } else if (state.sos_state == 'entering') {
+                } else if (state.sos_state && state.sos_state.startsWith('entering ')) {
                   // the second parameter is starting column
                   state.inner_mode = CodeMirror.getMode(conf, state.sos_state.slice(9));
                   state.inner_state = CodeMirror.startState(state.inner_mode, stream.indentation());
@@ -2548,8 +2548,6 @@ table.task_table {
                 let it = base_mode.token(stream, state.base_state);
                 return it ? it + ' sos-option' : null;
               } else if (state.sos_state && state.sos_state.startsWith("start ")) {
-                let sl = stream.peek();
-                let token = base_mode.token(stream, state.base_state);
 
                 // try to understand option expand=
                 if (stream.match(/expand\s*=\s*True/, false)) {
@@ -2569,8 +2567,9 @@ table.task_table {
                     }
                   }
                 }
+                let token = base_mode.token(stream, state.base_state);
                 // if it is end of line, ending the starting switch mode
-                if (stream.eol() && sl !== ',') {
+                if (stream.eol() && stream.peek() !== ',') {
                   // really
                   let mode = findMode(state.sos_state.slice(6).toLowerCase());
                   if (mode) {
