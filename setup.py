@@ -20,15 +20,17 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import sys, os
+import os
 import shutil
-from setuptools import find_packages, setup
+import sys
 from distutils import log
+
+from setuptools import find_packages, setup
 
 _py_ver = sys.version_info
 if _py_ver.major == 2 or (_py_ver.major == 3 and (_py_ver.minor, _py_ver.micro) < (6, 0)):
     raise SystemError('sos-notebook requires Python 3.6 or higher. Please upgrade your Python {}.{}.{}.'
-        .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
+                      .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
 
 # obtain version of SoS
 with open('src/sos_notebook/_version.py') as version:
@@ -60,38 +62,39 @@ report-generation tool to create dynamic documents from steps in different
 languages. SoS Notebook enables researchers to perform sophisticated
 bioinformatic analysis using the most suitable tools for different parts of
 the workflow, without the limitations of a particular language or
-complications of cross-language communications. 
+complications of cross-language communications.
 
 Please refer to http://vatlab.github.io/SOS/ for more details on SoS.
 '''
 
-setup(name = "sos-notebook",
-    version = __version__,
-    description = 'Script of Scripts (SoS): an interactive, cross-platform, and cross-language workflow system for reproducible data analysis',
-    long_description=dest,
-    author = 'Bo Peng',
-    url = 'https://github.com/vatlab/SOS',
-    author_email = 'bpeng@mdanderson.org',
-    maintainer = 'Bo Peng',
-    maintainer_email = 'bpeng@mdanderson.org',
-    license = 'GPL3',
-    include_package_data = True,
-    classifiers = [
-        'Development Status :: 4 - Beta',
-        'Environment :: Console',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Natural Language :: English',
-        'Operating System :: POSIX :: Linux',
-        'Operating System :: MacOS :: MacOS X',
-        'Operating System :: Microsoft :: Windows',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: Science/Research',
-        'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: Implementation :: CPython',
-        ],
-    packages = find_packages('src'),
-    package_dir = {'': 'src'},
-    install_requires=[
+setup(name="sos-notebook",
+      version=__version__,
+      description='Script of Scripts (SoS): an interactive, cross-platform, and cross-language workflow system for reproducible data analysis',
+      long_description=dest,
+      author='Bo Peng',
+      url='https://github.com/vatlab/SOS',
+      author_email='bpeng@mdanderson.org',
+      maintainer='Bo Peng',
+      maintainer_email='bpeng@mdanderson.org',
+      license='GPL3',
+      include_package_data=True,
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Environment :: Console',
+          'License :: OSI Approved :: GNU General Public License (GPL)',
+          'Natural Language :: English',
+          'Operating System :: POSIX :: Linux',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: Microsoft :: Windows',
+          'Intended Audience :: Information Technology',
+          'Intended Audience :: Science/Research',
+          'Programming Language :: Python :: 3 :: Only',
+          'Programming Language :: Python :: Implementation :: CPython',
+      ],
+      zip_safe=False,
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
+      install_requires=[
           'sos>=0.9.12.10',
           'nbformat',
           'nbconvert>=5.1.1',
@@ -102,7 +105,7 @@ setup(name = "sos-notebook",
           'wand',
           'markdown',
       ],
-    entry_points= '''
+      entry_points='''
 [sos_functions]
 runfile = sos_notebook.workflow_executor:runfile
 
@@ -128,11 +131,11 @@ ipynb-ipynb.func = sos_notebook.converter:notebook_to_notebook
 rmd-ipynb.parser = sos_notebook.converter:get_Rmarkdown_to_notebook_parser
 rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
 ''',
-#
-#[sos_installers]
-#kernel.parser = sos_notebook.install:get_install_sos_kernel_spec_parser
-#kernel.func = sos_notebook.install:install_sos_kernel_spec
-    extras_require = {
-        'dot':      ['graphviz']
-    }
-)
+      #
+      # [sos_installers]
+      # kernel.parser = sos_notebook.install:get_install_sos_kernel_spec_parser
+      # kernel.func = sos_notebook.install:install_sos_kernel_spec
+      extras_require={
+          'dot':      ['graphviz']
+      }
+      )

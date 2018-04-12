@@ -20,43 +20,41 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os
-import sys
-import re
-import time
-import shlex
-import fnmatch
-import contextlib
-import subprocess
 import argparse
-import pkg_resources
+import contextlib
+import fnmatch
+import os
 import pydoc
-import pandas as pd
-
+import re
+import shlex
+import subprocess
+import sys
+import time
+from collections import OrderedDict, Sized, defaultdict
 from io import StringIO
-from ipykernel.ipkernel import IPythonKernel
-from collections import Sized, defaultdict, OrderedDict
-
-from types import ModuleType
-from sos.utils import env, WorkflowDict, short_repr, pretty_size, PrettyRelativeTime, log_to_file
-from sos._version import __sos_version__, __version__
-from sos.eval import SoS_exec, SoS_eval, interpolate
-from sos.syntax import SOS_SECTION_HEADER, SOS_GLOBAL_SECTION_HEADER
-
-from IPython.lib.clipboard import ClipboardEmpty, osx_clipboard_get, tkinter_clipboard_get
-from IPython.core.error import UsageError
-from IPython.core.display import HTML
-from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
-from jupyter_client import manager, find_connection_file
-
 from textwrap import dedent
+from types import ModuleType
 
+import pandas as pd
+import pkg_resources
+from ipykernel.ipkernel import IPythonKernel
+from IPython.core.display import HTML
+from IPython.core.error import UsageError
+from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
+                                   tkinter_clipboard_get)
+from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
+from jupyter_client import find_connection_file, manager
+from sos._version import __sos_version__, __version__
+from sos.eval import SoS_eval, SoS_exec, interpolate
+from sos.syntax import SOS_GLOBAL_SECTION_HEADER, SOS_SECTION_HEADER
+from sos.utils import (PrettyRelativeTime, WorkflowDict, env, log_to_file,
+                       pretty_size, short_repr)
+
+from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
-
-from .workflow_executor import runfile
 from .step_executor import PendingTasks
-from ._version import __version__ as __notebook_version__
+from .workflow_executor import runfile
 
 
 class FlushableStringIO:
@@ -1074,8 +1072,6 @@ class SoS_Kernel(IPythonKernel):
                         ['change-status', v[1], v[0], 'pending'])
                 elif k == 'task-info':
                     self.handle_taskinfo(v[0], v[1], side_panel=True)
-                elif k == 'workflow':
-                    self._workflow = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n' + v
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue
@@ -2196,6 +2192,11 @@ Available subkernels:\n{}'''.format(
             self.send_response(self.iopub_socket, 'execute_result',
                                {'execution_count': self._execution_count, 'data': format_dict,
                                 'metadata': md_dict})
+
+    def init_metadata(self, meta):
+        super(SoS_Kernel, self).init_metadata(meta)
+        self.warn(meta)
+        self._workflow = meta.workflow
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):

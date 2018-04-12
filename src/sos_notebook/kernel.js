@@ -264,11 +264,12 @@ define([
       }
     }
     if (run_notebook) {
-      window.sos_comm.send({
-        "workflow": workflow,
-      });
+      options.filename = window.document.getElementById("notebook_name").innerHTML;
+      options.workflow = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n' + workflow;
     }
-    var rerun_option = "";
+    options.user_panel = nb.metadata["sos"]["panel"].displayed;
+    options.default_kernel = nb.metadata["sos"].default_kernel;
+    options.rerun = false;
     for (i = cells.length - 1; i >= 0; --i) {
       // this is the cell that is being executed...
       // according to this.set_input_prompt("*") before execute is called.
@@ -277,35 +278,20 @@ define([
       if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
         // use cell kernel if meta exists, otherwise use nb.metadata["sos"].default_kernel
         if (window._auto_resume) {
-          rerun_option = " --resume ";
+          options.rerun = true;
           window._auto_resume = false;
         }
-        return this.orig_execute(
-          // passing to kernel
-          // 1. the default kernel (might have been changed from menu bar
-          // 2. cell kernel (might be unspecified for new cell)
-          // 3. cell index (for setting style after execution)
-          "%frontend " +
-          (nb.metadata["sos"]["panel"].displayed ? " --use-panel" : "") +
-          " --default-kernel " + nb.metadata["sos"].default_kernel +
-          " --cell-kernel " + cells[i].metadata.kernel + rerun_option +
-          (run_notebook ? " --filename '" + window.document.getElementById("notebook_name").innerHTML + "'" : "") +
-          " --cell " + i.toString() + "\n" + code,
-          callbacks, options);
+        options.cell = i;
+        options.cell_kernel = cells[i].metadata.kernel;
+        return this.orig_execute(code, callbacks, options);
       }
     }
+    options.cell_kernel = window.my_panel.cell.metadata.kernel;
+    options.cell = -1;
+    options.silent = false;
+    options.store_history = false;
     // if this is a command from scratch pad (not part of the notebook)
-    return this.orig_execute(
-      "%frontend " +
-      " --use-panel " +
-      " --default-kernel " + nb.metadata["sos"].default_kernel +
-      " --cell-kernel " + window.my_panel.cell.metadata.kernel +
-      (run_notebook ? " --filename '" + window.document.getElementById("notebook_name").innerHTML + "'" : "") +
-      " --cell -1 " + "\n" + code,
-      callbacks, {
-        "silent": false,
-        "store_history": false
-      });
+    return this.orig_execute(code, callbacks, options);
   };
 
   function loadFiles(files, fn) {
