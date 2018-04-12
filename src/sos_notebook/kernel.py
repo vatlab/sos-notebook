@@ -77,9 +77,9 @@ class FlushableStringIO:
                                       })
         else:
             if self.name == 'stdout':
-                if self.kernel._capture_result is not None:
-                    self.kernel._capture_result += content
-                if self.kernel._render_result:
+                if self.kernel._meta['capture_result'] is not None:
+                    self.kernel._meta['capture_result'] += content
+                if self.kernel._meta['render_result']:
                     format_dict, md_dict = self.kernel.format_obj(
                         self.kernel.render_result(content))
                     self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
@@ -899,21 +899,17 @@ class SoS_Kernel(IPythonKernel):
         self._execution_count = 1
         self._debug_mode = False
         self._use_panel = None
-        self._resume_execution = False
-
         self.frontend_comm = None
         self.comm_manager.register_target('sos_comm', self.sos_comm)
-        self.cell_idx = None
         self.my_tasks = {}
         self.last_executed_code = ''
         self.RET_VARS = []
-        self._workflow = ''
-        #
-        self._workflow_mode = False
-        self._render_result = False
-        self._capture_result = None
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
+
+    cell_idx = property(lambda self: self._meta['cell_idx'])
+    _workflow_mode = property(lambda self: self._meta['workflow_mode'])
+    _resume_execution = property(lambda self: self._meta['resume_execution'])
 
     def handle_taskinfo(self, task_id, task_queue, side_panel=None):
         # requesting information on task
@@ -1337,9 +1333,9 @@ class SoS_Kernel(IPythonKernel):
                     # NOTE: we do not send status of sub kernel alone because
                     # these are generated automatically during the execution of
                     # "this cell" in SoS kernel
-                    if (self._capture_result is not None or self._render_result) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
-                        if self._capture_result is not None:
-                            self._capture_result += sub_msg['content']['text']
+                    if (self._meta['capture_result'] is not None or self._meta['render_result']) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
+                        if self._meta['capture_result'] is not None:
+                            self._meta['capture_result'] += sub_msg['content']['text']
                             self.send_response(self.iopub_socket, 'stream',
                                                {'name': 'stdout', 'text': sub_msg['content']['text']})
                         else:
@@ -1933,7 +1929,7 @@ Available subkernels:\n{}'''.format(
         try:
             with self.redirect_sos_io():
                 pexpect_run(cmd, shell=True,
-                            win_width=40 if isinstance(self.cell_idx, int) and self.cell_idx < 0 else 80)
+                            win_width=40 if isinstance(self._meta['cell_idx'], int) and self._meta['cell_idx'] < 0 else 80)
         except Exception as e:
             self.warn(e)
 
@@ -1949,7 +1945,7 @@ Available subkernels:\n{}'''.format(
             except PendingTasks as e:
                 # send cell index and task IDs to frontend
                 self.send_frontend_msg(
-                    'tasks-pending', [self.cell_idx, e.tasks])
+                    'tasks-pending', [self._meta['cell_idx'], e.tasks])
                 return
             except Exception as e:
                 sys.stderr.flush()
@@ -2141,18 +2137,18 @@ Available subkernels:\n{}'''.format(
                                        dict(name='stderr', text=f'Failed to preview {filename}: {e}'))
 
     def render_result(self, res):
-        if self._render_result is False:
+        if self._meta['render_result'] is False:
             return res
         if not isinstance(res, str):
             self.warn(
-                f'Cannot render result {short_repr(res)} in type {res.__class__.__name__} as {self._render_result}.')
+                f'Cannot render result {short_repr(res)} in type {res.__class__.__name__} as {self._meta["render_result"]}.')
         else:
             # import the object from IPython.display
             mod = __import__('IPython.display')
-            if not hasattr(mod.display, self._render_result):
-                self.warn(f'Unrecognized render format {self._render_result}')
+            if not hasattr(mod.display, self._meta['render_result']):
+                self.warn(f'Unrecognized render format {self._meta["render_result"]}')
             else:
-                func = getattr(mod.display, self._render_result)
+                func = getattr(mod.display, self._meta['render_result'])
                 res = func(res)
         return res
 
@@ -2164,16 +2160,24 @@ Available subkernels:\n{}'''.format(
                                {'execution_count': self._execution_count, 'data': format_dict,
                                 'metadata': md_dict})
 
-    def init_metadata(self, meta):
-        super(SoS_Kernel, self).init_metadata(meta)
+    def init_metadata(self, metadata):
+        super(SoS_Kernel, self).init_metadata(metadata)
+        meta = metadata['content']
         if self._debug_mode:
             self.warn(meta)
-        if 'workflow' in meta:
-            self._workflow = meta['workflow']
-        if 'cell_idx' in meta:
-            self.cell_idx = meta['cell_idx']
-        self._notebook_name = meta['filename'] if 'filename' in meta else 'Untitled'
-        self._user_panel = True if 'use_panel' in meta and meta['use_panel'] is True else False
+        self._meta = {
+            'workflow': meta['workflow'] if 'workflow' in meta else '',
+            'workflow_mode': False,
+            'render_result': False,
+            'capture_result': None,
+            'cell_idx': meta['cell_idx'] if 'cell_idx' in meta else -1,
+            'notebook_name': meta['filename'] if 'filename' in meta else 'Untitled',
+            'user_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
+            'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
+            'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
+            'resume_execution': True if 'resume' in meta and meta['resume'] else False,
+            'hard_switch_kernel': False,
+        }
         if 'list_kernel' in meta and meta['list_kernel']:
             # https://github.com/jupyter/help/issues/153#issuecomment-289026056
             #
@@ -2182,40 +2186,42 @@ Available subkernels:\n{}'''.format(
             # request would be sent by the new-connection so we reset the
             # frontend_comm to re-connect to the frontend.
             self.comm_manager.register_target('sos_comm', self.sos_comm)
-        if 'default_kernel' in meta:
-            if self.subkernels.find(meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
-                self.switch_kernel(meta['default_kernel'])
-        else:
-            meta['default_kernel'] = 'SoS'
+        return self._meta
 
-        if 'cell_kernel' not in meta:
-            meta['cell_kernel'] = meta['default_kernel']
-        #
-        original_kernel = self.kernel
+    def do_execute(self, code, silent, store_history=True, user_expressions=None,
+                   allow_stdin=False):
+        if self._debug_mode:
+            self.warn(code)
+
+        # switch to global default kernel
         try:
-            if self.subkernels.find(meta['cell_kernel']).name != self.subkernels.find(self.kernel).name:
-                self.switch_kernel(meta['cell_kernel'])
+            if self.subkernels.find(self._meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
+                self.switch_kernel(self._meta['default_kernel'])
+                # evaluate user expression
+            original_kernel = self.kernel
         except Exception as e:
             self.warn(
-                f'Failed to switch to language {meta["cell_kernel"]}: {e}\n')
+                f'Failed to switch to language {self._meta["default_kernel"]}: {e}\n')
             return {'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
                     'traceback': [],
                     'execution_count': self._execution_count,
                     }
-        if 'resume' in meta and meta['resume']:
-            self._resume_execution = True
-        # a flag for if the kernel is hard switched (by %use)
-        self.hard_switch_kernel = False
-        return meta
-
-    def do_execute(self, code, silent, store_history=True, user_expressions=None,
-                   allow_stdin=False):
-        if self._debug_mode:
-            self.warn(code)
-        # evaluate user expression
-        self._original_kernel = self.kernel
+        # switch to cell kernel
+        try:
+            if self.subkernels.find(self._meta['cell_kernel']).name != self.subkernels.find(self.kernel).name:
+                self.switch_kernel(self._meta['cell_kernel'])
+        except Exception as e:
+            self.warn(
+                f'Failed to switch to language {self._meta["cell_kernel"]}: {e}\n')
+            return {'status': 'error',
+                    'ename': e.__class__.__name__,
+                    'evalue': str(e),
+                    'traceback': [],
+                    'execution_count': self._execution_count,
+                    }
+        # execute with cell kernel
         try:
             ret = self._do_execute(code=code, silent=silent, store_history=store_history,
                                    user_expressions=user_expressions, allow_stdin=allow_stdin)
@@ -2228,9 +2234,9 @@ Available subkernels:\n{}'''.format(
                     'execution_count': self._execution_count,
                     }
         finally:
-            self._resume_execution = False
-            if not self.hard_switch_kernel:
-                self.switch_kernel(self._original_kernel)
+            self._meta['resume_execution'] = False
+            if not self._meta['hard_switch_kernel']:
+                self.switch_kernel(original_kernel)
 
         if ret is None:
             ret = {'status': 'ok',
@@ -2283,10 +2289,10 @@ Available subkernels:\n{}'''.format(
             except SystemExit:
                 return
             try:
-                self._render_result = args.format
+                self._meta['render_result'] = args.format
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
-                self._render_result = False
+                self._meta['render_result'] = False
         elif self.MAGIC_CAPTURE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_capture_parser()
@@ -2296,19 +2302,19 @@ Available subkernels:\n{}'''.format(
                 return
             try:
                 if not args.__from__:
-                    self._capture_result = ''
+                    self._meta['capture_result'] = ''
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
                 if args.__to__ and not args.__to__.isidentifier():
                     self.warn(f'Invalid variable name {args.__to__}')
-                    self._capture_result = None
+                    self._meta['capture_result'] = None
                     return
                 if args.__append__ and not args.__append__.isidentifier():
                     self.warn(f'Invalid variable name {args.__append__}')
-                    self._capture_result = None
+                    self._meta['capture_result'] = None
                     return
                 if self._debug_mode:
-                    self.warn(f'Captured {self._capture_result[:40]}')
+                    self.warn(f'Captured {self._meta["capture_result"][:40]}')
                 if not args.format or args.format == 'text':
                     if args.__from__:
                         # get content from a file
@@ -2319,7 +2325,7 @@ Available subkernels:\n{}'''.format(
                             self.warn(
                                 f'Failed to capture {args.format} from output file {args.__from__}: {e}')
                     else:
-                        new_var = self._capture_result
+                        new_var = self._meta['capture_result']
                 elif args.format == 'json':
                     import json
                     try:
@@ -2332,11 +2338,11 @@ Available subkernels:\n{}'''.format(
                                 self.warn(
                                     f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
-                            new_var = json.loads(self._capture_result)
+                            new_var = json.loads(self._meta['capture_result'])
                     except Exception as e:
                         self.warn(
                             f'Failed to capture output in JSON format, text returned: {e}')
-                        new_var = self._capture_result
+                        new_var = self._meta['capture_result']
                 elif args.format == 'csv':
                     try:
                         if args.__from__:
@@ -2348,12 +2354,12 @@ Available subkernels:\n{}'''.format(
                                 self.warn(
                                     f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
-                            with StringIO(self._capture_result) as ifile:
+                            with StringIO(self._meta['capture_result']) as ifile:
                                 new_var = pd.read_csv(ifile)
                     except Exception as e:
                         self.warn(
                             f'Failed to capture output in {args.format} format, text returned: {e}')
-                        new_var = self._capture_result
+                        new_var = self._meta['capture_result']
                 elif args.format == 'tsv':
                     try:
                         if args.__from__:
@@ -2365,12 +2371,12 @@ Available subkernels:\n{}'''.format(
                                 self.warn(
                                     f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
                         else:
-                            with StringIO(self._capture_result) as ifile:
+                            with StringIO(self._meta['capture_result']) as ifile:
                                 new_var = pd.read_csv(ifile, sep='\t')
                     except Exception as e:
                         self.warn(
                             f'Failed to capture output in {args.format} format, text returned: {e}')
-                        new_var = self._capture_result
+                        new_var = self._meta['capture_result']
                 if args.__to__:
                     env.sos_dict.set(args.__to__, new_var)
                 else:
@@ -2400,7 +2406,7 @@ Available subkernels:\n{}'''.format(
                     else:
                         self.warn(
                             f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
-            self._capture_result = None
+            self._meta['capture_result'] = None
         elif self.MAGIC_SESSIONINFO.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_sessioninfo_parser()
@@ -2492,8 +2498,8 @@ Available subkernels:\n{}'''.format(
                 args = parser.parse_args(options.split())
             except SystemExit:
                 return
-            # self.cell_idx could be reset by _do_execute
-            cell_idx = self.cell_idx
+            # self._meta['cell_idx'] could be reset by _do_execute
+            cell_idx = self._meta['cell_idx']
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
@@ -2560,7 +2566,7 @@ Available subkernels:\n{}'''.format(
             try:
                 self.switch_kernel(args.name, args.in_vars, args.out_vars,
                                    args.kernel, args.language, args.color)
-                self.hard_switch_kernel = True
+                self._meta['hard_switch_kernel'] = True
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn(
@@ -2682,7 +2688,7 @@ Available subkernels:\n{}'''.format(
             # find the global sections of the workflow
             global_sections = ''
             in_global = False
-            for line in self._workflow.splitlines():
+            for line in self._meta['workflow'].splitlines():
                 if SOS_GLOBAL_SECTION_HEADER.match(line):
                     in_global = True
                 elif SOS_SECTION_HEADER.match(line):
@@ -2699,7 +2705,7 @@ Available subkernels:\n{}'''.format(
                     # %run is executed in its own namespace
                     old_dict = env.sos_dict
                     self._reset_dict()
-                    self._workflow_mode = True
+                    self._meta['workflow_mode'] = True
                     if self._debug_mode:
                         self.warn(f'Executing\n{global_sections + run_code}')
                     ret = self._do_execute(global_sections + run_code, silent, store_history, user_expressions,
@@ -2710,7 +2716,7 @@ Available subkernels:\n{}'''.format(
                 finally:
                     old_dict.quick_update(env.sos_dict._dict)
                     env.sos_dict = old_dict
-                    self._workflow_mode = False
+                    self._meta['workflow_mode'] = False
                     self.options = old_options
             return ret
         elif self.MAGIC_SOSRUN.match(code):
@@ -2721,13 +2727,13 @@ Available subkernels:\n{}'''.format(
                 # %run is executed in its own namespace
                 old_dict = env.sos_dict
                 self._reset_dict()
-                self._workflow_mode = True
-                # self.send_frontend_msg('preview-workflow', self._workflow)
-                if not self._workflow:
+                self._meta['workflow_mode'] = True
+                # self.send_frontend_msg('preview-workflow', self._meta['workflow'])
+                if not self._meta['workflow']:
                     self.warn(
                         'Nothing to execute (notebook workflow is empty).')
                 else:
-                    self._do_execute(self._workflow, silent,
+                    self._do_execute(self._meta['workflow'], silent,
                                      store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn(f'Failed to execute workflow: {e}')
@@ -2735,7 +2741,7 @@ Available subkernels:\n{}'''.format(
             finally:
                 old_dict.quick_update(env.sos_dict._dict)
                 env.sos_dict = old_dict
-                self._workflow_mode = False
+                self._meta['workflow_mode'] = False
                 self.options = old_options
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SAVE.match(code):
@@ -2802,25 +2808,25 @@ Available subkernels:\n{}'''.format(
                         ftype = 'sos'
                 else:
                     ftype = args.__to__ if args.__to__ else 'sos'
-                    filename = self._notebook_name + '.' + ftype
+                    filename = self._meta['notebook_name'] + '.' + ftype
 
                 filename = os.path.expanduser(filename)
 
                 if os.path.isfile(filename) and not args.force:
                     raise ValueError(
                         f'Cannot overwrite existing output file {filename}')
-                # self.send_frontend_msg('preview-workflow', self._workflow)
+                # self.send_frontend_msg('preview-workflow', self._meta['workflow'])
                 if ftype == 'sos':
                     if not args.all:
                         with open(filename, 'w') as script:
-                            script.write(self._workflow)
+                            script.write(self._meta['workflow'])
                     else:
                         # convert to sos report
                         from .converter import notebook_to_script
                         arg = argparse.Namespace()
                         arg.all = True
                         notebook_to_script(
-                            self._notebook_name + '.ipynb', filename, args=arg, unknown_args=[])
+                            self._meta['notebook_name'] + '.ipynb', filename, args=arg, unknown_args=[])
                     if args.setx:
                         import stat
                         os.chmod(filename, os.stat(
@@ -2838,7 +2844,7 @@ Available subkernels:\n{}'''.format(
                             arg.template = 'sos-report'
                     else:
                         arg.template = args.template
-                    notebook_to_html(self._notebook_name + '.ipynb',
+                    notebook_to_html(self._meta['notebook_name'] + '.ipynb',
                                      filename, sargs=arg, unknown_args=[])
 
                 self.send_response(self.iopub_socket, 'display_data',
@@ -2869,7 +2875,7 @@ Available subkernels:\n{}'''.format(
             old_options = self.options
             self.options = options + ' ' + self.options
             try:
-                self._workflow_mode = True
+                self._meta['workflow_mode'] = True
                 old_dict = env.sos_dict
                 self._reset_dict()
                 if not self.last_executed_code:
@@ -2882,8 +2888,8 @@ Available subkernels:\n{}'''.format(
             finally:
                 old_dict.quick_update(env.sos_dict._dict)
                 env.sos_dict = old_dict
+                self._meta['workflow_mode'] = False
                 self.options = old_options
-                self._workflow_mode = False
         elif self.MAGIC_SANDBOX.match(code):
             import tempfile
             import shutil
@@ -2966,9 +2972,9 @@ Available subkernels:\n{}'''.format(
                     self.send_frontend_msg('display_data',
                                            {'metadata': {},
                                             'data':
-                                            {'text/plain': self._workflow,
+                                            {'text/plain': self._meta['workflow'],
                                              'text/html': HTML(
-                                                 f'<textarea id="{ta_id}">{self._workflow}</textarea>').data
+                                                 f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
                                              }})
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
@@ -3048,10 +3054,10 @@ Available subkernels:\n{}'''.format(
             if code:
                 self.last_executed_code = code
             # code = self._interpolate_text(code, quiet=False)
-            if self.cell_idx is not None:
+            if self._meta['cell_idx'] is not None:
                 self.send_frontend_msg(
-                    'cell-kernel', [self.cell_idx, self.kernel])
-                self.cell_idx = None
+                    'cell-kernel', [self._meta['cell_idx'], self.kernel])
+                self._meta['cell_idx'] = None
             if code is None:
                 return
             try:
@@ -3082,10 +3088,10 @@ Available subkernels:\n{}'''.format(
             # run sos
             try:
                 self.run_sos_code(code, silent)
-                if self.cell_idx is not None:
+                if self._meta['cell_idx'] is not None:
                     self.send_frontend_msg(
-                        'cell-kernel', [self.cell_idx, 'SoS'])
-                    self.cell_idx = None
+                        'cell-kernel', [self._meta['cell_idx'], 'SoS'])
+                    self._meta['cell_idx'] = None
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
                 self.warn(str(e))
