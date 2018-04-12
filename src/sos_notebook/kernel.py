@@ -513,35 +513,6 @@ class SoS_Kernel(IPythonKernel):
         parser.error = self._parse_error
         return parser
 
-    def get_frontend_parser(self):
-        parser = argparse.ArgumentParser(prog='%frontend',
-                                         description='''Use specified the subkernel to evaluate current
-            cell. soft with tells the start kernel of the cell. If no other
-            switch happens the kernel will switch back. However, a %use inside
-            the cell will still switch the global kernel. In contrast, a hard
-            %with magic will absorb the effect of %use.''')
-        parser.add_argument('--list-kernel', action='store_true',
-                            help='List kernels')
-        parser.add_argument('--default-kernel',
-                            help='Default global kernel')
-        parser.add_argument('--cell-kernel',
-                            help='Kernel to switch to.')
-        parser.add_argument('--use-panel', action='store_true',
-                            help='If panel is open')
-        # pass cell index from notebook so that we know which cell fired
-        # the command. Use to set metadata of cell through frontend message
-        parser.add_argument('--resume', action='store_true',
-                            help='''If the cell is automatically reresumed by frontend, in which
-            case -s force should be handled differently.''')
-        parser.add_argument('--cell', dest='cell_idx', type=int,
-                            help='Index of cell')
-        parser.add_argument('--workflow', const='', nargs='?',
-                            help='Workflow defined in the notebook')
-        parser.add_argument('--filename',
-                            help='filename of the current notebook')
-        parser.error = self._parse_error
-        return parser
-
     def get_get_parser(self):
         parser = argparse.ArgumentParser(prog='%get',
                                          description='''Get specified variables from another kernel, which is
@@ -2195,16 +2166,56 @@ Available subkernels:\n{}'''.format(
 
     def init_metadata(self, meta):
         super(SoS_Kernel, self).init_metadata(meta)
-        self.warn(meta)
-        self._workflow = meta.workflow
+        if self._debug_mode:
+            self.warn(meta)
+        if 'workflow' in meta:
+            self._workflow = meta['workflow']
+        if 'cell_idx' in meta:
+            self.cell_idx = meta['cell_idx']
+        self._notebook_name = meta['filename'] if 'filename' in meta else 'Untitled'
+        self._user_panel = True if 'use_panel' in meta and meta['use_panel'] is True else False
+        if 'list_kernel' in meta and meta['list_kernel']:
+            # https://github.com/jupyter/help/issues/153#issuecomment-289026056
+            #
+            # when the frontend is refreshed, cached comm would be lost and
+            # communication would be discontinued. However, a kernel-list
+            # request would be sent by the new-connection so we reset the
+            # frontend_comm to re-connect to the frontend.
+            self.comm_manager.register_target('sos_comm', self.sos_comm)
+        if 'default_kernel' in meta:
+            if self.subkernels.find(meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
+                self.switch_kernel(meta['default_kernel'])
+        else:
+            meta['default_kernel'] = 'SoS'
+
+        if 'cell_kernel' not in meta:
+            meta['cell_kernel'] = meta['default_kernel']
+        #
+        original_kernel = self.kernel
+        try:
+            if self.subkernels.find(meta['cell_kernel']).name != self.subkernels.find(self.kernel).name:
+                self.switch_kernel(meta['cell_kernel'])
+        except Exception as e:
+            self.warn(
+                f'Failed to switch to language {meta["cell_kernel"]}: {e}\n')
+            return {'status': 'error',
+                    'ename': e.__class__.__name__,
+                    'evalue': str(e),
+                    'traceback': [],
+                    'execution_count': self._execution_count,
+                    }
+        if 'resume' in meta and meta['resume']:
+            self._resume_execution = True
+        # a flag for if the kernel is hard switched (by %use)
+        self.hard_switch_kernel = False
+        return meta
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
                    allow_stdin=False):
         if self._debug_mode:
             self.warn(code)
-        # a flag for if the kernel is hard switched (by %use)
-        self.hard_switch_kernel = False
         # evaluate user expression
+        self._original_kernel = self.kernel
         try:
             ret = self._do_execute(code=code, silent=silent, store_history=store_history,
                                    user_expressions=user_expressions, allow_stdin=allow_stdin)
@@ -2216,6 +2227,10 @@ Available subkernels:\n{}'''.format(
                     'traceback': [],
                     'execution_count': self._execution_count,
                     }
+        finally:
+            self._resume_execution = False
+            if not self.hard_switch_kernel:
+                self.switch_kernel(self._original_kernel)
 
         if ret is None:
             ret = {'status': 'ok',
@@ -2488,65 +2503,6 @@ Available subkernels:\n{}'''.format(
                     status_style = None
                 self.send_frontend_msg(
                     'clear-output', [cell_idx, args.all, status_style, args.elem_class])
-        elif self.MAGIC_FRONTEND.match(code):
-            options, remaining_code = self.get_magic_and_code(code, False)
-            try:
-                parser = self.get_frontend_parser()
-                try:
-                    args = parser.parse_args(shlex.split(options))
-                except SystemExit:
-                    return
-                self.cell_idx = args.cell_idx
-                #
-                # if self.cell_idx is None or self.cell_idx < 0:
-                #    self._execution_count = 1
-                self._notebook_name = args.filename if args.filename else 'Untitled'
-            except Exception as e:
-                self.warn('Invalid option "{}": {}\n'.format(options, e))
-                return {'status': 'error',
-                        'ename': e.__class__.__name__,
-                        'evalue': str(e),
-                        'traceback': [],
-                        'execution_count': self._execution_count,
-                        }
-            self._use_panel = args.use_panel is True
-            if args.list_kernel:
-                # https://github.com/jupyter/help/issues/153#issuecomment-289026056
-                #
-                # when the frontend is refreshed, cached comm would be lost and
-                # communication would be discontinued. However, a kernel-list
-                # request would be sent by the new-connection so we reset the
-                # frontend_comm to re-connect to the frontend.
-                self.comm_manager.register_target('sos_comm', self.sos_comm)
-
-            # args.default_kernel should be valid
-            if self.subkernels.find(args.default_kernel).name != self.subkernels.find(self.kernel).name:
-                self.switch_kernel(args.default_kernel)
-            #
-            if args.cell_kernel == 'undefined':
-                args.cell_kernel = args.default_kernel
-            #
-            original_kernel = self.kernel
-            try:
-                if self.subkernels.find(args.cell_kernel).name != self.subkernels.find(self.kernel).name:
-                    self.switch_kernel(args.cell_kernel)
-            except Exception as e:
-                self.warn(
-                    f'Failed to switch to language "{args.cell_kernel}": {e}\n')
-                return {'status': 'error',
-                        'ename': e.__class__.__name__,
-                        'evalue': str(e),
-                        'traceback': [],
-                        'execution_count': self._execution_count,
-                        }
-            try:
-                if args.resume:
-                    self._resume_execution = True
-                return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
-            finally:
-                self._resume_execution = False
-                if not self.hard_switch_kernel:
-                    self.switch_kernel(original_kernel)
         elif self.MAGIC_WITH.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:

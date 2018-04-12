@@ -104,6 +104,7 @@ setup(name="sos-notebook",
           'tabulate',
           'wand',
           'markdown',
+          'pandas'
       ],
       entry_points='''
 [sos_functions]
