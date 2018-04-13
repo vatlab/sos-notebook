@@ -375,7 +375,7 @@ define([
       return col;
     }
 
-    if (type === "sos" && get_workflow_from_cell(cell)) {
+    if (type === "sos" && getCellWorkflow(cell)) {
       col = "#F0F0F0";
     } else if (type && window.BackgroundColor[type]) {
       col = window.BackgroundColor[type];
