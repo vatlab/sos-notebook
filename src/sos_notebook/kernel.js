@@ -206,7 +206,27 @@ define([
     // if some kernel is not registered add them
   }
 
-  function get_workflow_from_cell(cell) {
+  // detect if the code contains notebook-involved magics such as %sosrun, sossave, preview
+  function hasWorkflowMagic(code) {
+    let lines = code.split("\n");
+    for (let l = 0; l < lines.length; ++l) {
+      // ignore starting comment, new line and ! lines
+      if (lines[l].startsWith("#") || lines[l].trim() === "" || lines[l].startsWith("!")) {
+        continue;
+      }
+      // other magic
+      if (lines[l].startsWith("%")) {
+        if (lines[l].match(/^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/)) {
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+
+  // get the workflow part of text from a cell
+  function getCellWorkflow(cell) {
     var lines = cell.get_text().split("\n");
     var workflow = "";
     var l;
@@ -224,53 +244,36 @@ define([
     return workflow;
   }
 
+  // get workflow from notebook
+  function getNotebookWorkflow(cells) {
+    let workflow = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n';
+    for (let i = 0; i < cells.length; ++i) {
+      let cell = cells[i];
+      if (cell.type === "code" && (!cell.metadata.get('kernel') || cell.metadata.get('kernel') === "SoS")) {
+        workflow += getCellWorkflow(cell);
+      }
+    }
+    return workflow;
+  }
+
+
   var my_execute = function(code, callbacks, options) {
     /* check if the code is a workflow call, which is marked by
      * %sosrun or %sossave workflowname with options
      */
-    var workflow = "";
-    var run_notebook = false;
-    var lines = code.split("\n");
-    var l;
-    for (l = 0; l < lines.length; ++l) {
-      if (lines[l].startsWith("#") || lines[l].trim() === "" || lines[l].startsWith("!")) {
-        continue;
-      }
-      // other magic
-      if (lines[l].startsWith("%")) {
-        if (lines[l].match(/^%sosrun($|\s)|^%run($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/)) {
-          run_notebook = true;
-          break;
-        } else {
-          continue;
-        }
-      } else {
-        run_notebook = false;
-        break;
-      }
-    }
-
-    var i;
+    options.sos = {}
+    var run_notebook = hasWorkflowMagic(code);
     var cells = nb.get_cells();
     if (run_notebook) {
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
-      for (i = 0; i < cells.length; ++i) {
-        // older version of the notebook might have sos in metadata
-        if (cells[i].cell_type === "code" && (!cells[i].metadata.kernel || cells[i].metadata.kernel === "SoS" ||
-            cells[i].metadata.kernel === "sos")) {
-          workflow += get_workflow_from_cell(cells[i]);
-        }
-      }
+      options.sos.workflow = getNotebookWorkflow(cells);
+      options.sos.filename = window.document.getElementById("notebook_name").innerHTML;
     }
-    if (run_notebook) {
-      options.filename = window.document.getElementById("notebook_name").innerHTML;
-      options.workflow = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n' + workflow;
-    }
-    options.user_panel = nb.metadata["sos"]["panel"].displayed;
-    options.default_kernel = nb.metadata["sos"].default_kernel;
-    options.rerun = false;
-    for (i = cells.length - 1; i >= 0; --i) {
+    options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
+    options.sos.default_kernel = nb.metadata["sos"].default_kernel;
+    options.sos.rerun = false;
+    for (var i = cells.length - 1; i >= 0; --i) {
       // this is the cell that is being executed...
       // according to this.set_input_prompt("*") before execute is called.
       // also, because a cell might be starting without a previous cell
@@ -278,16 +281,16 @@ define([
       if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
         // use cell kernel if meta exists, otherwise use nb.metadata["sos"].default_kernel
         if (window._auto_resume) {
-          options.rerun = true;
+          options.sos.rerun = true;
           window._auto_resume = false;
         }
-        options.cell = i;
-        options.cell_kernel = cells[i].metadata.kernel;
+        options.sos.cell_id = cells[i].cell_id;
+        options.sos.cell_kernel = cells[i].metadata.kernel;
         return this.orig_execute(code, callbacks, options);
       }
     }
-    options.cell_kernel = window.my_panel.cell.metadata.kernel;
-    options.cell = -1;
+    options.sos.cell_kernel = window.my_panel.cell.metadata.kernel;
+    options.sos.cell_id = '';
     options.silent = false;
     options.store_history = false;
     // if this is a command from scratch pad (not part of the notebook)
@@ -326,6 +329,13 @@ define([
     loadFile(0);
   }
 
+  function get_cell_by_id(id) {
+    if (id) {
+      return nb.get_cells().find(cell => cell.cell_id === id);
+    } else {
+      return window.my_panel.cell;
+    }
+  }
 
   function changeStyleOnKernel(cell, type) {
     // type should be  displayed name of kernel
@@ -561,7 +571,7 @@ define([
         // get cell from passed cell index, which was sent through the
         // %frontend magic
 
-        cell = data[0] === -1 ? window.my_panel.cell : nb.get_cell(data[0]);
+        cell = get_cell_by_id(data[0]);
         if (cell.metadata.kernel !== window.DisplayName[data[1]]) {
           cell.metadata.kernel = window.DisplayName[data[1]];
           // set meta information
@@ -603,7 +613,7 @@ define([
            rerun cells once all tasks have been completed */
         /* let us get a more perminant id for cell so that we
            can still locate the cell once its tasks are completed. */
-        cell = nb.get_cell(data[0]);
+        cell = get_cell_by_id(data[0]);
         window.pending_cells[cell.cell_id] = data[1];
       } else if (msg_type === "remove-task") {
         var item = document.getElementById("table_" + data[0] + "_" + data[1]);
@@ -723,7 +733,7 @@ define([
               cells[i].clear_output();
             }
           }
-        } else if (data[0] === -1) {
+        } else if (data[0] === "") {
           // clear output of selected cells
           var i;
           var j;
@@ -742,19 +752,19 @@ define([
               nb.get_cell(active[i]).clear_output();
             }
           }
-        } else if (nb.get_cell(data[0]).cell_type === "code") {
+        } else if (get_cell_by_id(data[0]).cell_type === "code") {
           // clear current cell
           var j;
           if (data[2]) {
             for (j = 0; j < data[2].length; ++j) {
-              clear_task(nb.get_cell(data[0]), data[2][j]);
+              clear_task(get_cell_by_id(data[0]), data[2][j]);
             }
           } else if (data[3]) {
             for (j = 0; j < data[3].length; ++j) {
-              clear_class(nb.get_cell(data[0]), data[3][j]);
+              clear_class(get_cell_by_id(data[0]), data[3][j]);
             }
           } else {
-            nb.get_cell(data[0]).clear_output();
+            get_cell_by_id(data[0]).clear_output();
           }
         }
         if (active.length > 0) {

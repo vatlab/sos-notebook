@@ -907,7 +907,7 @@ class SoS_Kernel(IPythonKernel):
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
 
-    cell_idx = property(lambda self: self._meta['cell_idx'])
+    cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
     _resume_execution = property(lambda self: self._meta['resume_execution'])
 
@@ -1929,7 +1929,7 @@ Available subkernels:\n{}'''.format(
         try:
             with self.redirect_sos_io():
                 pexpect_run(cmd, shell=True,
-                            win_width=40 if isinstance(self._meta['cell_idx'], int) and self._meta['cell_idx'] < 0 else 80)
+                            win_width=40 if self._meta['cell_id'] == "" else 80)
         except Exception as e:
             self.warn(e)
 
@@ -1945,7 +1945,7 @@ Available subkernels:\n{}'''.format(
             except PendingTasks as e:
                 # send cell index and task IDs to frontend
                 self.send_frontend_msg(
-                    'tasks-pending', [self._meta['cell_idx'], e.tasks])
+                    'tasks-pending', [self._meta['cell_id'], e.tasks])
                 return
             except Exception as e:
                 sys.stderr.flush()
@@ -2162,7 +2162,7 @@ Available subkernels:\n{}'''.format(
 
     def init_metadata(self, metadata):
         super(SoS_Kernel, self).init_metadata(metadata)
-        meta = metadata['content']
+        meta = metadata['content']['sos']
         if self._debug_mode:
             self.warn(meta)
         self._meta = {
@@ -2170,9 +2170,9 @@ Available subkernels:\n{}'''.format(
             'workflow_mode': False,
             'render_result': False,
             'capture_result': None,
-            'cell_idx': meta['cell_idx'] if 'cell_idx' in meta else -1,
+            'cell_id': meta['cell_id'] if 'cell_id' in meta else "",
             'notebook_name': meta['filename'] if 'filename' in meta else 'Untitled',
-            'user_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
+            'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'resume_execution': True if 'resume' in meta and meta['resume'] else False,
@@ -2498,8 +2498,8 @@ Available subkernels:\n{}'''.format(
                 args = parser.parse_args(options.split())
             except SystemExit:
                 return
-            # self._meta['cell_idx'] could be reset by _do_execute
-            cell_idx = self._meta['cell_idx']
+            # self._meta['cell_id'] could be reset by _do_execute
+            cell_id = self._meta['cell_id']
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
@@ -2508,7 +2508,7 @@ Available subkernels:\n{}'''.format(
                 else:
                     status_style = None
                 self.send_frontend_msg(
-                    'clear-output', [cell_idx, args.all, status_style, args.elem_class])
+                    'clear-output', [cell_id, args.all, status_style, args.elem_class])
         elif self.MAGIC_WITH.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             try:
@@ -3054,10 +3054,10 @@ Available subkernels:\n{}'''.format(
             if code:
                 self.last_executed_code = code
             # code = self._interpolate_text(code, quiet=False)
-            if self._meta['cell_idx'] is not None:
+            if self._meta['cell_id']:
                 self.send_frontend_msg(
-                    'cell-kernel', [self._meta['cell_idx'], self.kernel])
-                self._meta['cell_idx'] = None
+                    'cell-kernel', [self._meta['cell_id'], self.kernel])
+                self._meta['cell_id'] = ""
             if code is None:
                 return
             try:
@@ -3088,10 +3088,10 @@ Available subkernels:\n{}'''.format(
             # run sos
             try:
                 self.run_sos_code(code, silent)
-                if self._meta['cell_idx'] is not None:
+                if self._meta['cell_id']:
                     self.send_frontend_msg(
-                        'cell-kernel', [self._meta['cell_idx'], 'SoS'])
-                    self._meta['cell_idx'] = None
+                        'cell-kernel', [self._meta['cell_id'], 'SoS'])
+                    self._meta['cell_id'] = ""
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
                 self.warn(str(e))
