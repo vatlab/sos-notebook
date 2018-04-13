@@ -1965,24 +1965,6 @@ table.task_table {
     };
   }
 
-  function remove_extension(extension) {
-    if ($(extension).length) {
-      console.log("remove " + extension)
-      $(extension).remove()
-    } else {
-      setTimeout(function() {
-        console.log("Wait 5 sec and remove" + extension)
-        $(extension).remove();
-      }, 5000);
-    }
-  }
-
-  function remove_nbextensions() {
-    // var extenstionArray=["#nbextension-scratchpad"]
-    var extenstionArray = ["#nbextension-scratchpad"]
-    return Array.prototype.map.call(extenstionArray, remove_extension)
-  }
-
 
   function add_lan_selector(cell, kernel) {
     //
@@ -2043,8 +2025,6 @@ table.task_table {
   }
 
   var onload = function() {
-
-    remove_nbextensions()
 
     // setting up frontend using existing metadata (without executing anything)
     load_select_kernel();
