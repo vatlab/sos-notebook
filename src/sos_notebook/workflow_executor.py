@@ -353,7 +353,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                         code = '[scratch_0]\n' + code
                         script = SoS_Script(content=code)
                     else:
-                        if kernel.cell_idx == -1:
+                        if not kernel.cell_id:
                             kernel.send_frontend_msg('stream',
                                 {'name': 'stdout', 'text': 'Workflow can only be executed with magic %run or %sosrun.'})
                         return
