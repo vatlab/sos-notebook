@@ -893,6 +893,7 @@ class SoS_Kernel(IPythonKernel):
 
         self.previewers = None
         self.original_keys = None
+        self._meta = {'use_panel': True}
         self._supported_languages = None
         self._completer = None
         self._inspector = None
@@ -1194,7 +1195,6 @@ class SoS_Kernel(IPythonKernel):
 
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
-        self.warn(f'send frontend {msg_type} {msg}')
         if self._meta['use_panel'] is False and msg_type in ('display_data', 'stream', 'preview-input'):
             if msg_type in ('display_data', 'stream'):
                 self.send_response(self.iopub_socket, msg_type,
