@@ -44,6 +44,7 @@ from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import find_connection_file, manager
+
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_GLOBAL_SECTION_HEADER, SOS_SECTION_HEADER
@@ -898,7 +899,6 @@ class SoS_Kernel(IPythonKernel):
         self._real_execution_count = 1
         self._execution_count = 1
         self._debug_mode = False
-        self._use_panel = None
         self.frontend_comm = None
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
@@ -1194,7 +1194,8 @@ class SoS_Kernel(IPythonKernel):
 
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
-        if self._use_panel is False and msg_type in ('display_data', 'stream', 'preview-input'):
+        self.warn(f'send frontend {msg_type} {msg}')
+        if self._meta['use_panel'] is False and msg_type in ('display_data', 'stream', 'preview-input'):
             if msg_type in ('display_data', 'stream'):
                 self.send_response(self.iopub_socket, msg_type,
                                    {} if msg is None else msg)
@@ -1860,7 +1861,7 @@ Available subkernels:\n{}'''.format(
         orig_kernel = self.kernel
         if kernel is not None and self.kernel != self.subkernels.find(kernel).name:
             self.switch_kernel(kernel)
-        if self._use_panel:
+        if self._meta['use_panel']:
             self.send_frontend_msg('preview-kernel', self.kernel)
         try:
             for item in (x for x, y in zip(items, handled) if not y):
@@ -2955,9 +2956,9 @@ Available subkernels:\n{}'''.format(
                 self.preview_output = True
             #
             if args.panel:
-                self._use_panel = True
+                self._meta['use_panel'] = True
             elif args.notebook:
-                self._use_panel = False
+                self._meta['use_panel'] = False
             # else, use default _use_panel
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -2965,7 +2966,7 @@ Available subkernels:\n{}'''.format(
                 # preview workflow
                 if args.workflow:
                     import random
-                    if self._use_panel:
+                    if self._meta['use_panel']:
                         self.send_frontend_msg(
                             'preview-input', '%preview --workflow')
                     ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
@@ -2979,7 +2980,7 @@ Available subkernels:\n{}'''.format(
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:
-                        if not args.keep_output and self._use_panel:
+                        if not args.keep_output and self._meta['use_panel']:
                             self.send_frontend_msg(
                                 'preview-input', f'%preview {" ".join(args.items)}')
                         self.handle_magic_preview(
