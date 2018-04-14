@@ -388,12 +388,18 @@ define([
     if (op.length > 0) {
       op[0].style.backgroundColor = col;
     }
-    cell.user_highlight = {
-      name: 'sos',
-      base_mode: window.LanguageName[type] || window.KernelName[type] || type,
-    };
+    var base_mode = window.LanguageName[type] || window.KernelName[type] || type;
+    if (!base_mode || base_mode.toLowerCase() === 'sos') {
+      cell.user_highlight = 'auto';
+      cell.code_mirror.setOption('mode', 'sos');
+    } else {
+      cell.user_highlight = {
+        name: 'sos',
+        base_mode: base_mode
+      }
+      cell.code_mirror.setOption('mode', cell.user_highlight);
+    }
     //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
-    cell.code_mirror.setOption('mode', cell.user_highlight);
     return col;
   }
 
