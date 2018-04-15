@@ -81,12 +81,6 @@ class FlushableStringIO:
                 if self.kernel._meta['capture_result'] is not None:
                     self.kernel._meta['capture_result'] += content
                 if self.kernel._meta['render_result']:
-                    format_dict, md_dict = self.kernel.format_obj(
-                        self.kernel.render_result(content))
-                    self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
-                                              {'source': 'SoS', 'metadata': md_dict,
-                                               'data': format_dict
-                                               })
                     return
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
                                       {'name': self.name, 'text': content})
@@ -1335,17 +1329,12 @@ class SoS_Kernel(IPythonKernel):
                     # these are generated automatically during the execution of
                     # "this cell" in SoS kernel
                     if (self._meta['capture_result'] is not None or self._meta['render_result']) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
-                        if self._meta['capture_result'] is not None:
-                            self._meta['capture_result'] += sub_msg['content']['text']
+                        self._meta['capture_result'] += sub_msg['content']['text']
+                        # if in render mode, does not send stdout
+                        if not self._meta['render_result']:
                             self.send_response(self.iopub_socket, 'stream',
                                                {'name': 'stdout', 'text': sub_msg['content']['text']})
-                        else:
-                            format_dict, md_dict = self.format_obj(
-                                self.render_result(sub_msg['content']['text']))
-                            self.send_response(self.iopub_socket, 'display_data',
-                                               {'source': 'SoS', 'metadata': md_dict,
-                                                'data': format_dict
-                                                })
+
                     elif msg_type == 'error':
                         if on_error and not self._debug_mode:
                             self.warn(on_error)
@@ -2290,9 +2279,17 @@ Available subkernels:\n{}'''.format(
             except SystemExit:
                 return
             try:
+                self._meta['capture_result'] = ''
                 self._meta['render_result'] = args.format
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
+                content = self._meta['capture_result']
+                format_dict, md_dict = self.format_obj(self.render_result(content))
+                self.send_response(self.iopub_socket, 'display_data',
+                                          {'source': 'SoS', 'metadata': md_dict,
+                                           'data': format_dict
+                                           })
+                self._meta['capture_result'] = None
                 self._meta['render_result'] = False
         elif self.MAGIC_CAPTURE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
