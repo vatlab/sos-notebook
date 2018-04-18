@@ -146,8 +146,8 @@ class Subkernels(object):
                 # the SoS kernel will be default theme color.
                 self._kernel_list.append(
                     subkernel(name='SoS', kernel='sos', options={
-                        'variable_pattern': r'^[_A-Za-z0-9\.]+\s*$',
-                        'assignment_pattern': r'^([_A-Za-z0-9\.]+)\s*=.*$'}))
+                        'variable_pattern': r'^\s*[_A-Za-z0-9\.]+\s*$',
+                        'assignment_pattern': r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'}))
             elif spec in lan_map:
                 # e.g. ir ==> R
                 self._kernel_list.append(
