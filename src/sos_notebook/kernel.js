@@ -2337,7 +2337,7 @@ table.task_table {
                         }
                       }
                       // the rest of the lines will be processed as Python code
-                      return "meta strong";
+                      return "meta";
                     }
                   }
                   state.sos_mode = false;
@@ -2450,10 +2450,10 @@ table.task_table {
                     }
                   }
                 } else if (sl == '!') {
-                  stream.skipToEnd();
+                  stream.eatWhile(/\S/);
                   return "meta";
                 } else if (sl == '%') {
-                  stream.skipToEnd();
+                  stream.eatWhile(/\S/);
                   return "meta";
                 } else if (state.sos_state && state.sos_state.startsWith('entering ')) {
                   // the second parameter is starting column
