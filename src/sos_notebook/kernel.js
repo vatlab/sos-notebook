@@ -2159,6 +2159,7 @@ table.task_table {
         'sas': 'sas',
         'bash': 'shell',
         'sh': 'shell',
+        'julia': 'julia',
         'run': 'shell',
         'javascript': 'javascript',
         'typescript': {
