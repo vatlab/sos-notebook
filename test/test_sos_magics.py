@@ -1,30 +1,16 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (SoS), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
 import os
 import sys
 import unittest
+
 from ipykernel.tests.utils import execute, wait_for_idle
-from sos_notebook.test_utils import sos_kernel, get_display_data, get_std_output
+from sos_notebook.test_utils import (get_display_data, get_std_output,
+                                     sos_kernel)
+
 
 class TestSoSMagics(unittest.TestCase):
     def testHelp(self):
@@ -57,7 +43,6 @@ x = np.linspace(0, 10)
 plt.plot(x, np.sin(x), '--', linewidth=2)
 plt.show()''')
             wait_for_idle(kc)
-
 
     def testMagicSave(self):
         with sos_kernel() as kc:
@@ -236,7 +221,6 @@ graph graphname {
         self.assertEqual(stderr, '', 'Got {}'.format(stderr))
         self.assertTrue('set' in stdout, 'Got {}'.format(stdout))
 
-
     @unittest.skipIf(sys.platform == 'win32', 'AppVeyor does not support linux based docker')
     def testMagicRemotePreview(self):
         # test preview of remote file
@@ -302,7 +286,7 @@ with open('test_blah.txt', 'w') as tb:
             iopub = kc.iopub_channel
             # preview variable
             execute(kc=kc, code='''
-%capture --to res            
+%capture --to res
 print('kkk')
 ''')
             wait_for_idle(kc)

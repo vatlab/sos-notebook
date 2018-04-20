@@ -1,28 +1,13 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (sos), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
 import pydoc
-from sos.utils import env
+
 from sos.syntax import SOS_USAGES
+from sos.utils import env
+
 
 class SoS_VariableInspector(object):
     def __init__(self, kernel):
@@ -41,6 +26,7 @@ class SoS_VariableInspector(object):
                     return {'text/plain': f'{repr(env.sos_dict["name"])} ({obj_desc})'}
         except Exception:
             return {}
+
 
 class SoS_SyntaxInspector(object):
     def __init__(self, kernel):
@@ -69,6 +55,7 @@ class SoS_SyntaxInspector(object):
         else:
             return {}
 
+
 class SoS_Inspector(object):
     def __init__(self, kernel):
         self.inspectors = [
@@ -86,4 +73,3 @@ class SoS_Inspector(object):
                 continue
         # No match
         return {}
-

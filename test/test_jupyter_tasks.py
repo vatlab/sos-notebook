@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (SoS), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
 #
 # NOTE: for some namespace reason, this test can only be tested using
@@ -28,14 +11,16 @@
 #
 #
 import os
-import unittest
 import subprocess
-from ipykernel.tests.utils import wait_for_idle, execute
-from sos_notebook.test_utils import sos_kernel, KC, get_display_data
+import unittest
 
 import nose.tools as nt
+from ipykernel.tests.utils import execute, wait_for_idle
+from sos_notebook.test_utils import KC, get_display_data, sos_kernel
 
 TIMEOUT = 60
+
+
 def long_execute(code='', kc=None, **kwargs):
     """wrapper for doing common steps for validating an execution request"""
     from ipykernel.tests.test_message_spec import validate_message
@@ -54,6 +39,7 @@ def long_execute(code='', kc=None, **kwargs):
         nt.assert_equal(execute_input['content']['code'], code)
 
     return msg_id, reply['content']
+
 
 class TestJupyterTasks(unittest.TestCase):
     #
@@ -129,7 +115,6 @@ run: expand=True
             #lines = subprocess.check_output(['sos', 'status']).decode().splitlines()
             # for duo-core machine, perhaps only one job is running.
             #self.assertGreaterEqual(len(lines), 1)
-
 
 
 if __name__ == '__main__':

@@ -1,24 +1,7 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (sos), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
 import argparse
 import contextlib
@@ -44,7 +27,6 @@ from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import find_connection_file, manager
-
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_GLOBAL_SECTION_HEADER, SOS_SECTION_HEADER
@@ -2286,9 +2268,9 @@ Available subkernels:\n{}'''.format(
                 content = self._meta['capture_result']
                 format_dict, md_dict = self.format_obj(self.render_result(content))
                 self.send_response(self.iopub_socket, 'display_data',
-                                          {'source': 'SoS', 'metadata': md_dict,
-                                           'data': format_dict
-                                           })
+                                   {'source': 'SoS', 'metadata': md_dict,
+                                    'data': format_dict
+                                    })
                 self._meta['capture_result'] = None
                 self._meta['render_result'] = False
         elif self.MAGIC_CAPTURE.match(code):

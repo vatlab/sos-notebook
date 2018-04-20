@@ -1,50 +1,32 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (sos), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
-import sys
-import re
 import argparse
-
+import re
+import sys
 from io import StringIO
 
 import nbformat
-from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 from nbconvert.exporters import Exporter
-
+from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
+from sos.syntax import SOS_CELL_LINE, SOS_SECTION_HEADER
 from sos.utils import env
-from sos.syntax import SOS_SECTION_HEADER, SOS_CELL_LINE
 
 #
 # Converter from Notebook
 #
 
+
 def get_notebook_to_script_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.sos (or --to sos)',
-        description='''Export Jupyter notebook with a SoS kernel to a
+                                     description='''Export Jupyter notebook with a SoS kernel to a
         .sos file. The cells are presented in the .sos file as
         cell structure lines, which will be ignored if executed
         in batch mode ''')
     parser.add_argument('-a', '--all', action='store_true', dest='__all__',
-        help='''By default sos only export workflows from an .ipynb file, which consists
+                        help='''By default sos only export workflows from an .ipynb file, which consists
         of only cells that starts with section headers (ignoring comments and magics before
         them). Option `-a` allows you to export cell separator, meta data, execution count,
         and all cells in a sos-like format although the resulting .sos file might not be
@@ -61,7 +43,7 @@ class SoS_Exporter(Exporter):
         self.export_all = export_all
         Exporter.__init__(self, config, **kwargs)
 
-    def from_notebook_cell(self, cell, fh, idx = 0):
+    def from_notebook_cell(self, cell, fh, idx=0):
         if self.export_all:
             meta = ' '.join(f'{x}={y}' for x, y in cell.metadata.items())
             if not hasattr(cell, 'execution_count') or cell.execution_count is None:
@@ -134,14 +116,17 @@ def notebook_to_script(notebook_file, sos_file, args=None, unknown_args=None):
 #
 # Converter to Notebook
 #
+
+
 def get_script_to_notebook_parser():
     parser = argparse.ArgumentParser('sos convert FILE.sos FILE._ipynb (or --to ipynb)',
-        description='''Convert a sos script to Jupyter notebook (.ipynb)
+                                     description='''Convert a sos script to Jupyter notebook (.ipynb)
             so that it can be opened by Jupyter notebook.''')
-    #parser.add_argument('-e', '--execute', action='store_true',
+    # parser.add_argument('-e', '--execute', action='store_true',
     #    help='''Execute the notebook as if running "Cell -> Run all" from the
     #        Jupyter notebook interface''')
     return parser
+
 
 def add_cell(cells, content, cell_type, cell_count, metainfo):
     # if a section consist of all report, report it as a markdown cell
@@ -155,19 +140,19 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
     #
     if cell_type == 'markdown':
         cells.append(new_markdown_cell(source=''.join([x[3:] for x in content]).strip(),
-            metadata=metainfo))
+                                       metadata=metainfo))
     else:
         cells.append(
-             new_code_cell(
-                 # remove any trailing blank lines...
-                 source=''.join(content).strip(),
-                 execution_count=cell_count,
-                 metadata=metainfo)
+            new_code_cell(
+                # remove any trailing blank lines...
+                source=''.join(content).strip(),
+                execution_count=cell_count,
+                metadata=metainfo)
         )
 
 
 #from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
-#class SoS_ExecutePreprocessor(ExecutePreprocessor):
+# class SoS_ExecutePreprocessor(ExecutePreprocessor):
 #    def __init__(self, *args, **kwargs):
 #        super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
 #
@@ -205,7 +190,8 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                     continue
                 if line.startswith('#fileformat='):
                     if not line[12:].startswith('SOS'):
-                        raise RuntimeError(f'{script_file} is not a SoS script according to #fileformat line.')
+                        raise RuntimeError(
+                            f'{script_file} is not a SoS script according to #fileformat line.')
                     continue
 
             first_block = False
@@ -229,8 +215,8 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                     cell_count += 1
                 metainfo = mo.group('metainfo')
                 if metainfo:
-                    pieces = [piece.split('=',1) for piece in metainfo.split()]
-                    for idx,piece in enumerate(pieces):
+                    pieces = [piece.split('=', 1) for piece in metainfo.split()]
+                    for idx, piece in enumerate(pieces):
                         if len(piece) == 1:
                             env.logger.warning(f'Incorrect metadata {piece}')
                             pieces[idx].append('')
@@ -238,7 +224,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                             pieces[idx][1] = True
                         elif piece[1] == 'False':
                             pieces[idx][1] = False
-                    metainfo = {x:y for x,y in pieces}
+                    metainfo = {x: y for x, y in pieces}
                 else:
                     metainfo = {}
                 content = []
@@ -283,30 +269,30 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
     if content and any(x.strip() for x in content):
         add_cell(cells, content, cell_type, cell_count, metainfo)
     #
-    nb = new_notebook(cells = cells,
-        metadata = {
-            'kernelspec' : {
-                "display_name": "SoS",
-                "language": "sos",
-                "name": "sos"
-            },
-            "language_info": {
-                'codemirror_mode': 'sos',
-                "file_extension": ".sos",
-                "mimetype": "text/x-sos",
-                "name": "sos",
-                "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-            },
-            'sos': {
-                'kernels': [
-                    ['SoS', 'sos', '', '']
-                ]
-            }
-        }
-    )
+    nb = new_notebook(cells=cells,
+                      metadata={
+                          'kernelspec': {
+                              "display_name": "SoS",
+                              "language": "sos",
+                              "name": "sos"
+                          },
+                          "language_info": {
+                              'codemirror_mode': 'sos',
+                              "file_extension": ".sos",
+                              "mimetype": "text/x-sos",
+                              "name": "sos",
+                              "pygments_lexer": "python",
+                              'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+                          },
+                          'sos': {
+                              'kernels': [
+                                  ['SoS', 'sos', '', '']
+                              ]
+                          }
+                      }
+                      )
     #err = None
-    #if args and args.execute:
+    # if args and args.execute:
     #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
     #    try:
     #        ep.preprocess(nb, {'metadata': {'path': '.'}})
@@ -319,7 +305,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
         with open(notebook_file, 'w') as notebook:
             nbformat.write(nb, notebook, 4)
         env.logger.info(f'Jupyter notebook saved to {notebook_file}')
-    #if err:
+    # if err:
     #    raise RuntimeError(repr(err))
 
 
@@ -339,7 +325,7 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
         tmp_stderr = tempfile.NamedTemporaryFile(delete=False, suffix='.' + to_format).name
         with open(tmp_stderr, 'w') as err:
             ret = subprocess.call(['jupyter', 'nbconvert', notebook_file, '--to', to_format,
-                '--output', tmp] + ([] if unknown_args is None else unknown_args), stderr=err)
+                                   '--output', tmp] + ([] if unknown_args is None else unknown_args), stderr=err)
         with open(tmp_stderr) as err:
             err_msg = err.read()
         if ret != 0:
@@ -360,7 +346,7 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
             pass
     else:
         ret = subprocess.call(['jupyter', 'nbconvert', os.path.abspath(notebook_file), '--to', to_format,
-            '--output', os.path.abspath(output_file)] + ([] if unknown_args is None else unknown_args))
+                               '--output', os.path.abspath(output_file)] + ([] if unknown_args is None else unknown_args))
         if ret != 0:
             env.logger.error(f'Failed to convert {notebook_file} to {to_format} format')
         else:
@@ -369,16 +355,17 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
 
 def get_notebook_to_html_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.html (or --to html)',
-        description='''Export Jupyter notebook with a SoS kernel to a
+                                     description='''Export Jupyter notebook with a SoS kernel to a
         .html file. Additional command line arguments are passed directly to
         command "jupyter nbconvert --to html" so please refer to nbconvert manual for
         available options.''')
     parser.add_argument('--template',
-        help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
+                        help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
         of templates, with sos-report displays markdown cells and only output of cells with
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
     return parser
+
 
 def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.html import HTMLExporter
@@ -387,23 +374,26 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
         unknown_args = []
     if sargs.template and sargs.template.startswith('sos') and not os.path.isfile(sargs.template):
         # use the default sos template
-        unknown_args = ['--template', os.path.join(os.path.split(__file__)[0], sargs.template + ('' if sargs.template.endswith('.tpl') else '.tpl')) ] + unknown_args
+        unknown_args = ['--template', os.path.join(os.path.split(__file__)[0], sargs.template + (
+            '' if sargs.template.endswith('.tpl') else '.tpl'))] + unknown_args
     elif sargs.template:
         unknown_args = ['--template', sargs.template] + unknown_args
     export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args)
 
+
 def get_notebook_to_pdf_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.pdf (or --to pdf)',
-        description='''Export Jupyter notebook with a SoS kernel to a
+                                     description='''Export Jupyter notebook with a SoS kernel to a
         .pdf file. Additional command line arguments are passed directly to
         command "jupyter nbconvert --to pdf" so please refer to nbconvert manual for
         available options.''')
     parser.add_argument('--template',
-        help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
+                        help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
         of templates, with sos-report displays markdown cells and only output of cells with
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
     return parser
+
 
 def notebook_to_pdf(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.pdf import PDFExporter
@@ -412,7 +402,8 @@ def notebook_to_pdf(notebook_file, output_file, sargs=None, unknown_args=None):
         unknown_args = []
     if sargs.template and sargs.template.startswith('sos') and not os.path.isfile(sargs.template):
         # use the default sos template
-        unknown_args = ['--template', os.path.join(os.path.split(__file__)[0], sargs.template + ('' if sargs.template.endswith('.tpl') else '.tpl')) ] + unknown_args
+        unknown_args = ['--template', os.path.join(os.path.split(__file__)[0], sargs.template + (
+            '' if sargs.template.endswith('.tpl') else '.tpl'))] + unknown_args
     elif sargs.template:
         unknown_args = ['--template', sargs.template] + unknown_args
     # jupyter convert will add extension to output file...
@@ -420,33 +411,38 @@ def notebook_to_pdf(notebook_file, output_file, sargs=None, unknown_args=None):
         output_file = output_file[:-4]
     export_notebook(PDFExporter, 'pdf', notebook_file, output_file, unknown_args)
 
+
 def get_notebook_to_md_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.md (or --to md)',
-        description='''Export Jupyter notebook with a SoS kernel to a
+                                     description='''Export Jupyter notebook with a SoS kernel to a
         markdown file. Additional command line arguments are passed directly to
         command "jupyter nbconvert --to markdown" so please refer to nbconvert manual for
         available options.''')
     return parser
 
+
 def notebook_to_md(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.markdown import MarkdownExporter
     export_notebook(MarkdownExporter, 'markdown', notebook_file, output_file, unknown_args)
 
+
 def get_notebook_to_notebook_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.ipynb (or --to ipynb)',
-        description='''Export a Jupyter notebook with a non-SoS kernel to a
+                                     description='''Export a Jupyter notebook with a non-SoS kernel to a
         SoS notebook with SoS kernel. A SoS notebook will simply be copied to
         the destination file.''')
     parser.add_argument('--python3-to-sos', action='store_true',
-        help='''Convert python3 cells to SoS.''')
+                        help='''Convert python3 cells to SoS.''')
     parser.add_argument('--inplace', action='store_true',
-        help='''Overwrite input notebook with the output.''')
+                        help='''Overwrite input notebook with the output.''')
     return parser
+
 
 def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=None):
     notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
     # get the kernel of the notebook
-    lan_name = notebook['metadata']['kernelspec']['language']   # this is like 'R', there is another 'display_name'
+    # this is like 'R', there is another 'display_name'
+    lan_name = notebook['metadata']['kernelspec']['language']
     kernel_name = notebook['metadata']['kernelspec']['name']  # this is like 'ir'
     if kernel_name == 'sos':
         # already a SoS notebook?
@@ -475,28 +471,28 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
         cells.append(cell)
     #
     # create header
-    nb = new_notebook(cells = cells,
-        metadata = {
-            'kernelspec' : {
-                "display_name": "SoS",
-                "language": "sos",
-                "name": "sos"
-            },
-            "language_info": {
-                "file_extension": ".sos",
-                "mimetype": "text/x-sos",
-                "name": "sos",
-                "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-            },
-            'sos': {
-                'kernels': [
-                    ['SoS', 'sos', '', ''] ] +
-                    ([[to_lan, to_kernel, '', '']] if to_lan != 'SoS' else []),
-                'default_kernel': to_lan
-            }
-        }
-    )
+    nb = new_notebook(cells=cells,
+                      metadata={
+                          'kernelspec': {
+                              "display_name": "SoS",
+                              "language": "sos",
+                              "name": "sos"
+                          },
+                          "language_info": {
+                              "file_extension": ".sos",
+                              "mimetype": "text/x-sos",
+                              "name": "sos",
+                              "pygments_lexer": "python",
+                              'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+                          },
+                          'sos': {
+                              'kernels': [
+                                  ['SoS', 'sos', '', '']] +
+                              ([[to_lan, to_kernel, '', '']] if to_lan != 'SoS' else []),
+                              'default_kernel': to_lan
+                          }
+                      }
+                      )
 
     if sargs.inplace:
         with open(notebook_file, 'w') as new_nb:
@@ -512,9 +508,10 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
 
 def get_Rmarkdown_to_notebook_parser():
     parser = argparse.ArgumentParser('sos convert FILE.Rmd FILE.ipynb (or --to ipynb)',
-        description='''Export a Rmarkdown file kernel to a SoS notebook. It currently
+                                     description='''Export a Rmarkdown file kernel to a SoS notebook. It currently
         only handles code block and Markdown, and not inline expression.''')
     return parser
+
 
 def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=None):
     #
@@ -531,8 +528,8 @@ def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=
         if idx % 2 == 1:
             # this is header, let us create a markdown cell
             cells.append(
-                    new_markdown_cell(
-                        source=p.strip()))
+                new_markdown_cell(
+                    source=p.strip()))
         else:
             # this is unknown yet, let us find ```{} block
             code = re.compile('^\s*(```{.*})$', re.M)
@@ -545,13 +542,13 @@ def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=
                     cells.append(
                         new_markdown_cell(
                             source=pc.strip())
-                        )
+                    )
                 elif pidx % 2 == 0:
-                    # this is AFTER the {r} piece, let us assume all R code 
+                    # this is AFTER the {r} piece, let us assume all R code
                     # for now
                     # this is code, but it should end somewhere
                     pieces = re.split(endcode, pc)
-                    # I belive that we should have 
+                    # I belive that we should have
                     #   pieces[0] <- code
                     #   pieces[1] <- rest...
                     # but I could be wrong.
@@ -560,39 +557,39 @@ def Rmarkdown_to_notebook(rmarkdown_file, output_file, sargs=None, unknown_args=
                             source=pieces[0],
                             execution_count=cell_count,
                             metadata={'kernel': 'R'}
-                            )
                         )
+                    )
                     cell_count += 1
                     #
                     for piece in pieces[1:]:
                         cells.append(
                             new_markdown_cell(
                                 source=piece.strip())
-                            )
+                        )
     #
     # create header
-    nb = new_notebook(cells = cells,
-        metadata = {
-            'kernelspec' : {
-                "display_name": "SoS",
-                "language": "sos",
-                "name": "sos"
-            },
-            "language_info": {
-                "file_extension": ".sos",
-                "mimetype": "text/x-sos",
-                "name": "sos",
-                "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-            },
-            'sos': {
-                'kernels': [
-                    ['SoS', 'sos', '', ''],
-                    ['R', 'ir', '', '']],
-                'default_kernel': 'R'
-                }
-        }
-    )
+    nb = new_notebook(cells=cells,
+                      metadata={
+                          'kernelspec': {
+                              "display_name": "SoS",
+                              "language": "sos",
+                              "name": "sos"
+                          },
+                          "language_info": {
+                              "file_extension": ".sos",
+                              "mimetype": "text/x-sos",
+                              "name": "sos",
+                              "pygments_lexer": "python",
+                              'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+                          },
+                          'sos': {
+                              'kernels': [
+                                  ['SoS', 'sos', '', ''],
+                                  ['R', 'ir', '', '']],
+                              'default_kernel': 'R'
+                          }
+                      }
+                      )
 
     if not output_file:
         nbformat.write(nb, sys.stdout, 4)

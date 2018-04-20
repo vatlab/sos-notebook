@@ -1,44 +1,32 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (sos), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-##
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
-import sys
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
+
+import keyword
 import os
 import shlex
-import keyword
+import sys
 import tempfile
 import time
-from sos.utils import env, _parse_error, get_traceback, load_config_files
-from sos.eval import SoS_exec
-from sos._version import __version__
+
 from sos.__main__ import get_run_parser
+from sos._version import __version__
+from sos.eval import SoS_exec
 from sos.parser import SoS_Script
-from sos.workflow_executor import Base_Executor, __null_func__
-from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import path, file_target, UnknownTarget, RemovedTarget, UnavailableLock, Undetermined
 from sos.step_executor import PendingTasks
+from sos.syntax import SOS_SECTION_HEADER
+from sos.targets import (RemovedTarget, UnavailableLock, Undetermined,
+                         UnknownTarget, file_target, path)
+from sos.utils import _parse_error, env, get_traceback, load_config_files
+from sos.workflow_executor import Base_Executor, __null_func__
+
 from .step_executor import Interactive_Step_Executor
 
 
 class Interactive_Executor(Base_Executor):
     '''Interactive executor called from by iPython Jupyter or Spyder'''
+
     def __init__(self, workflow=None, args=None, shared=None, config=None):
         # we actually do not have our own workflow, everything is passed from ipython
         # by nested = True we actually mean no new dictionary
@@ -56,9 +44,11 @@ class Interactive_Executor(Base_Executor):
                 sig.write(f'# workflow: {self.workflow.name}\n')
                 # script is None because it is entered from notebook
                 sig.write('# script: __interactive__\n')
-                sig.write(f'# included: {",".join([x[1] for x in self.workflow.content.included])}\n')
+                sig.write(
+                    f'# included: {",".join([x[1] for x in self.workflow.content.included])}\n')
                 sig.write(f'# configuration: {self.config.get("config_file", "")}\n')
-                sig.write(f'# start time: {time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())}\n')
+                sig.write(
+                    f'# start time: {time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())}\n')
                 sig.write(self.sig_content)
                 sig.write('# runtime signatures\n')
 
@@ -67,9 +57,11 @@ class Interactive_Executor(Base_Executor):
         env.sos_dict.set('SOS_VERSION', __version__)
         env.sos_dict.set('__args__', self.args)
         if self.md5:
-            env.sos_dict.set('__workflow_sig__', os.path.join(env.exec_dir, '.sos', f'{self.md5}.sig'))
+            env.sos_dict.set('__workflow_sig__', os.path.join(
+                env.exec_dir, '.sos', f'{self.md5}.sig'))
 
-        self._base_symbols = set(dir(__builtins__)) | set(env.sos_dict['sos_symbols_']) | set(keyword.kwlist)
+        self._base_symbols = set(dir(__builtins__)) | set(
+            env.sos_dict['sos_symbols_']) | set(keyword.kwlist)
         self._base_symbols -= {'dynamic', 'sos_run'}
 
         # load configuration files
@@ -135,7 +127,7 @@ class Interactive_Executor(Base_Executor):
             runnable = dag.find_executable()
             if runnable is None:
                 # no runnable
-                #dag.show_nodes()
+                # dag.show_nodes()
                 break
             # find the section from runnable
             section = self.workflow.section_by_id(runnable._step_uuid)
@@ -172,9 +164,9 @@ class Interactive_Executor(Base_Executor):
                     node = edge[1]
                     # if node is the logical next step...
                     if node._node_index is not None and runnable._node_index is not None:
-                        #and node._node_index == runnable._node_index + 1:
+                        # and node._node_index == runnable._node_index + 1:
                         node._context.update(env.sos_dict.clone_selected_vars(
-                            node._context['__signature_vars__'] | node._context['__environ_vars__'] \
+                            node._context['__signature_vars__'] | node._context['__environ_vars__']
                             | {'_input', '__step_output__', '__default_output__', '__args__'}))
                     node._context['__completed__'].append(res['__step_name__'])
                 runnable._status = 'completed'
@@ -186,8 +178,8 @@ class Interactive_Executor(Base_Executor):
                 if isinstance(target, path):
                     target = str(target)
                 if dag.regenerate_target(target):
-                    #runnable._depends_targets.append(target)
-                    #dag._all_dependent_files[target].append(runnable)
+                    # runnable._depends_targets.append(target)
+                    # dag._all_dependent_files[target].append(runnable)
                     dag.build(self.workflow.auxiliary_sections)
                     #
                     cycle = dag.circular_dependencies()
@@ -224,7 +216,8 @@ class Interactive_Executor(Base_Executor):
                 raise
         if self.md5:
             self.save_workflow_signature(dag)
-            env.logger.debug(f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
+            env.logger.debug(
+                f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
         # remove task pending status if the workflow is completed normally
         try:
             wf_status = os.path.join(os.path.expanduser('~'), '.sos', self.md5 + '.status')
@@ -237,6 +230,7 @@ class Interactive_Executor(Base_Executor):
 #
 # function runfile that is used by spyder to execute complete script
 #
+
 
 def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs):
     # this has something to do with Prefix matching rule of parse_known_args
@@ -307,15 +301,15 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         try:
             with kernel.redirect_sos_io():
                 ret = host._host_agent.run_command(['sos', 'run', script] + argv, wait_for_task=True,
-                    realtime=True)
+                                                   realtime=True)
             if ret:
-               kernel.send_response(kernel.iopub_socket, 'stream',
-                                    dict(name='stderr',
-                                         text=f'remote execution of workflow exited with code {ret}'))
+                kernel.send_response(kernel.iopub_socket, 'stream',
+                                     dict(name='stderr',
+                                          text=f'remote execution of workflow exited with code {ret}'))
         except Exception as e:
             if kernel:
                 kernel.send_response(kernel.iopub_socket, 'stream',
-                    {'name': 'stdout', 'text': str(e)})
+                                     {'name': 'stdout', 'text': str(e)})
         return
 
     if args.__bin_dirs__:
@@ -326,13 +320,14 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                     os.makedirs(os.path.expanduser(d))
             elif not os.path.isdir(os.path.expanduser(d)):
                 raise ValueError(f'directory does not exist: {d}')
-        os.environ['PATH'] = os.pathsep.join([os.path.expanduser(x) for x in args.__bin_dirs__]) + os.pathsep + os.environ['PATH']
+        os.environ['PATH'] = os.pathsep.join(
+            [os.path.expanduser(x) for x in args.__bin_dirs__]) + os.pathsep + os.environ['PATH']
 
     # clear __step_input__, __step_output__ etc because there is
     # no concept of passing input/outputs across cells.
     env.sos_dict.set('__step_output__', [])
-    for k in ['__step_input__', '__default_output__', 'step_input', 'step_output', \
-        'step_depends', '_input', '_output', '_depends']:
+    for k in ['__step_input__', '__default_output__', 'step_input', 'step_output',
+              'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
 
     try:
@@ -355,7 +350,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                     else:
                         if not kernel.cell_id:
                             kernel.send_frontend_msg('stream',
-                                {'name': 'stdout', 'text': 'Workflow can only be executed with magic %run or %sosrun.'})
+                                                     {'name': 'stdout', 'text': 'Workflow can only be executed with magic %run or %sosrun.'})
                         return
         else:
             script = SoS_Script(filename=script)
@@ -395,4 +390,3 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     finally:
         env.config['sig_mode'] = 'ignore'
         env.verbosity = 2
-

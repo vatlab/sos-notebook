@@ -1,38 +1,23 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (SoS), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 
 #
 # NOTE: for some namespace reason, this test can only be tested using
 # nose.
-#
-# % nosetests test_kernel.py
-#
-#
-from contextlib import contextmanager
-from ipykernel.tests.utils import start_new_kernel, assemble_output
 
 
 import atexit
+#
+#
+from contextlib import contextmanager
 from queue import Empty
+
+#
+# % nosetests test_kernel.py
+from ipykernel.tests.utils import assemble_output, start_new_kernel
+
 KM = None
 KC = None
 
@@ -60,8 +45,9 @@ def flush_channels(kc=None):
             except Empty:
                 break
             # do not validate message because SoS has special sos_comm
-            #else:
+            # else:
             #    validate_message(msg)
+
 
 def start_sos_kernel():
     """start the global kernel (if it isn't running) and return its client"""
@@ -73,6 +59,7 @@ def start_sos_kernel():
         flush_channels(KC)
     return KC
 
+
 def stop_sos_kernel():
     """Stop the global shared kernel instance, if it exists"""
     global KM, KC
@@ -82,6 +69,7 @@ def stop_sos_kernel():
         return
     KM.shutdown_kernel(now=False)
     KM = None
+
 
 def get_result(iopub):
     """retrieve result from an execution"""
@@ -106,12 +94,14 @@ def get_result(iopub):
     array
     matrix
     # it can also have dict_keys, we will have to redefine it
+
     def dict_keys(args):
         return args
     if result is None:
         return None
     else:
         return eval(result['text/plain'])
+
 
 def get_display_data(iopub, data_type='text/plain'):
     """retrieve display_data from an execution from subkernel
@@ -139,6 +129,7 @@ def get_display_data(iopub, data_type='text/plain'):
             result = content['data']['text/plain']
     return result
 
+
 def clear_channels(iopub):
     """assemble stdout/err from an execution"""
     while True:
@@ -149,8 +140,9 @@ def clear_channels(iopub):
             # idle message signals end of output
             break
 
+
 def get_std_output(iopub):
-    '''Obtain stderr and remove some unnecessary warning from 
+    '''Obtain stderr and remove some unnecessary warning from
     https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710'''
     stdout, stderr = assemble_output(iopub)
     return stdout, '\n'.join([x for x in stderr.splitlines() if 'sticky' not in x and 'RuntimeWarning' not in x and 'communicator' not in x])

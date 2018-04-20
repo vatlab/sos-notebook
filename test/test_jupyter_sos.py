@@ -1,25 +1,7 @@
 #!/usr/bin/env python3
 #
-# This file is part of Script of Scripts (SoS), a workflow system
-# for the execution of commands and scripts in different languages.
-# Please visit https://github.com/vatlab/SOS for more information.
-#
-# Copyright (C) 2016 Bo Peng (bpeng@mdanderson.org)
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
-
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
 #
 # NOTE: for some namespace reason, this test can only be tested using
 # nose.
@@ -28,11 +10,13 @@
 #
 #
 import os
-import unittest
 import subprocess
+import unittest
+
 from ipykernel.tests.utils import execute, wait_for_idle
-from sos_notebook.test_utils import sos_kernel, get_result, get_std_output
 from sos.targets import file_target
+from sos_notebook.test_utils import get_result, get_std_output, sos_kernel
+
 
 class TestJupyterSoS(unittest.TestCase):
     #
@@ -68,7 +52,6 @@ b = a
             execute(kc=kc, code="b")
             res = get_result(iopub)
             self.assertEqual(res, 20)
-
 
     def testDAG(self):
         with sos_kernel() as kc:
@@ -161,7 +144,6 @@ fail
             res = get_result(iopub)
             self.assertEqual(res, 0)
 
-
     def testReverseSharedVariable(self):
         '''Test shared variables defined in auxiliary steps'''
         file_target('a.txt').remove('both')
@@ -187,6 +169,7 @@ print(b)
             execute(kc=kc, code="b")
             res = get_result(iopub)
             self.assertEqual(res, 1)
+
 
 if __name__ == '__main__':
     unittest.main()
