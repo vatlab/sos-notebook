@@ -231,7 +231,7 @@ define([
     let workflow = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n';
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
-      if (cell.type === "code" && (!cell.metadata.get('kernel') || cell.metadata.get('kernel') === "SoS")) {
+      if (cell.cell_type === "code" && (!cell.metadata['kernel'] || cell.metadata['kernel'] === "SoS")) {
         workflow += getCellWorkflow(cell);
       }
     }
