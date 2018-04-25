@@ -87,7 +87,15 @@ setup(name="sos-notebook",
           'tabulate',
           'wand',
           'markdown',
-          'pandas'
+          'pandas',
+          # language modules
+          'sos-bash',
+          'sos-javascript',
+          'sos-julia',
+          'sos-matlab',
+          'sos-python',
+          'sos-r',
+          'sos-sas',
       ],
       entry_points='''
 [sos_functions]
