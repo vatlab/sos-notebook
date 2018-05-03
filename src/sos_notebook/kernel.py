@@ -618,9 +618,7 @@ class SoS_Kernel(IPythonKernel):
 
     def get_save_parser(self):
         parser = argparse.ArgumentParser(prog='%save',
-                                         description='''Save the jupyter notebook as workflow (consisting of all sos
-            steps defined in cells starting with section header) or a HTML report to
-            specified file.''')
+                                         description='''Save the content of the cell (after the magic itself) to specified file''')
         parser.add_argument('filename',
                             help='''Filename of saved report or script.''')
         parser.add_argument('-f', '--force', action='store_true',
