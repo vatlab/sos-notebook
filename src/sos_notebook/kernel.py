@@ -2725,9 +2725,6 @@ Available subkernels:\n{}'''.format(
                 self.options = old_options
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SAVE.match(code):
-            if self.kernel != 'SoS':
-                # pass the %save magic to underlying kernel
-                return self._do_execute(code, silent, store_history, user_expressions, allow_stdin)
             # if sos kernel ...
             options, remaining_code = self.get_magic_and_code(code, False)
             try:
