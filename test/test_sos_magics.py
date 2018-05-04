@@ -57,24 +57,6 @@ a=1
             with open(os.path.join(os.path.expanduser('~'), 'test.txt')) as tt:
                 self.assertEqual(tt.read(), 'a=1\n')
 
-    def testMagicSoSSave(self):
-        with sos_kernel() as kc:
-            execute(kc=kc, code='''\
-%frontend --cell 0 --workflow --default-kernel SoS --cell-kernel SoS --filename ~/test.ipynb
-%sossave ~/test.sos
-[10]
-a=1
-''')
-            wait_for_idle(kc)
-            execute(kc=kc, code='''\
-%frontend --cell 0 --workflow --default-kernel SoS --cell-kernel SoS --filename ~/test1
-%sossave --to sos
-[10]
-a=1
-''')
-            wait_for_idle(kc)
-            self.assertTrue(os.path.exists(os.path.join(os.path.expanduser('~'), 'test1.sos')))
-
     def testMagicPreview(self):
         with sos_kernel() as kc:
             # preview variable
