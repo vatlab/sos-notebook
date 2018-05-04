@@ -13,9 +13,9 @@ import os
 import subprocess
 import unittest
 
-from ipykernel.tests.utils import execute, wait_for_idle
 from sos.targets import file_target
 from sos_notebook.test_utils import get_result, get_std_output, sos_kernel
+from ipykernel.tests.utils import execute, wait_for_idle, TIMEOUT
 
 
 class TestJupyterSoS(unittest.TestCase):

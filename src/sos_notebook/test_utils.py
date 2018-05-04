@@ -16,7 +16,8 @@ from queue import Empty
 
 #
 # % nosetests test_kernel.py
-from ipykernel.tests.utils import assemble_output, start_new_kernel
+from ipykernel.tests import utils as test_utils
+test_utils.TIMEOUT = 60
 
 KM = None
 KC = None
@@ -53,7 +54,7 @@ def start_sos_kernel():
     """start the global kernel (if it isn't running) and return its client"""
     global KM, KC
     if KM is None:
-        KM, KC = start_new_kernel(kernel_name='sos')
+        KM, KC = test_utils.start_new_kernel(kernel_name='sos')
         atexit.register(stop_sos_kernel)
     else:
         flush_channels(KC)
@@ -144,5 +145,5 @@ def clear_channels(iopub):
 def get_std_output(iopub):
     '''Obtain stderr and remove some unnecessary warning from
     https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710'''
-    stdout, stderr = assemble_output(iopub)
+    stdout, stderr = test_utils.assemble_output(iopub)
     return stdout, '\n'.join([x for x in stderr.splitlines() if 'sticky' not in x and 'RuntimeWarning' not in x and 'communicator' not in x])
