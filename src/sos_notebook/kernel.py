@@ -2132,7 +2132,26 @@ Available subkernels:\n{}'''.format(
 
     def init_metadata(self, metadata):
         super(SoS_Kernel, self).init_metadata(metadata)
-        meta = metadata['content']['sos']
+        if 'sos' in metadata['content']:
+            meta = metadata['content']['sos']
+        else:
+            # if there is no sos metadata, the execution should be started from a test suite
+            # just ignore
+            self._meta = {
+                'workflow': '',
+                'workflow_mode': False,
+                'render_result': False,
+                'capture_result': None,
+                'cell_id': 0,
+                'notebook_name': '',
+                'use_panel': False,
+                'default_kernel': 'SoS',
+                'cell_kernel': 'SoS',
+                'resume_execution': False,
+                'hard_switch_kernel': False,
+            }
+            return self._meta
+
         if self._debug_mode:
             self.warn(meta)
         self._meta = {
