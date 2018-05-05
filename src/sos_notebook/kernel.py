@@ -2771,6 +2771,7 @@ Available subkernels:\n{}'''.format(
                                             f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
                                    }
                                    })
+                return
             except Exception as e:
                 self.warn(f'Failed to save cell: {e}')
                 return {'status': 'error',
@@ -2779,7 +2780,6 @@ Available subkernels:\n{}'''.format(
                         'traceback': [],
                         'execution_count': self._execution_count,
                         }
-            return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SOSSAVE.match(code):
             # get the saved filename
             options, remaining_code = self.get_magic_and_code(code, False)
@@ -2855,6 +2855,7 @@ Available subkernels:\n{}'''.format(
                                                args.message if args.message else f'save {filename}'})
                 if args.push:
                     self.handle_shell_command(['git', 'push'])
+                return
             except Exception as e:
                 self.warn(f'Failed to save workflow: {e}')
                 return {'status': 'error',
@@ -2863,7 +2864,6 @@ Available subkernels:\n{}'''.format(
                         'traceback': [],
                         'execution_count': self._execution_count,
                         }
-            return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_RERUN.match(code):
             options, remaining_code = self.get_magic_and_code(code, True)
             old_options = self.options
