@@ -53,7 +53,6 @@ class FlushableStringIO:
         if content.startswith('!sos_hint:'):
             self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
                                       {
-                                          'source': 'SoS',
                                           'metadata': {},
                                           'data': {'text/html': HTML(
                                               f'<div class="sos_hint">{content[10:].strip()}</div>').data}
@@ -984,7 +983,7 @@ class SoS_Kernel(IPythonKernel):
                 res += '</tr>\n'
             res += '</table>\n'
         self.send_response(self.iopub_socket, 'display_data',
-                           {'source': 'SoS', 'metadata': {},
+                           {'metadata': {},
                             'data': {'text/html': HTML(res).data}})
 
     def sos_comm(self, comm, msg):
@@ -1112,7 +1111,6 @@ class SoS_Kernel(IPythonKernel):
             tqu, tid, tst, tdt = task_status[1:]
             self.send_response(self.iopub_socket, 'display_data',
                                {
-                                   'source': 'SoS',
                                    'metadata': {},
                                    'data': {'text/html':
                                             HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
@@ -1176,7 +1174,6 @@ class SoS_Kernel(IPythonKernel):
             elif msg_type == 'preview-input':
                 self.send_response(self.iopub_socket, 'display_data',
                                    {
-                                       'source': 'SoS',
                                        'metadata': {},
                                        'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                                    })
@@ -1745,7 +1742,6 @@ Available subkernels:\n{}'''.format(
                                                                           sorted(received.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
                                {
-                                   'source': 'SoS',
                                    'metadata': {},
                                    'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                                })
@@ -1773,7 +1769,6 @@ Available subkernels:\n{}'''.format(
                                                        '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
             self.send_response(self.iopub_socket, 'display_data',
                                {
-                                   'source': 'SoS',
                                    'metadata': {},
                                    'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
                                })
@@ -1787,7 +1782,6 @@ Available subkernels:\n{}'''.format(
             if new_text != text and not quiet:
                 self.send_response(self.iopub_socket, 'display_data',
                                    {
-                                       'source': 'SoS',
                                        'metadata': {},
                                        'data': {
                                            'text/html': HTML(
@@ -1922,7 +1916,6 @@ Available subkernels:\n{}'''.format(
                 sys.stdout.flush()
                 # self.send_response(self.iopub_socket, 'display_data',
                 #    {
-                #        'source': 'SoS',
                 #        'metadata': {},
                 #        'data': { 'text/html': HTML('<hr color="black" width="60%">').data}
                 #    })
@@ -1944,7 +1937,6 @@ Available subkernels:\n{}'''.format(
             #    if sos_report.strip():
             #        self.send_response(self.iopub_socket, 'display_data',
             #            {
-            #                'source': 'SoS',
             #                'metadata': {},
             #                'data': {'text/markdown': sos_report}
             #            })
@@ -1976,7 +1968,6 @@ Available subkernels:\n{}'''.format(
                     # files will be removed soon.
                     self.send_frontend_msg('display_data',
                                            {
-                                               'source': 'SoS',
                                                'metadata': {},
                                                'data': {'text/html':
                                                         HTML(
@@ -1989,7 +1980,6 @@ Available subkernels:\n{}'''.format(
                 else:
                     self.send_frontend_msg('display_data',
                                            {
-                                               'source': 'SoS',
                                                'metadata': {},
                                                'data': {'text/html':
                                                         HTML(
@@ -2094,10 +2084,10 @@ Available subkernels:\n{}'''.format(
                                        {'name': 'stdout', 'text': result})
             elif isinstance(result, dict):
                 self.send_frontend_msg('display_data',
-                                       {'source': filename, 'data': result, 'metadata': {}})
+                                       {'data': result, 'metadata': {}})
             elif isinstance(result, [list, tuple]) and len(result) == 2:
                 self.send_frontend_msg('display_data',
-                                       {'source': filename, 'data': result[0], 'metadata': result[1]})
+                                       {'data': result[0], 'metadata': result[1]})
             else:
                 self.send_frontend_msg('stream',
                                        dict(name='stderr', text=f'Unrecognized preview content: {result}'))
@@ -2285,7 +2275,7 @@ Available subkernels:\n{}'''.format(
                 content = self._meta['capture_result']
                 format_dict, md_dict = self.format_obj(self.render_result(content))
                 self.send_response(self.iopub_socket, 'display_data',
-                                   {'source': 'SoS', 'metadata': md_dict,
+                                   {'metadata': md_dict,
                                     'data': format_dict
                                     })
                 self._meta['capture_result'] = None
@@ -2764,7 +2754,7 @@ Available subkernels:\n{}'''.format(
                         filename).st_mode | stat.S_IEXEC)
 
                 self.send_response(self.iopub_socket, 'display_data',
-                                   {'source': 'SoS', 'metadata': {},
+                                   {'metadata': {},
                                     'data': {
                                         'text/plain': f'Cell content saved to {filename}\n',
                                         'text/html': HTML(
@@ -2842,7 +2832,7 @@ Available subkernels:\n{}'''.format(
                                      filename, sargs=arg, unknown_args=[])
 
                 self.send_response(self.iopub_socket, 'display_data',
-                                   {'source': 'SoS', 'metadata': {},
+                                   {'metadata': {},
                                     'data': {
                                         'text/plain': f'Workflow saved to {filename}\n',
                                         'text/html': HTML(
