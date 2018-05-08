@@ -1884,6 +1884,30 @@ Available subkernels:\n{}'''.format(
         except Exception as e:
             self.warn(
                 f'Failed to change dir to {os.path.expanduser(to_dir)}: {e}')
+            return
+        #
+        cur_kernel = self.kernel
+        try:
+            for kernel in self.kernels.keys():
+                kinfo = self.subkernels.find(kernel)
+                if kernel not in self.supported_languages:
+                    self.warn(f'Current directory of kernel {kernel} is not changed: unsupported language')
+                    continue
+                lan = self.supported_languages[kernel]
+                if hasattr(lan, 'cd_command'):
+                    try:
+                        self.switch_kernel(kernel)
+                        cmd = interpolate(lan.cd_command, {'dir': to_dir})
+                        self.run_cell(cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
+                    except Exception as e:
+                        self.warn(
+                            f'Current directory of kernel {kernel} is not changed: {e}')
+                else:
+                    self.warn(
+                        f'Current directory of kernel {kernel} is not changed: cd_command not defined')
+        finally:
+            self.switch_kernel(cur_kernel)
+
 
     def handle_shell_command(self, cmd):
         # interpolate command
