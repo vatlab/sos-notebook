@@ -1799,8 +1799,19 @@ Available subkernels:\n{}'''.format(
             try:
                 item = os.path.expanduser(item)
                 if os.path.isfile(item):
-                    handled[idx] = True
                     self.preview_file(item, style)
+                    handled[idx] = True
+                    continue
+                if os.path.isdir(item):
+                    handled[idx] = True
+                    _, dirs, files = os.walk(item).__next__()
+                    self.send_frontend_msg('display_data',
+                                           {'metadata': {},
+                                            'data': {'text/plain': '>>> ' + item + ':\n',
+                                                     'text/html': HTML(
+                                                         f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
+                                                     }
+                                            })
                     continue
                 else:
                     import glob
@@ -1814,10 +1825,6 @@ Available subkernels:\n{}'''.format(
                 self.warn(f'\n> Failed to preview file {item}: {e}')
                 continue
 
-        # all are files
-        if all(handled):
-            return
-
         # non-sos kernel
         use_sos = kernel in ('sos', 'SoS') or (
             kernel is None and self.kernel == 'SoS')
@@ -1827,7 +1834,7 @@ Available subkernels:\n{}'''.format(
         if self._meta['use_panel']:
             self.send_frontend_msg('preview-kernel', self.kernel)
         try:
-            for item in (x for x, y in zip(items, handled) if not y):
+            for idx, item in enumerate(items):
                 try:
                     # quoted
                     if (item.startswith('"') and item.endswith('"')) or \
@@ -1866,10 +1873,11 @@ Available subkernels:\n{}'''.format(
                         for response in responses:
                             self.send_frontend_msg(response[0], response[1])
                 except Exception as e:
-                    self.send_frontend_msg('stream',
-                                           dict(name='stderr',
-                                                text='> Failed to preview file or expression {}{}'.format(
-                                                    item, f': {e}' if self._debug_mode else '')))
+                    if not handled[idx]:
+                        self.send_frontend_msg('stream',
+                                               dict(name='stderr',
+                                                    text='> Failed to preview file or expression {}{}'.format(
+                                                        item, f': {e}' if self._debug_mode else '')))
         finally:
             self.switch_kernel(orig_kernel)
 
@@ -1891,14 +1899,16 @@ Available subkernels:\n{}'''.format(
             for kernel in self.kernels.keys():
                 kinfo = self.subkernels.find(kernel)
                 if kernel not in self.supported_languages:
-                    self.warn(f'Current directory of kernel {kernel} is not changed: unsupported language')
+                    self.warn(
+                        f'Current directory of kernel {kernel} is not changed: unsupported language')
                     continue
                 lan = self.supported_languages[kernel]
                 if hasattr(lan, 'cd_command'):
                     try:
                         self.switch_kernel(kernel)
                         cmd = interpolate(lan.cd_command, {'dir': to_dir})
-                        self.run_cell(cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
+                        self.run_cell(
+                            cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
                     except Exception as e:
                         self.warn(
                             f'Current directory of kernel {kernel} is not changed: {e}')
@@ -1907,7 +1917,6 @@ Available subkernels:\n{}'''.format(
                         f'Current directory of kernel {kernel} is not changed: cd_command not defined')
         finally:
             self.switch_kernel(cur_kernel)
-
 
     def handle_shell_command(self, cmd):
         # interpolate command
@@ -2130,7 +2139,8 @@ Available subkernels:\n{}'''.format(
             # import the object from IPython.display
             mod = __import__('IPython.display')
             if not hasattr(mod.display, self._meta['render_result']):
-                self.warn(f'Unrecognized render format {self._meta["render_result"]}')
+                self.warn(
+                    f'Unrecognized render format {self._meta["render_result"]}')
             else:
                 func = getattr(mod.display, self._meta['render_result'])
                 res = func(res)
@@ -2297,7 +2307,8 @@ Available subkernels:\n{}'''.format(
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
                 content = self._meta['capture_result']
-                format_dict, md_dict = self.format_obj(self.render_result(content))
+                format_dict, md_dict = self.format_obj(
+                    self.render_result(content))
                 self.send_response(self.iopub_socket, 'display_data',
                                    {'metadata': md_dict,
                                     'data': format_dict
