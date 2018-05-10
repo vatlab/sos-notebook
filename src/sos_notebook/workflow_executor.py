@@ -32,7 +32,8 @@ class Interactive_Executor(Base_Executor):
         # by nested = True we actually mean no new dictionary
         if env.config['sig_mode'] is None:
             env.config['sig_mode'] = 'ignore'
-        Base_Executor.__init__(self, workflow=workflow, args=args, shared=shared, config=config)
+        Base_Executor.__init__(self, workflow=workflow,
+                               args=args, shared=shared, config=config)
         self.md5 = self.create_signature()
         # the md5 of the master workflow would be passed from master workflow...
         if 'master_md5' not in env.config:
@@ -46,7 +47,8 @@ class Interactive_Executor(Base_Executor):
                 sig.write('# script: __interactive__\n')
                 sig.write(
                     f'# included: {",".join([x[1] for x in self.workflow.content.included])}\n')
-                sig.write(f'# configuration: {self.config.get("config_file", "")}\n')
+                sig.write(
+                    f'# configuration: {self.config.get("config_file", "")}\n')
                 sig.write(
                     f'# start time: {time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())}\n')
                 sig.write(self.sig_content)
@@ -118,7 +120,8 @@ class Interactive_Executor(Base_Executor):
                 elif file_target(t).target_exists('signature'):
                     env.logger.debug(f'Re-generating {t}')
                     file_target(t).remove('signature')
-            targets = [x for x in targets if not file_target(x).target_exists('target')]
+            targets = [x for x in targets if not file_target(
+                x).target_exists('target')]
         #
         dag = self.initialize_dag(targets=targets)
         while True:
@@ -142,7 +145,8 @@ class Interactive_Executor(Base_Executor):
             except Exception as e:
                 if env.verbosity > 2:
                     sys.stderr.write(get_traceback())
-                raise RuntimeError(f'Failed to execute statements\n"{section.global_def}"\n{e}')
+                raise RuntimeError(
+                    f'Failed to execute statements\n"{section.global_def}"\n{e}')
 
             # clear existing keys, otherwise the results from some random result
             # might mess with the execution of another step that does not define input
@@ -205,7 +209,8 @@ class Interactive_Executor(Base_Executor):
                 runnable._status = 'pending'
                 dag.save(self.config['output_dag'])
                 runnable._signature = (e.output, e.sig_file)
-                env.logger.debug(f'Waiting on another process for step {section.step_name()}')
+                env.logger.debug(
+                    f'Waiting on another process for step {section.step_name()}')
             except PendingTasks as e:
                 self.record_quit_status(e.tasks)
                 raise
@@ -220,7 +225,8 @@ class Interactive_Executor(Base_Executor):
                 f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
         # remove task pending status if the workflow is completed normally
         try:
-            wf_status = os.path.join(os.path.expanduser('~'), '.sos', self.md5 + '.status')
+            wf_status = os.path.join(os.path.expanduser(
+                '~'), '.sos', self.md5 + '.status')
             if os.path.isfile(wf_status):
                 os.remove(wf_status)
         except Exception as e:
@@ -266,19 +272,10 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
 
     env.verbosity = args.verbosity
 
-    if args.__queue__ == '':
-        from sos.hosts import list_queues
-        list_queues(args.__config__, args.verbosity)
-        return
-
     if args.__remote__:
         from sos.utils import load_config_files
         cfg = load_config_files(args.__config__)
         env.sos_dict.set('CONFIG', cfg)
-        if args.__remote__ == '':
-            from .hosts import list_queues
-            list_queues(cfg, args.verbosity)
-            return
 
         # if executing on a remote host...
         from sos.hosts import Host
@@ -354,7 +351,8 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                         return
         else:
             script = SoS_Script(filename=script)
-        workflow = script.workflow(args.workflow, use_default=not args.__targets__)
+        workflow = script.workflow(
+            args.workflow, use_default=not args.__targets__)
         executor = Interactive_Executor(workflow, args=workflow_args, config={
             'config_file': args.__config__,
             'output_dag': args.__dag__,

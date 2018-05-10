@@ -523,11 +523,9 @@ class SoS_Kernel(IPythonKernel):
             keyword arguments, which would be interpreted by individual style. Passing
             '-h' with '--style' would display the usage information of particular
             style.''')
-        parser.add_argument('-r', '--host', dest='host', metavar='HOST', nargs='?', const='',
+        parser.add_argument('-r', '--host', dest='host', metavar='HOST',
                             help='''Preview files on specified remote host, which should
-            be defined under key host of sos configuration files (preferrably
-            in ~/.sos/hosts.yml). If this option is specified without
-            value, SoS will list all configured queues and stop.''')
+            be one of the hosts defined in sos configuration files.''')
         parser.add_argument('--off', action='store_true',
                             help='''Turn off file preview''')
         loc = parser.add_mutually_exclusive_group()
@@ -548,9 +546,9 @@ class SoS_Kernel(IPythonKernel):
             retrieved from remote host. The files should be relative to local file
             system. The files to retrieve are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
-        parser.add_argument('-f', '--from', dest='host', nargs='?', const='',
-                            help='''Remote host to which the files will be sent. SoS will list all
-            configured queues and stop''')
+        parser.add_argument('-f', '--from', dest='host',
+                            help='''Remote host to which the files will be sent, which should
+            be one of the hosts defined in sos configuration files.''')
         parser.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
@@ -566,7 +564,7 @@ class SoS_Kernel(IPythonKernel):
         parser.add_argument('items', nargs='+', help='''Files or directories to be sent
             to remote host. The location of remote files are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
-        parser.add_argument('-t', '--to', dest='host', nargs='?', const='',
+        parser.add_argument('-t', '--to', dest='host',
                             help='''Remote host to which the files will be sent. SoS will list all
             configured queues if no such key is defined''')
         parser.add_argument('-c', '--config', help='''A configuration file with host
@@ -1726,10 +1724,6 @@ Available subkernels:\n{}'''.format(
             from sos.utils import load_config_files
             load_config_files(args.config)
         cfg = env.sos_dict['CONFIG']
-        if args.host == '':
-            from sos.hosts import list_queues
-            list_queues(cfg, args.verbosity)
-            return
         try:
             host = Host(args.host)
             #
@@ -1754,10 +1748,6 @@ Available subkernels:\n{}'''.format(
             from sos.utils import load_config_files
             load_config_files(args.config)
         cfg = env.sos_dict['CONFIG']
-        if args.host == '':
-            from .hosts import list_hosts
-            list_hosts(cfg, args.verbosity)
-            return
         try:
             host = Host(args.host)
             #
