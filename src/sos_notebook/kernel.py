@@ -2159,8 +2159,8 @@ Available subkernels:\n{}'''.format(
                 'cell_id': 0,
                 'notebook_name': '',
                 'use_panel': False,
-                'default_kernel': 'SoS',
-                'cell_kernel': 'SoS',
+                'default_kernel': self.kernel,
+                'cell_kernel': self.kernel,
                 'resume_execution': False,
                 'hard_switch_kernel': False,
             }
