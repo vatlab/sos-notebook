@@ -2012,6 +2012,18 @@ table.task_table {
     return select;
   }
 
+  function highlight_cells(cells, i, interval){
+    setTimeout(function(){
+      enable_fold_gutter(cells[i]);
+      if (cells[i].cell_type === 'code' && cells[i].user_highlight) {
+        // console.log(`set ${cells[i].user_highlight} for cell ${i}`);
+        cells[i].code_mirror.setOption('mode', cells[i].user_highlight === 'auto' ? 'sos' : cells[i].user_highlight);
+      }
+      if (i<cells.length)
+        highlight_cells(cells, i+1, interval);
+    }, interval);
+  }
+
   var onload = function() {
 
     // setting up frontend using existing metadata (without executing anything)
@@ -2073,14 +2085,7 @@ table.task_table {
        * set codemirror mode again.
        * */
       //nb.set_codemirror_mode("sos");
-      var cells = nb.get_cells();
-      var i;
-      for (i = cells.length - 1; i >= 0; --i) {
-        enable_fold_gutter(cells[i]);
-        if (cells[i].cell_type === 'code' && cells[i].user_highlight) {
-          cells[i].code_mirror.setOption('mode', cells[i].user_highlight);
-        }
-      }
+      highlight_cells(nb.get_cells(), 0, 100);
     });
 
 
