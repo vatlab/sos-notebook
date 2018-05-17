@@ -2462,7 +2462,7 @@ table.task_table {
                       // really
                       let mode = findMode(stream.current().slice(0, -1).toLowerCase());
                       if (mode) {
-                        state.sos_state = "entering " + mode;
+                        state.sos_state = "entering " + stream.current().slice(0, -1);
                       } else {
                         state.sos_state = 'unknown_language';
                       }
@@ -2472,12 +2472,12 @@ table.task_table {
                     state.overlay_state.sigil = null;
                     return "builtin strong";
                   }
-                  // if unknown action
-                  if (stream.match(/\w+:/)) {
-                    state.overlay_state.sigil = null;
-                    state.sos_state = 'start ' + stream.current().slice(0, -1);
-                    return "builtin strong";
-                  }
+                }
+                // if unknown action
+                if (stream.match(/\w+:/)) {
+                  state.overlay_state.sigil = null;
+                  state.sos_state = 'start ' + stream.current().slice(0, -1);
+                  return "builtin strong";
                 }
               } else if (state.sos_state == 'header_option') {
                 // stuff after :
@@ -2543,7 +2543,7 @@ table.task_table {
                   // really
                   let mode = findMode(state.sos_state.slice(6).toLowerCase());
                   if (mode) {
-                    state.sos_state = "entering " + mode;
+                    state.sos_state = "entering " + state.sos_state.slice(6);
                   } else {
                     state.sos_state = 'unknown_language';
                   }
