@@ -2444,7 +2444,8 @@ table.task_table {
                   return "meta";
                 } else if (state.sos_state && state.sos_state.startsWith('entering ')) {
                   // the second parameter is starting column
-                  state.inner_mode = CodeMirror.getMode(conf, state.sos_state.slice(9));
+                  let mode = findMode(state.sos_state.slice(9).toLowerCase());
+                  state.inner_mode = CodeMirror.getMode({}, mode);
                   state.inner_state = CodeMirror.startState(state.inner_mode, stream.indentation());
                   state.sos_state = null;
                 }
