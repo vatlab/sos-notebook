@@ -899,12 +899,9 @@ class SoS_Kernel(IPythonKernel):
     _resume_execution = property(lambda self: self._meta['resume_execution'])
 
     def handle_magic_revisions(self, args, unknown_args):
-        import git
-        # default
-        repo = git.Git()
         filename = self._meta['notebook_name'] + '.ipynb'
-        revisions = repo.log(*(unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
-                                               '--', filename])).splitlines()
+        revisions = subprocess.check_output(['git', 'log'] + unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
+                                                                             '--', filename]).decode().splitlines()
         if not revisions:
             return
         text = '''
