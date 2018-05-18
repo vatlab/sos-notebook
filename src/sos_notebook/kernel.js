@@ -250,8 +250,8 @@ define([
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
       options.sos.workflow = getNotebookWorkflow(cells);
-      options.sos.filename = window.document.getElementById("notebook_name").innerHTML;
     }
+    options.sos.filename = window.document.getElementById("notebook_name").innerHTML;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
     options.sos.default_kernel = nb.metadata["sos"].default_kernel;
     options.sos.rerun = false;

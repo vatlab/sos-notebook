@@ -386,6 +386,7 @@ class SoS_Kernel(IPythonKernel):
         'put',
         'render',
         'rerun',
+        'revisions',
         'run',
         'save',
         'sandbox',
@@ -417,6 +418,7 @@ class SoS_Kernel(IPythonKernel):
     MAGIC_PUT = re.compile('^%put(\s|$)')
     MAGIC_RENDER = re.compile('^%render(\s|$)')
     MAGIC_RERUN = re.compile('^%rerun(\s|$)')
+    MAGIC_REVISIONS = re.compile('^%revisions(\s|$)')
     MAGIC_RUN = re.compile('^%run(\s|$)')
     MAGIC_SAVE = re.compile('^%save(\s|$)')
     MAGIC_SANDBOX = re.compile('^%sandbox(\s|$)')
@@ -610,6 +612,19 @@ class SoS_Kernel(IPythonKernel):
                                          description='''Execute the current cell with specified command line
             arguments. Arguments set by magic %set will be appended at the
             end of command line''')
+        parser.error = self._parse_error
+        return parser
+
+    def get_revisions_parser(self):
+        parser = argparse.ArgumentParser(prog='%revision',
+                                         description='''Revision history of the document, parsed from the log
+            message of the notebook if it is kept in a git repository. Additional parameters to git log command
+            (e.g. -n 5 --since --after) to limit the revisions to display.''')
+        parser.add_argument('-s', '--source', help='''Source URL with revision interpolated with revision ID
+            and filename as current filename. Because sos interpolates command line by default, revision should be
+            included with double braceses (e.g. --source https://github.com/ORG/USER/blob/{{revision}}/analysis/{{filename}}).''')
+        parser.add_argument('-l', '--links', nargs='+', help='''Name and URL or additional links for related
+            files (e.g. --links report URL_to_repo ) with URL interpolated as option --source.''')
         parser.error = self._parse_error
         return parser
 
@@ -882,6 +897,50 @@ class SoS_Kernel(IPythonKernel):
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
     _resume_execution = property(lambda self: self._meta['resume_execution'])
+
+    def handle_magic_revisions(self, args, unknown_args):
+        import git
+        # default
+        repo = git.Git()
+        filename = self._meta['notebook_name'] + '.ipynb'
+        revisions = repo.log(*(unknown_args + ['--date=short', '--pretty=%h!%cN!%cd!%s',
+                                               '--', filename])).splitlines()
+        if not revisions:
+            return
+        text = '''
+        <table>
+        <tr>
+        <th>Revision</th>
+        <th>Author</th>
+        <th>Date</th>
+        <th>Message</th>
+        <tr>
+        '''
+        for line in revisions:
+            fields = line.split('!', 3)
+            revision = fields[0]
+            if args.source:
+                # source URL
+                URL = interpolate(args.source, {'revision': revision, 'filename': filename})
+                fields[0] = f'<a target="_blank" href="{URL}">{revision}</a>'
+            links = []
+            if args.links:
+                for i in range(len(args.links) // 2):
+                    name = args.links[2 * i]
+                    if len(args.links) == 2 * i + 1:
+                        continue
+                    URL = interpolate(args.links[2 * i + 1],
+                                      {'revision': revision, 'filename': filename})
+                    links.append(f'<a target="_blank" href="{URL}">{name}</a>')
+            if links:
+                fields[0] += ' (' + ', '.join(links) + ')'
+            text += '<tr>' + '\n'.join(f'<td>{x}</td>' for x in fields) + '</tr>'
+        text += '</table>'
+        self.send_response(self.iopub_socket, 'display_data',
+                           {
+                               'metadata': {},
+                               'data': {'text/html': HTML(text).data}
+                           })
 
     def handle_taskinfo(self, task_id, task_queue, side_panel=None):
         # requesting information on task
@@ -2899,6 +2958,18 @@ Available subkernels:\n{}'''.format(
                 env.sos_dict = old_dict
                 self._meta['workflow_mode'] = False
                 self.options = old_options
+        elif self.MAGIC_REVISIONS.match(code):
+            options, remaining_code = self.get_magic_and_code(code, True)
+            parser = self.get_revisions_parser()
+            try:
+                args, unknown_args = parser.parse_known_args(shlex.split(options))
+            except SystemExit:
+                return
+            try:
+                self.handle_magic_revisions(args, unknown_args)
+            except Exception as e:
+                self.warn(f'Failed to retrieve revisions of notebook: {e}')
+            return self._do_execute(self.remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SANDBOX.match(code):
             import tempfile
             import shutil
