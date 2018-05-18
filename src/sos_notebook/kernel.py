@@ -903,7 +903,7 @@ class SoS_Kernel(IPythonKernel):
         # default
         repo = git.Git()
         filename = self._meta['notebook_name'] + '.ipynb'
-        revisions = repo.log(*(unknown_args + ['--date=short', '--pretty=%h!%cN!%cd!%s',
+        revisions = repo.log(*(unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
                                                '--', filename])).splitlines()
         if not revisions:
             return
@@ -919,10 +919,11 @@ class SoS_Kernel(IPythonKernel):
         for line in revisions:
             fields = line.split('!', 3)
             revision = fields[0]
+            fields[0] = fields[0][:7]
             if args.source:
                 # source URL
                 URL = interpolate(args.source, {'revision': revision, 'filename': filename})
-                fields[0] = f'<a target="_blank" href="{URL}">{revision}</a>'
+                fields[0] = f'<a target="_blank" href="{URL}">{fields[0]}</a>'
             links = []
             if args.links:
                 for i in range(len(args.links) // 2):
@@ -2969,7 +2970,7 @@ Available subkernels:\n{}'''.format(
                 self.handle_magic_revisions(args, unknown_args)
             except Exception as e:
                 self.warn(f'Failed to retrieve revisions of notebook: {e}')
-            return self._do_execute(self.remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_SANDBOX.match(code):
             import tempfile
             import shutil
