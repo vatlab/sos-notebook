@@ -618,8 +618,8 @@ class SoS_Kernel(IPythonKernel):
     def get_revisions_parser(self):
         parser = argparse.ArgumentParser(prog='%revision',
                                          description='''Revision history of the document, parsed from the log
-            message of the notebook if it is kept in a git repository. Additional parameters to git log command
-            (e.g. -n 5 --since --after) to limit the revisions to display.''')
+            message of the notebook if it is kept in a git repository. Additional parameters to "git log" command
+            (e.g. -n 5 --since --after) could be specified to limit the revisions to display.''')
         parser.add_argument('-s', '--source', help='''Source URL with revision interpolated with revision ID
             and filename as current filename. Because sos interpolates command line by default, revision should be
             included with double braceses (e.g. --source https://github.com/ORG/USER/blob/{{revision}}/analysis/{{filename}}).''')
