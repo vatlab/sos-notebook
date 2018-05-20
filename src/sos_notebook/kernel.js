@@ -251,7 +251,7 @@ define([
       nb.save_notebook();
       options.sos.workflow = getNotebookWorkflow(cells);
     }
-    options.sos.filename = window.document.getElementById("notebook_name").innerHTML;
+    options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
     options.sos.default_kernel = nb.metadata["sos"].default_kernel;
     options.sos.rerun = false;
@@ -2012,15 +2012,15 @@ table.task_table {
     return select;
   }
 
-  function highlight_cells(cells, i, interval){
-    setTimeout(function(){
+  function highlight_cells(cells, i, interval) {
+    setTimeout(function() {
       enable_fold_gutter(cells[i]);
       if (cells[i].cell_type === 'code' && cells[i].user_highlight) {
         // console.log(`set ${cells[i].user_highlight} for cell ${i}`);
         cells[i].code_mirror.setOption('mode', cells[i].user_highlight === 'auto' ? 'sos' : cells[i].user_highlight);
       }
-      if (i<cells.length)
-        highlight_cells(cells, i+1, interval);
+      if (i < cells.length)
+        highlight_cells(cells, i + 1, interval);
     }, interval);
   }
 

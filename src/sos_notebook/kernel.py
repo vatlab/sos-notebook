@@ -620,9 +620,14 @@ class SoS_Kernel(IPythonKernel):
                                          description='''Revision history of the document, parsed from the log
             message of the notebook if it is kept in a git repository. Additional parameters to "git log" command
             (e.g. -n 5 --since --after) could be specified to limit the revisions to display.''')
-        parser.add_argument('-s', '--source', help='''Source URL with revision interpolated with revision ID
-            and filename as current filename. Because sos interpolates command line by default, revision should be
-            included with double braceses (e.g. --source https://github.com/ORG/USER/blob/{{revision}}/analysis/{{filename}}).''')
+        parser.add_argument('-s', '--source', nargs='?', default='',
+                            help='''Source URL to to create links for revisions.
+            SoS automatically parse source URL of the origin and provides variables "repo" for complete origin
+            URL without trailing ".git" (e.g. https://github.com/vatlab/sos-notebook), "path" for complete
+            path name (e.g. src/document/doc.ipynb), "filename" for only the name of the "path", and "revision"
+            for revisions. Because sos interpolates command line by default, variables in URL template should be
+            included with double braceses (e.g. --source {{repo}}/blob/{{revision}}/{{path}})). If this option is
+            provided without value and the document is hosted on github, a default template will be provided.''')
         parser.add_argument('-l', '--links', nargs='+', help='''Name and URL or additional links for related
             files (e.g. --links report URL_to_repo ) with URL interpolated as option --source.''')
         parser.error = self._parse_error
@@ -900,12 +905,34 @@ class SoS_Kernel(IPythonKernel):
 
     def handle_magic_revisions(self, args, unknown_args):
         filename = self._meta['notebook_name'] + '.ipynb'
+        path = self._meta['notebook_path']
         revisions = subprocess.check_output(['git', 'log'] + unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
                                                                              '--', filename]).decode().splitlines()
         if not revisions:
             return
+        # args.source is None for --source without option
+        if args.source != '' or args.links:
+            # need to determine origin etc for interpolation
+            try:
+                origin = subprocess.check_output(
+                    ['git', 'ls-remote', '--get-url', 'origin']).decode().strip()
+                from urllib.parse import urlparse
+                parts = urlparse(origin)
+                repo = origin[:-4] if origin.endswith('.git') else origin
+            except Exception as e:
+                repo = ''
+                if self._debug_mode:
+                    self.warn(f'Failed to get repo URL: {e}')
+            if args.source is None:
+                if 'github.com' in repo:
+                    args.source = '{repo}/blob/{revision}/{path}'
+                    if self._debug_mode:
+                        self.warn(f"source is set to {args.source} with repo={repo}")
+                else:
+                    args.source = ''
+                    self.warn(f'A default source URL is unavailable for repository {repo}')
         text = '''
-        <table>
+        <table class="revision_table">
         <tr>
         <th>Revision</th>
         <th>Author</th>
@@ -916,10 +943,11 @@ class SoS_Kernel(IPythonKernel):
         for line in revisions:
             fields = line.split('!', 3)
             revision = fields[0]
-            fields[0] = fields[0][:7]
-            if args.source:
+            fields[0] = f'<span class="revision_id">{fields[0][:7]}<span>'
+            if args.source != '':
                 # source URL
-                URL = interpolate(args.source, {'revision': revision, 'filename': filename})
+                URL = interpolate(args.source, {'revision': revision, 'repo': repo,
+                                                'filename': filename, 'path': path})
                 fields[0] = f'<a target="_blank" href="{URL}">{fields[0]}</a>'
             links = []
             if args.links:
@@ -928,7 +956,7 @@ class SoS_Kernel(IPythonKernel):
                     if len(args.links) == 2 * i + 1:
                         continue
                     URL = interpolate(args.links[2 * i + 1],
-                                      {'revision': revision, 'filename': filename})
+                                      {'revision': revision, 'repo': repo, 'filename': filename, 'path': path})
                     links.append(f'<a target="_blank" href="{URL}">{name}</a>')
             if links:
                 fields[0] += ' (' + ', '.join(links) + ')'
@@ -2215,6 +2243,7 @@ Available subkernels:\n{}'''.format(
                 'capture_result': None,
                 'cell_id': 0,
                 'notebook_name': '',
+                'notebook_path': '',
                 'use_panel': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
@@ -2224,20 +2253,23 @@ Available subkernels:\n{}'''.format(
             return self._meta
 
         if self._debug_mode:
-            self.warn(meta)
+            self.warn(f"Meta info: {meta}")
         self._meta = {
             'workflow': meta['workflow'] if 'workflow' in meta else '',
             'workflow_mode': False,
             'render_result': False,
             'capture_result': None,
             'cell_id': meta['cell_id'] if 'cell_id' in meta else "",
-            'notebook_name': meta['filename'] if 'filename' in meta else 'Untitled',
+            'notebook_path': meta['path'] if 'path' in meta else 'Untitled.ipynb',
             'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'resume_execution': True if 'resume' in meta and meta['resume'] else False,
             'hard_switch_kernel': False,
         }
+        # remove path and extension
+        self._meta['notebook_name'] = os.path.basename(
+            self._meta['notebook_path']).rsplit('.', 1)[0]
         if 'list_kernel' in meta and meta['list_kernel']:
             # https://github.com/jupyter/help/issues/153#issuecomment-289026056
             #
