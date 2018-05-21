@@ -1872,6 +1872,13 @@ Available subkernels:\n{}'''.format(
         handled = [False for x in items]
         for idx, item in enumerate(items):
             try:
+                # quoted
+                if (item.startswith('"') and item.endswith('"')) or \
+                        (item.startswith("'") and item.endswith("'")):
+                    try:
+                        item = eval(item)
+                    except Exception:
+                        pass
                 item = os.path.expanduser(item)
                 if os.path.isfile(item):
                     self.preview_file(item, style)
@@ -1935,18 +1942,25 @@ Available subkernels:\n{}'''.format(
                                                {'execution_count': self._execution_count, 'data': format_dict,
                                                 'metadata': md_dict})
                     else:
-                        self.send_frontend_msg('display_data',
+                        # evaluate
+                        responses = self.get_response(
+                            item, ['stream', 'display_data', 'execution_result', 'error'])
+                        if not self._debug_mode:
+                            # if the variable or expression is invalid, do not do anything
+                            responses = [x for x in responses if x[0] != 'error']
+                        if responses:
+                            self.send_frontend_msg('display_data',
                                                {'metadata': {},
                                                 'data': {'text/plain': '>>> ' + item + ':\n',
                                                          'text/html': HTML(
                                                              f'<div class="sos_hint">> {item}:</div>').data
                                                          }
                                                 })
-                        # evaluate
-                        responses = self.get_response(
-                            item, ['stream', 'display_data', 'execution_result'])
-                        for response in responses:
-                            self.send_frontend_msg(response[0], response[1])
+                            for response in responses:
+                                self.warn(f'{response[0]} {response[1]}' )
+                                self.send_frontend_msg(response[0], response[1])
+                        else:
+                            raise ValueError(f'Cannot preview expresison {item}')
                 except Exception as e:
                     if not handled[idx]:
                         self.send_frontend_msg('stream',
