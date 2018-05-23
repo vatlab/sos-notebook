@@ -59,7 +59,7 @@ setup(name="sos-notebook",
       author_email='bpeng@mdanderson.org',
       maintainer='Bo Peng',
       maintainer_email='bpeng@mdanderson.org',
-      license='GPL3',
+      license='3-clause BSD',
       include_package_data=True,
       classifiers=[
           'Development Status :: 4 - Beta',
