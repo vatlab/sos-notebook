@@ -2295,7 +2295,7 @@ Available subkernels:\n{}'''.format(
             'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
-            'resume_execution': True if 'resume' in meta and meta['resume'] else False,
+            'resume_execution': True if 'rerun' in meta and meta['rerun'] else False,
             'hard_switch_kernel': False,
         }
         # remove path and extension
