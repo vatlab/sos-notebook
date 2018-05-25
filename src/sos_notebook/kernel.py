@@ -1957,7 +1957,7 @@ Available subkernels:\n{}'''.format(
                                                          }
                                                 })
                             for response in responses:
-                                self.warn(f'{response[0]} {response[1]}' )
+                                #self.warn(f'{response[0]} {response[1]}' )
                                 self.send_frontend_msg(response[0], response[1])
                         else:
                             raise ValueError(f'Cannot preview expresison {item}')
