@@ -43,7 +43,7 @@ install:
     - pip install jupyter wand numpy pandas sos sos-bash sos-python
  
     - pip install pytest
-    - python setup.py install
+    - pip install . -U
     - python -m sos_notebook.install
 
 test_script:
