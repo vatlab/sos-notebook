@@ -503,6 +503,18 @@ class SoS_Kernel(IPythonKernel):
         parser.error = self._parse_error
         return parser
 
+    def get_matplotlib_parser(self):
+        parser = argparse.ArgumentParser(prog='%matplotlib',
+                                         description='''Set matplotlib parser type''')
+        parser.add_argument('gui', choices=['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg',
+                                            'notebook', 'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'],
+                            nargs='?',
+                            help='''Name of the matplotlib backend to use (‘agg’, ‘gtk’, ‘gtk3’,''')
+        parser.add_argument('-l', '--list', action='store_true',
+                            help='''Show available matplotlib backends''')
+        parser.error = self._parse_error
+        return parser
+
     def get_preview_parser(self):
         parser = argparse.ArgumentParser(prog='%preview',
                                          description='''Preview files, sos variables, or expressions in the
@@ -898,6 +910,11 @@ class SoS_Kernel(IPythonKernel):
         self.RET_VARS = []
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
+        # enable matplotlib by default #77
+        self.shell.enable_gui = lambda gui: None
+        # sos does not yet support MaxOSX backend to start a new window
+        # so a default inline mode is used.
+        self.shell.enable_matplotlib('inline')
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -1950,12 +1967,12 @@ Available subkernels:\n{}'''.format(
                             responses = [x for x in responses if x[0] != 'error']
                         if responses:
                             self.send_frontend_msg('display_data',
-                                               {'metadata': {},
-                                                'data': {'text/plain': '>>> ' + item + ':\n',
-                                                         'text/html': HTML(
-                                                             f'<div class="sos_hint">> {item}:</div>').data
-                                                         }
-                                                })
+                                                   {'metadata': {},
+                                                    'data': {'text/plain': '>>> ' + item + ':\n',
+                                                             'text/html': HTML(
+                                                                 f'<div class="sos_hint">> {item}:</div>').data
+                                                             }
+                                                    })
                             for response in responses:
                                 #self.warn(f'{response[0]} {response[1]}' )
                                 self.send_frontend_msg(response[0], response[1])
@@ -2550,9 +2567,23 @@ Available subkernels:\n{}'''.format(
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_MATPLOTLIB.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
+            parser = self.get_matplotlib_parser()
             try:
-                self.shell.enable_gui = lambda gui: None
-                self.shell.enable_matplotlib(options)
+                args = parser.parse_args(shlex.split(options))
+            except SystemExit:
+                return
+            if args.list:
+                self.send_response(self.iopub_socket, 'stream',
+                                   {'name': 'stdout', 'text': 'Available matplotlib backends: {}'.format(
+                                       ['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg', 'notebook',
+                                        'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'])})
+                return
+            try:
+                _, backend = self.shell.enable_matplotlib(args.gui)
+                if not args.gui or args.gui == 'auto':
+                    self.send_response(self.iopub_socket, 'stream',
+                                       {'name': 'stdout',
+                                        'text': f'Using matplotlib backend {backend}'})
             except Exception as e:
                 self.warn(
                     'Failed to set matplotlib backnd {}: {}'.format(options, e))
@@ -2563,8 +2594,6 @@ Available subkernels:\n{}'''.format(
             # self.options will be set to inflence the execution of remaing_code
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_EXPAND.match(code):
-            if self.kernel.lower() == 'sos':
-                self.warn('Use of %expand magic in SoS cells is deprecated.')
             lines = code.splitlines()
             options = lines[0]
             parser = self.get_expand_parser()
@@ -2572,6 +2601,8 @@ Available subkernels:\n{}'''.format(
                 args = parser.parse_args(options.split()[1:])
             except SystemExit:
                 return
+            if self.kernel.lower() == 'sos':
+                self.warn('Use of %expand magic in SoS cells is deprecated.')
             if args.sigil in ('None', None):
                 sigil = None
             if args.right_sigil is not None:
