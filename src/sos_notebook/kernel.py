@@ -1336,12 +1336,29 @@ class SoS_Kernel(IPythonKernel):
         return reply_content
 
     def do_complete(self, code, cursor_pos):
-        text, matches = self.completer.complete_text(code, cursor_pos)
-        return {'matches': matches,
+        if self.kernel == 'SoS':
+            text, matches = self.completer.complete_text(code, cursor_pos)
+            return {'matches': matches,
                 'cursor_end': cursor_pos,
                 'cursor_start': cursor_pos - len(text),
                 'metadata': {},
                 'status': 'ok'}
+        else:
+            try:
+                self.KC.complete(code, cursor_pos)
+                while self.KC.shell_channel.msg_ready():
+                    msg = self.KC.shell_channel.get_msg()
+                    if msg['header']['msg_type'] == 'complete_reply':
+                        return msg['content']
+                    else:
+                        # other messages, do not know what is going on but
+                        # we should not wait forever and cause a deadloop here
+                        if self._debug_mode:
+                            log_to_file(f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
+                        break
+            except Exception as e:
+                if self._debug_mode:
+                    log_to_file(f'Completion fail with exception: {e}')
 
     def warn(self, message):
         message = str(message).rstrip() + '\n'
