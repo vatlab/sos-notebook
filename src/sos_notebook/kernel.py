@@ -915,6 +915,8 @@ class SoS_Kernel(IPythonKernel):
         # sos does not yet support MaxOSX backend to start a new window
         # so a default inline mode is used.
         self.shell.enable_matplotlib('inline')
+        #
+        self.editor_kernel = 'sos'
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -1099,6 +1101,8 @@ class SoS_Kernel(IPythonKernel):
                     if v:
                         self.subkernels.update(v)
                     self.subkernels.notify_frontend()
+                elif k == 'set-editor-kernel':
+                    self.editor_kernel = v
                 elif k == 'kill-task':
                     # kill specified task
                     from sos.hosts import Host
@@ -1336,7 +1340,7 @@ class SoS_Kernel(IPythonKernel):
         return reply_content
 
     def do_complete(self, code, cursor_pos):
-        if self.kernel == 'SoS':
+        if self.editor_kernel.lower() == 'sos':
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {'matches': matches,
                 'cursor_end': cursor_pos,
@@ -1344,10 +1348,17 @@ class SoS_Kernel(IPythonKernel):
                 'metadata': {},
                 'status': 'ok'}
         else:
+            cell_kernel = self.subkernels.find(self.editor_kernel)
             try:
-                self.KC.complete(code, cursor_pos)
-                while self.KC.shell_channel.msg_ready():
-                    msg = self.KC.shell_channel.get_msg()
+                _, KC = self.kernels[cell_kernel.name]
+            except Exception as e:
+                if self._debug_mode:
+                    log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                KC = self.KC
+            try:
+                KC.complete(code, cursor_pos)
+                while KC.shell_channel.msg_ready():
+                    msg = KC.shell_channel.get_msg()
                     if msg['header']['msg_type'] == 'complete_reply':
                         return msg['content']
                     else:

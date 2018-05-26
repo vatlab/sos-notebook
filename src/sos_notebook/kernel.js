@@ -889,6 +889,16 @@ define([
   }
 
 
+  function notify_cell_kernel(evt, param) {
+    var cell = param.cell;
+    if (cell.cell_type === "code") {
+      var cell_kernel = cell.metadata.kernel ? cell.metadata.kernel : nb.metadata["sos"].default_kernel;
+      send_kernel_msg({
+        'set-editor-kernel': cell_kernel
+      });
+    }
+  }
+
   function incr_lbl(ary, h_idx) { //increment heading label  w/ h_idx (zero based)
     ary[h_idx]++;
     for (var j = h_idx + 1; j < ary.length; j++) {
@@ -1980,6 +1990,9 @@ table.task_table {
 
     select.change(function() {
       cell.metadata.kernel = window.DisplayName[this.value];
+      send_kernel_msg({
+        'set-editor-kernel': cell.metadata.kernel
+      })
       // cell in panel does not have prompt area
       if (cell.is_panel) {
         if (window.BackgroundColor[this.value])
@@ -2068,6 +2081,7 @@ table.task_table {
     // #550
     events.on("select.Cell", set_codemirror_option);
     events.on("select.Cell", highlight_toc_item);
+    events.on("select.Cell", notify_cell_kernel);
 
     load_panel();
     add_panel_button();
