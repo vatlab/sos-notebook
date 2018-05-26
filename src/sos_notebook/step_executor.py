@@ -25,14 +25,8 @@ class Interactive_Step_Executor(Step_Executor):
         if not tasks:
             return
         if self.host is None:
-            if 'queue' in env.sos_dict['_runtime']:
-                self.queue = env.sos_dict['_runtime']['queue']
-            elif env.config['default_queue']:
-                self.queue = env.config['default_queue']
-            else:
-                self.queue = 'localhost'
-
-            self.host = Host(self.queue)
+            self.host = Host(env.sos_dict['_runtime']['queue']
+                             if 'queue' in env.sos_dict['_runtime'] else 'localhost')
         for task in tasks:
             self.host.submit_task(task)
 
@@ -44,12 +38,12 @@ class Interactive_Step_Executor(Step_Executor):
             if len(tasks) > 4:
                 print('!sos_hint: {} task{} completed: {}, {}, ..., {}'.format(
                     len(tasks), 's' if len(tasks) > 1 else '',
-                    f"""<a onclick="task_info('{tasks[0]}', '{self.queue}')">{tasks[0][:4]}</a>""",
-                    f"""<a onclick="task_info('{tasks[1]}', '{self.queue}')">{tasks[1][:4]}</a>""",
-                    f"""<a onclick="task_info('{tasks[-1]}', '{self.queue}')">{tasks[-1][:4]}</a>"""))
+                    f"""<a onclick="task_info('{tasks[0]}', '{self.host.alias}')">{tasks[0][:4]}</a>""",
+                    f"""<a onclick="task_info('{tasks[1]}', '{self.host.alias}')">{tasks[1][:4]}</a>""",
+                    f"""<a onclick="task_info('{tasks[-1]}', '{self.host.alias}')">{tasks[-1][:4]}</a>"""))
             else:
                 print('!sos_hint: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                                                                  ','.join([f"""<a onclick="task_info('{x}', '{self.queue}')">{x[:4]}</a>""" for x in tasks])))
+                                                                  ','.join([f"""<a onclick="task_info('{x}', '{self.host.alias}')">{x[:4]}</a>""" for x in tasks])))
             self.host._task_engine.remove_tasks(tasks)
             return self.host.retrieve_results(tasks)
         while True:
@@ -60,7 +54,7 @@ class Interactive_Step_Executor(Step_Executor):
                 return self.host.retrieve_results(tasks)
             # no pending
             elif not env.config['wait_for_task']:
-                raise PendingTasks([(self.queue, x) for x, y in zip(tasks, res)
+                raise PendingTasks([(self.host.alias, x) for x, y in zip(tasks, res)
                                     if y in ('pending', 'submitted', 'running')])
             time.sleep(1)
 
@@ -73,7 +67,8 @@ class Interactive_Step_Executor(Step_Executor):
                                                     self.step.step_name(), self.step.comment.strip()))
         elif stage == 'input':
             if env.sos_dict['step_input'] is not None:
-                env.logger.debug('input:    ``{}``'.format(short_repr(env.sos_dict['step_input'])))
+                env.logger.debug('input:    ``{}``'.format(
+                    short_repr(env.sos_dict['step_input'])))
         elif stage == 'output':
             if env.sos_dict['step_output'] is not None:
                 env.logger.debug('output:   ``{}``'.format(
