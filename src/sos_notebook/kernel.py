@@ -1329,24 +1329,49 @@ class SoS_Kernel(IPythonKernel):
         return {'status': 'incomplete', 'indent': ''}
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
-        line, offset = line_at_cursor(code, cursor_pos)
-        name = token_at_cursor(code, cursor_pos)
-        data = self.inspector.inspect(name, line, cursor_pos - offset)
-
-        reply_content = {'status': 'ok'}
-        reply_content['metadata'] = {}
-        reply_content['found'] = True if data else False
-        reply_content['data'] = data
-        return reply_content
+        if self.editor_kernel.lower() == 'sos':
+            line, offset = line_at_cursor(code, cursor_pos)
+            name = token_at_cursor(code, cursor_pos)
+            data = self.inspector.inspect(name, line, cursor_pos - offset)
+            return {
+                'status': 'ok',
+                'metadata': {},
+                'found': True if data else False,
+                'data': data
+            }
+        else:
+            cell_kernel = self.subkernels.find(self.editor_kernel)
+            try:
+                _, KC = self.kernels[cell_kernel.name]
+            except Exception as e:
+                if self._debug_mode:
+                    log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                KC = self.KC
+            try:
+                KC.inspect(code, cursor_pos)
+                while KC.shell_channel.msg_ready():
+                    msg = KC.shell_channel.get_msg()
+                    if msg['header']['msg_type'] == 'inspect_reply':
+                        return msg['content']
+                    else:
+                        # other messages, do not know what is going on but
+                        # we should not wait forever and cause a deadloop here
+                        if self._debug_mode:
+                            log_to_file(
+                                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
+                        break
+            except Exception as e:
+                if self._debug_mode:
+                    log_to_file(f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {'matches': matches,
-                'cursor_end': cursor_pos,
-                'cursor_start': cursor_pos - len(text),
-                'metadata': {},
-                'status': 'ok'}
+                    'cursor_end': cursor_pos,
+                    'cursor_start': cursor_pos - len(text),
+                    'metadata': {},
+                    'status': 'ok'}
         else:
             cell_kernel = self.subkernels.find(self.editor_kernel)
             try:
@@ -1365,7 +1390,8 @@ class SoS_Kernel(IPythonKernel):
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
                         if self._debug_mode:
-                            log_to_file(f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
+                            log_to_file(
+                                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
                         break
             except Exception as e:
                 if self._debug_mode:
@@ -2002,7 +2028,7 @@ Available subkernels:\n{}'''.format(
                                                              }
                                                     })
                             for response in responses:
-                                #self.warn(f'{response[0]} {response[1]}' )
+                                # self.warn(f'{response[0]} {response[1]}' )
                                 self.send_frontend_msg(response[0], response[1])
                         else:
                             raise ValueError(f'Cannot preview expresison {item}')
