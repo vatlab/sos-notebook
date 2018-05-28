@@ -319,7 +319,8 @@ define([
     }
   }
 
-  function changeStyleOnKernel(cell, type) {
+  function changeStyleOnKernel(cell) {
+    var type = cell.cell_type === 'code' ? cell.metadata.kernel : '';
     // type should be  displayed name of kernel
     var sel = cell.element[0].getElementsByClassName("cell_kernel_selector")[0];
     if (!type) {
@@ -370,16 +371,19 @@ define([
     if (op.length > 0) {
       op[0].style.backgroundColor = col;
     }
-    var base_mode = window.LanguageName[type] || window.KernelName[type] || type;
-    if (!base_mode || base_mode.toLowerCase() === 'sos') {
-      cell.user_highlight = 'auto';
-      cell.code_mirror.setOption('mode', 'sos');
-    } else {
-      cell.user_highlight = {
-        name: 'sos',
-        base_mode: base_mode
+
+    if (type) {
+      var base_mode = window.LanguageName[type] || window.KernelName[type] || type;
+      if (!base_mode || base_mode.toLowerCase() === 'sos') {
+        cell.user_highlight = 'auto';
+        cell.code_mirror.setOption('mode', 'sos');
+      } else {
+        cell.user_highlight = {
+          name: 'sos',
+          base_mode: base_mode
+        }
+        cell.code_mirror.setOption('mode', cell.user_highlight);
       }
-      cell.code_mirror.setOption('mode', cell.user_highlight);
     }
     //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
     return col;
@@ -396,20 +400,15 @@ define([
     var i = 0;
     var cells = nb.get_cells();
     for (i = 0; i < cells.length; i++) {
-      add_lan_selector(cells[i], cells[i].metadata.kernel);
-    }
-    if (window.my_panel) {
-      add_lan_selector(window.my_panel.cell, "SoS");
-    }
-
-    cells = nb.get_cells();
-    for (i = 0; i < cells.length; i++) {
+      // selector is added to all cells but will not be Displayed
+      // for non-code cell
+      add_lan_selector(cells[i]);
       if (cells[i].cell_type === "code") {
-        changeStyleOnKernel(cells[i], cells[i].metadata.kernel);
+        changeStyleOnKernel(cells[i]);
       }
     }
-    // update droplist of panel cell
     if (window.my_panel) {
+      add_lan_selector(window.my_panel.cell);
       changeStyleOnKernel(window.my_panel.cell);
     }
 
@@ -431,15 +430,7 @@ define([
     $("#kernel_selector").val(nb.metadata.sos.default_kernel);
     $("#kernel_selector").change(function() {
       var kernel_type = $("#kernel_selector").val();
-
       nb.metadata["sos"].default_kernel = kernel_type;
-
-      var cells = nb.get_cells();
-      for (var i in cells) {
-        if (cells[i].cell_type === "code" && !cells[i].metadata.kernel) {
-          changeStyleOnKernel(cells[i], undefined);
-        }
-      }
     });
   }
 
@@ -563,7 +554,7 @@ define([
         if (cell.metadata.kernel !== window.DisplayName[data[1]]) {
           cell.metadata.kernel = window.DisplayName[data[1]];
           // set meta information
-          changeStyleOnKernel(cell, data[1]);
+          changeStyleOnKernel(cell);
           save_kernel_info();
         } else if (cell.metadata.tags && cell.metadata.tags.indexOf("report_output") >= 0) {
           // #639
@@ -577,7 +568,8 @@ define([
         cell.set_text(data);
         cell.clear_output();
       } else if (msg_type === "preview-kernel") {
-        changeStyleOnKernel(window.my_panel.cell, data);
+        window.my_panel.cell.metadata.kernel = data;
+        changeStyleOnKernel(window.my_panel.cell);
       } else if (msg_type === "highlight-workflow") {
         //cell = window.my_panel.cell;
         //cell.clear_input();
@@ -873,7 +865,7 @@ define([
     var i;
     for (i in cells) {
       if (cells[i].cell_type === "code") {
-        changeStyleOnKernel(cells[i], cells[i].metadata.kernel);
+        changeStyleOnKernel(cells[i]);
       }
     }
     $("[id^=status_]").removeAttr("onClick").removeAttr("onmouseover").removeAttr("onmouseleave");
@@ -892,9 +884,8 @@ define([
   function notify_cell_kernel(evt, param) {
     var cell = param.cell;
     if (cell.cell_type === "code") {
-      var cell_kernel = cell.metadata.kernel ? cell.metadata.kernel : nb.metadata["sos"].default_kernel;
       send_kernel_msg({
-        'set-editor-kernel': cell_kernel
+        'set-editor-kernel': cell.metadata.kernel
       });
     }
   }
@@ -1209,6 +1200,7 @@ define([
       notebook: nb,
       tooltip: nb.tooltip,
     });
+    cell.metadata.kernel = 'SoS';
     add_lan_selector(cell).css("margin-top", "-17pt").css("margin-right", "0pt");
     cell.set_input_prompt();
     cell.is_panel = true;
@@ -1260,7 +1252,7 @@ define([
           // set the kernel of the panel cell as the sending cell
           if (panel_cell.metadata.kernel !== kernel) {
             panel_cell.metadata.kernel = kernel;
-            changeStyleOnKernel(panel_cell, kernel);
+            changeStyleOnKernel(panel_cell);
           }
           panel_cell.clear_input();
           panel_cell.set_text(text);
@@ -1495,12 +1487,12 @@ define([
       var col = cell.element[0].getElementsByClassName("input_prompt")[0].style.backgroundColor;
       if (panel_cell.metadata.kernel !== cell.metadata.kernel) {
         panel_cell.metadata.kernel = cell.metadata.kernel;
-        col = changeStyleOnKernel(panel_cell, panel_cell.metadata.kernel);
+        col = changeStyleOnKernel(panel_cell);
       }
       // if in sos mode and is single line, enable automatic preview
-      var cell_kernel = cell.metadata.kernel ? cell.metadata.kernel : nb.metadata["sos"].default_kernel;
+      var cell_kernel = cell.metadata.kernel;
     } else {
-      var cell_kernel = panel_cell.metadata.kernel ? panel_cell.metadata.kernel : nb.metadata["sos"].default_kernel;
+      var cell_kernel = panel_cell.metadata.kernel;
     }
     if (KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
       text = "%preview " + text;
@@ -1964,8 +1956,12 @@ table.task_table {
   }
 
 
-  function add_lan_selector(cell, kernel) {
-    //
+  function add_lan_selector(cell) {
+    // for a new cell? NOTE that the cell could be a markdown cell.
+    // A selector would be added although not displayed.
+    if (!cell.metadata.kernel)
+      cell.metadata.kernel = nb.metadata.sos.default_kernel;
+    var kernel = cell.metadata.kernel;
     if (cell.element[0].getElementsByClassName("cell_kernel_selector").length > 0) {
       // update existing list
       var select = $(".cell_kernel_selector", cell.element).empty();
@@ -1974,7 +1970,7 @@ table.task_table {
           .attr("value", window.DisplayName[window.KernelList[i][0]])
           .text(window.DisplayName[window.KernelList[i][0]]));
       }
-      select.val(kernel ? kernel : "");
+      select.val(kernel);
       return;
     }
     // add a new one
@@ -1986,7 +1982,7 @@ table.task_table {
         .attr("value", window.DisplayName[window.KernelList[i][0]])
         .text(window.DisplayName[window.KernelList[i][0]]));
     }
-    select.val(kernel ? kernel : "");
+    select.val(kernel);
 
     select.change(function() {
       cell.metadata.kernel = window.DisplayName[this.value];
@@ -2060,6 +2056,7 @@ table.task_table {
     events.on("rendered.MarkdownCell", update_toc);
     events.on("create.Cell", function(evt, param) {
       add_lan_selector(param.cell);
+      changeStyleOnKernel(param.cell);
     });
     // I assume that Jupyter would load the notebook before it tries to connect
     // to the kernel, so kernel_connected.kernel is the right time to show toc
