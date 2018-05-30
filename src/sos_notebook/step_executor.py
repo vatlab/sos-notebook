@@ -25,8 +25,13 @@ class Interactive_Step_Executor(Step_Executor):
         if not tasks:
             return
         if self.host is None:
-            self.host = Host(env.sos_dict['_runtime']['queue']
-                             if 'queue' in env.sos_dict['_runtime'] else 'localhost')
+            if 'queue' in env.sos_dict['_runtime']:
+                queue = env.sos_dict['_runtime']['queue']
+            elif env.config['default_queue']:
+                queue = env.config['default_queue']
+            else:
+                queue = 'localhost'
+            self.host = Host(queue)
         for task in tasks:
             self.host.submit_task(task)
 
