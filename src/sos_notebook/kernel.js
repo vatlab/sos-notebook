@@ -1845,6 +1845,18 @@ table.task_table {
   border: 0px;
   border-style: solid;
 }
+.code_cell .cm-header-1,
+.code_cell .cm-header-2,
+.code_cell .cm-header-3,
+.code_cell .cm-header-4,
+.code_cell .cm-header-5,
+.code_cell .cm-header-6
+{
+    font-size: 100%;
+    font-style: normal;
+    font-weight: normal;
+    font-family: monospace;
+}
 
 .task_hover {
  color: black !important;
