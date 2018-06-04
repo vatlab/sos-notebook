@@ -5,7 +5,9 @@
 
 import keyword
 import os
+import datetime
 import shlex
+import subprocess
 import sys
 import tempfile
 import time
@@ -20,6 +22,9 @@ from sos.targets import (RemovedTarget, UnavailableLock, Undetermined,
                          UnknownTarget, file_target, path)
 from sos.utils import _parse_error, env, get_traceback, load_config_files
 from sos.workflow_executor import Base_Executor, __null_func__
+from sos.report import workflow_report, render_report
+
+from collections import defaultdict
 
 from .step_executor import Interactive_Step_Executor
 
@@ -34,25 +39,20 @@ class Interactive_Executor(Base_Executor):
             env.config['sig_mode'] = 'ignore'
         Base_Executor.__init__(self, workflow=workflow,
                                args=args, shared=shared, config=config)
-        self.md5 = self.create_signature()
+        self.md5 = self.calculate_md5()
+        env.sos_dict.set('__workflow_sig__', os.path.join(
+            env.exec_dir, '.sos', f'{self.md5}.sig'))
+        #
         # the md5 of the master workflow would be passed from master workflow...
-        if 'master_md5' not in env.config:
-            env.config['master_md5'] = self.md5
-        if env.config['sig_mode'] != 'ignore':
-            # We append to existing workflow files because some files are ignored and we
-            # still wants their information.
-            with open(os.path.join(env.exec_dir, '.sos', f'{self.md5}.sig'), 'a') as sig:
-                sig.write(f'# workflow: {self.workflow.name}\n')
-                # script is None because it is entered from notebook
-                sig.write('# script: __interactive__\n')
-                sig.write(
-                    f'# included: {",".join([x[1] for x in self.workflow.content.included])}\n')
-                sig.write(
-                    f'# configuration: {self.config.get("config_file", "")}\n')
-                sig.write(
-                    f'# start time: {time.strftime("%a, %d %b %Y %H:%M:%S +0000", time.gmtime())}\n')
-                sig.write(self.sig_content)
-                sig.write('# runtime signatures\n')
+        if 'master_md5' not in self.config:
+            self.config['master_md5'] = self.md5
+        with workflow_report(mode='w') as sig:
+            sig.write(f'''
+workflow_name\t{self.md5}\t{self.workflow.name}
+workflow_start_time\t{self.md5}\t{time.time()}
+workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
+''')
+
 
     def reset_dict(self):
         env.sos_dict.set('__null_func__', __null_func__)
@@ -102,6 +102,7 @@ class Interactive_Executor(Base_Executor):
         '''
         # if there is no valid code do nothing
         self.reset_dict()
+        self.completed = defaultdict(int)
 
         # this is the result returned by the workflow, if the
         # last stement is an expression.
@@ -162,6 +163,14 @@ class Interactive_Executor(Base_Executor):
                 res = executor.run()
                 for k, v in res.items():
                     env.sos_dict.set(k, v)
+
+                for k, v in res['__completed__'].items():
+                    self.completed[k] += v
+                if res['__completed__']['__substep_completed__'] == 0:
+                    self.completed['__step_skipped__'] += 1
+                else:
+                    self.completed['__step_completed__'] += 1
+
                 last_res = res['__last_res__']
                 # set context to the next logic step.
                 for edge in dag.out_edges(runnable):
@@ -220,9 +229,17 @@ class Interactive_Executor(Base_Executor):
                 dag.save(self.config['output_dag'])
                 raise
         if self.md5:
-            self.save_workflow_signature(dag)
             env.logger.debug(
                 f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
+            with workflow_report() as sig:
+                sig.write(f'workflow_end_time\t{self.md5}\t{time.time()}\n')
+                sig.write(f'workflow_stat\t{self.md5}\t{dict(self.completed)}\n')
+                if self.config['output_dag']:
+                    sig.write(f"workflow_dag\t{self.md5}\t{self.config['output_dag']}\n")
+            if env.config['output_report'] and env.sos_dict.get('__workflow_sig__'):
+                # if this is the outter most workflow
+                render_report(env.config['output_report'],
+                              env.sos_dict.get('__workflow_sig__'))
         # remove task pending status if the workflow is completed normally
         try:
             wf_status = os.path.join(os.path.expanduser(
@@ -271,6 +288,17 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         args, workflow_args = parser.parse_known_args(args)
 
     env.verbosity = args.verbosity
+
+    dt = datetime.datetime.now().strftime('%m%d%y_%H%M')
+    if args.__dag__ is None:
+        args.__dag__ = f'workflow_{dt}.dot'
+    elif args.__dag__ == '':
+        args.__dag__ = None
+
+    if args.__report__ is None:
+        args.__report__ = f'workflow_{dt}.html'
+    elif args.__report__ == '':
+        args.__report__ = None
 
     if args.__remote__:
         from sos.utils import load_config_files
@@ -356,6 +384,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         executor = Interactive_Executor(workflow, args=workflow_args, config={
             'config_file': args.__config__,
             'output_dag': args.__dag__,
+            'output_report': args.__report__,
             'sig_mode': args.__sig_mode__,
             'default_queue': '' if args.__queue__ is None else args.__queue__,
             'wait_for_task': True if args.__wait__ is True or args.dryrun else (False if args.__no_wait__ else None),
