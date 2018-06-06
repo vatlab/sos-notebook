@@ -44,13 +44,11 @@ class Interactive_Executor(Base_Executor):
             env.exec_dir, '.sos', f'{self.md5}.sig'))
         #
         # the md5 of the master workflow would be passed from master workflow...
-        if 'master_md5' not in self.config:
-            self.config['master_md5'] = self.md5
         with workflow_report(mode='w') as sig:
             sig.write(f'''
 workflow_name\t{self.md5}\t{self.workflow.name}
 workflow_start_time\t{self.md5}\t{time.time()}
-workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
+workflow_subworkflows\t{env.config['master_md5']}\t{self.md5}
 ''')
 
 
@@ -67,7 +65,7 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
         self._base_symbols -= {'dynamic', 'sos_run'}
 
         # load configuration files
-        cfg = load_config_files(self.config['config_file'])
+        cfg = load_config_files(env.config['config_file'])
         # if check_readonly is set to True, allow checking readonly vars
         if cfg.get('sos', {}).get('change_all_cap_vars', None) is not None:
             if cfg['sos']['change_all_cap_vars'] not in ('warning', 'error'):
@@ -157,7 +155,7 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
             env.sos_dict.quick_update(runnable._context)
             # execute section with specified input
             runnable._status = 'running'
-            dag.save(self.config['output_dag'])
+            dag.save(env.config['output_dag'])
             try:
                 executor = Interactive_Step_Executor(section)
                 res = executor.run()
@@ -183,10 +181,10 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
                             | {'_input', '__step_output__', '__default_output__', '__args__'}))
                     node._context['__completed__'].append(res['__step_name__'])
                 runnable._status = 'completed'
-                dag.save(self.config['output_dag'])
+                dag.save(env.config['output_dag'])
             except (UnknownTarget, RemovedTarget) as e:
                 runnable._status = None
-                dag.save(self.config['output_dag'])
+                dag.save(env.config['output_dag'])
                 target = e.target
                 if isinstance(target, path):
                     target = str(target)
@@ -213,10 +211,10 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
                     if cycle:
                         raise RuntimeError(
                             f'Circular dependency detected {cycle}. It is likely a later step produces input of a previous step.')
-                dag.save(self.config['output_dag'])
+                dag.save(env.config['output_dag'])
             except UnavailableLock as e:
                 runnable._status = 'pending'
-                dag.save(self.config['output_dag'])
+                dag.save(env.config['output_dag'])
                 runnable._signature = (e.output, e.sig_file)
                 env.logger.debug(
                     f'Waiting on another process for step {section.step_name()}')
@@ -226,7 +224,7 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
             # if the job is failed
             except Exception as e:
                 runnable._status = 'failed'
-                dag.save(self.config['output_dag'])
+                dag.save(env.config['output_dag'])
                 raise
         if self.md5:
             env.logger.debug(
@@ -234,8 +232,8 @@ workflow_subworkflows\t{self.config['master_md5']}\t{self.md5}
             with workflow_report() as sig:
                 sig.write(f'workflow_end_time\t{self.md5}\t{time.time()}\n')
                 sig.write(f'workflow_stat\t{self.md5}\t{dict(self.completed)}\n')
-                if self.config['output_dag']:
-                    sig.write(f"workflow_dag\t{self.md5}\t{self.config['output_dag']}\n")
+                if env.config['output_dag']:
+                    sig.write(f"workflow_dag\t{self.md5}\t{env.config['output_dag']}\n")
             if env.config['output_report'] and env.sos_dict.get('__workflow_sig__'):
                 # if this is the outter most workflow
                 render_report(env.config['output_report'],
