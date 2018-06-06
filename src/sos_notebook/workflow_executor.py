@@ -43,12 +43,17 @@ class Interactive_Executor(Base_Executor):
         env.sos_dict.set('__workflow_sig__', os.path.join(
             env.exec_dir, '.sos', f'{self.md5}.sig'))
         #
-        # the md5 of the master workflow would be passed from master workflow...
-        with workflow_report(mode='w') as sig:
-            sig.write(f'''
-workflow_name\t{self.md5}\t{self.workflow.name}
-workflow_start_time\t{self.md5}\t{time.time()}
-workflow_subworkflows\t{env.config['master_md5']}\t{self.md5}
+        workflow_info = {
+            'name': self.workflow.name,
+            'start_time': time.time(),
+        }
+        if not env.config['master_id']:
+            env.config['master_id'] = self.md5
+            workflow_info['command_line'] = subprocess.list2cmdline([os.path.basename(sys.argv[0])] + sys.argv[1:]),
+        workflow_info['master_id'] = env.config['master_id']
+        with workflow_report(mode='w' if env.config['master_id'] == self.md5 else 'a') as sig:
+            sig.write(f'''\
+workflow\t{self.md5}\t{workflow_info}
 ''')
 
 
@@ -230,10 +235,13 @@ workflow_subworkflows\t{env.config['master_md5']}\t{self.md5}
             env.logger.debug(
                 f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
             with workflow_report() as sig:
-                sig.write(f'workflow_end_time\t{self.md5}\t{time.time()}\n')
-                sig.write(f'workflow_stat\t{self.md5}\t{dict(self.completed)}\n')
-                if env.config['output_dag']:
-                    sig.write(f"workflow_dag\t{self.md5}\t{env.config['output_dag']}\n")
+                workflow_info = {
+                    'end_time': time.time(),
+                    'stat': dict(self.completed),
+                }
+                if env.config['output_dag'] and env.config['master_id'] == self.md5:
+                    workflow_info['dag'] = env.config['output_dag']
+                sig.write(f'workflow\t{self.md5}\t{workflow_info}\n')
             if env.config['output_report'] and env.sos_dict.get('__workflow_sig__'):
                 # if this is the outter most workflow
                 render_report(env.config['output_report'],
