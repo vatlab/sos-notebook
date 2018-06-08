@@ -40,8 +40,7 @@ class Interactive_Executor(Base_Executor):
         Base_Executor.__init__(self, workflow=workflow,
                                args=args, shared=shared, config=config)
         self.md5 = self.calculate_md5()
-        env.sos_dict.set('__workflow_sig__', os.path.join(
-            env.exec_dir, '.sos', f'{self.md5}.sig'))
+        env.sos_dict.set('workflow_id', self.md5)
         #
         workflow_info = {
             'name': self.workflow.name,
@@ -61,9 +60,7 @@ workflow\t{self.md5}\t{workflow_info}
         env.sos_dict.set('__null_func__', __null_func__)
         env.sos_dict.set('SOS_VERSION', __version__)
         env.sos_dict.set('__args__', self.args)
-        if self.md5:
-            env.sos_dict.set('__workflow_sig__', os.path.join(
-                env.exec_dir, '.sos', f'{self.md5}.sig'))
+        env.sos_dict.set('workflow_id', self.md5)
 
         self._base_symbols = set(dir(__builtins__)) | set(
             env.sos_dict['sos_symbols_']) | set(keyword.kwlist)
@@ -242,10 +239,10 @@ workflow\t{self.md5}\t{workflow_info}
                 if env.config['output_dag'] and env.config['master_id'] == self.md5:
                     workflow_info['dag'] = env.config['output_dag']
                 sig.write(f'workflow\t{self.md5}\t{workflow_info}\n')
-            if env.config['output_report'] and env.sos_dict.get('__workflow_sig__'):
+            if env.config['output_report'] and env.sos_dict.get('workflow_id'):
                 # if this is the outter most workflow
                 render_report(env.config['output_report'],
-                              env.sos_dict.get('__workflow_sig__'))
+                              env.sos_dict.get('workflow_id'))
         # remove task pending status if the workflow is completed normally
         try:
             wf_status = os.path.join(os.path.expanduser(
