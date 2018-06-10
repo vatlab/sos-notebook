@@ -18,8 +18,8 @@ from sos.eval import SoS_exec
 from sos.parser import SoS_Script
 from sos.step_executor import PendingTasks
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import (RemovedTarget, UnavailableLock, Undetermined,
-                         UnknownTarget, file_target, path)
+from sos.targets import (RemovedTarget, UnavailableLock, BaseTarget,
+                         UnknownTarget, file_target, path, sos_targets)
 from sos.utils import _parse_error, env, get_traceback, load_config_files
 from sos.workflow_executor import Base_Executor, __null_func__
 from sos.report import workflow_report, render_report
@@ -48,13 +48,13 @@ class Interactive_Executor(Base_Executor):
         }
         if not env.config['master_id']:
             env.config['master_id'] = self.md5
-            workflow_info['command_line'] = subprocess.list2cmdline([os.path.basename(sys.argv[0])] + sys.argv[1:]),
+            workflow_info['command_line'] = subprocess.list2cmdline(
+                [os.path.basename(sys.argv[0])] + sys.argv[1:]),
         workflow_info['master_id'] = env.config['master_id']
         with workflow_report(mode='w' if env.config['master_id'] == self.md5 else 'a') as sig:
             sig.write(f'''\
 workflow\t{self.md5}\t{workflow_info}
 ''')
-
 
     def reset_dict(self):
         env.sos_dict.set('__null_func__', __null_func__)
@@ -188,6 +188,7 @@ workflow\t{self.md5}\t{workflow_info}
                 runnable._status = None
                 dag.save(env.config['output_dag'])
                 target = e.target
+                assert isinstance(target, BaseTarget)
                 if isinstance(target, path):
                     target = str(target)
                 if dag.regenerate_target(target):
@@ -200,10 +201,10 @@ workflow\t{self.md5}\t{workflow_info}
                         raise RuntimeError(
                             f'Circular dependency detected {cycle} after regeneration. It is likely a later step produces input of a previous step.')
                 else:
-                    if self.resolve_dangling_targets(dag, [target]) == 0:
+                    if self.resolve_dangling_targets(dag, sos_targets(target)) == 0:
                         raise RuntimeError(
                             f'Failed to regenerate or resolve {target}{dag.steps_depending_on(target, self.workflow)}.')
-                    if not isinstance(runnable._depends_targets, Undetermined):
+                    if runnable._depends_targets.determined():
                         runnable._depends_targets.append(target)
                     if runnable not in dag._all_dependent_files[target]:
                         dag._all_dependent_files[target].append(runnable)
@@ -353,7 +354,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
 
     # clear __step_input__, __step_output__ etc because there is
     # no concept of passing input/outputs across cells.
-    env.sos_dict.set('__step_output__', [])
+    env.sos_dict.set('__step_output__', sos_targets([]))
     for k in ['__step_input__', '__default_output__', 'step_input', 'step_output',
               'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
