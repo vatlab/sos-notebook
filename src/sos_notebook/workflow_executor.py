@@ -25,6 +25,7 @@ from sos.workflow_executor import Base_Executor, __null_func__
 from sos.report import workflow_report, render_report
 
 from collections import defaultdict
+from typing import Union, DefaultDict
 
 from .step_executor import Interactive_Step_Executor
 
@@ -35,26 +36,8 @@ class Interactive_Executor(Base_Executor):
     def __init__(self, workflow=None, args=None, shared=None, config=None):
         # we actually do not have our own workflow, everything is passed from ipython
         # by nested = True we actually mean no new dictionary
-        if env.config['sig_mode'] is None:
-            env.config['sig_mode'] = 'ignore'
         Base_Executor.__init__(self, workflow=workflow,
                                args=args, shared=shared, config=config)
-        self.md5 = self.calculate_md5()
-        env.sos_dict.set('workflow_id', self.md5)
-        #
-        workflow_info = {
-            'name': self.workflow.name,
-            'start_time': time.time(),
-        }
-        if not env.config['master_id']:
-            env.config['master_id'] = self.md5
-            workflow_info['command_line'] = subprocess.list2cmdline(
-                [os.path.basename(sys.argv[0])] + sys.argv[1:]),
-        workflow_info['master_id'] = env.config['master_id']
-        with workflow_report(mode='w' if env.config['master_id'] == self.md5 else 'a') as sig:
-            sig.write(f'''\
-workflow\t{self.md5}\t{workflow_info}
-''')
 
     def reset_dict(self):
         env.sos_dict.set('__null_func__', __null_func__)
@@ -276,20 +259,23 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     #
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
-    args = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
-    if (script is None and code is None) or '-h' in args:
+    raw_args = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
+    if (script is None and code is None) or '-h' in raw_args:
         parser = get_run_parser(interactive=True, with_workflow=True)
         parser.print_help()
         return
-    if args and args[0].lstrip().startswith('-'):
+    if raw_args and raw_args[0].lstrip().startswith('-'):
         parser = get_run_parser(interactive=True, with_workflow=False)
         parser.error = _parse_error
-        args, workflow_args = parser.parse_known_args(args)
+        args, workflow_args = parser.parse_known_args(raw_args)
         args.workflow = None
     else:
         parser = get_run_parser(interactive=True, with_workflow=True)
         parser.error = _parse_error
-        args, workflow_args = parser.parse_known_args(args)
+        args, workflow_args = parser.parse_known_args(raw_args)
+
+    # for reporting purpose
+    sys.argv = ['%run'] + raw_args
 
     env.verbosity = args.verbosity
 
@@ -385,6 +371,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             script = SoS_Script(filename=script)
         workflow = script.workflow(
             args.workflow, use_default=not args.__targets__)
+        env.config: DefaultDict[str, Union[None, bool, str]] = defaultdict(str)
         executor = Interactive_Executor(workflow, args=workflow_args, config={
             'config_file': args.__config__,
             'output_dag': args.__dag__,
