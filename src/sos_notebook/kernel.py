@@ -364,6 +364,7 @@ class SoS_Kernel(IPythonKernel):
         'mimetype': 'text/x-sos',
         'name': 'sos',
         'file_extension': '.sos',
+        'pygments_lexer': 'sos',
         'codemirror_mode': 'sos',
         'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
     }
