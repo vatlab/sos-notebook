@@ -1663,6 +1663,10 @@ define([
     color: black;
 }
 
+pre.section-header.CodeMirror-line {
+  background-color: #eee;
+}
+
 .toc {
   padding: 0px;
   overflow-y: auto;
@@ -2451,12 +2455,12 @@ table.task_table {
                       // reset state
                       state.sos_state = null;
                       state.inner_mode = null;
-                      return "header";
+                      return "header line-section-header";
                     } else {
                       // match up to :
                       stream.match(/^\[[^:]*:/);
                       state.sos_state = 'header_option';
-                      return "header";
+                      return "header line-section-header";
                     }
                   }
                 } else if (sl == '!') {
@@ -2512,7 +2516,7 @@ table.task_table {
                   if (stream.eol()) {
                     state.sos_state = null;
                     state.inner_mode = null;
-                    return "header";
+                    return "header line-section-header";
                   } else {
                     stream.backUp(1);
                     let it = base_mode.token(stream, state.base_state);
