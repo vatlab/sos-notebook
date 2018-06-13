@@ -449,8 +449,8 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
         if sargs.inplace:
             return
         if output_file:
-            import shutils
-            shutils.copy(notebook_file, output_file)
+            import shutil
+            shutil.copy(notebook_file, output_file)
         else:
             with open(notebook_file) as nb:
                 sys.stdout.write(nb.read())
