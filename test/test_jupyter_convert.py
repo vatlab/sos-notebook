@@ -87,6 +87,17 @@ report('this is action report')
         subprocess.call('sos convert test.ipynb --to md > test_wf1.md', shell=True)
         self.assertTrue(os.path.isfile('test_wf1.md'))
 
+    def testComments(self):
+        '''Test if comments before section headers are correctly extracted'''
+        subprocess.call('sos convert sample_workflow.ipynb sample_workflow.sos', shell=True)
+        with open('sample_workflow.sos') as sw:
+            wf = sw.read()
+        self.assertFalse('this is a test workflow' in wf)
+        self.assertEqual(wf.count('this comment will be included but not shown in help'), 1)
+        self.assertTrue(wf.count('this comment will become the comment for parameter b'), 1)
+        self.assertTrue(wf.count('this comment will become the comment for parameter d'), 1)
+        self.assertFalse('this is a cell with another kernel' in wf)
+        self.assertFalse('this comment will not be included in exported workflow' in wf)
 
 if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)

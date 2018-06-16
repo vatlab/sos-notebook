@@ -67,12 +67,18 @@ class SoS_Exporter(Exporter):
                 return
             lines = cell.source.split('\n')
             valid_cell = False
-            for line in lines:
+            for idx,line in enumerate(lines):
                 if valid_cell or (line.startswith('%include') or line.startswith('%from')):
                     fh.write(line + '\n')
                 elif SOS_SECTION_HEADER.match(line):
                     valid_cell = True
-                    fh.write(line + '\n')
+                    # look retrospectively for comments
+                    c = idx - 1
+                    comment = ''
+                    while c >= 0 and lines[c].startswith('#'):
+                        comment = lines[c] + '\n' + comment
+                        c -= 1
+                    fh.write(comment + line + '\n')
                 # other content, namely non-%include lines before section header is ignored
             if valid_cell:
                 fh.write('\n')
