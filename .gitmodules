@@ -1,0 +1,24 @@
+[submodule "src/sos-r"]
+	path = src/sos-r
+	url = https://github.com/vatlab/sos-r.git
+[submodule "src/sos-bash"]
+	path = src/sos-bash
+	url = https://github.com/vatlab/sos-bash.git
+[submodule "src/sos-python"]
+	path = src/sos-python
+	url = https://github.com/vatlab/sos-python.git
+[submodule "src/sos-javascript"]
+	path = src/sos-javascript
+	url = https://github.com/vatlab/sos-javascript.git
+[submodule "src/sos-sas"]
+	path = src/sos-sas
+	url = https://github.com/vatlab/sos-sas.git
+[submodule "src/sos-matlab"]
+	path = src/sos-matlab
+	url = https://github.com/vatlab/sos-matlab.git
+[submodule "src/sos-julia"]
+	path = src/sos-julia
+	url = https://github.com/vatlab/sos-julia.git
+[submodule "src/sos-ruby"]
+	path = src/sos-ruby
+	url = https://github.com/vatlab/sos-ruby.git
