@@ -171,9 +171,6 @@ class Interactive_Executor(Base_Executor):
                 runnable._status = None
                 dag.save(env.config['output_dag'])
                 target = e.target
-                assert isinstance(target, BaseTarget)
-                if isinstance(target, path):
-                    target = str(target)
                 if dag.regenerate_target(target):
                     # runnable._depends_targets.append(target)
                     # dag._all_dependent_files[target].append(runnable)
@@ -188,7 +185,7 @@ class Interactive_Executor(Base_Executor):
                         raise RuntimeError(
                             f'Failed to regenerate or resolve {target}{dag.steps_depending_on(target, self.workflow)}.')
                     if runnable._depends_targets.determined():
-                        runnable._depends_targets.append(target)
+                        runnable._depends_targets.extend(target)
                     if runnable not in dag._all_dependent_files[target]:
                         dag._all_dependent_files[target].append(runnable)
                     dag.build(self.workflow.auxiliary_sections)
