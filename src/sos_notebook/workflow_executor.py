@@ -3,7 +3,6 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-import keyword
 import os
 import datetime
 import shlex
@@ -40,38 +39,11 @@ class Interactive_Executor(Base_Executor):
                                args=args, shared=shared, config=config)
 
     def reset_dict(self):
-        env.sos_dict.set('__null_func__', __null_func__)
-        env.sos_dict.set('SOS_VERSION', __version__)
-        env.sos_dict.set('__args__', self.args)
-        env.sos_dict.set('workflow_id', self.md5)
-
-        self._base_symbols = set(dir(__builtins__)) | set(
-            env.sos_dict['sos_symbols_']) | set(keyword.kwlist)
-        self._base_symbols -= {'dynamic', 'sos_run'}
-
-        # load configuration files
-        cfg = load_config_files(env.config['config_file'])
-        # if check_readonly is set to True, allow checking readonly vars
-        if cfg.get('sos', {}).get('change_all_cap_vars', None) is not None:
-            if cfg['sos']['change_all_cap_vars'] not in ('warning', 'error'):
-                env.logger.error(
-                    f'Configuration sos.change_all_cap_vars can only be warning or error: {cfg["sos"]["change_all_cap_vars"]} provided')
-            else:
-                env.sos_dict._change_all_cap_vars = cfg['sos']['change_all_cap_vars']
-        env.sos_dict.set('CONFIG', cfg)
-        # set config to CONFIG
-        file_target('config.yml').remove('both')
-
+        # do not reset the entire env.sos_dict
+        self.init_dict()
         # remove some variables because they would interfere with step analysis
         for key in ('_input', 'step_input'):
             env.sos_dict.pop(key, None)
-
-        env.sos_dict.quick_update(self.shared)
-
-        if isinstance(self.args, dict):
-            for key, value in self.args.items():
-                if not key.startswith('__'):
-                    env.sos_dict.set(key, value)
 
     def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode='run'):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
@@ -98,14 +70,10 @@ class Interactive_Executor(Base_Executor):
         # if targets are specified and there are only signatures for them, we need
         # to remove the signature and really generate them
         if targets:
-            for t in targets:
-                if file_target(t).target_exists('target'):
-                    env.logger.debug(f'Target {t} already exists')
-                elif file_target(t).target_exists('signature'):
-                    env.logger.debug(f'Re-generating {t}')
-                    file_target(t).remove('signature')
-            targets = [x for x in targets if not file_target(
-                x).target_exists('target')]
+            targets = self.check_targets(targets)
+            if len(targets) == 0:
+                return last_res
+
         #
         dag = self.initialize_dag(targets=targets)
         while True:
@@ -113,25 +81,9 @@ class Interactive_Executor(Base_Executor):
             # with status.
             runnable = dag.find_executable()
             if runnable is None:
-                # no runnable
-                # dag.show_nodes()
                 break
             # find the section from runnable
             section = self.workflow.section_by_id(runnable._step_uuid)
-            #
-            # this is to keep compatibility of dag run with sequential run because
-            # in sequential run, we evaluate global section of each step in
-            # order to determine values of options such as skip.
-            # The consequence is that global definitions are available in
-            # SoS namespace.
-            try:
-                SoS_exec(section.global_def)
-            except Exception as e:
-                if env.verbosity > 2:
-                    sys.stderr.write(get_traceback())
-                raise RuntimeError(
-                    f'Failed to execute statements\n"{section.global_def}"\n{e}')
-
             # clear existing keys, otherwise the results from some random result
             # might mess with the execution of another step that does not define input
             for k in ['__step_input__', '__default_output__', '__step_output__']:
@@ -144,63 +96,12 @@ class Interactive_Executor(Base_Executor):
             try:
                 executor = Interactive_Step_Executor(section)
                 res = executor.run()
-                for k, v in res.items():
-                    env.sos_dict.set(k, v)
-
-                for k, v in res['__completed__'].items():
-                    self.completed[k] += v
-                if res['__completed__']['__substep_completed__'] == 0:
-                    self.completed['__step_skipped__'] += 1
-                else:
-                    self.completed['__step_completed__'] += 1
-
+                self.step_completed(res, dag, runnable)
                 last_res = res['__last_res__']
-                # set context to the next logic step.
-                for edge in dag.out_edges(runnable):
-                    node = edge[1]
-                    # if node is the logical next step...
-                    if node._node_index is not None and runnable._node_index is not None:
-                        # and node._node_index == runnable._node_index + 1:
-                        node._context.update(env.sos_dict.clone_selected_vars(
-                            node._context['__signature_vars__'] | node._context['__environ_vars__']
-                            | {'_input', '__step_output__', '__default_output__', '__args__'}))
-                    node._context['__completed__'].append(res['__step_name__'])
-                runnable._status = 'completed'
-                dag.save(env.config['output_dag'])
             except (UnknownTarget, RemovedTarget) as e:
-                runnable._status = None
-                dag.save(env.config['output_dag'])
-                target = e.target
-                if dag.regenerate_target(target):
-                    # runnable._depends_targets.append(target)
-                    # dag._all_dependent_files[target].append(runnable)
-                    dag.build(self.workflow.auxiliary_sections)
-                    #
-                    cycle = dag.circular_dependencies()
-                    if cycle:
-                        raise RuntimeError(
-                            f'Circular dependency detected {cycle} after regeneration. It is likely a later step produces input of a previous step.')
-                else:
-                    if self.resolve_dangling_targets(dag, sos_targets(target)) == 0:
-                        raise RuntimeError(
-                            f'Failed to regenerate or resolve {target}{dag.steps_depending_on(target, self.workflow)}.')
-                    if runnable._depends_targets.determined():
-                        runnable._depends_targets.extend(target)
-                    if runnable not in dag._all_dependent_files[target]:
-                        dag._all_dependent_files[target].append(runnable)
-                    dag.build(self.workflow.auxiliary_sections)
-                    #
-                    cycle = dag.circular_dependencies()
-                    if cycle:
-                        raise RuntimeError(
-                            f'Circular dependency detected {cycle}. It is likely a later step produces input of a previous step.')
-                dag.save(env.config['output_dag'])
+                self.handle_unknown_target(e, dag, runnable)
             except UnavailableLock as e:
-                runnable._status = 'pending'
-                dag.save(env.config['output_dag'])
-                runnable._signature = (e.output, e.sig_file)
-                env.logger.debug(
-                    f'Waiting on another process for step {section.step_name()}')
+                self.handle_unavailable_lock(e, dag, runnable)
             except PendingTasks as e:
                 self.record_quit_status(e.tasks)
                 raise
@@ -209,29 +110,7 @@ class Interactive_Executor(Base_Executor):
                 runnable._status = 'failed'
                 dag.save(env.config['output_dag'])
                 raise
-        if self.md5:
-            env.logger.debug(
-                f'Workflow {self.workflow.name} (ID={self.md5}) is executed successfully.')
-            with workflow_report() as sig:
-                workflow_info = {
-                    'end_time': time.time(),
-                    'stat': dict(self.completed),
-                }
-                if env.config['output_dag'] and env.config['master_id'] == self.md5:
-                    workflow_info['dag'] = env.config['output_dag']
-                sig.write(f'workflow\t{self.md5}\t{workflow_info}\n')
-            if env.config['output_report'] and env.sos_dict.get('workflow_id'):
-                # if this is the outter most workflow
-                render_report(env.config['output_report'],
-                              env.sos_dict.get('workflow_id'))
-        # remove task pending status if the workflow is completed normally
-        try:
-            wf_status = os.path.join(os.path.expanduser(
-                '~'), '.sos', self.md5 + '.status')
-            if os.path.isfile(wf_status):
-                os.remove(wf_status)
-        except Exception as e:
-            env.logger.warning(f'Failed to clear workflow status file: {e}')
+        self.finalize_and_report()
         return last_res
 
 #
@@ -401,4 +280,4 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         raise
     finally:
         env.config['sig_mode'] = 'ignore'
-        env.verbosity = 2
+        env.verbosity = 1
