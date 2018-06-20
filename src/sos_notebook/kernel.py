@@ -2883,7 +2883,7 @@ Available subkernels:\n{}'''.format(
                     break
             # if there are more magics after %run, they will be ignored so a warning
             # is needed.
-            if run_code.lstrip().startswith('%'):
+            if run_code.lstrip().startswith('%') and not any(run_code.lstrip().startswith(x) for x in ('%include', '%from')):
                 self.warn(
                     f'Magic {run_code.split()[0]} after magic %run will be ignored.')
 
