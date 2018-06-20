@@ -6,6 +6,7 @@
 import argparse
 import re
 import sys
+import time
 from io import StringIO
 
 import nbformat
@@ -319,7 +320,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
 # notebook to HTML
 #
 
-def export_notebook(exporter_class, to_format, notebook_file, output_file, unknown_args=None):
+def export_notebook(exporter_class, to_format, notebook_file, output_file, unknown_args=None, view=False):
 
     import os
     import subprocess
@@ -343,6 +344,13 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
             if not os.path.isfile(dest_file):
                 env.logger.error(err_msg)
                 env.logger.error('Failed to get converted file.')
+            elif view:
+                import webbrowser
+                url = f'file://{os.path.abspath(dest_file)}'
+                env.logger.info(f'Viewing {url} in a browser')
+                webbrowser.open(url, new=2)
+                # allow browser some time to process the file before this process removes it
+                time.sleep(2)
             else:
                 with open(dest_file, 'rb') as tfile:
                     sys.stdout.buffer.write(tfile.read())
@@ -370,6 +378,10 @@ def get_notebook_to_html_parser():
         of templates, with sos-report displays markdown cells and only output of cells with
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
+    parser.add_argument('-v', '--view', action='store_true',
+                        help='''Open the output file in a broswer. In case no html file is specified,
+        this option will display the HTML file in a browser, instead of writing its
+        content to standard output.''')
     return parser
 
 
@@ -384,7 +396,7 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
             '' if sargs.template.endswith('.tpl') else '.tpl'))] + unknown_args
     elif sargs.template:
         unknown_args = ['--template', sargs.template] + unknown_args
-    export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args)
+    export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args, view=sargs.view)
 
 
 def get_notebook_to_pdf_parser():
