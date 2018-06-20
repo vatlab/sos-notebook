@@ -96,6 +96,8 @@ class Interactive_Executor(Base_Executor):
             runnable._status = 'running'
             dag.save(env.config['output_dag'])
             try:
+                # the global section might have parameter definition etc
+                SoS_exec(section.global_def)
                 executor = Interactive_Step_Executor(section, mode=mode)
                 res = executor.run()
                 self.step_completed(res, dag, runnable)
