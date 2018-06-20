@@ -1284,7 +1284,9 @@ class SoS_Kernel(IPythonKernel):
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
                                     'msg_type': msg_type})
-        else:
+        elif self._debug_mode:
+            # we should not always do this because the kernel could be triggered by
+            # tests, which will not have a frontend sos comm
             self.warn(
                 'Frontend communicator is broken. Please restart jupyter server')
 
