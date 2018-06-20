@@ -12,13 +12,13 @@ from sos.utils import env, short_repr
 
 
 class Interactive_Step_Executor(Step_Executor):
-    def __init__(self, step):
+    def __init__(self, step, mode='interactive'):
         # This is the only interesting part of this executor. Basically
         # it derives everything from SP_Step_Executor but does not
         # use the Queue mechanism, so the __init__ and the run
         # functions are copied from Base_Step_Executor
         Base_Step_Executor.__init__(self, step)
-        self.run_mode = 'interactive'
+        self.run_mode = mode
         self.host = None
 
     def submit_tasks(self, tasks):

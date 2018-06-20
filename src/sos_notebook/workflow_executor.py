@@ -32,7 +32,7 @@ from .step_executor import Interactive_Step_Executor
 class Interactive_Executor(Base_Executor):
     '''Interactive executor called from by iPython Jupyter or Spyder'''
 
-    def __init__(self, workflow=None, args=None, shared=None, config=None):
+    def __init__(self, workflow=None, args=None, shared=None, config={}):
         # we actually do not have our own workflow, everything is passed from ipython
         # by nested = True we actually mean no new dictionary
         Base_Executor.__init__(self, workflow=workflow,
@@ -45,7 +45,7 @@ class Interactive_Executor(Base_Executor):
         for key in ('_input', 'step_input'):
             env.sos_dict.pop(key, None)
 
-    def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode='run'):
+    def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode='interactive'):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
         The code can be simple SoS/Python statements, one SoS step, or more
         or more SoS workflows with multiple steps. This executor,
@@ -57,11 +57,13 @@ class Interactive_Executor(Base_Executor):
         '''
         # if there is no valid code do nothing
         self.reset_dict()
+        env.config['run_mode'] = mode
+        env.sos_dict.set('run_mode', mode)
         self.completed = defaultdict(int)
 
         # this is the result returned by the workflow, if the
         # last stement is an expression.
-        last_res = None
+        wf_result =  {'__workflow_id__': my_workflow_id, 'shared': {}, '__last_res__': None}
 
         # process step of the pipelinp
         if isinstance(targets, str):
@@ -72,7 +74,7 @@ class Interactive_Executor(Base_Executor):
         if targets:
             targets = self.check_targets(targets)
             if len(targets) == 0:
-                return last_res
+                return wf_result
 
         #
         dag = self.initialize_dag(targets=targets)
@@ -94,10 +96,10 @@ class Interactive_Executor(Base_Executor):
             runnable._status = 'running'
             dag.save(env.config['output_dag'])
             try:
-                executor = Interactive_Step_Executor(section)
+                executor = Interactive_Step_Executor(section, mode=mode)
                 res = executor.run()
                 self.step_completed(res, dag, runnable)
-                last_res = res['__last_res__']
+                wf_result['__last_res__'] = res['__last_res__']
             except (UnknownTarget, RemovedTarget) as e:
                 self.handle_unknown_target(e, dag, runnable)
             except UnavailableLock as e:
@@ -111,7 +113,10 @@ class Interactive_Executor(Base_Executor):
                 dag.save(env.config['output_dag'])
                 raise
         self.finalize_and_report()
-        return last_res
+        wf_result['shared'] = {x: env.sos_dict[x]
+                               for x in self.shared.keys() if x in env.sos_dict}
+        wf_result['__completed__'] = self.completed
+        return wf_result
 
 #
 # function runfile that is used by spyder to execute complete script
@@ -267,7 +272,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             'bin_dirs': args.__bin_dirs__,
             'workflow_args': workflow_args
         })
-        return executor.run(args.__targets__)
+        return executor.run(args.__targets__)['__last_res__']
     except PendingTasks:
         raise
     except SystemExit:
