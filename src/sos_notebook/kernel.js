@@ -1671,7 +1671,7 @@ define([
 }
 
 pre.section-header.CodeMirror-line {
-  background-color: #eee;
+  border-top: 1px dotted #cfcfcf
 }
 
 .toc {
