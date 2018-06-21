@@ -1,13 +1,25 @@
 {% extends 'full.tpl' %}
 
+{% import 'parts/sos_style.tpl' as sos_style %}
+{% import 'parts/preview.tpl' as preview %}
+
 {% block header %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{ super() }}
-{% include 'parts/styles.css' %}
-{% include 'parts/code_cell.css' %}
-{% include 'parts/preview.css' %}
-{% endblock header %}
+{{ sos_style.css() }}
+{{ preview.css() }}
 
+<style>
+   {% for item in nb['metadata'].get('sos', {}).get('kernels', []) %}
+   {%- if item[2] -%}
+   .lan_{{item[0]}} .input_prompt {
+      background-color: {{item[3]}} !important;
+    }
+   {%- endif -%}
+   {% endfor %}
+</style>
+
+{% endblock header %}
 
 {% block codecell %}
 {% if cell['metadata'].get('kernel',none) is not none %}
@@ -19,43 +31,7 @@
 {% endif %}
 {% endblock codecell %}
 
-{%- block input -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
-	{%- elif 'report_cell' in cell.metadata.tags -%}
-        {{ super() }}
-  {%- else -%}
-        <div class="hidden_content">
-        {{ super() }}
-        </div>
-  {%- endif -%}
-{%- endblock input -%}
-
-{% block output %}
-  {%- if 'report_output' in cell.metadata.tags -%}
-      {{ super() }}
-  {%- elif 'report_cell' in cell.metadata.tags -%}
-      {{ super() }}
-  {%- elif 'scratch' in cell.metadata.tags -%}
-  {%- else -%}
-      <div class="hidden_content">
-      {{ super() }}
-      </div>
-  {%- endif -%}
-{% endblock output %}
-
-{% block markdowncell %}
-  {%- if 'hide_output' in cell.metadata.tags -%}
-	<div class="hidden_content">
-      {{ super() }}
-	</div>
-  {%- elif 'scratch' in cell.metadata.tags -%}
-  {%- else -%}
-      {{ super() }}
-  {%- endif -%}
-{%- endblock markdowncell -%}
-
-
 {% block footer %}
-{% include "parts/preview.js" %}
+{{ preview.js() }}
 {{ super() }}
 {% endblock footer %}

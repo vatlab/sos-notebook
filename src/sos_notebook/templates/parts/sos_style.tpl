@@ -1,4 +1,6 @@
 
+{% macro css() %}
+
 <style type="text/css">
 
 .rendered_html table {
@@ -52,3 +54,6 @@
   font-family: monospace;
 }
 </style>
+
+
+{% endmacro %}
