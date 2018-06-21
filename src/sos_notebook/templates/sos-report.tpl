@@ -1,14 +1,19 @@
 {% extends 'full.tpl' %}
 
+
+{% import 'parts/control_panel.tpl' as control_panel %}
+
 {% block header %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {{ super() }}
 {% include 'parts/styles.css' %}
 {% include 'parts/code_cell.css' %}
-{% include 'parts/control_panel.css' %}
+{{ control_panel.css() }}
 {% include 'parts/preview.css' %}
-{% endblock header %}
 
+
+{% endblock header %}
+{{ macro.killcell() }}
 
 {% block codecell %}
 {% if cell['metadata'].get('kernel',none) is not none %}
@@ -57,12 +62,12 @@
 
 
 {% block body %}
-{% include "parts/control_panel.html" %}
+{{ control_panel.html() }}
 {{ super() }}
 {% endblock body %}
 
 {% block footer %}
-{% include "parts/control_panel.js" %}
+{{ control_panel.js() }}
 {% include "parts/preview.js" %}
 {{ super() }}
 {% endblock footer %}
