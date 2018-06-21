@@ -393,7 +393,7 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     if sargs.template:
         sos_template = os.path.join(os.path.split(os.path.abspath(__file__))[0],
             'templates', sargs.template + ('' if sargs.template.endswith('.tpl') else '.tpl'))
-        unknown_args = ['--template', sos_template if os.path.isfile(sos_template) else sargs.template] + unknown_args
+        unknown_args = ['--template', sos_template if os.path.isfile(sos_template) else os.path.abspath(sargs.template)] + unknown_args
     export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args, view=sargs.view)
 
 
