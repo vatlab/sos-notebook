@@ -27,6 +27,12 @@ before_install:
     - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     - conda install pandas numpy
 
+    # Octave, needed for testing these targets inside sos notebook
+    - sudo apt-get install octave
+    # R
+    - conda install -c r r-markdown r-rmarkdown r-base64enc  pandoc
+    # ruby
+    - sudo apt-get install ruby-full
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown
     - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz
