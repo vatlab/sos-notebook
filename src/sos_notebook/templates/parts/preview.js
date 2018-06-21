@@ -1,38 +1,5 @@
-{% block header %}
-{{ super() }}
-
-<style type="text/css">
-
-.dataframe_container { max-height: 400px }
-.dataframe_input {
-    border: 1px solid #ddd;
-    margin-bottom: 5px;
-}
-
-.scatterplot_by_rowname div.xAxis div.tickLabel {
-    transform: translateY(15px) translateX(15px) rotate(45deg);
-    -ms-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -moz-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -webkit-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -o-transform: translateY(15px) translateX(15px) rotate(45deg);
-    /*rotation-point:50% 50%;*/
-    /*rotation:270deg;*/
-}
-
-.sos_dataframe td, .sos_dataframe th, .sos_dataframe tr {
-    white-space: nowrap;
-    border: none;
-}
-
-.sos_dataframe tr:hover {
-    background-color: #e6f2ff;
-}
-</style>
-{% blockend header %}
-
-{% block footer %}
-
 <script>
+
 function filterDataFrame(id) {
     var input = document.getElementById("search_" + id);
     var filter = input.value.toUpperCase();
@@ -99,7 +66,3 @@ function sortDataFrame(id, n, dtype) {
 }
 
 </script>
-
-{{ super() }}
-
-{% endblock footer %}
