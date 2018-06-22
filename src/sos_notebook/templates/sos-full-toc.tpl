@@ -28,6 +28,5 @@
 
 
 {% block markdowncell %}
- <p>whatever</p>
   {{ super() | replace('&#182;', '')}}
 {%- endblock markdowncell -%}
