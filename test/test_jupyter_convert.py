@@ -69,11 +69,14 @@ report('this is action report')
         subprocess.call('sos convert test.ipynb test_wf.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf.html --template sos-report', shell=True)
-        self.assertTrue(os.path.isfile('test_wf.html'))
+        subprocess.call('sos convert test.ipynb test_wf1.html --template sos-report', shell=True)
+        self.assertTrue(os.path.isfile('test_wf1.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf.html --template sos-full', shell=True)
-        self.assertTrue(os.path.isfile('test_wf.html'))
+        subprocess.call('sos convert test.ipynb test_wf2.html --template sos-full', shell=True)
+        self.assertTrue(os.path.isfile('test_wf2.html'))
+        # test the use of jupyter templates
+        subprocess.call('sos convert test.ipynb test_wf3.html --template basic', shell=True)
+        self.assertTrue(os.path.isfile('test_wf3.html'))
 
     @unittest.skipIf(not shutil.which('xelatex'), 'No XeLatex under windows to compile pdf')
     def testConvertPDF(self):
