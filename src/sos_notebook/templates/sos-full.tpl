@@ -31,7 +31,9 @@
 {% endif %}
 {% endblock codecell %}
 
-{% block footer %}
-{{ preview.js() }}
+{% block body %}
 {{ super() }}
-{% endblock footer %}
+{{ preview.js() }}
+{% block footer_js %}
+{% endblock footer_js %}
+{% endblock body %}

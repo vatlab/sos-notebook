@@ -54,7 +54,6 @@ textarea.sos-source {
 </script>
 <script>
     function highlight_cells(cells, i, interval) {
-        console.log(cells[i].name);
         setTimeout(function() {
             var editor = CodeMirror.fromTextArea(cells[i], {
                 lineNumbers: false,
@@ -71,6 +70,6 @@ textarea.sos-source {
         }, interval);
     }
 
-    highlight_cells(document.getElementsByClassName("sos-source"), 0, 100);
+    highlight_cells(document.getElementsByClassName("sos-source"), 0, 10);
 </script>
 {% endmacro %}
