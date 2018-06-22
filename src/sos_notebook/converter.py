@@ -331,10 +331,13 @@ def export_notebook(exporter_class, to_format, notebook_file, output_file, unkno
         with open(cfg_file, 'w') as cfg:
             cfg.write(f'''
 import os
+import sos
+import sos_notebook
 
 c = get_config()
-custom_path = '{os.path.join(os.path.split(os.path.abspath(__file__))[0], 'templates')}'
-c.TemplateExporter.template_path.append(custom_path)
+c.TemplateExporter.template_path.extend([
+  os.path.join(os.path.split(os.path.abspath(sos.__file__))[0], 'templates'),
+  os.path.join(os.path.split(os.path.abspath(sos_notebook.__file__))[0], 'templates')])
 ''')
     if not output_file:
         import tempfile
