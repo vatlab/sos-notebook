@@ -53,6 +53,21 @@
   color: rgba(0,0,0,.4);
   font-family: monospace;
 }
+
+
+.cm-sos-interpolated {
+  background-color: #EDD5F3;
+}
+
+.cm-sos-sigil {
+  background-color: #EDD5F3;
+}
+
+
+pre.section-header.CodeMirror-line {
+  background-color: #f7f7f7;
+  border-top: 1px solid #ddd;
+}
 </style>
 
 
