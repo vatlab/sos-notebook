@@ -48,7 +48,7 @@ $(document).ready(function() {
 
     for (var a = pos + 1; a < docs.length; a++) {
         var name = docs[a]
-        $(".toc #toc-level0").append('<li><a href="' + path + '/doc/documentation/' + name + '.html">' + name.replace(/_/g, " ") +
+        $(".toc #toc-level0").append('<li><a href="' + path + '/doc/{{topic}}/' + name + '.html">' + name.replace(/_/g, " ") +
             '&nbsp' + '<i class="fa fa-caret-right"></i>' + '</a></li>');
     }
 });
