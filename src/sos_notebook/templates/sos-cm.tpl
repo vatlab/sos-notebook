@@ -13,7 +13,7 @@
 {% block input %}
 {%- if cell['metadata'].get('kernel',none) is not none -%}
 <div class="inner_cell" >
-  <div class="input_area cm-s-ipython" style="min-height: {{(cell.source.splitlines() | length)*1.42857143 + 1.1}}em">
+  <div class="input_area cm-s-ipython" style="min-height: {{(cell.source.splitlines() | length)*1.21429 + 1.1}}em">
    <textarea rows="{{ cell.source.splitlines() | length }}"
       class="sos-source" name="{{cell['metadata'].get('kernel')}}">{{ cell.source }}</textarea>
   </div>
