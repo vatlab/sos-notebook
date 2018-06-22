@@ -68,15 +68,27 @@ report('this is action report')
     def testConvertHTML(self):
         subprocess.call('sos convert test.ipynb test_wf.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf.html'))
-        #
-        subprocess.call('sos convert test.ipynb test_wf1.html --template sos-report', shell=True)
+        # test the use of jupyter templates
+        subprocess.call('sos convert test.ipynb test_wf1.html --template basic', shell=True)
         self.assertTrue(os.path.isfile('test_wf1.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf2.html --template sos-full', shell=True)
+        subprocess.call('sos convert test.ipynb test_wf2.html --template sos-report', shell=True)
         self.assertTrue(os.path.isfile('test_wf2.html'))
-        # test the use of jupyter templates
-        subprocess.call('sos convert test.ipynb test_wf3.html --template basic', shell=True)
+        #
+        subprocess.call('sos convert test.ipynb test_wf3.html --template sos-full', shell=True)
         self.assertTrue(os.path.isfile('test_wf3.html'))
+        #
+        subprocess.call('sos convert test.ipynb test_wf4.html --template sos-cm', shell=True)
+        self.assertTrue(os.path.isfile('test_wf4.html'))
+        #
+        subprocess.call('sos convert test.ipynb test_wf5.html --template sos-full-toc', shell=True)
+        self.assertTrue(os.path.isfile('test_wf5.html'))
+        #
+        subprocess.call('sos convert test.ipynb test_wf6.html --template sos-report-toc', shell=True)
+        self.assertTrue(os.path.isfile('test_wf6.html'))
+        #
+        subprocess.call('sos convert test.ipynb test_wf7.html --template sos-cm-toc', shell=True)
+        self.assertTrue(os.path.isfile('test_wf7.html'))
 
     @unittest.skipIf(not shutil.which('xelatex'), 'No XeLatex under windows to compile pdf')
     def testConvertPDF(self):
