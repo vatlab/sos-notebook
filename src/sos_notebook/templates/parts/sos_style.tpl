@@ -65,10 +65,62 @@
 
 
 pre.section-header.CodeMirror-line {
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
   background-color: #f7f7f7;
-  border-top: 1px solid #ddd;
+  /* border-top: 1px solid #ddd; */
 }
+
+.code_cell .cm-header-1,
+.code_cell .cm-header-2,
+.code_cell .cm-header-3,
+.code_cell .cm-header-4,
+.code_cell .cm-header-5,
+.code_cell .cm-header-6
+{
+    font-size: 100%;
+    font-style: normal;
+    font-weight: normal;
+    font-family: monospace;
+}
+
+
+
+div.cell {
+  /* Old browsers */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-box-align: stretch;
+  display: -moz-box;
+  -moz-box-orient: vertical;
+  -moz-box-align: stretch;
+  display: box;
+  box-orient: vertical;
+  box-align: stretch;
+  /* Modern browsers */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 2px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  width: 100%;
+  padding: 5px;
+  /* This acts as a spacer between cells, that is outside the border */
+  margin: 0px;
+  outline: none;
+  position: relative;
+  overflow: visible;
+}
+
+
 </style>
+
 
 
 {% endmacro %}

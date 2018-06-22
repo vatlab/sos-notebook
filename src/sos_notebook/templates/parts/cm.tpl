@@ -1,7 +1,6 @@
 {% macro css() %}
 
 <link type="text/css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/codemirror.css">
-<link rel="stylesheet" href="https://vatlab.github.io/sos-docs/css/jt.css">
 
 <style type="text/css">
 
@@ -27,7 +26,7 @@ textarea.sos-source {
   border: none;
   font-family: monospace;
   height: auto;
-  padding: 0.4em;
+  padding: 4px;
   outline: none;
   position: relative;
   resize: none;
