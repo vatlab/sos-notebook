@@ -935,8 +935,6 @@ class SoS_Kernel(IPythonKernel):
             try:
                 origin = subprocess.check_output(
                     ['git', 'ls-remote', '--get-url', 'origin']).decode().strip()
-                from urllib.parse import urlparse
-                parts = urlparse(origin)
                 repo = origin[:-4] if origin.endswith('.git') else origin
             except Exception as e:
                 repo = ''
@@ -946,10 +944,12 @@ class SoS_Kernel(IPythonKernel):
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
                     if self._debug_mode:
-                        self.warn(f"source is set to {args.source} with repo={repo}")
+                        self.warn(
+                            f"source is set to {args.source} with repo={repo}")
                 else:
                     args.source = ''
-                    self.warn(f'A default source URL is unavailable for repository {repo}')
+                    self.warn(
+                        f'A default source URL is unavailable for repository {repo}')
         text = '''
         <table class="revision_table">
         <tr>
@@ -979,7 +979,8 @@ class SoS_Kernel(IPythonKernel):
                     links.append(f'<a target="_blank" href="{URL}">{name}</a>')
             if links:
                 fields[0] += ' (' + ', '.join(links) + ')'
-            text += '<tr>' + '\n'.join(f'<td>{x}</td>' for x in fields) + '</tr>'
+            text += '<tr>' + \
+                '\n'.join(f'<td>{x}</td>' for x in fields) + '</tr>'
         text += '</table>'
         self.send_response(self.iopub_socket, 'display_data',
                            {
@@ -1881,7 +1882,7 @@ Available subkernels:\n{}'''.format(
         if args.config:
             from sos.utils import load_config_files
             load_config_files(args.config)
-        cfg = env.sos_dict['CONFIG']
+        env.sos_dict['CONFIG']
         try:
             host = Host(args.host)
             #
@@ -1905,7 +1906,7 @@ Available subkernels:\n{}'''.format(
         if args.config:
             from sos.utils import load_config_files
             load_config_files(args.config)
-        cfg = env.sos_dict['CONFIG']
+        env.sos_dict['CONFIG']
         try:
             host = Host(args.host)
             #
@@ -2020,7 +2021,8 @@ Available subkernels:\n{}'''.format(
                             item, ['stream', 'display_data', 'execution_result', 'error'])
                         if not self._debug_mode:
                             # if the variable or expression is invalid, do not do anything
-                            responses = [x for x in responses if x[0] != 'error']
+                            responses = [
+                                x for x in responses if x[0] != 'error']
                         if responses:
                             self.send_frontend_msg('display_data',
                                                    {'metadata': {},
@@ -2031,9 +2033,11 @@ Available subkernels:\n{}'''.format(
                                                     })
                             for response in responses:
                                 # self.warn(f'{response[0]} {response[1]}' )
-                                self.send_frontend_msg(response[0], response[1])
+                                self.send_frontend_msg(
+                                    response[0], response[1])
                         else:
-                            raise ValueError(f'Cannot preview expresison {item}')
+                            raise ValueError(
+                                f'Cannot preview expresison {item}')
                 except Exception as e:
                     if not handled[idx]:
                         self.send_frontend_msg('stream',
@@ -2059,7 +2063,6 @@ Available subkernels:\n{}'''.format(
         cur_kernel = self.kernel
         try:
             for kernel in self.kernels.keys():
-                kinfo = self.subkernels.find(kernel)
                 if kernel not in self.supported_languages:
                     self.warn(
                         f'Current directory of kernel {kernel} is not changed: unsupported language')
@@ -3093,7 +3096,8 @@ Available subkernels:\n{}'''.format(
             options, remaining_code = self.get_magic_and_code(code, True)
             parser = self.get_revisions_parser()
             try:
-                args, unknown_args = parser.parse_known_args(shlex.split(options))
+                args, unknown_args = parser.parse_known_args(
+                    shlex.split(options))
             except SystemExit:
                 return
             try:

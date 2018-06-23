@@ -6,22 +6,17 @@
 import os
 import datetime
 import shlex
-import subprocess
 import sys
-import tempfile
-import time
 
 from sos.__main__ import get_run_parser
-from sos._version import __version__
 from sos.eval import SoS_exec
 from sos.parser import SoS_Script
 from sos.step_executor import PendingTasks
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import (RemovedTarget, UnavailableLock, BaseTarget,
-                         UnknownTarget, file_target, path, sos_targets)
-from sos.utils import _parse_error, env, get_traceback, load_config_files
-from sos.workflow_executor import Base_Executor, __null_func__
-from sos.report import workflow_report, render_report
+from sos.targets import (RemovedTarget, UnavailableLock,
+                         UnknownTarget, sos_targets)
+from sos.utils import _parse_error, env, get_traceback
+from sos.workflow_executor import Base_Executor
 
 from collections import defaultdict
 from typing import Union, DefaultDict
@@ -63,7 +58,8 @@ class Interactive_Executor(Base_Executor):
 
         # this is the result returned by the workflow, if the
         # last stement is an expression.
-        wf_result =  {'__workflow_id__': my_workflow_id, 'shared': {}, '__last_res__': None}
+        wf_result = {'__workflow_id__': my_workflow_id,
+                     'shared': {}, '__last_res__': None}
 
         # process step of the pipelinp
         if isinstance(targets, str):
@@ -211,10 +207,9 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         return
 
     if args.__bin_dirs__:
-        import fasteners
         for d in args.__bin_dirs__:
             if d == '~/.sos/bin' and not os.path.isdir(os.path.expanduser(d)):
-                os.makedirs(os.path.expanduser(d), exist_ok = True)
+                os.makedirs(os.path.expanduser(d), exist_ok=True)
         os.environ['PATH'] = os.pathsep.join(
             [os.path.expanduser(x) for x in args.__bin_dirs__]) + os.pathsep + os.environ['PATH']
 

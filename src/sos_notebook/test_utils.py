@@ -94,6 +94,7 @@ def get_result(iopub):
     # suppress pyflakes warning
     array
     matrix
+    uint8
     # it can also have dict_keys, we will have to redefine it
 
     def dict_keys(args):
