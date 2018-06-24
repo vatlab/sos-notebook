@@ -50,12 +50,12 @@ class FlushableStringIO:
         self.name = name
 
     def write(self, content):
-        if content.startswith('!sos_hint:'):
+        if content.startswith('sos:: '):
             self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
                                       {
                                           'metadata': {},
                                           'data': {'text/html': HTML(
-                                              f'<div class="sos_hint">{content[10:].strip()}</div>').data}
+                                              f'<div class="sos_hint">{content[6:].strip()}</div>').data}
                                       })
         else:
             if self.name == 'stdout':
