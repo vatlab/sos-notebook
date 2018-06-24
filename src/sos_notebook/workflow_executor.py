@@ -40,7 +40,7 @@ class Interactive_Executor(Base_Executor):
         for key in ('_input', 'step_input'):
             env.sos_dict.pop(key, None)
 
-    def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode='interactive'):
+    def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode=None):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
         The code can be simple SoS/Python statements, one SoS step, or more
         or more SoS workflows with multiple steps. This executor,
@@ -52,8 +52,9 @@ class Interactive_Executor(Base_Executor):
         '''
         # if there is no valid code do nothing
         self.reset_dict()
-        env.config['run_mode'] = mode
-        env.sos_dict.set('run_mode', mode)
+        if mode:
+            env.config['run_mode'] = mode
+        env.sos_dict.set('run_mode', env.config['run_mode'])
         self.completed = defaultdict(int)
 
         # this is the result returned by the workflow, if the
@@ -251,7 +252,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             'config_file': args.__config__,
             'output_dag': args.__dag__,
             'output_report': args.__report__,
-            'sig_mode': args.__sig_mode__,
+            'sig_mode': 'ignore' if args.dryrun else args.__sig_mode__,
             'default_queue': '' if args.__queue__ is None else args.__queue__,
             'wait_for_task': True if args.__wait__ is True or args.dryrun else (False if args.__no_wait__ else None),
             'resume_mode': kernel is not None and kernel._resume_execution,
