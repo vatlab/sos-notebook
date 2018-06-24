@@ -52,9 +52,10 @@ class Interactive_Executor(Base_Executor):
         '''
         # if there is no valid code do nothing
         self.reset_dict()
-        if mode:
-            env.config['run_mode'] = mode
-        env.sos_dict.set('run_mode', env.config['run_mode'])
+        if not mode:
+            mode = env.config.get('run_mode', 'interactive')
+        else:
+            env.sos_dict.set('run_mode', mode)
         self.completed = defaultdict(int)
 
         # this is the result returned by the workflow, if the
