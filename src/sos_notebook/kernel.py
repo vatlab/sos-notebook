@@ -51,13 +51,16 @@ class FlushableStringIO:
 
     def write(self, content):
         if content.startswith('sos:: '):
+            content = content.splitlines()
+            hint_line = content[0][6:].strip()
+            content = '\n'.join(content[1:])
             self.kernel.send_response(self.kernel.iopub_socket, 'display_data',
                                       {
                                           'metadata': {},
                                           'data': {'text/html': HTML(
-                                              f'<div class="sos_hint">{content[6:].strip()}</div>').data}
+                                              f'<div class="sos_hint">{hint_line}</div>').data}
                                       })
-        else:
+        if content:
             if self.name == 'stdout':
                 if self.kernel._meta['capture_result'] is not None:
                     self.kernel._meta['capture_result'] += content
