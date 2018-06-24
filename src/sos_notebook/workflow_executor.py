@@ -54,8 +54,11 @@ class Interactive_Executor(Base_Executor):
         self.reset_dict()
         if not mode:
             mode = env.config.get('run_mode', 'interactive')
-        else:
-            env.config['run_mode'] = mode
+            # if user specified wrong mode with this executor, correct it.
+            if mode == 'run':
+                mode = 'interactive'
+        env.config['run_mode'] = mode
+        env.sos_dict.set('run_mode', mode)
         self.completed = defaultdict(int)
 
         # this is the result returned by the workflow, if the
