@@ -119,7 +119,8 @@ def header_to_toc(text, id):
         if matched:
             text = text.replace(matched.group(1), '')
         if not anchor:
-            anchor = re.sub('[^ a-zA-Z0-9]', '', text).replace(' ', '-')
+            anchor = re.sub('[^ a-zA-Z0-9]', '',
+                            text).strip().replace(' ', '-')
         # handle ` ` in header
         text = re.sub('`(.*?)`', '<code>\\1</code>', text)
         line_level = header.count('#')
