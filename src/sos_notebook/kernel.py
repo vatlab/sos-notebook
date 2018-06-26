@@ -101,9 +101,9 @@ class subkernel(object):
         return f'subkernel {self.name} with kernel {self.kernel} for language {self.language} with color {self.color}'
 
 
-def header_to_toc(text):
+def header_to_toc(text, id):
     '''Convert a bunch of ## header to TOC'''
-    toc = ['<div class="toc">']
+    toc = [f'<div class="toc" id="{id}">' if id else '<div class="toc">']
     lines = text.splitlines()
     level = None
     for line in lines:
@@ -119,7 +119,7 @@ def header_to_toc(text):
         if matched:
             text = text.replace(matched.group(1), '')
         if not anchor:
-            anchor = re.sub('\W', '', text.replace(' ', '-'))
+            anchor = re.sub('[^ a-zA-Z0-9]', '', text).replace(' ', '-')
         # handle ` ` in header
         text = re.sub('`(.*?)`', '<code>\\1</code>', text)
         line_level = header.count('#')
@@ -805,6 +805,8 @@ class SoS_Kernel(IPythonKernel):
                          help='''Show the TOC in side panel even if the panel is currently closed''')
         loc.add_argument('-n', '--notebook', action='store_true',
                          help='''Show the TOC in the main notebook.''')
+        parser.add_argument(
+            '--id', help='''Optional ID of the generated TOC.''')
         parser.error = self._parse_error
         return parser
 
@@ -2671,7 +2673,7 @@ Available subkernels:\n{}'''.format(
                 self.send_response(self.iopub_socket, 'display_data',
                                    {'metadata': {},
                                     'data': {
-                                       'text/html': header_to_toc(self._meta['toc'])
+                                       'text/html': header_to_toc(self._meta['toc'], args.id)
                                    },
                                    })
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
