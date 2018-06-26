@@ -107,8 +107,22 @@ def header_to_toc(text):
     lines = text.splitlines()
     level = None
     for line in lines:
-        m, t = line.split(' ', 1)
-        line_level = m.count('#')
+        header, text = line.split(' ', 1)
+        # the header might have anchor link like <a id="videos"></a>
+        matched = re.match('.*(<a\s+id="(.*)">.*</a>).*', text)
+        anchor = ''
+        if matched:
+            text = text.replace(matched.group(1), '')
+            anchor = matched.group(2)
+        # remove image
+        matched = re.match('.*(<img .*>).*', text)
+        if matched:
+            text = text.replace(matched.group(1), '')
+        if not anchor:
+            anchor = re.sub('\W', '', text.replace(' ', '-'))
+        # handle ` ` in header
+        text = re.sub('`(.*?)`', '<code>\\1</code>', text)
+        line_level = header.count('#')
         if level is None:
             top_level = line_level
             level = top_level - 1
@@ -119,7 +133,7 @@ def header_to_toc(text):
             # end last one
             toc.append('</ul>')
         level = line_level
-        toc.append(f'''<li><a href="#{t.replace(' ', '-')}">{t}</a></li>''')
+        toc.append(f'''<li><a href="#{anchor}">{text}</a></li>''')
     toc.append('</div>')
     return HTML('\n'.join(toc)).data
 
