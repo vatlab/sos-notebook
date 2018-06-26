@@ -101,6 +101,29 @@ class subkernel(object):
         return f'subkernel {self.name} with kernel {self.kernel} for language {self.language} with color {self.color}'
 
 
+def header_to_toc(text):
+    '''Convert a bunch of ## header to TOC'''
+    toc = ['<div class="toc">']
+    lines = text.splitlines()
+    level = None
+    for line in lines:
+        m, t = line.split(' ', 1)
+        line_level = m.count('#')
+        if level is None:
+            top_level = line_level
+            level = top_level - 1
+        if line_level > level:
+            # increase level, new ui
+            toc.append(f'<ul class="toc-item lev{line_level - top_level}">')
+        elif line_level < level:
+            # end last one
+            toc.append('</ul>')
+        level = line_level
+        toc.append(f'''<li><a href="#{t.replace(' ', '-')}">{t}</a></li>''')
+    toc.append('</div>')
+    return HTML('\n'.join(toc)).data
+
+
 class Subkernels(object):
     # a collection of subkernels
     def __init__(self, kernel):
@@ -762,7 +785,12 @@ class SoS_Kernel(IPythonKernel):
 
     def get_toc_parser(self):
         parser = argparse.ArgumentParser(prog='%toc',
-                                         description='''Display toc in the side panel''')
+                                         description='''Generate a table of content from the current notebook.''')
+        loc = parser.add_mutually_exclusive_group()
+        loc.add_argument('-p', '--panel', action='store_true',
+                         help='''Show the TOC in side panel even if the panel is currently closed''')
+        loc.add_argument('-n', '--notebook', action='store_true',
+                         help='''Show the TOC in the main notebook.''')
         parser.error = self._parse_error
         return parser
 
@@ -2342,6 +2370,7 @@ Available subkernels:\n{}'''.format(
                 'cell_kernel': self.kernel,
                 'resume_execution': False,
                 'hard_switch_kernel': False,
+                'toc': '',
             }
             return self._meta
 
@@ -2359,6 +2388,7 @@ Available subkernels:\n{}'''.format(
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'resume_execution': True if 'rerun' in meta and meta['rerun'] else False,
             'hard_switch_kernel': False,
+            'toc': meta.get('toc', ''),
         }
         # remove path and extension
         self._meta['notebook_name'] = os.path.basename(
@@ -2605,14 +2635,31 @@ Available subkernels:\n{}'''.format(
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_sessioninfo_parser()
             try:
-                args = parser.parse_known_args(shlex.split(options))
+                parser.parse_known_args(shlex.split(options))
             except SystemExit:
                 return
             self.handle_sessioninfo()
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_TOC.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
-            self.send_frontend_msg('show_toc')
+            parser = self.get_toc_parser()
+            try:
+                args = parser.parse_args(shlex.split(options))
+            except SystemExit:
+                return
+            if args.panel:
+                self._meta['use_panel'] = True
+            elif args.notebook:
+                self._meta['use_panel'] = False
+            if self._meta['use_panel']:
+                self.send_frontend_msg('show_toc')
+            else:
+                self.send_response(self.iopub_socket, 'display_data',
+                                   {'metadata': {},
+                                    'data': {
+                                       'text/html': header_to_toc(self._meta['toc'])
+                                   },
+                                   })
             return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         elif self.MAGIC_DICT.match(code):
             # %dict should be the last magic
@@ -3049,6 +3096,7 @@ Available subkernels:\n{}'''.format(
                             arg.template = 'sos-report'
                     else:
                         arg.template = args.template
+                    arg.view = False
                     notebook_to_html(self._meta['notebook_name'] + '.ipynb',
                                      filename, sargs=arg, unknown_args=[])
 

@@ -207,6 +207,22 @@ define([
     }
   }
 
+  function hasTOCMagic(code) {
+    let lines = code.split("\n");
+    for (let l = 0; l < lines.length; ++l) {
+      // ignore starting comment, new line and ! lines
+      if (lines[l].startsWith("#") || lines[l].trim() === "" || lines[l].startsWith("!")) {
+        continue;
+      }
+      // other magic
+      if (lines[l].startsWith("%toc")) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+
   // get the workflow part of text from a cell
   function getCellWorkflow(cell) {
     var lines = cell.get_text().split("\n");
@@ -225,7 +241,7 @@ define([
         while (c >= 0 && lines[c].startsWith('#')) {
             comment = lines[c] + '\n' + comment;
             c -= 1;
-		}
+		    }
         workflow += comment + lines.slice(l).join("\n") + "\n\n";
         break;
       }
@@ -245,6 +261,22 @@ define([
     return workflow;
   }
 
+  function scan_table_of_content(cells)
+  {
+    let TOC = ''
+    for (let i = 0; i < cells.length; ++i) {
+      let cell = cells[i];
+      if (cell.cell_type === "markdown") {
+        var lines = cell.get_text().split("\n");
+        for (let l = 0; l < lines.length; ++l) {
+          if (lines[l].match('^#+ ')) {
+            TOC += lines[l] + '\n';
+          }
+        }
+      }
+    }
+    return TOC;
+  }
 
   var my_execute = function(code, callbacks, options) {
     /* check if the code is a workflow call, which is marked by
@@ -257,6 +289,9 @@ define([
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
       options.sos.workflow = getNotebookWorkflow(cells);
+    }
+    if (hasTOCMagic(code)) {
+      options.sos.toc = scan_table_of_content(cells)
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
