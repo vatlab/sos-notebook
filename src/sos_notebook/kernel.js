@@ -63,9 +63,6 @@ define([
   // Initial style is always side but the style is saved and we can honor this
   // configuration later on.
   nb.metadata["sos"]["panel"].style = "side";
-  if (!nb.metadata["sos"].default_kernel) {
-    nb.metadata["sos"]["default_kernel"] = "SoS";
-  }
 
   var data = nb.metadata["sos"]["kernels"];
   // upgrade existing meta data if it uses the old 3 item format
@@ -294,7 +291,6 @@ define([
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
-    options.sos.default_kernel = nb.metadata["sos"].default_kernel;
     options.sos.rerun = false;
     for (var i = cells.length - 1; i >= 0; --i) {
       // this is the cell that is being executed...
@@ -302,7 +298,6 @@ define([
       // also, because a cell might be starting without a previous cell
       // being finished, we should start from reverse and check actual code
       if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
-        // use cell kernel if meta exists, otherwise use nb.metadata["sos"].default_kernel
         if (window._auto_resume) {
           options.sos.rerun = true;
           window._auto_resume = false;
@@ -452,27 +447,6 @@ define([
       add_lan_selector(window.my_panel.cell);
       changeStyleOnKernel(window.my_panel.cell);
     }
-
-    var dropdown = $("<select></select>").attr("id", "kernel_selector")
-      .css("margin-left", "0.75em")
-      .attr("class", "form-control select-xs");
-    // .change(select_kernel);
-    if (Jupyter.toolbar.element.has("#kernel_selector").length === 0) {
-      Jupyter.toolbar.element.append(dropdown);
-    }
-    // remove any existing items
-    $("#kernel_selector").empty();
-    $.each(window.KernelList, function(key, value) {
-      $("#kernel_selector")
-        .append($("<option/>")
-          .attr("value", window.DisplayName[value[0]])
-          .text(window.DisplayName[value[0]]));
-    });
-    $("#kernel_selector").val(nb.metadata.sos.default_kernel);
-    $("#kernel_selector").change(function() {
-      var kernel_type = $("#kernel_selector").val();
-      nb.metadata["sos"].default_kernel = kernel_type;
-    });
   }
 
   var show_toc = function(evt) {
