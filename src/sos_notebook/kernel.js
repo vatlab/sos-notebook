@@ -2016,8 +2016,14 @@ table.task_table {
   function add_lan_selector(cell) {
     // for a new cell? NOTE that the cell could be a markdown cell.
     // A selector would be added although not displayed.
-    if (!cell.metadata.kernel)
-      cell.metadata.kernel = nb.metadata.sos.default_kernel;
+    if (!cell.metadata.kernel) {
+      let idx = nb.find_cell_index(cell);
+      if (idx === 0 || nb.get_cell(idx - 1).cell_type !== 'code') {
+        cell.metadata.kernel = 'SoS';
+      } else {
+        cell.metadata.kernel = nb.get_cell(idx - 1).metadata['kernel'];
+      }
+    }
     var kernel = cell.metadata.kernel;
     if (cell.element[0].getElementsByClassName("cell_kernel_selector").length > 0) {
       // update existing list
