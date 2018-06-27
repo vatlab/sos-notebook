@@ -1985,12 +1985,17 @@ table.task_table {
     // for a new cell? NOTE that the cell could be a markdown cell.
     // A selector would be added although not displayed.
     if (!cell.metadata.kernel) {
-      let idx = nb.find_cell_index(cell);
-      if (idx === 0 || nb.get_cell(idx - 1).cell_type !== 'code') {
-        cell.metadata.kernel = 'SoS';
-      } else {
-        cell.metadata.kernel = nb.get_cell(idx - 1).metadata['kernel'];
+      var idx = nb.find_cell_index(cell);
+      var kernel = 'SoS';
+      if (idx > 0) {
+        for (idx = idx - 1; idx >= 0; --idx) {
+          if (nb.get_cell(idx).cell_type === 'code') {
+            kernel = nb.get_cell(idx).metadata['kernel'];
+            break;
+          }
+        }
       }
+      cell.metadata.kernel = kernel;
     }
     var kernel = cell.metadata.kernel;
     if (cell.element[0].getElementsByClassName("cell_kernel_selector").length > 0) {
