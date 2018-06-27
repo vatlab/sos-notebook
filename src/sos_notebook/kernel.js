@@ -239,9 +239,9 @@ define([
         let c = l - 1
         let comment = ''
         while (c >= 0 && lines[c].startsWith('#')) {
-            comment = lines[c] + '\n' + comment;
-            c -= 1;
-		    }
+          comment = lines[c] + '\n' + comment;
+          c -= 1;
+        }
         workflow += comment + lines.slice(l).join("\n") + "\n\n";
         break;
       }
@@ -261,8 +261,7 @@ define([
     return workflow;
   }
 
-  function scan_table_of_content(cells)
-  {
+  function scan_table_of_content(cells) {
     let TOC = ''
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
