@@ -128,14 +128,24 @@ def header_to_toc(text, id):
             top_level = line_level
             level = top_level - 1
         if line_level > level:
-            # increase level, new ui
-            toc.append(f'<ul class="toc-item lev{line_level - top_level}">')
+            # level          2
+            # line_leval     4
+            # add level 3, 4
+            for l in range(level + 1, line_level + 1):
+                # increase level, new ui
+                toc.append(f'<ul class="toc-item lev{l - top_level}">')
         elif line_level < level:
-            # end last one
-            toc.append('</ul>')
+            # level          4
+            # line_level     2
+            # end level 4 and 3.
+            for level in range(level - line_level):
+                # end last one
+                toc.append('</ul>')
         level = line_level
         toc.append(f'''<li><a href="#{anchor}">{text}</a></li>''')
-    toc.append('</div>')
+    # if last level is 4, toplevel is 2 ...
+    for level in range(level - top_level):
+        toc.append('</div>')
     return HTML('\n'.join(toc)).data
 
 
