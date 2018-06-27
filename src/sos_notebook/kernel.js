@@ -555,12 +555,6 @@ define([
         //add dropdown menu of kernels in frontend
         load_select_kernel();
         console.log("kernel list updated");
-      } else if (msg_type === "default-kernel") {
-        // update the cells when the notebook is being opened.
-        // we also set a global kernel to be used for new cells
-        $("#kernel_selector").val(window.DisplayName[data]);
-        // a side effect of change is cells without metadata kernel info will change background
-        $("#kernel_selector").change();
       } else if (msg_type === "cell-kernel") {
         // get cell from passed cell index, which was sent through the
         // %frontend magic

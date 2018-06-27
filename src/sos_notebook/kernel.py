@@ -2505,8 +2505,6 @@ Available subkernels:\n{}'''.format(
         # trigger post processing of object and display matplotlib figures
         self.shell.events.trigger('post_execute')
         # tell the frontend the kernel for the "next" cell
-        if store_history:
-            self.send_frontend_msg('default-kernel', self.kernel)
         return ret
 
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
