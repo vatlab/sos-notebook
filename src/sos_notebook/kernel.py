@@ -189,6 +189,9 @@ class Subkernels(object):
                 # undefined language also use default theme color
                 self._kernel_list.append(subkernel(name=spec, kernel=spec))
 
+    def kernel_list(self):
+        return self._kernel_list
+
     # now, no kernel is found, name has to be a new name and we need some definition
     # if kernel is defined
     def add_or_replace(self, kdef):
@@ -939,7 +942,6 @@ class SoS_Kernel(IPythonKernel):
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.last_executed_code = ''
-        self.RET_VARS = []
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
         # enable matplotlib by default #77
@@ -1518,18 +1520,15 @@ class SoS_Kernel(IPythonKernel):
         reply['content']['execution_count'] = self._execution_count
         return reply['content']
 
-    def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
+    def switch_kernel(self, kernel, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
             self.send_response(self.iopub_socket, 'stream',
                                dict(name='stdout', text='''\
-Current subkernel: {} (kernel={}, language={}, color="{}")
 Active subkernels: {}
-Available subkernels:\n{}'''.format(
-                                   kinfo.name, kinfo.kernel, kinfo.language if kinfo.language else "undefined", kinfo.color,
-                                   ', '.join(self.kernels.keys()),
-                                   '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.subkernels]))))
+Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
+                                    '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.subkernels.kernel_list()]))))
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
@@ -1552,16 +1551,13 @@ Available subkernels:\n{}'''.format(
             # automatically shared variables to sos (done by the following) (#375)
             if kinfo.name != 'SoS':
                 self.switch_kernel('SoS')
-                self.switch_kernel(kinfo.name, in_vars, ret_vars)
+                self.switch_kernel(kinfo.name)
         elif kinfo.name == 'SoS':
-            # switch from non-sos to sos kernel
-            self.handle_magic_put(self.RET_VARS)
-            self.RET_VARS = []
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
-            self.switch_kernel('SoS', in_vars, ret_vars)
-            self.switch_kernel(kinfo.name, in_vars, ret_vars)
+            self.switch_kernel('SoS')
+            self.switch_kernel(kinfo.name)
         else:
             if self._debug_mode:
                 self.warn(f'Switch from {self.kernel} to {kinfo.name}')
@@ -1589,15 +1585,12 @@ Available subkernels:\n{}'''.format(
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
             self.KM, self.KC = self.kernels[kinfo.name]
-            self.RET_VARS = [] if ret_vars is None else ret_vars
             self.kernel = kinfo.name
             if new_kernel and self.kernel in self.supported_languages:
                 init_stmts = self.supported_languages[self.kernel](
                     self, kinfo.kernel).init_statements
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
-            #
-            self.handle_magic_get(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
@@ -2776,10 +2769,12 @@ Available subkernels:\n{}'''.format(
                         }
             original_kernel = self.kernel
             try:
-                self.switch_kernel(args.name, args.in_vars, args.out_vars)
+                self.switch_kernel(args.name)
+                if args.in_vars:
+                    self.handle_magic_get(args.in_vars)
             except Exception as e:
                 self.warn(
-                    f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
+                    f'Failed to switch to subkernel {args.name}): {e}')
                 return {'status': 'error',
                         'ename': e.__class__.__name__,
                         'evalue': str(e),
@@ -2789,6 +2784,8 @@ Available subkernels:\n{}'''.format(
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
+                if args.out_vars:
+                    self.handle_magic_put(args.out_vars)
                 self.switch_kernel(original_kernel)
         elif self.MAGIC_USE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
@@ -2810,8 +2807,8 @@ Available subkernels:\n{}'''.format(
                 self.shutdown_kernel(args.name)
                 self.warn(f'{args.name} is shutdown')
             try:
-                self.switch_kernel(args.name, None, None,
-                                   args.kernel, args.language, args.color)
+                self.switch_kernel(args.name, args.kernel,
+                                   args.language, args.color)
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn(
