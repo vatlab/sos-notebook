@@ -89,6 +89,7 @@ setup(name="sos-notebook",
           'wand',
           'markdown',
           'pandas',
+          'matplotlib',
           # language modules
           'sos-bash>=0.9.12.2',
           'sos-javascript>=0.9.12.2',
