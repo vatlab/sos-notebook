@@ -942,6 +942,7 @@ class SoS_Kernel(IPythonKernel):
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.last_executed_code = ''
+        self._kernel_return_vars = []
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
         # enable matplotlib by default #77
@@ -1520,7 +1521,7 @@ class SoS_Kernel(IPythonKernel):
         reply['content']['execution_count'] = self._execution_count
         return reply['content']
 
-    def switch_kernel(self, kernel, kernel_name=None, language=None, color=None):
+    def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
@@ -1551,13 +1552,16 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             # automatically shared variables to sos (done by the following) (#375)
             if kinfo.name != 'SoS':
                 self.switch_kernel('SoS')
-                self.switch_kernel(kinfo.name)
+                self.switch_kernel(kinfo.name, in_vars, ret_vars)
         elif kinfo.name == 'SoS':
+            self.handle_magic_put(self._kernel_return_vars)
+            self.RET_VARS = []
+            self.handle_magic_put()
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
-            self.switch_kernel('SoS')
-            self.switch_kernel(kinfo.name)
+            self.switch_kernel('SoS', in_vars, ret_vars)
+            self.switch_kernel(kinfo.name, in_vars, ret_vars)
         else:
             if self._debug_mode:
                 self.warn(f'Switch from {self.kernel} to {kinfo.name}')
@@ -1585,12 +1589,15 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
             self.KM, self.KC = self.kernels[kinfo.name]
+            self._kernel_return_vars = [] if ret_vars is None else ret_vars
             self.kernel = kinfo.name
             if new_kernel and self.kernel in self.supported_languages:
                 init_stmts = self.supported_languages[self.kernel](
                     self, kinfo.kernel).init_statements
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
+            # passing
+            self.handle_magic_get(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
@@ -2769,9 +2776,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                         }
             original_kernel = self.kernel
             try:
-                self.switch_kernel(args.name)
-                if args.in_vars:
-                    self.handle_magic_get(args.in_vars)
+                self.switch_kernel(args.name, args.in_vars, args.out_vars)
             except Exception as e:
                 self.warn(
                     f'Failed to switch to subkernel {args.name}): {e}')
@@ -2784,8 +2789,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
-                if args.out_vars:
-                    self.handle_magic_put(args.out_vars)
                 self.switch_kernel(original_kernel)
         elif self.MAGIC_USE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
@@ -2807,7 +2810,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.shutdown_kernel(args.name)
                 self.warn(f'{args.name} is shutdown')
             try:
-                self.switch_kernel(args.name, args.kernel,
+                self.switch_kernel(args.name, None, None, args.kernel,
                                    args.language, args.color)
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:

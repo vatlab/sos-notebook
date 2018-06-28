@@ -3,13 +3,6 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-#
-# NOTE: for some namespace reason, this test can only be tested using
-# nose.
-#
-# % nosetests test_kernel.py
-#
-#
 import os
 import sys
 import unittest
@@ -32,6 +25,28 @@ class TestSoSKernel(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.olddir)
+
+    def testAutoSharedVars(self):
+        '''Test the sharing of variables automatically'''
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            execute(kc=kc, code="""\
+sos_null = None
+sos_num = 123
+""")
+            wait_for_idle(kc)
+            execute(kc=kc, code="%use Python3")
+            wait_for_idle(kc)
+            execute(kc=kc, code="sos_num")
+            res = get_display_data(iopub)
+            self.assertEqual(res, '123')
+            execute(kc=kc, code="sos_num = sos_num + 10")
+            wait_for_idle(kc)
+            execute(kc=kc, code="%use sos")
+            wait_for_idle(kc)
+            execute(kc=kc, code="sos_num")
+            res = get_display_data(iopub)
+            self.assertEqual(res, '133')
 
     def testMagicDict(self):
         '''Test %dict magic'''
