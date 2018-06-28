@@ -63,9 +63,6 @@ define([
   // Initial style is always side but the style is saved and we can honor this
   // configuration later on.
   nb.metadata["sos"]["panel"].style = "side";
-  if (!nb.metadata["sos"].default_kernel) {
-    nb.metadata["sos"]["default_kernel"] = "SoS";
-  }
 
   var data = nb.metadata["sos"]["kernels"];
   // upgrade existing meta data if it uses the old 3 item format
@@ -239,9 +236,9 @@ define([
         let c = l - 1
         let comment = ''
         while (c >= 0 && lines[c].startsWith('#')) {
-            comment = lines[c] + '\n' + comment;
-            c -= 1;
-		    }
+          comment = lines[c] + '\n' + comment;
+          c -= 1;
+        }
         workflow += comment + lines.slice(l).join("\n") + "\n\n";
         break;
       }
@@ -261,8 +258,7 @@ define([
     return workflow;
   }
 
-  function scan_table_of_content(cells)
-  {
+  function scan_table_of_content(cells) {
     let TOC = ''
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
@@ -295,7 +291,6 @@ define([
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
-    options.sos.default_kernel = nb.metadata["sos"].default_kernel;
     options.sos.rerun = false;
     for (var i = cells.length - 1; i >= 0; --i) {
       // this is the cell that is being executed...
@@ -303,7 +298,6 @@ define([
       // also, because a cell might be starting without a previous cell
       // being finished, we should start from reverse and check actual code
       if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
-        // use cell kernel if meta exists, otherwise use nb.metadata["sos"].default_kernel
         if (window._auto_resume) {
           options.sos.rerun = true;
           window._auto_resume = false;
@@ -453,27 +447,6 @@ define([
       add_lan_selector(window.my_panel.cell);
       changeStyleOnKernel(window.my_panel.cell);
     }
-
-    var dropdown = $("<select></select>").attr("id", "kernel_selector")
-      .css("margin-left", "0.75em")
-      .attr("class", "form-control select-xs");
-    // .change(select_kernel);
-    if (Jupyter.toolbar.element.has("#kernel_selector").length === 0) {
-      Jupyter.toolbar.element.append(dropdown);
-    }
-    // remove any existing items
-    $("#kernel_selector").empty();
-    $.each(window.KernelList, function(key, value) {
-      $("#kernel_selector")
-        .append($("<option/>")
-          .attr("value", window.DisplayName[value[0]])
-          .text(window.DisplayName[value[0]]));
-    });
-    $("#kernel_selector").val(nb.metadata.sos.default_kernel);
-    $("#kernel_selector").change(function() {
-      var kernel_type = $("#kernel_selector").val();
-      nb.metadata["sos"].default_kernel = kernel_type;
-    });
   }
 
   var show_toc = function(evt) {
@@ -582,12 +555,6 @@ define([
         //add dropdown menu of kernels in frontend
         load_select_kernel();
         console.log("kernel list updated");
-      } else if (msg_type === "default-kernel") {
-        // update the cells when the notebook is being opened.
-        // we also set a global kernel to be used for new cells
-        $("#kernel_selector").val(window.DisplayName[data]);
-        // a side effect of change is cells without metadata kernel info will change background
-        $("#kernel_selector").change();
       } else if (msg_type === "cell-kernel") {
         // get cell from passed cell index, which was sent through the
         // %frontend magic
@@ -2017,8 +1984,19 @@ table.task_table {
   function add_lan_selector(cell) {
     // for a new cell? NOTE that the cell could be a markdown cell.
     // A selector would be added although not displayed.
-    if (!cell.metadata.kernel)
-      cell.metadata.kernel = nb.metadata.sos.default_kernel;
+    if (!cell.metadata.kernel) {
+      var idx = nb.find_cell_index(cell);
+      var kernel = 'SoS';
+      if (idx > 0) {
+        for (idx = idx - 1; idx >= 0; --idx) {
+          if (nb.get_cell(idx).cell_type === 'code') {
+            kernel = nb.get_cell(idx).metadata['kernel'];
+            break;
+          }
+        }
+      }
+      cell.metadata.kernel = kernel;
+    }
     var kernel = cell.metadata.kernel;
     if (cell.element[0].getElementsByClassName("cell_kernel_selector").length > 0) {
       // update existing list

@@ -128,14 +128,24 @@ def header_to_toc(text, id):
             top_level = line_level
             level = top_level - 1
         if line_level > level:
-            # increase level, new ui
-            toc.append(f'<ul class="toc-item lev{line_level - top_level}">')
+            # level          2
+            # line_leval     4
+            # add level 3, 4
+            for l in range(level + 1, line_level + 1):
+                # increase level, new ui
+                toc.append(f'<ul class="toc-item lev{l - top_level}">')
         elif line_level < level:
-            # end last one
-            toc.append('</ul>')
+            # level          4
+            # line_level     2
+            # end level 4 and 3.
+            for level in range(level - line_level):
+                # end last one
+                toc.append('</ul>')
         level = line_level
         toc.append(f'''<li><a href="#{anchor}">{text}</a></li>''')
-    toc.append('</div>')
+    # if last level is 4, toplevel is 2 ...
+    for level in range(level - top_level):
+        toc.append('</div>')
     return HTML('\n'.join(toc)).data
 
 
@@ -178,6 +188,9 @@ class Subkernels(object):
             else:
                 # undefined language also use default theme color
                 self._kernel_list.append(subkernel(name=spec, kernel=spec))
+
+    def kernel_list(self):
+        return self._kernel_list
 
     # now, no kernel is found, name has to be a new name and we need some definition
     # if kernel is defined
@@ -813,7 +826,8 @@ class SoS_Kernel(IPythonKernel):
 
     def get_use_parser(self):
         parser = argparse.ArgumentParser(prog='%use',
-                                         description='''Switch to a specified subkernel.''')
+                                         description='''Switch to an existing subkernel
+            or start a new subkernel.''')
         parser.add_argument('name', nargs='?', default='',
                             help='''Displayed name of kernel to start (if no kernel with name is
             specified) or switch to (if a kernel with this name is already started).
@@ -838,42 +852,15 @@ class SoS_Kernel(IPythonKernel):
             used to reset color to default.''')
         parser.add_argument('-r', '--restart', action='store_true',
                             help='''Restart the kernel if it is running.''')
-        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
-                            help='Input variables (variables to get from SoS kernel)')
-        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
-                            help='''Output variables (variables to put back to SoS kernel
-            before switching back to the SoS kernel''')
         parser.error = self._parse_error
         return parser
 
     def get_with_parser(self):
         parser = argparse.ArgumentParser(prog='%with',
-                                         description='''Use specified the subkernel to evaluate current
-            cell''')
+                                         description='''Use specified subkernel to evaluate current
+            cell, with optional input and output variables''')
         parser.add_argument('name', nargs='?', default='',
-                            help='''Displayed name of kernel to start (if no kernel with name is
-            specified) or switch to (if a kernel with this name is already started).
-            The name is usually a kernel name (e.g. %use ir) or a language name
-            (e.g. %use R) in which case the language name will be used. One or
-            more parameters --language or --kernel will need to be specified
-            if a new name is used to start a separate instance of a kernel.''')
-        parser.add_argument('-k', '--kernel',
-                            help='''kernel name as displayed in the output of jupyter kernelspec
-            list. Default to the default kernel of selected language (e.g. ir for
-            language R.''')
-        parser.add_argument('-l', '--language',
-                            help='''Language extension that enables magics such as %get and %put
-            for the kernel, which should be in the name of a registered language
-            (e.g. R), or a specific language module in the format of
-            package.module:class. SoS maitains a list of languages and kernels
-            so this option is only needed for starting a new instance of a kernel.
-            ''')
-        parser.add_argument('-c', '--color',
-                            help='''Background color of existing or new kernel, which overrides
-            the default color of the language. A special value "default" can be
-            used to reset color to default.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-                            help='''Restart the kernel if it is running.''')
+                            help='''Name of an existing kernel.''')
         parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
                             help='Input variables (variables to get from SoS kernel)')
         parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
@@ -955,7 +942,6 @@ class SoS_Kernel(IPythonKernel):
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.last_executed_code = ''
-        self.RET_VARS = []
         self._failed_languages = {}
         env.__task_notifier__ = self.notify_task_status
         # enable matplotlib by default #77
@@ -1534,18 +1520,15 @@ class SoS_Kernel(IPythonKernel):
         reply['content']['execution_count'] = self._execution_count
         return reply['content']
 
-    def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
+    def switch_kernel(self, kernel, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
             self.send_response(self.iopub_socket, 'stream',
                                dict(name='stdout', text='''\
-Current subkernel: {} (kernel={}, language={}, color="{}")
 Active subkernels: {}
-Available subkernels:\n{}'''.format(
-                                   kinfo.name, kinfo.kernel, kinfo.language if kinfo.language else "undefined", kinfo.color,
-                                   ', '.join(self.kernels.keys()),
-                                   '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.subkernels]))))
+Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
+                                    '\n'.join(['    {} ({})'.format(x.name, x.kernel) for x in self.subkernels.kernel_list()]))))
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
@@ -1568,16 +1551,13 @@ Available subkernels:\n{}'''.format(
             # automatically shared variables to sos (done by the following) (#375)
             if kinfo.name != 'SoS':
                 self.switch_kernel('SoS')
-                self.switch_kernel(kinfo.name, in_vars, ret_vars)
+                self.switch_kernel(kinfo.name)
         elif kinfo.name == 'SoS':
-            # switch from non-sos to sos kernel
-            self.handle_magic_put(self.RET_VARS)
-            self.RET_VARS = []
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
-            self.switch_kernel('SoS', in_vars, ret_vars)
-            self.switch_kernel(kinfo.name, in_vars, ret_vars)
+            self.switch_kernel('SoS')
+            self.switch_kernel(kinfo.name)
         else:
             if self._debug_mode:
                 self.warn(f'Switch from {self.kernel} to {kinfo.name}')
@@ -1605,15 +1585,12 @@ Available subkernels:\n{}'''.format(
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
             self.KM, self.KC = self.kernels[kinfo.name]
-            self.RET_VARS = [] if ret_vars is None else ret_vars
             self.kernel = kinfo.name
             if new_kernel and self.kernel in self.supported_languages:
                 init_stmts = self.supported_languages[self.kernel](
                     self, kinfo.kernel).init_statements
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
-            #
-            self.handle_magic_get(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
@@ -2386,7 +2363,6 @@ Available subkernels:\n{}'''.format(
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
                 'resume_execution': False,
-                'hard_switch_kernel': False,
                 'toc': '',
             }
             return self._meta
@@ -2404,7 +2380,6 @@ Available subkernels:\n{}'''.format(
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'resume_execution': True if 'rerun' in meta and meta['rerun'] else False,
-            'hard_switch_kernel': False,
             'toc': meta.get('toc', ''),
         }
         # remove path and extension
@@ -2430,7 +2405,6 @@ Available subkernels:\n{}'''.format(
             if self.subkernels.find(self._meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
                 self.switch_kernel(self._meta['default_kernel'])
                 # evaluate user expression
-            original_kernel = self.kernel
         except Exception as e:
             self.warn(
                 f'Failed to switch to language {self._meta["default_kernel"]}: {e}\n')
@@ -2467,8 +2441,6 @@ Available subkernels:\n{}'''.format(
                     }
         finally:
             self._meta['resume_execution'] = False
-            if not self._meta['hard_switch_kernel']:
-                self.switch_kernel(original_kernel)
 
         if ret is None:
             ret = {'status': 'ok',
@@ -2495,8 +2467,6 @@ Available subkernels:\n{}'''.format(
         # trigger post processing of object and display matplotlib figures
         self.shell.events.trigger('post_execute')
         # tell the frontend the kernel for the "next" cell
-        if store_history:
-            self.send_frontend_msg('default-kernel', self.kernel)
         return ret
 
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
@@ -2798,14 +2768,13 @@ Available subkernels:\n{}'''.format(
                         'execution_count': self._execution_count,
                         }
             original_kernel = self.kernel
-            if args.restart and args.name in self.kernels:
-                self.shutdown_kernel(args.name)
             try:
-                self.switch_kernel(args.name, args.in_vars, args.out_vars,
-                                   args.kernel, args.language, args.color)
+                self.switch_kernel(args.name)
+                if args.in_vars:
+                    self.handle_magic_get(args.in_vars)
             except Exception as e:
                 self.warn(
-                    f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
+                    f'Failed to switch to subkernel {args.name}): {e}')
                 return {'status': 'error',
                         'ename': e.__class__.__name__,
                         'evalue': str(e),
@@ -2815,6 +2784,8 @@ Available subkernels:\n{}'''.format(
             try:
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
+                if args.out_vars:
+                    self.handle_magic_put(args.out_vars)
                 self.switch_kernel(original_kernel)
         elif self.MAGIC_USE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
@@ -2836,9 +2807,8 @@ Available subkernels:\n{}'''.format(
                 self.shutdown_kernel(args.name)
                 self.warn(f'{args.name} is shutdown')
             try:
-                self.switch_kernel(args.name, args.in_vars, args.out_vars,
-                                   args.kernel, args.language, args.color)
-                self._meta['hard_switch_kernel'] = True
+                self.switch_kernel(args.name, args.kernel,
+                                   args.language, args.color)
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.warn(
@@ -3359,6 +3329,8 @@ Available subkernels:\n{}'''.format(
             # if the cell starts with comment, and newline, remove it
             lines = code.splitlines()
             empties = [x.startswith('#') or not x.strip() for x in lines]
+            self.send_frontend_msg(
+                'cell-kernel', [self._meta['cell_id'], 'SoS'])
             if all(empties):
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             else:
@@ -3372,8 +3344,6 @@ Available subkernels:\n{}'''.format(
             try:
                 self.run_sos_code(code, silent)
                 if self._meta['cell_id']:
-                    self.send_frontend_msg(
-                        'cell-kernel', [self._meta['cell_id'], 'SoS'])
                     self._meta['cell_id'] = ""
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
