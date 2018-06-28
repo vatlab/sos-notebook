@@ -1555,8 +1555,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.switch_kernel(kinfo.name, in_vars, ret_vars)
         elif kinfo.name == 'SoS':
             self.handle_magic_put(self._kernel_return_vars)
-            self.RET_VARS = []
-            self.handle_magic_put()
+            self._kernel_return_vars = []
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
