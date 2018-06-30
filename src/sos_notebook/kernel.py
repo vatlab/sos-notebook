@@ -105,7 +105,10 @@ def header_to_toc(text, id):
     '''Convert a bunch of ## header to TOC'''
     toc = [f'<div class="toc" id="{id}">' if id else '<div class="toc">']
     lines = text.splitlines()
-    level = None
+    if not lines:
+        return ''
+    top_level = min(x.split(' ').count('#') for x in lines)
+    level = top_level - 1
     for line in lines:
         header, text = line.split(' ', 1)
         # the header might have anchor link like <a id="videos"></a>
@@ -124,9 +127,6 @@ def header_to_toc(text, id):
         # handle ` ` in header
         text = re.sub('`(.*?)`', '<code>\\1</code>', text)
         line_level = header.count('#')
-        if level is None:
-            top_level = line_level
-            level = top_level - 1
         if line_level > level:
             # level          2
             # line_leval     4
@@ -144,8 +144,9 @@ def header_to_toc(text, id):
         level = line_level
         toc.append(f'''<li><a href="#{anchor}">{text}</a></li>''')
     # if last level is 4, toplevel is 2 ...
-    for level in range(level - top_level):
-        toc.append('</div>')
+    if level:
+        for level in range(level - top_level):
+            toc.append('</div>')
     return HTML('\n'.join(toc)).data
 
 

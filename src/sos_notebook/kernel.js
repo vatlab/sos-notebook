@@ -185,25 +185,6 @@ define([
     // if some kernel is not registered add them
   }
 
-  // detect if the code contains notebook-involved magics such as %sosrun, sossave, preview
-  function hasWorkflowMagic(code) {
-    let lines = code.split("\n");
-    for (let l = 0; l < lines.length; ++l) {
-      // ignore starting comment, new line and ! lines
-      if (lines[l].startsWith("#") || lines[l].trim() === "" || lines[l].startsWith("!")) {
-        continue;
-      }
-      // other magic
-      if (lines[l].startsWith("%")) {
-        if (lines[l].match(/^%sosrun($|\s)|^%run($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/)) {
-          return true;
-        }
-      } else {
-        return false;
-      }
-    }
-  }
-
   function hasTOCMagic(code) {
     let lines = code.split("\n");
     for (let l = 0; l < lines.length; ++l) {
@@ -279,14 +260,15 @@ define([
      * %sosrun or %sossave workflowname with options
      */
     options.sos = {}
-    var run_notebook = hasWorkflowMagic(code);
+    var run_notebook = code.match(/^%sosrun($|\s)|^%run($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m);
+
     var cells = nb.get_cells();
     if (run_notebook) {
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
       options.sos.workflow = getNotebookWorkflow(cells);
     }
-    if (hasTOCMagic(code)) {
+    if (code.match(/^%toc\s/m)) {
       options.sos.toc = scan_table_of_content(cells)
     }
     options.sos.path = nb.notebook_path;
