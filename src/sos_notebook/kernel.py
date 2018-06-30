@@ -104,10 +104,10 @@ class subkernel(object):
 def header_to_toc(text, id):
     '''Convert a bunch of ## header to TOC'''
     toc = [f'<div class="toc" id="{id}">' if id else '<div class="toc">']
-    lines = text.splitlines()
+    lines = [x for x in text.splitlines() if x.strip()]
     if not lines:
         return ''
-    top_level = min(x.split(' ').count('#') for x in lines)
+    top_level = min(x.split(' ')[0].count('#') for x in lines)
     level = top_level - 1
     for line in lines:
         header, text = line.split(' ', 1)
