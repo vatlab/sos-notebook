@@ -393,7 +393,6 @@ class Subkernels(object):
                 f'No subkernel named {name} is found. Please make sure that you have the kernel installed (listed in the output of "jupyter kernelspec list" and usable in jupyter by itself), install appropriate language module (e.g. "pip install sos-r"), restart jupyter notebook and try again.')
 
     def update(self, notebook_kernel_list):
-        log_to_file(notebook_kernel_list)
         for kinfo in notebook_kernel_list:
             try:
                 # if we can find the kernel, fine...
