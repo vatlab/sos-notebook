@@ -609,8 +609,8 @@ define([
         } else {
           // id, status, status_class, action_class, action_func
           item.className = "fa fa-fw fa-2x " + data[3];
-          item.setAttribute("onmouseover", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[4] + " task_hover').removeClass('" + data[3] + "')");
-          item.setAttribute("onmouseleave", "$('#status_" + data[0] + "_" + data[1] + "').addClass('" + data[3] + "').removeClass('" + data[4] + " task_hover')");
+          item.setAttribute("onmouseover", `'${data[3]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[4]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
+          item.setAttribute("onmouseleave", `'${data[4]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[3]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
           item.setAttribute("onClick", data[5] + "('" + data[1] + "', '" + data[0] + "')");
         }
         var item = document.getElementById("duration_" + data[0] + "_" + data[1]);

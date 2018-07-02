@@ -1257,8 +1257,8 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border: 0px">
                         <i id="status_{tqu}_{tid}"
                             class="fa fa-2x fa-fw {self.status_class[tst]}"
-                            onmouseover="$('#status_{tqu}_{tid}').addClass('{action_class[tst]} task_hover').removeClass('{self.status_class[tst]}')"
-                            onmouseleave="$('#status_{tqu}_{tid}').addClass('{self.status_class[tst]}').removeClass('{action_class[tst]} task_hover')"
+                            onmouseover="'{self.status_class[tst]}'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.remove(x));'{action_class[tst]} task_hover'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.add(x));"
+                            onmouseleave="'{action_class[tst]} task_hover'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.remove(x));'{self.status_class[tst]}'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.add(x));"
                             onclick="{action_func[tst]}('{tid}', '{tqu}')"
                         ></i> </td>
                         <td style="border:0px"><a onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
@@ -1266,9 +1266,7 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border:0px;text-align=right;">
                         <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{PrettyRelativeTime(time.time() - tdt)}</time></pre></td>
                         </tr>
-                        </table>''').data
-                                            }
-                               })
+                        </table>''').data}})
             # keep tracks of my tasks to avoid updating status of
             # tasks that does not belong to the notebook
             self.my_tasks[(tqu, tid)] = time.time()
