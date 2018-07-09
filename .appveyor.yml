@@ -40,8 +40,9 @@ install:
     - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose 
     # https://github.com/jupyter/jupyter/issues/150
     - pip install entrypoints markdown
-    - pip install jupyter wand numpy pandas sos
- 
+    - pip install jupyter wand numpy pandas
+    # install github version of sos
+    - pip install git+https://github.com/vatlab/sos.git
     - pip install pytest
     - pip install . -U
     - python -m sos_notebook.install
