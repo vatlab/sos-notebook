@@ -18,7 +18,9 @@
    {%- endif -%}
    {% endfor %}
 </style>
-
+{{ preview.js() }}
+{% block header_js %}
+{% endblock header_js %}
 {% endblock html_head %}
 
 {% block codecell %}
@@ -33,7 +35,6 @@
 
 {% block body %}
 {{ super() }}
-{{ preview.js() }}
 {% block footer_js %}
 {% endblock footer_js %}
 {% endblock body %}

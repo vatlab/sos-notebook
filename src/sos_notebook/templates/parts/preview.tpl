@@ -33,8 +33,12 @@
 {% endmacro %}
 
 {% macro js() %}
-<script>
+<script src="https://code.jquery.com/jquery-1.7.2.min.js"
+  integrity="sha256-R7aNzoy2gFrVs+pNJ6+SokH04ppcEqJ0yFLkNGoFALQ="
+  crossorigin="anonymous">
+</script>
 
+<script>
 function filterDataFrame(id) {
     var input = document.getElementById("search_" + id);
     var filter = input.value.toUpperCase();
