@@ -595,9 +595,8 @@ define([
         if (!window._duration_updater) {
           window._duration_updater = window.setInterval(function() {
             $("[id^=duration_]").text(function() {
-              if ($(this).attr("class") != "running")
-                return $(this).text();
-              return window.durationFormatter($(this).attr("datetime"));
+              // if class != running, show "started "
+              return window.durationFormatter($(this).attr("datetime"), $(this).attr("class") != "running");
             });
           }, 5000);
         }
@@ -619,8 +618,7 @@ define([
           // stop update and reset time ...
           if (data[2] != "running") {
             var curTime = new Date();
-            item.innerText = window.durationFormatter(item.getAttribute("datetime"));
-            item.setAttribute('datetime', curTime.getTime());
+            item.innerText = window.durationFormatter(item.getAttribute("datetime"), true);
           }
         }
         if (data[2] === "completed") {
@@ -799,13 +797,13 @@ define([
     cell.clear_output();
   };
 
-  window.durationFormatter = function(start_date) {
+  window.durationFormatter = function(start_date, start_only = false) {
     var ms = new Date() - start_date;
     var res = [];
     var seconds = parseInt(ms / 1000);
     var day = Math.floor(seconds / 86400);
     if (day > 0) {
-      res.push(day + " day");
+      res.push(day + " day" + (day > 1 ? "s" : ""));
     }
     var hh = Math.floor((seconds % 86400) / 3600);
     if (hh > 0) {
@@ -819,11 +817,20 @@ define([
     if (ss > 0) {
       res.push(ss + " sec");
     }
-    res = res.join(" ");
-    if (res === "") {
-      return "0 sec";
+    if (start_only) {
+      // we only take day, or hr..
+      if (res.length === 0) {
+        return "started just now"
+      }
+      // we only take day, or hr..
+      return `started ${res[0]} ago`;
     } else {
-      return res;
+      res = res.join(" ");
+      if (res === "") {
+        return "0 sec";
+      } else {
+        return res;
+      }
     }
   };
 
