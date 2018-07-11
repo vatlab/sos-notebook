@@ -3218,17 +3218,30 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 # preview workflow
                 if args.workflow:
                     import random
+                    ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
                     if self._meta['use_panel']:
                         self.send_frontend_msg(
-                            'preview-input', '%preview --workflow')
-                    ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
-                    self.send_frontend_msg('display_data',
-                                           {'metadata': {},
-                                            'data':
-                                            {'text/plain': self._meta['workflow'],
-                                             'text/html': HTML(
+                            'transient_display_data',
+                            {
+                                'title': '%preview --workflow',
+                                'data': {
+                                    'text/plain': self._meta['workflow'],
+                                    'text/html': HTML(
+                                        f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
+                                 },
+                                 'metadata': {}
+                            }
+                        )
+                    else:
+                        self.kernel.send_response(self.kernel.iopub_socket,
+                            'display_data', {
+                                'metadata': {},
+                                'data': {
+                                    'text/plain': self._meta['workflow'],
+                                    'text/html': HTML(
                                                  f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
-                                             }})
+                                    }
+                            })
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:

@@ -738,6 +738,23 @@ define([
         if (active.length > 0) {
           nb.select(active[0]);
         }
+      } else if (msg_type === 'transient_display_data') {
+        let title = data.title;
+        // we ignore page in jupyter
+        let append = data.metadata ? data.metadata.append : false;
+
+        cell = window.my_panel.cell;
+        // current title?
+        let cur_title = cell.get_text();
+        // clear side panel?
+        if (!append || cur_title !== title) {
+          cell.clear_input();
+          cell.set_text(title);
+          cell.clear_output();
+        }
+        // append the output
+        data.output_type = 'display_data';
+        cell.output_area.append_output(data);
       } else {
         // this is preview output
         cell = window.my_panel.cell;
