@@ -1031,8 +1031,9 @@ class SoS_Kernel(IPythonKernel):
             [task_id], verbosity=2, html=True)
         # log_to_file(result)
         if side_panel is True:
-            self.send_frontend_msg('display_data',
-                                   {'metadata': {},
+            self.send_frontend_msg('transient_display_data',
+                                   {'title': f'%taskinfo {task_id} -q {task_queue}',
+                                    'metadata': {},
                                     'data': {'text/plain': result,
                                              'text/html': HTML(result).data
                                              }})

@@ -807,10 +807,6 @@ define([
     send_kernel_msg({
       "task-info": [task_id, task_queue],
     });
-    var cell = window.my_panel.cell;
-    cell.clear_input();
-    cell.set_text("%taskinfo " + task_id + " -q " + task_queue);
-    cell.clear_output();
   };
 
   window.durationFormatter = function(start_date, start_only = false) {
