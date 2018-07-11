@@ -553,11 +553,6 @@ define([
           // otherwise we mark report_output
           $(".output_wrapper", cell.element).addClass("report_output");
         }
-      } else if (msg_type === "preview-input") {
-        cell = window.my_panel.cell;
-        cell.clear_input();
-        cell.set_text(data);
-        cell.clear_output();
       } else if (msg_type === "preview-kernel") {
         window.my_panel.cell.metadata.kernel = data;
         changeStyleOnKernel(window.my_panel.cell);
@@ -739,7 +734,7 @@ define([
           nb.select(active[0]);
         }
       } else if (msg_type === 'transient_display_data') {
-        let title = data.title;
+        let title = data.title ? data.title : "";
         // we ignore page in jupyter
         let append = data.metadata ? data.metadata.append : false;
 
