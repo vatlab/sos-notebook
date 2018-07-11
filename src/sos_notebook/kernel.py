@@ -1033,25 +1033,19 @@ class SoS_Kernel(IPythonKernel):
                                'data': {'text/html': HTML(text).data}
                            })
 
-    def handle_taskinfo(self, task_id, task_queue, side_panel=None):
+    def handle_taskinfo(self, task_id, task_queue):
         # requesting information on task
         from sos.hosts import Host
         host = Host(task_queue)
         result = host._task_engine.query_tasks(
             [task_id], verbosity=2, html=True)
         # log_to_file(result)
-        content = {
+        self.send_frontend_msg('display_data', {
             'metadata': {},
             'data': {'text/plain': result,
                   'text/html': HTML(result).data
-            }}
-        if side_panel is True:
-            self.send_frontend_msg('transient_display_data',
-                make_transient_msg('display_data', content,
-                    title=f'%taskinfo {task_id} -q {task_queue}'))
-        else:
-            self.send_response(self.iopub_socket, 'display_data',
-                content)
+            }}, title=f'%taskinfo {task_id} -q {task_queue}')
+
         # now, there is a possibility that the status of the task is different from what
         # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
         # already get the status, we should update the task engine...
@@ -1162,7 +1156,8 @@ class SoS_Kernel(IPythonKernel):
                     self.notify_task_status(
                         ['change-status', v[1], v[0], 'pending'])
                 elif k == 'task-info':
-                    self.handle_taskinfo(v[0], v[1], side_panel=True)
+                    self._meta['use_panel'] = True
+                    self.handle_taskinfo(v[0], v[1])
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue
@@ -1313,18 +1308,23 @@ class SoS_Kernel(IPythonKernel):
             raise RuntimeError(
                 f'Unrecognized status change message {task_status}')
 
-    def send_frontend_msg(self, msg_type, msg=None, title=''):
+    def send_frontend_msg(self, msg_type, msg=None, title='', append=False):
         # if comm is never created by frontend, the kernel is in test mode without frontend
-        if self._meta['use_panel'] is False and msg_type in ('display_data', 'stream', 'preview-input'):
-            if msg_type in ('display_data', 'stream'):
-                self.send_response(self.iopub_socket, msg_type,
-                                   {} if msg is None else msg)
-            elif msg_type == 'preview-input':
-                self.send_response(self.iopub_socket, 'display_data',
-                                   {
-                                       'metadata': {},
-                                       'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                                   })
+        if msg_type in ('display_data', 'stream'):
+            if self._meta['use_panel'] is False:
+                if msg_type in ('display_data', 'stream'):
+                    self.send_response(self.iopub_socket, msg_type,
+                                       {} if msg is None else msg)
+                elif msg_type == 'preview-input':
+                    self.send_response(self.iopub_socket, 'display_data',
+                                       {
+                                           'metadata': {},
+                                           'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                                       })
+            else:
+                self.frontend_comm.send(
+                    make_transient_msg(msg_type, msg, append=append, title=title),
+                    {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
                                     'msg_type': msg_type})
@@ -3237,14 +3237,9 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                          },
                          'metadata': {}
                     }
-                    if self._meta['use_panel']:
-                        self.send_frontend_msg(
-                            'transient_display_data',
-                            make_transient_msg('display_data', content,
+                    self.send_frontend_msg(
+                            'display_data', content,
                                 title='%preview --workflow'))
-                    else:
-                        self.kernel.send_response(self.kernel.iopub_socket,
-                            'display_data', content)
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:
