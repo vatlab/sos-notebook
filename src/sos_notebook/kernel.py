@@ -149,6 +149,16 @@ def header_to_toc(text, id):
             toc.append('</div>')
     return HTML('\n'.join(toc)).data
 
+# translate a message to transient_display_data message
+def make_transient_msg(msg_type, content, title, append=False):
+    if msg_type == 'display_data':
+        return {
+            'title': title,
+            'data': content['data'],
+            'metadata': ({'append': True} if append else {})
+        }
+    elif msg_type == 'stream':
+        return {}
 
 class Subkernels(object):
     # a collection of subkernels
@@ -1030,19 +1040,18 @@ class SoS_Kernel(IPythonKernel):
         result = host._task_engine.query_tasks(
             [task_id], verbosity=2, html=True)
         # log_to_file(result)
+        content = {
+            'metadata': {},
+            'data': {'text/plain': result,
+                  'text/html': HTML(result).data
+            }}
         if side_panel is True:
             self.send_frontend_msg('transient_display_data',
-                                   {'title': f'%taskinfo {task_id} -q {task_queue}',
-                                    'metadata': {},
-                                    'data': {'text/plain': result,
-                                             'text/html': HTML(result).data
-                                             }})
+                make_transient_msg('display_data', content,
+                    title=f'%taskinfo {task_id} -q {task_queue}'))
         else:
             self.send_response(self.iopub_socket, 'display_data',
-                               {'metadata': {},
-                                'data': {'text/plain': result,
-                                         'text/html': HTML(result).data
-                                         }})
+                content)
         # now, there is a possibility that the status of the task is different from what
         # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
         # already get the status, we should update the task engine...
@@ -1304,7 +1313,7 @@ class SoS_Kernel(IPythonKernel):
             raise RuntimeError(
                 f'Unrecognized status change message {task_status}')
 
-    def send_frontend_msg(self, msg_type, msg=None):
+    def send_frontend_msg(self, msg_type, msg=None, title=''):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if self._meta['use_panel'] is False and msg_type in ('display_data', 'stream', 'preview-input'):
             if msg_type in ('display_data', 'stream'):
@@ -1971,7 +1980,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.warn(f'Failed to interpolate {short_repr(text)}: {e}\n')
             return None
 
-    def handle_magic_preview(self, items, kernel=None, style=None):
+    def handle_magic_preview(self, items, kernel=None, style=None, title=''):
         # expand items
         handled = [False for x in items]
         for idx, item in enumerate(items):
@@ -3220,37 +3229,28 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 if args.workflow:
                     import random
                     ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
+                    content = {
+                        'data': {
+                            'text/plain': self._meta['workflow'],
+                            'text/html': HTML(
+                                f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
+                         },
+                         'metadata': {}
+                    }
                     if self._meta['use_panel']:
                         self.send_frontend_msg(
                             'transient_display_data',
-                            {
-                                'title': '%preview --workflow',
-                                'data': {
-                                    'text/plain': self._meta['workflow'],
-                                    'text/html': HTML(
-                                        f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
-                                 },
-                                 'metadata': {}
-                            }
-                        )
+                            make_transient_msg('display_data', content,
+                                title='%preview --workflow'))
                     else:
                         self.kernel.send_response(self.kernel.iopub_socket,
-                            'display_data', {
-                                'metadata': {},
-                                'data': {
-                                    'text/plain': self._meta['workflow'],
-                                    'text/html': HTML(
-                                                 f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
-                                    }
-                            })
+                            'display_data', content)
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host is None:
-                        if not args.keep_output and self._meta['use_panel']:
-                            self.send_frontend_msg(
-                                'preview-input', f'%preview {" ".join(args.items)}')
                         self.handle_magic_preview(
-                            args.items, args.kernel, style)
+                            args.items, args.kernel, style,
+                            title=f'%preview {" ".join(args.items)}')
                     elif args.workflow:
                         self.warn('Invalid option --kernel with -r (--host)')
                     elif args.kernel:
