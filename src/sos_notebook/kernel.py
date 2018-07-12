@@ -150,12 +150,12 @@ def header_to_toc(text, id):
     return HTML('\n'.join(toc)).data
 
 # translate a message to transient_display_data message
-def make_transient_msg(msg_type, content, title, append=False):
+def make_transient_msg(msg_type, content, title, append=False, page='Info'):
     if msg_type == 'display_data':
         return {
             'title': title,
             'data': content['data'],
-            'metadata': ({'append': True} if append else {})
+            'metadata': {'append': append, 'page': page}
         }
     elif msg_type == 'stream':
         if content['name'] == 'stdout':
@@ -165,7 +165,7 @@ def make_transient_msg(msg_type, content, title, append=False):
                     'text/plain': content['text'],
                     'application/vnd.jupyter.stdout': content['text']
                     },
-                'metadata': ({'append': True} if append else {})
+                'metadata': {'append': append, 'page': page}
             }
         else:
             return {
@@ -174,7 +174,7 @@ def make_transient_msg(msg_type, content, title, append=False):
                     'text/plain': content['text'],
                     'application/vnd.jupyter.stderr': content['text']
                 },
-                'metadata': ({'append': True} if append else {})
+                'metadata': {'append': append, 'page': page}
             }
     else:
         raise ValueError(f"failed to translate message {msg_type} to transient_display_data message")
@@ -1063,7 +1063,7 @@ class SoS_Kernel(IPythonKernel):
             'metadata': {},
             'data': {'text/plain': result,
                   'text/html': HTML(result).data
-            }}, title=f'%taskinfo {task_id} -q {task_queue}')
+            }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
 
         # now, there is a possibility that the status of the task is different from what
         # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
@@ -1327,7 +1327,7 @@ class SoS_Kernel(IPythonKernel):
             raise RuntimeError(
                 f'Unrecognized status change message {task_status}')
 
-    def send_frontend_msg(self, msg_type, msg=None, title='', append=False):
+    def send_frontend_msg(self, msg_type, msg=None, title='', append=False, page='Info'):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
             if self._meta['use_panel'] is False:
@@ -1336,7 +1336,7 @@ class SoS_Kernel(IPythonKernel):
                                        {} if msg is None else msg)
             else:
                 self.frontend_comm.send(
-                    make_transient_msg(msg_type, msg, append=append, title=title),
+                    make_transient_msg(msg_type, msg, append=append, title=title, page=page),
                     {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
@@ -2018,7 +2018,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                      'text/html': HTML(
                                          f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
                                      }
-                            }, title=title, append=False)
+                            }, title=title, append=False, page='Preview')
                     continue
                 else:
                     import glob
@@ -2039,7 +2039,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         if kernel is not None and self.kernel != self.subkernels.find(kernel).name:
             self.switch_kernel(kernel)
         if self._meta['use_panel']:
-            self.send_frontend_msg('preview-kernel', self.kernel)
+            self.send_frontend_msg('preview-kernel', self.kernel, page='Preview')
         try:
             for idx, item in enumerate(items):
                 try:
@@ -2062,10 +2062,10 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                          'text/html': HTML(
                                                              f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
                                                          }
-                                                }, title=title, append=True)
+                                                }, title=title, append=True, page='Preview')
                         self.send_frontend_msg('display_data',
                                                {'execution_count': self._execution_count, 'data': format_dict,
-                                                'metadata': md_dict}, title=title, append=True)
+                                                'metadata': md_dict}, title=title, append=True, page='Preview')
                     else:
                         # evaluate
                         responses = self.get_response(
@@ -2081,11 +2081,11 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                              'text/html': HTML(
                                                                  f'<div class="sos_hint">> {item}:</div>').data
                                                              }
-                                                    }, title=title, append=True)
+                                                    }, title=title, append=True, page='Preview')
                             for response in responses:
                                 # self.warn(f'{response[0]} {response[1]}' )
                                 self.send_frontend_msg(
-                                    response[0], response[1], title=title, append=True)
+                                    response[0], response[1], title=title, append=True, page='Preview')
                         else:
                             raise ValueError(
                                 f'Cannot preview expresison {item}')
@@ -2095,7 +2095,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                dict(name='stderr',
                                                     text='> Failed to preview file or expression {}{}'.format(
                                                         item, f': {e}' if self._debug_mode else '')),
-                                            title=title, append=True)
+                                            title=title, append=True, page='Preview')
         finally:
             self.switch_kernel(orig_kernel)
 
@@ -2232,7 +2232,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                                     x for x in input_files),
                                                                 ', '.join(x for x in output_files))).data
                                                         }
-                                           }, title=title)
+                                           }, title=title, page='Preview')
                 else:
                     self.send_frontend_msg('display_data',
                                            {
@@ -2247,7 +2247,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                                     f'<a target="_blank" href="{x}">{x}</a>' for x
                                                                     in output_files))).data
                                                         }
-                                           }, title=title)
+                                           }, title=title, page='Preview')
                 for filename in output_files:
                     self.preview_file(filename, style=None, title=title)
 
@@ -2296,7 +2296,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                     'text/html': HTML(
                                         f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
                                }
-                               }, title=title, append=True)
+                               }, title=title, append=True, page='Preview')
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
@@ -2321,14 +2321,14 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             self.send_frontend_msg('stream',
                                 dict(name='stderr',
                                     text=f'Failed to load previewer {y}: {e}'),
-                                title=title, append=True)
+                                title=title, append=True, page='Preview')
                             continue
                         break
                 except Exception as e:
                     self.send_frontend_msg('stream', {
                         'name': 'stderr',
                         'text': str(e)},
-                        title=title, append=True)
+                        title=title, append=True, page='Preview')
                     continue
         #
         # if no previewer can be found
@@ -2341,24 +2341,24 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if isinstance(result, str):
                 self.send_frontend_msg('stream',
                                        {'name': 'stdout', 'text': result},
-                                       title=title, append=True)
+                                       title=title, append=True, page='Preview')
             elif isinstance(result, dict):
                 self.send_frontend_msg('display_data',
                                        {'data': result, 'metadata': {}},
-                                       title=title, append=True)
+                                       title=title, append=True, page='Preview')
             elif isinstance(result, [list, tuple]) and len(result) == 2:
                 self.send_frontend_msg('display_data',
                                        {'data': result[0], 'metadata': result[1]},
-                                       title=title, append=True)
+                                       title=title, append=True, page='Preview')
             else:
                 self.send_frontend_msg('stream',
                                        dict(name='stderr', text=f'Unrecognized preview content: {result}'),
-                                       title=title, append=True)
+                                       title=title, append=True, page='Preview')
         except Exception as e:
             if self._debug_mode:
                 self.send_frontend_msg('stream',
                                        dict(name='stderr', text=f'Failed to preview {filename}: {e}'),
-                                       title=title, append=True)
+                                       title=title, append=True, page='Preview')
 
     def render_result(self, res):
         if self._meta['render_result'] is False:
@@ -3265,7 +3265,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                          'metadata': {}
                     }
                     self.send_frontend_msg('display_data', content,
-                                title='%preview --workflow')
+                                title='%preview --workflow', page='Workflow')
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host:
@@ -3281,7 +3281,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             })
                     else:
                         # clear the page
-                        self.send_frontend_msg('transient_display_data', {})
+                        self.send_frontend_msg('transient_display_data', {}, page='Preview')
                     if args.host is None:
                         self.handle_magic_preview(
                             args.items, args.kernel, style,
@@ -3301,7 +3301,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             if self._debug_mode:
                                 self.warn(f'Running "{" ".join(rargs)}"')
                             for msg in eval(subprocess.check_output(rargs)):
-                                self.send_frontend_msg(msg[0], msg[1], title=title, append=True)
+                                self.send_frontend_msg(msg[0], msg[1], title=title, append=True, page='Preview')
                         except Exception as e:
                             self.warn('Failed to preview {} on remote host {}{}'.format(
                                 args.items, args.host, f': {e}' if self._debug_mode else ''))
