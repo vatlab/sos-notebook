@@ -154,7 +154,7 @@ def make_transient_msg(msg_type, content, title, append=False, page='Info'):
     if msg_type == 'display_data':
         return {
             'title': title,
-            'data': content['data'],
+            'data': content.get('data', {}),
             'metadata': {'append': append, 'page': page}
         }
     elif msg_type == 'stream':
@@ -3281,7 +3281,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             })
                     else:
                         # clear the page
-                        self.send_frontend_msg('transient_display_data', {}, page='Preview')
+                        self.send_frontend_msg('display_data', {}, page='Preview')
                     if args.host is None:
                         self.handle_magic_preview(
                             args.items, args.kernel, style,
