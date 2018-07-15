@@ -2339,7 +2339,18 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if not result:
                 return
             if isinstance(result, str):
-                self.send_frontend_msg('stream',
+                if result.startswith('sos:: '):
+                    result = result.splitlines()
+                    hint_line = result[0][6:].strip()
+                    result = '\n'.join(result[1:])
+                    self.send_frontend_msg('display_data',
+                                      {
+                                          'metadata': {},
+                                          'data': {'text/html': HTML(
+                                              f'<div class="sos_hint">{hint_line}</div>').data}
+                                      }, title=title, append=True, page='Preview')
+                if result:
+                    self.send_frontend_msg('stream',
                                        {'name': 'stdout', 'text': result},
                                        title=title, append=True, page='Preview')
             elif isinstance(result, dict):
