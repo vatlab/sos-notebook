@@ -97,6 +97,7 @@ setup(name="sos-notebook",
           'sos-matlab>=0.9.12.1',
           'sos-python>=0.9.12.1',
           'sos-r>=0.9.12.1',
+          'sos-ruby>=0.9.15.0',
           'sos-sas>=0.9.12.2',
       ],
       entry_points='''
