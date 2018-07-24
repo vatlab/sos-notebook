@@ -30,7 +30,7 @@ from jupyter_client import find_connection_file, manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_GLOBAL_SECTION_HEADER, SOS_SECTION_HEADER
-from sos.utils import (PrettyRelativeTime, WorkflowDict, env, log_to_file,
+from sos.utils import (format_relative_time, WorkflowDict, env, log_to_file,
                        pretty_size, short_repr)
 
 from ._version import __version__ as __notebook_version__
@@ -1288,7 +1288,7 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border:0px"><a href='#' onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
-                        <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{PrettyRelativeTime(time.time() - tdt)}</time></pre></td>
+                        <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{format_relative_time(time.time() - tdt)}</time></pre></td>
                         </tr>
                         </table>''').data}})
             # keep tracks of my tasks to avoid updating status of
