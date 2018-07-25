@@ -30,7 +30,7 @@ from jupyter_client import find_connection_file, manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_GLOBAL_SECTION_HEADER, SOS_SECTION_HEADER
-from sos.utils import (format_relative_time, WorkflowDict, env, log_to_file,
+from sos.utils import (format_duration, WorkflowDict, env, log_to_file,
                        pretty_size, short_repr)
 
 from ._version import __version__ as __notebook_version__
@@ -1205,7 +1205,7 @@ class SoS_Kernel(IPythonKernel):
                             continue
                         for tid in tids:
                             tst, tdt = h._task_engine.check_task_status(
-                                tid, unknown='unknown')
+                                tid, unknown='unknown', with_time_stamps=True)
                             self.notify_task_status(
                                 ['change-status', tqu, tid, tst, tdt])
                     self.send_frontend_msg('update-duration', {})
@@ -1233,15 +1233,11 @@ class SoS_Kernel(IPythonKernel):
         'pending': 'fa-square-o',
         'submitted': 'fa-spinner',
         'running': 'fa-spinner fa-pulse fa-spin',
-        'result-ready': 'fa-files-o',
         'completed': 'fa-check-square-o',
         'failed': 'fa-times-circle-o',
         'aborted': 'fa-frown-o',
-        'signature-mismatch': 'fa-question',
         'missing': 'fa-question',
-        # obsolete
         'unknown': 'fa-question',
-        'non-exist': 'fa-question',
     }
 
     def notify_task_status(self, task_status):
@@ -1249,41 +1245,33 @@ class SoS_Kernel(IPythonKernel):
             'pending': 'fa-stop',
             'submitted': 'fa-stop',
             'running': 'fa-stop',
-            'result-ready': 'fa-play',
             'completed': 'fa-play',
             'failed': 'fa-play',
             'aborted': 'fa-play',
-            'signature-mismatch': 'fa-play',
             'missing': 'fa-question',
-            # obsolete
             'unknown': 'fa-question',
-            'non-exist': 'fa-question',
         }
 
         action_func = {
             'pending': 'kill_task',
             'submitted': 'kill_task',
             'running': 'kill_task',
-            'result-ready': 'resume_task',
             'completed': 'resume_task',
             'failed': 'resume_task',
             'aborted': 'resume_task',
-            'signature-mismatch': 'resume_task',
             'missing': 'function(){}',
-            # obsolete
             'unknown': 'function(){}',
-            'non-exist': 'function(){}',
         }
         if task_status[0] == 'new-status':
             tqu, tid, tst, tdt = task_status[1:]
             # tdt contains cretion time, start running time, and duration time.
             if tdt[2]:
-                timer = f'Ran for {format_relative_time(tdt[2])}</time>'
+                timer = f'Ran for {format_duration(tdt[2])}</time>'
             elif tdt[1]:
                 # start running
-                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">Ran for {format_relative_time(time.time() - tdt[1])}</time>'
+                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt[1]*1000}">Ran for {format_duration(time.time() - tdt[1])}</time>'
             else:
-                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">Pending {format_relative_time(time.time() - tdt[0])}</time>'
+                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt[0]*1000}">Pending for {format_duration(time.time() - tdt[0])}</time>'
             self.send_response(self.iopub_socket, 'display_data',
                                {
                                    'metadata': {},
@@ -1299,7 +1287,7 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border:0px"><a href='#' onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
-                        <pre><span id="status_line_{tqu}_{tid}">{timer}</span></pre></td>
+                        <pre><span id="tagline_{tqu}_{tid}">{timer}</span></pre></td>
                         </tr>
                         </table>''').data}})
             # keep tracks of my tasks to avoid updating status of
@@ -1318,7 +1306,7 @@ class SoS_Kernel(IPythonKernel):
                                    [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
             self.my_tasks[(tqu, tid)] = time.time()
         elif task_status[0] == 'pulse-status':
-            tqu, tid, tst = task_status[1:]
+            tqu, tid, tst, tdt = task_status[1:]
             if tst not in ('pending', 'submitted', 'running', 'completed',
                            'failed', 'aborted'):
                 tst = 'unknown'

@@ -39,7 +39,7 @@ class Interactive_Step_Executor(Step_Executor):
         if not tasks:
             return {}
         # wait till the executor responde
-        if all(x[0] == 'completed' for x in self.host.check_status(tasks)):
+        if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
                 print('sos:: {} task{} completed: {}, {}, ..., {}'.format(
                     len(tasks), 's' if len(tasks) > 1 else '',
@@ -53,7 +53,7 @@ class Interactive_Step_Executor(Step_Executor):
             return self.host.retrieve_results(tasks)
         while True:
             res = self.host.check_status(tasks)
-            if all(x[0] not in ('submitted', 'pending', 'running') for x in res):
+            if all(x not in ('submitted', 'pending', 'running') for x in res):
                 #completed = [task for task, status in zip(tasks, res) if status == 'completed']
                 self.host._task_engine.remove_tasks(tasks)
                 return self.host.retrieve_results(tasks)

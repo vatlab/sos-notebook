@@ -591,7 +591,7 @@ define([
           window._duration_updater = window.setInterval(function() {
             $("[id^=duration_]").text(function() {
               // if class != running, show "started "
-              return window.durationFormatter(new Date() - $(this).attr("datetime"), $(this).attr("class") != "running");
+              return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"), $(this).attr("class") != "running");
             });
           }, 5000);
         }
@@ -608,7 +608,7 @@ define([
           item.setAttribute("onClick", data[6] + "('" + data[1] + "', '" + data[0] + "')");
         }
         if (data[2] === "completed") {
-          var item = document.getElementById("status_line_" + data[0] + "_" + data[1]);
+          var item = document.getElementById("tagline_" + data[0] + "_" + data[1]);
           if (item) {
             console.log(data)
             if (data[3][2]) {
@@ -645,14 +645,23 @@ define([
               }
             }
           }
-        } else {
+        } else if (data[2] === "running") {
           var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
           if (item) {
             item.className = data[2];
-            // stop update and reset time ...
-            if (data[2] != "running") {
-              item.innerText = window.durationFormatter(new Date() - item.getAttribute("datetime"), true);
+          } else {
+            // if the timer is not found, it was changed from a terminal status
+            // without this item, so we need to create one
+            var item = document.getElementById("tagline_" + data[0] + "_" + data[1]);
+            if (item) {
+              item.innerHTML = `<time id="duration_${data[0]}_${data[1]}" class="running" datetime="${data[3][1]*1000}">Ran for ${window.durationFormatter(new Date() - data[3][1]*1000)}</time>`
             }
+          }
+        } else {
+          // paused, aborted etc
+          var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
+          if (item) {
+            item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"), true);
           }
         }
       } else if (msg_type === "show_toc") {
@@ -872,7 +881,7 @@ define([
     window.unknown_tasks = [];
     for (i = 0; i < tasks.length; ++i) {
       // status_localhost_5ea9232779ca1959
-      if (tasks[i].id.match("^status_[^_]+_[0-9a-f]{16,32}$")) {
+      if (tasks[i].id.match("^status_.+_[0-9a-f]{16,32}$")) {
         tasks[i].className = "fa fa-fw fa-2x fa-refresh fa-spin";
         window.unknown_tasks.push(tasks[i].id);
       }
@@ -2258,9 +2267,10 @@ table.task_table {
           let mode = findMode(parserConf.base_mode.toLowerCase());
           if (mode) {
             base_mode = CodeMirror.getMode(conf, mode);
-          } else {
-            console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);
           }
+          // } else {
+          //   console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);
+          // }
         }
         // if there is a user specified base mode, this is the single cell mode
         if (base_mode) {
