@@ -591,7 +591,7 @@ define([
           window._duration_updater = window.setInterval(function() {
             $("[id^=duration_]").text(function() {
               // if class != running, show "started "
-              return window.durationFormatter($(this).attr("datetime"), $(this).attr("class") != "running");
+              return window.durationFormatter(new Date() - $(this).attr("datetime"), $(this).attr("class") != "running");
             });
           }, 5000);
         }
@@ -602,20 +602,20 @@ define([
           return;
         } else {
           // id, status, status_class, action_class, action_func
-          item.className = "fa fa-fw fa-2x " + data[3];
-          item.setAttribute("onmouseover", `'${data[3]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[4]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
-          item.setAttribute("onmouseleave", `'${data[4]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[3]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
-          item.setAttribute("onClick", data[5] + "('" + data[1] + "', '" + data[0] + "')");
-        }
-        var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
-        if (item) {
-          item.className = data[2];
-          // stop update and reset time ...
-          if (data[2] != "running") {
-            item.innerText = window.durationFormatter(item.getAttribute("datetime"), true);
-          }
+          item.className = "fa fa-fw fa-2x " + data[4];
+          item.setAttribute("onmouseover", `'${data[4]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[5]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
+          item.setAttribute("onmouseleave", `'${data[5]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[4]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
+          item.setAttribute("onClick", data[6] + "('" + data[1] + "', '" + data[0] + "')");
         }
         if (data[2] === "completed") {
+          var item = document.getElementById("status_line_" + data[0] + "_" + data[1]);
+          if (item) {
+            console.log(data)
+            if (data[3][2]) {
+              // duration is specified
+              item.innerText = `Ran for ${window.durationFormatter(data[3][2]*1000)}`;
+            }
+          }
           /* if successful, let us re-run the cell to submt another task
              or get the result */
           for (cell in window.pending_cells) {
@@ -643,6 +643,15 @@ define([
                 }
                 break;
               }
+            }
+          }
+        } else {
+          var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
+          if (item) {
+            item.className = data[2];
+            // stop update and reset time ...
+            if (data[2] != "running") {
+              item.innerText = window.durationFormatter(new Date() - item.getAttribute("datetime"), true);
             }
           }
         }
@@ -804,8 +813,7 @@ define([
     });
   };
 
-  window.durationFormatter = function(start_date, start_only = false) {
-    var ms = new Date() - start_date;
+  window.durationFormatter = function(ms, start_only = false) {
     var res = [];
     var seconds = parseInt(ms / 1000);
     var day = Math.floor(seconds / 86400);

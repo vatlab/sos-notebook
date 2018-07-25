@@ -150,6 +150,8 @@ def header_to_toc(text, id):
     return HTML('\n'.join(toc)).data
 
 # translate a message to transient_display_data message
+
+
 def make_transient_msg(msg_type, content, title, append=False, page='Info'):
     if msg_type == 'display_data':
         return {
@@ -164,7 +166,7 @@ def make_transient_msg(msg_type, content, title, append=False, page='Info'):
                 'data': {
                     'text/plain': content['text'],
                     'application/vnd.jupyter.stdout': content['text']
-                    },
+                },
                 'metadata': {'append': append, 'page': page}
             }
         else:
@@ -177,7 +179,9 @@ def make_transient_msg(msg_type, content, title, append=False, page='Info'):
                 'metadata': {'append': append, 'page': page}
             }
     else:
-        raise ValueError(f"failed to translate message {msg_type} to transient_display_data message")
+        raise ValueError(
+            f"failed to translate message {msg_type} to transient_display_data message")
+
 
 class Subkernels(object):
     # a collection of subkernels
@@ -1062,8 +1066,8 @@ class SoS_Kernel(IPythonKernel):
         self.send_frontend_msg('display_data', {
             'metadata': {},
             'data': {'text/plain': result,
-                  'text/html': HTML(result).data
-            }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
+                     'text/html': HTML(result).data
+                     }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
 
         # now, there is a possibility that the status of the task is different from what
         # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
@@ -1167,13 +1171,13 @@ class SoS_Kernel(IPythonKernel):
                     from sos.hosts import Host
                     Host(v[1])._task_engine.kill_tasks([v[0]])
                     self.notify_task_status(
-                        ['change-status', v[1], v[0], 'aborted'])
+                        ['change-status', v[1], v[0], 'aborted', (None, None, None)])
                 elif k == 'resume-task':
                     # kill specified task
                     from sos.hosts import Host
                     Host(v[1])._task_engine.resume_task(v[0])
                     self.notify_task_status(
-                        ['change-status', v[1], v[0], 'pending'])
+                        ['change-status', v[1], v[0], 'pending', (None, None, None)])
                 elif k == 'task-info':
                     self._meta['use_panel'] = True
                     self.handle_taskinfo(v[0], v[1])
@@ -1200,10 +1204,10 @@ class SoS_Kernel(IPythonKernel):
                         except Exception:
                             continue
                         for tid in tids:
-                            tst = h._task_engine.check_task_status(
+                            tst, tdt = h._task_engine.check_task_status(
                                 tid, unknown='unknown')
                             self.notify_task_status(
-                                ['change-status', tqu, tid, tst])
+                                ['change-status', tqu, tid, tst, tdt])
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
                     try:
@@ -1270,9 +1274,16 @@ class SoS_Kernel(IPythonKernel):
             'unknown': 'function(){}',
             'non-exist': 'function(){}',
         }
-
         if task_status[0] == 'new-status':
             tqu, tid, tst, tdt = task_status[1:]
+            # tdt contains cretion time, start running time, and duration time.
+            if tdt[2]:
+                timer = f'Ran for {format_relative_time(tdt[2])}</time>'
+            elif tdt[1]:
+                # start running
+                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">Ran for {format_relative_time(time.time() - tdt[1])}</time>'
+            else:
+                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">Pending {format_relative_time(time.time() - tdt[0])}</time>'
             self.send_response(self.iopub_socket, 'display_data',
                                {
                                    'metadata': {},
@@ -1288,7 +1299,7 @@ class SoS_Kernel(IPythonKernel):
                         <td style="border:0px"><a href='#' onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
-                        <pre><time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt*1000}">{format_relative_time(time.time() - tdt)}</time></pre></td>
+                        <pre><span id="status_line_{tqu}_{tid}">{timer}</span></pre></td>
                         </tr>
                         </table>''').data}})
             # keep tracks of my tasks to avoid updating status of
@@ -1299,17 +1310,17 @@ class SoS_Kernel(IPythonKernel):
             if (tqu, tid) in self.my_tasks:
                 self.send_frontend_msg('remove-task', [tqu, tid])
         elif task_status[0] == 'change-status':
-            tqu, tid, tst = task_status[1:]
-            if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
-                           'failed', 'aborted', 'signature-mismatch'):
+            tqu, tid, tst, tdt = task_status[1:]
+            if tst not in ('pending', 'submitted', 'running', 'completed',
+                           'failed', 'aborted'):
                 tst = 'unknown'
             self.send_frontend_msg('task-status',
-                                   [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+                                   [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
             self.my_tasks[(tqu, tid)] = time.time()
         elif task_status[0] == 'pulse-status':
             tqu, tid, tst = task_status[1:]
-            if tst not in ('pending', 'submitted', 'running', 'result-ready', 'completed',
-                           'failed', 'aborted', 'signature-mismatch'):
+            if tst not in ('pending', 'submitted', 'running', 'completed',
+                           'failed', 'aborted'):
                 tst = 'unknown'
             if (tqu, tid) in self.my_tasks:
                 if time.time() - self.my_tasks[(tqu, tid)] < 20:
@@ -1317,11 +1328,11 @@ class SoS_Kernel(IPythonKernel):
                     # can confirm to verify it has been successfully delivered. Otherwise
                     # ignore such message
                     self.send_frontend_msg('task-status',
-                                           [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+                                           [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
             else:
                 # perhaps the pulse one does not have an initial value yet
                 self.send_frontend_msg('task-status',
-                                       [tqu, tid, tst, self.status_class[tst], action_class[tst], action_func[tst]])
+                                       [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
                 self.my_tasks[(tqu, tid)] = time.time()
         else:
             raise RuntimeError(
@@ -1336,7 +1347,8 @@ class SoS_Kernel(IPythonKernel):
                                        {} if msg is None else msg)
             else:
                 self.frontend_comm.send(
-                    make_transient_msg(msg_type, msg, append=append, title=title, page=page),
+                    make_transient_msg(
+                        msg_type, msg, append=append, title=title, page=page),
                     {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
@@ -2013,12 +2025,12 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     handled[idx] = True
                     _, dirs, files = os.walk(item).__next__()
                     self.send_frontend_msg('display_data',
-                           {'metadata': {},
-                            'data': {'text/plain': '>>> ' + item + ':\n',
-                                     'text/html': HTML(
-                                         f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
-                                     }
-                            }, title=title, append=False, page='Preview')
+                                           {'metadata': {},
+                                            'data': {'text/plain': '>>> ' + item + ':\n',
+                                                     'text/html': HTML(
+                                                         f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
+                                                     }
+                                            }, title=title, append=False, page='Preview')
                     continue
                 else:
                     import glob
@@ -2039,7 +2051,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         if kernel is not None and self.kernel != self.subkernels.find(kernel).name:
             self.switch_kernel(kernel)
         if self._meta['use_panel']:
-            self.send_frontend_msg('preview-kernel', self.kernel, page='Preview')
+            self.send_frontend_msg(
+                'preview-kernel', self.kernel, page='Preview')
         try:
             for idx, item in enumerate(items):
                 try:
@@ -2095,7 +2108,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                                dict(name='stderr',
                                                     text='> Failed to preview file or expression {}{}'.format(
                                                         item, f': {e}' if self._debug_mode else '')),
-                                            title=title, append=True, page='Preview')
+                                               title=title, append=True, page='Preview')
         finally:
             self.switch_kernel(orig_kernel)
 
@@ -2214,10 +2227,10 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 title = f'%preview {" ".join(output_files)}'
                 if not self._meta['use_panel']:
                     self.send_response(self.iopub_socket, 'display_data',
-                           {
-                                'metadata': {},
-                                'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                           })
+                                       {
+                                           'metadata': {},
+                                           'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
+                                       })
 
                 if hasattr(self, 'in_sandbox') and self.in_sandbox:
                     # if in sand box, do not link output to their files because these
@@ -2319,9 +2332,9 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             previewer_func = y.load()
                         except Exception as e:
                             self.send_frontend_msg('stream',
-                                dict(name='stderr',
-                                    text=f'Failed to load previewer {y}: {e}'),
-                                title=title, append=True, page='Preview')
+                                                   dict(name='stderr',
+                                                        text=f'Failed to load previewer {y}: {e}'),
+                                                   title=title, append=True, page='Preview')
                             continue
                         break
                 except Exception as e:
@@ -2344,31 +2357,34 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     hint_line = result[0][6:].strip()
                     result = '\n'.join(result[1:])
                     self.send_frontend_msg('display_data',
-                                      {
-                                          'metadata': {},
-                                          'data': {'text/html': HTML(
-                                              f'<div class="sos_hint">{hint_line}</div>').data}
-                                      }, title=title, append=True, page='Preview')
+                                           {
+                                               'metadata': {},
+                                               'data': {'text/html': HTML(
+                                                   f'<div class="sos_hint">{hint_line}</div>').data}
+                                           }, title=title, append=True, page='Preview')
                 if result:
                     self.send_frontend_msg('stream',
-                                       {'name': 'stdout', 'text': result},
-                                       title=title, append=True, page='Preview')
+                                           {'name': 'stdout', 'text': result},
+                                           title=title, append=True, page='Preview')
             elif isinstance(result, dict):
                 self.send_frontend_msg('display_data',
                                        {'data': result, 'metadata': {}},
                                        title=title, append=True, page='Preview')
             elif isinstance(result, [list, tuple]) and len(result) == 2:
                 self.send_frontend_msg('display_data',
-                                       {'data': result[0], 'metadata': result[1]},
+                                       {'data': result[0],
+                                           'metadata': result[1]},
                                        title=title, append=True, page='Preview')
             else:
                 self.send_frontend_msg('stream',
-                                       dict(name='stderr', text=f'Unrecognized preview content: {result}'),
+                                       dict(
+                                           name='stderr', text=f'Unrecognized preview content: {result}'),
                                        title=title, append=True, page='Preview')
         except Exception as e:
             if self._debug_mode:
                 self.send_frontend_msg('stream',
-                                       dict(name='stderr', text=f'Failed to preview {filename}: {e}'),
+                                       dict(
+                                           name='stderr', text=f'Failed to preview {filename}: {e}'),
                                        title=title, append=True, page='Preview')
 
     def render_result(self, res):
@@ -3272,11 +3288,11 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             'text/plain': self._meta['workflow'],
                             'text/html': HTML(
                                 f'<textarea id="{ta_id}">{self._meta["workflow"]}</textarea>').data
-                         },
-                         'metadata': {}
+                        },
+                        'metadata': {}
                     }
                     self.send_frontend_msg('display_data', content,
-                                title='%preview --workflow', page='Workflow')
+                                           title='%preview --workflow', page='Workflow')
                     self.send_frontend_msg('highlight-workflow', ta_id)
                 if not args.off and args.items:
                     if args.host:
@@ -3286,13 +3302,14 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     # reset preview panel
                     if not self._meta['use_panel']:
                         self.send_response(self.iopub_socket, 'display_data',
-                            {
-                            'metadata': {},
-                            'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                            })
+                                           {
+                                               'metadata': {},
+                                               'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
+                                           })
                     else:
                         # clear the page
-                        self.send_frontend_msg('display_data', {}, page='Preview')
+                        self.send_frontend_msg(
+                            'display_data', {}, page='Preview')
                     if args.host is None:
                         self.handle_magic_preview(
                             args.items, args.kernel, style,
@@ -3312,7 +3329,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             if self._debug_mode:
                                 self.warn(f'Running "{" ".join(rargs)}"')
                             for msg in eval(subprocess.check_output(rargs)):
-                                self.send_frontend_msg(msg[0], msg[1], title=title, append=True, page='Preview')
+                                self.send_frontend_msg(
+                                    msg[0], msg[1], title=title, append=True, page='Preview')
                         except Exception as e:
                             self.warn('Failed to preview {} on remote host {}{}'.format(
                                 args.items, args.host, f': {e}' if self._debug_mode else ''))
