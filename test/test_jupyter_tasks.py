@@ -48,7 +48,8 @@ class TestJupyterTasks(unittest.TestCase):
     # dependent tests could run successfully
     #
     def setUp(self):
-        subprocess.call(['sos', 'purge'])
+        #subprocess.call(['sos', 'purge'])
+        pass
 
     def tearDown(self):
         pass
