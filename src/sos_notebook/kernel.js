@@ -591,7 +591,7 @@ define([
           window._duration_updater = window.setInterval(function() {
             $("[id^=duration_]").text(function() {
               // if class != running, show "started "
-              return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"), $(this).attr("class") != "running");
+              return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"));
             });
           }, 5000);
         }
@@ -649,6 +649,9 @@ define([
           var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
           if (item) {
             item.className = data[2];
+            if (data[3][1]) {
+              item.setAttribute("datetime", data[3][1]*1000);
+            }
           } else {
             // if the timer is not found, it was changed from a terminal status
             // without this item, so we need to create one
@@ -661,7 +664,10 @@ define([
           // paused, aborted etc
           var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
           if (item) {
-            item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"), true);
+            if (data[3][1]) {
+              item.setAttribute("datetime", data[3][1]*1000);
+            }
+            item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"));
           }
         }
       } else if (msg_type === "show_toc") {
@@ -822,7 +828,7 @@ define([
     });
   };
 
-  window.durationFormatter = function(ms, start_only = false) {
+  window.durationFormatter = function(ms) {
     var res = [];
     var seconds = parseInt(ms / 1000);
     var day = Math.floor(seconds / 86400);
@@ -841,20 +847,11 @@ define([
     if (ss > 0) {
       res.push(ss + " sec");
     }
-    if (start_only) {
-      // we only take day, or hr..
-      if (res.length === 0) {
-        return "started just now"
-      }
-      // we only take day, or hr..
-      return `started ${res[0]} ago`;
+    res = res.join(" ");
+    if (res === "") {
+      return "0 sec";
     } else {
-      res = res.join(" ");
-      if (res === "") {
-        return "0 sec";
-      } else {
-        return res;
-      }
+      return res;
     }
   };
 
