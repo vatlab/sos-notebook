@@ -1203,9 +1203,7 @@ class SoS_Kernel(IPythonKernel):
                             h = Host(tqu)
                         except Exception:
                             continue
-                        for tid in tids:
-                            tst, tdt = h._task_engine.check_task_status(
-                                tid, unknown='unknown', with_time_stamps=True)
+                        for _, tst, tdt in h._task_engine.monitor_tasks(tids):
                             self.notify_task_status(
                                 ['change-status', tqu, tid, tst, tdt])
                     self.send_frontend_msg('update-duration', {})
