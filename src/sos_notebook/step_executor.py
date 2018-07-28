@@ -41,13 +41,13 @@ class Interactive_Step_Executor(Step_Executor):
         # wait till the executor responde
         if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
-                print('sos:: {} task{} completed: {}, {}, ..., {}'.format(
+                print('HINT: {} task{} completed: {}, {}, ..., {}'.format(
                     len(tasks), 's' if len(tasks) > 1 else '',
                     f"""<a onclick="task_info('{tasks[0]}', '{self.host.alias}')">{tasks[0][:4]}</a>""",
                     f"""<a onclick="task_info('{tasks[1]}', '{self.host.alias}')">{tasks[1][:4]}</a>""",
                     f"""<a onclick="task_info('{tasks[-1]}', '{self.host.alias}')">{tasks[-1][:4]}</a>"""))
             else:
-                print('sos:: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
+                print('HINT: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
                                                              ','.join([f"""<a onclick="task_info('{x}', '{self.host.alias}')">{x[:4]}</a>""" for x in tasks])))
             self.host._task_engine.remove_tasks(tasks)
             return self.host.retrieve_results(tasks)

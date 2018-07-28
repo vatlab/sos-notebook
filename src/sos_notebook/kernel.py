@@ -50,7 +50,7 @@ class FlushableStringIO:
         self.name = name
 
     def write(self, content):
-        if content.startswith('sos:: '):
+        if content.startswith('HINT: '):
             content = content.splitlines()
             hint_line = content[0][6:].strip()
             content = '\n'.join(content[1:])
@@ -2338,7 +2338,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if not result:
                 return
             if isinstance(result, str):
-                if result.startswith('sos:: '):
+                if result.startswith('HINT: '):
                     result = result.splitlines()
                     hint_line = result[0][6:].strip()
                     result = '\n'.join(result[1:])
