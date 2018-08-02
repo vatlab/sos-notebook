@@ -27,22 +27,21 @@ from .step_executor import Interactive_Step_Executor
 
 
 class NotebookLoggingHandler(logging.Handler):
-    def __init__(self, level, kernel=None):
+    def __init__(self, level, kernel=None, title="Log Messages"):
         super(NotebookLoggingHandler, self).__init__(level)
         self.kernel = kernel
+        self.title = title
+
+    def setTitle(self, title):
+        self.title = title
 
     def emit(self, record):
-        if record.msg == '__clear__':
-            self.kernel.send_frontend_msg('display_data', {
-                'metadata': {},
-                'data': {}}, title='Log Messages', append=False, page='SoS')
-            return
         msg = re.sub(r'``([^`]*)``',
                      r'<span class="sos_highlight">\1</span>', record.msg)
         self.kernel.send_frontend_msg('display_data', {
             'metadata': {},
-            'data': {'text/html': f'<div class="sos_{record.levelname.lower()}">{msg}</div>'}
-        }, title='Log Messages', append=True, page='SoS')
+            'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
+        }, title=self.title, append=True, page='SoS')
 
 
 class Interactive_Executor(Base_Executor):
@@ -194,8 +193,9 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
             None: logging.INFO
         }
         env.logger.addHandler(NotebookLoggingHandler(
-            levels[env.verbosity], kernel))
-    env.logger.info('__clear__')
+            levels[env.verbosity], kernel, title=' '.join(sys.argv)))
+    else:
+        env.logger.handers[0].setTitle(' '.join(sys.argv))
 
     dt = datetime.datetime.now().strftime('%m%d%y_%H%M')
     if args.__dag__ is None:

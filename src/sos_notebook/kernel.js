@@ -1733,46 +1733,40 @@ pre.section-header.CodeMirror-line {
     font-size: 80%;
 }
 
+.sos_logging {
+  font-family: monospace;
+  margin: -0.4em;
+  padding-left: 0.4em;
+}
 .sos_hint {
-    color: rgba(0,0,0,.4);
-    font-family: monospace;
+  color: rgba(0,0,0,.4);
 }
 
 .sos_debug {
-    color: blue;
-    font-family: monospace;
-    margin: -0.4em;
+  color: blue;
 }
 
 .sos_trace {
-    color: darkcyan;
-    font-family: monospace;
-    margin: -0.4em;
+  color: darkcyan;
 }
 
 .sos_hilight {
-    color: green;
-    font-family: monospace;
+  color: green;
 }
 
 .sos_info {
     color: black;
-    font-family: monospace;
-    margin: -0.4em;
 }
 
 .sos_warning {
-    color: purple;
-    font-family: monospace;
-    margin: -0.4em;
+  color: black;
+  background: #fdd
 }
 
 .sos_error {
-    color: red;
-    font-family: monospace;
-    margin: -0.4em;
+  color: black;
+  background: #fdd
 }
-
 
 .text_cell .cell_kernel_selector {
     display: none;
