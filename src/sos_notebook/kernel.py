@@ -6,6 +6,7 @@
 import argparse
 import contextlib
 import fnmatch
+import logging
 import os
 import pydoc
 import re
@@ -37,7 +38,7 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .step_executor import PendingTasks
-from .workflow_executor import runfile
+from .workflow_executor import runfile, NotebookLoggingHandler
 
 
 class FlushableStringIO:
@@ -985,6 +986,10 @@ class SoS_Kernel(IPythonKernel):
         self.shell.enable_matplotlib('inline')
         #
         self.editor_kernel = 'sos'
+        # remove all other ahdnlers
+        env.logger.handlers = []
+        env.logger.addHandler(
+            NotebookLoggingHandler(logging.DEBUG, kernel=self))
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
