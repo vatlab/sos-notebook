@@ -2,9 +2,11 @@
 #
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
-
+import re
 import os
 import datetime
+import logging
+
 import shlex
 import sys
 
@@ -22,6 +24,24 @@ from collections import defaultdict
 from typing import Union, DefaultDict
 
 from .step_executor import Interactive_Step_Executor
+
+
+class NotebookLoggingHandler(logging.Handler):
+    def __init__(self, level, kernel=None, title="Log Messages"):
+        super(NotebookLoggingHandler, self).__init__(level)
+        self.kernel = kernel
+        self.title = title
+
+    def setTitle(self, title):
+        self.title = title
+
+    def emit(self, record):
+        msg = re.sub(r'``([^`]*)``',
+                     r'<span class="sos_highlight">\1</span>', record.msg)
+        self.kernel.send_frontend_msg('display_data', {
+            'metadata': {},
+            'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
+        }, title=self.title, append=True, page='SoS')
 
 
 class Interactive_Executor(Base_Executor):
@@ -162,6 +182,20 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     sys.argv = ['%run'] + raw_args
 
     env.verbosity = args.verbosity
+    if kernel and not isinstance(env.logger.handlers[0], NotebookLoggingHandler):
+        env.logger.handlers = []
+        levels = {
+            0: logging.ERROR,
+            1: logging.WARNING,
+            2: logging.INFO,
+            3: logging.DEBUG,
+            4: logging.TRACE,
+            None: logging.INFO
+        }
+        env.logger.addHandler(NotebookLoggingHandler(
+            levels[env.verbosity], kernel, title=' '.join(sys.argv)))
+    else:
+        env.logger.handers[0].setTitle(' '.join(sys.argv))
 
     dt = datetime.datetime.now().strftime('%m%d%y_%H%M')
     if args.__dag__ is None:
@@ -287,4 +321,4 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         raise
     finally:
         env.config['sig_mode'] = 'ignore'
-        env.verbosity = 1
+        env.verbosity = 2

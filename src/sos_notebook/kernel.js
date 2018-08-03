@@ -1565,7 +1565,7 @@ define([
   overflow-y: auto;
   font-weight: normal;
   color: #333333;
-  white-space: nowrap;
+  /* white-space: nowrap; */
   overflow-x: auto;
   height: 100%;
 }
@@ -1730,9 +1730,39 @@ pre.section-header.CodeMirror-line {
     font-size: 80%;
 }
 
+.sos_logging {
+  font-family: monospace;
+  margin: -0.4em;
+  padding-left: 0.4em;
+}
 .sos_hint {
-    color: rgba(0,0,0,.4);
-    font-family: monospace;
+  color: rgba(0,0,0,.4);
+}
+
+.sos_debug {
+  color: blue;
+}
+
+.sos_trace {
+  color: darkcyan;
+}
+
+.sos_hilight {
+  color: green;
+}
+
+.sos_info {
+    color: black;
+}
+
+.sos_warning {
+  color: black;
+  background: #fdd
+}
+
+.sos_error {
+  color: black;
+  background: #fdd
 }
 
 .text_cell .cell_kernel_selector {

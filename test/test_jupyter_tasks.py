@@ -42,17 +42,6 @@ def long_execute(code='', kc=None, **kwargs):
 
 
 class TestJupyterTasks(unittest.TestCase):
-    #
-    # Beacuse these tests would be called from sos/test, we
-    # should switch to this directory so that some location
-    # dependent tests could run successfully
-    #
-    def setUp(self):
-        #subprocess.call(['sos', 'purge'])
-        pass
-
-    def tearDown(self):
-        pass
 
     def testForceTask(self):
         '''Test the execution of tasks with -s force'''
