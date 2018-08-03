@@ -946,7 +946,6 @@ class SoS_Kernel(IPythonKernel):
 
     def __init__(self, **kwargs):
         super(SoS_Kernel, self).__init__(**kwargs)
-        self._allow_stdin = True
         self.options = ''
         self.kernel = 'SoS'
         # a dictionary of started kernels, with the format of
@@ -2471,10 +2470,10 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         return self._meta
 
     def do_execute(self, code, silent, store_history=True, user_expressions=None,
-                   allow_stdin=False):
+                   allow_stdin=True):
         if self._debug_mode:
             self.warn(code)
-
+        self._forward_input(allow_stdin)
         # switch to global default kernel
         try:
             if self.subkernels.find(self._meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
@@ -2545,7 +2544,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         return ret
 
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
-                    allow_stdin=False):
+                    allow_stdin=True):
         # handles windows/unix newline
         code = '\n'.join(code.splitlines())
 
