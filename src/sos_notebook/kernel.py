@@ -946,6 +946,7 @@ class SoS_Kernel(IPythonKernel):
 
     def __init__(self, **kwargs):
         super(SoS_Kernel, self).__init__(**kwargs)
+        self._allow_stdin = True
         self.options = ''
         self.kernel = 'SoS'
         # a dictionary of started kernels, with the format of
@@ -1502,6 +1503,21 @@ class SoS_Kernel(IPythonKernel):
         _execution_state = "busy"
         while _execution_state != 'idle':
             # display intermediate print statements, etc.
+            while self.KC.stdin_channel.msg_ready():
+                sub_msg = self.KC.stdin_channel.get_msg()
+                if self._debug_mode:
+                    log_to_file(f"MSG TYPE {sub_msg['header']['msg_type']}")
+                    log_to_file(f'CONTENT  {sub_msg}')
+                if sub_msg['header']['msg_type'] != 'input_request':
+                    self.send_response(
+                        self.stdin_socket, sub_msg['header']['msg_type'], sub_msg["content"])
+                else:
+                    content = sub_msg["content"]
+                    if content['password']:
+                        res = self.getpass(prompt=content['prompt'])
+                    else:
+                        res = self.raw_input(prompt=content['prompt'])
+                    self.KC.input(res)
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
