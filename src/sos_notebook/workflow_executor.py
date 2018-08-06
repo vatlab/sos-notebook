@@ -277,9 +277,9 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                         code = '[scratch_0]\n' + code
                         script = SoS_Script(content=code)
                     else:
-                        if not kernel.cell_id:
-                            kernel.send_frontend_msg('stream',
-                                                     {'name': 'stdout', 'text': 'Workflow can only be executed with magic %run or %sosrun.'})
+                        kernel.send_frontend_msg('stream',
+                                                 {'name': 'stdout', 'text': 'Workflow cell can only be executed with magic %run or %sosrun.'},
+                                                 title='# SoS warning')
                         return
         else:
             script = SoS_Script(filename=script)
