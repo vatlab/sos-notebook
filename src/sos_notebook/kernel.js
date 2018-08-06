@@ -650,7 +650,7 @@ define([
           if (item) {
             item.className = data[2];
             if (data[3][1]) {
-              item.setAttribute("datetime", data[3][1]*1000);
+              item.setAttribute("datetime", data[3][1] * 1000);
             }
           } else {
             // if the timer is not found, it was changed from a terminal status
@@ -665,7 +665,7 @@ define([
           var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
           if (item) {
             if (data[3][1]) {
-              item.setAttribute("datetime", data[3][1]*1000);
+              item.setAttribute("datetime", data[3][1] * 1000);
             }
             item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"));
           }
@@ -1737,6 +1737,7 @@ pre.section-header.CodeMirror-line {
 }
 .sos_hint {
   color: rgba(0,0,0,.4);
+  font-family: monospace;
 }
 
 .sos_debug {
