@@ -591,6 +591,8 @@ define([
           window._duration_updater = window.setInterval(function() {
             $("[id^=duration_]").text(function() {
               // if class != running, show "started "
+              if ($(this).attr("class") != "running")
+                return $(this).text();
               return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"));
             });
           }, 5000);
@@ -609,11 +611,16 @@ define([
         }
         if (data[2] === "completed") {
           var item = document.getElementById("tagline_" + data[0] + "_" + data[1]);
+          item.className = 'completed'
           if (item) {
-            console.log(data)
             if (data[3][2]) {
               // duration is specified
               item.innerText = `Ran for ${window.durationFormatter(data[3][2]*1000)}`;
+            } else {
+              let item = document.getElementById("duration_" + data[0] + "_" + data[1]);
+              if (item) {
+                item.className = 'completed';
+              }
             }
           }
           /* if successful, let us re-run the cell to submt another task
@@ -1835,11 +1842,15 @@ time.pending, time.submitted, time.running  {
   color: #cdb62c; /* yellow */
 }
 
-time.completed, time.result-ready {
+time.completed {
   color: #39aa56; /* green */
 }
 
-time.failed, time.signature-mismatch {
+span.completed {
+  color: #39aa56; /* green */
+}
+
+time.failed {
   color: #db4545; /* red */
 }
 
