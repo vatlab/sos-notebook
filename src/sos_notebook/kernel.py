@@ -1854,8 +1854,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                             self.iopub_socket, msg_type, sub_msg['content'])
         if not responses and self._debug_mode:
             self.warn(
-                f'Failed to get a response from message type {msg_types}')
-
+                f'Failed to get a response from message type {msg_types} for the execution of {statement}')
         return responses
 
     def handle_magic_put(self, items, to_kernel=None, explicit=False):
@@ -1890,12 +1889,19 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             lan = self.supported_languages[self.kernel]
             kinfo = self.subkernels.find(self.kernel)
             # pass language name to to_kernel
-            if to_kernel:
-                objects = lan(self, kinfo.kernel).put_vars(
-                    items, to_kernel=self.subkernels.find(to_kernel).language)
-            else:
-                objects = lan(self, kinfo.kernel).put_vars(
-                    items, to_kernel='SoS')
+            try:
+                if to_kernel:
+                    objects = lan(self, kinfo.kernel).put_vars(
+                        items, to_kernel=self.subkernels.find(to_kernel).language)
+                else:
+                    objects = lan(self, kinfo.kernel).put_vars(
+                        items, to_kernel='SoS')
+            except Exception as e:
+                # if somethign goes wrong in the subkernel does not matter
+                if self._debug_mode:
+                    self.warn(
+                        f'Failed to call put_var({items}) from {kinfo.kernel}')
+                objects = {}
             if isinstance(objects, dict):
                 # returns a SOS dictionary
                 try:
