@@ -71,7 +71,8 @@ sos_run('a')
 
     def testTarget(self):
         for f in ['A1.txt', 'A2.txt', 'C2.txt', 'B2.txt', 'B1.txt', 'B3.txt', 'C1.txt', 'C3.txt', 'C4.txt']:
-            file_target(f).remove('both')
+            if file_target(f).exists():
+                file_target(f).unlink()
         #
         #  A1 <- B1 <- B2 <- B3
         #   |
@@ -146,7 +147,8 @@ fail
 
     def testReverseSharedVariable(self):
         '''Test shared variables defined in auxiliary steps'''
-        file_target('a.txt').remove('both')
+        if file_target('a.txt').exists():
+            file_target('a.txt').unlink()
         script = r'''
 %run B
 [A: shared='b', provides='a.txt']
