@@ -62,11 +62,9 @@ class FlushableStringIO:
                                               f'<div class="sos_hint">{hint_line}</div>').data}
                                       })
         if content:
-            if self.name == 'stdout':
-                if self.kernel._meta['capture_result'] is not None:
-                    self.kernel._meta['capture_result'] += content
-                if self.kernel._meta['render_result']:
-                    return
+            if self.kernel._meta['capture_result'] is not None:
+                self.kernel._meta['capture_result'].append(
+                    ('stream', {'name': self.name, 'text': content}))
             self.kernel.send_response(self.kernel.iopub_socket, 'stream',
                                       {'name': self.name, 'text': content})
 
@@ -526,16 +524,24 @@ class SoS_Kernel(IPythonKernel):
         parser = argparse.ArgumentParser(prog='%capture',
                                          description='''Capture output (stdout) or output file from a subkernel
                                          as variable in SoS''')
-        parser.add_argument('format', default='text', nargs='?', choices=('text', 'json', 'csv', 'tsv'),
-                            help='''How to interpret the captured text. By default the captured content will
-                            be saved plain text. Otherwise SoS will try to parse the text as json, csv (comma
-                            separated text), tsv (tab separated text), and store text (from text), Pandas DataFrame
+        parser.add_argument('msg_type', nargs='?', default='stdout', choices=['stdout', 'stderr', 'text', 'markdown',
+                'html', 'raw'],
+                        help='''Message type to capture, default to standard output. In terms of Jupyter message
+                        types, "stdout" refers to "stream" message with "stdout" type, "stderr" refers to "stream"
+                        message with "stderr" type, "text", "markdown" and "html" refers to "display_data" message
+                        with "text/plain", "text/markdown" and "text/html" type respectively. If "raw" is specified,
+                        all returned messages will be returned in a list format.''')
+        parser.add_argument('--as', dest='as_type', default='text', nargs='?', choices=('text', 'json', 'csv', 'tsv'),
+                            help='''How to interpret the captured text. This only applicable to stdout, stderr and
+                            text message type where the text from cell output will be collected. If this
+                            option is given, SoS will try to parse the text as json, csv (comma separated text),
+                             tsv (tab separated text), and store text (from text), Pandas DataFrame
                             (from csv or tsv), dict or other types (from json) to the variable.''')
-        parser.add_argument('-f', '--from',  dest='__from__', metavar='SOURCE',
-                            help='''File from which the content is captured, default to standard output''')
-        grp = parser.add_mutually_exclusive_group(required=True)
+        grp = parser.add_mutually_exclusive_group(required=False)
         grp.add_argument('-t', '--to', dest='__to__', metavar='VAR',
-                         help='''Name of variable to which the captured content will be saved''')
+                         help='''Name of variable to which the captured content will be saved. If no varialbe is
+                         specified, the return value will be saved to variable "__captured" and be displayed
+                         at the side panel. ''')
         grp.add_argument('-a', '--append', dest='__append__', metavar='VAR',
                          help='''Name of variable to which the captured content will be appended.
                             This option is equivalent to --to if VAR does not exist. If VAR exists
@@ -693,7 +699,11 @@ class SoS_Kernel(IPythonKernel):
     def get_render_parser(self):
         parser = argparse.ArgumentParser(prog='%render',
                                          description='''Treat the output of a SoS cell as another format, default to markdown.''')
-        parser.add_argument('format', default='Markdown', nargs='?',
+        parser.add_argument('msg_type', default='stdout', choices=['stdout', 'text'], nargs='?',
+                        help='''Message type to capture, default to standard output. In terms of Jupyter message
+                        types, "stdout" refers to "stream" message with "stdout" type, and "text" refers to
+                        "display_data" message with "text/plain" type.''')
+        parser.add_argument('--as', dest='as_type', default='Markdown', nargs='?',
                             help='''Format to render output of cell, default to Markdown, but can be any
             format that is supported by the IPython.display module such as HTML, Math, JSON,
             JavaScript and SVG.''')
@@ -1536,24 +1546,10 @@ class SoS_Kernel(IPythonKernel):
                     # NOTE: we do not send status of sub kernel alone because
                     # these are generated automatically during the execution of
                     # "this cell" in SoS kernel
-                    if (self._meta['capture_result'] is not None or self._meta['render_result']) and msg_type == 'stream' and sub_msg['content']['name'] == 'stdout':
-                        self._meta['capture_result'] += sub_msg['content']['text']
-                        # if in render mode, does not send stdout
-                        if not self._meta['render_result']:
-                            self.send_response(self.iopub_socket, 'stream',
-                                               {'name': 'stdout', 'text': sub_msg['content']['text']})
-
-                    elif msg_type == 'error':
-                        if on_error and not self._debug_mode:
-                            self.warn(on_error)
-                        else:
-                            self.send_response(
-                                self.iopub_socket, msg_type, sub_msg['content'])
-                    elif msg_type == 'stream' and sub_msg['content']['name'] == 'stderr':
-                        self.warn(sub_msg['content']['text'])
-                    else:
-                        self.send_response(
-                            self.iopub_socket, msg_type, sub_msg['content'])
+                    if self._meta['capture_result'] is not None:
+                        self._meta['capture_result'].append((msg_type, sub_msg['content']))
+                    self.send_response(
+                        self.iopub_socket, msg_type, sub_msg['content'])
         #
         # now get the real result
         reply = self.KC.get_shell_msg(timeout=10)
@@ -2400,7 +2396,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                        title=title, append=True, page='Preview')
 
     def render_result(self, res):
-        if self._meta['render_result'] is False:
+        if not self._meta['render_result']:
             return res
         if not isinstance(res, str):
             self.warn(
@@ -2571,19 +2567,30 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             except SystemExit:
                 return
             try:
-                self._meta['capture_result'] = ''
-                self._meta['render_result'] = args.format
+                self._meta['capture_result'] = []
+                self._meta['render_result'] = args.as_type
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
-                content = self._meta['capture_result']
-                format_dict, md_dict = self.format_obj(
-                    self.render_result(content))
-                self.send_response(self.iopub_socket, 'display_data',
-                                   {'metadata': md_dict,
-                                    'data': format_dict
-                                    })
-                self._meta['capture_result'] = None
-                self._meta['render_result'] = False
+                content = ''
+                if args.msg_type == 'stdout':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'stream' and msg[1]['name'] == 'stdout':
+                            content += msg[1]['text']
+                elif args.msg_type == 'text':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'display_data' and 'data' in msg[1] and 'text/plain' in msg[1]['data']:
+                            content += msg[1]['data']['text/plain']
+                try:
+                    if content:
+                        format_dict, md_dict = self.format_obj(
+                            self.render_result(content))
+                        self.send_response(self.iopub_socket, 'display_data',
+                                           {'metadata': md_dict,
+                                            'data': format_dict
+                                            })
+                finally:
+                    self._meta['capture_result'] = None
+                    self._meta['render_result'] = False
         elif self.MAGIC_CAPTURE.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
             parser = self.get_capture_parser()
@@ -2592,10 +2599,71 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             except SystemExit:
                 return
             try:
-                if not args.__from__:
-                    self._meta['capture_result'] = ''
+                self._meta['capture_result'] = []
                 return self._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             finally:
+                # parse capture_result
+                content = ''
+                if args.msg_type == 'stdout':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'stream' and msg[1]['name'] == 'stdout':
+                            content += msg[1]['text']
+                elif args.msg_type == 'stderr':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'stream' and msg[1]['name'] == 'stderr':
+                            content += msg[1]['text']
+                elif args.msg_type == 'text':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'display_data' and 'data' in msg[1] and 'text/plain' in msg[1]['data']:
+                            content += msg[1]['data']['text/plain']
+                elif args.msg_type == 'markdown':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'display_data' and 'data' in msg[1] and 'text/markdown' in msg[1]['data']:
+                            content += msg[1]['data']['text/markdown']
+                elif args.msg_type == 'html':
+                    for msg in self._meta['capture_result']:
+                        if msg[0] == 'display_data' and 'data' in msg[1] and 'text/html' in msg[1]['data']:
+                            content += msg[1]['data']['text/html']
+                else:
+                    args.as_type = 'raw'
+                    content = self._meta['capture_result']
+
+                if self._debug_mode:
+                    self.warn(f'Captured {self._meta["capture_result"][:40]}')
+                if not args.as_type or args.as_type == 'text':
+                    if not isinstance(content, str):
+                        self.warn('Option --as is only available for message types stdout, stderr, and text.')
+                elif args.as_type == 'json':
+                    import json
+                    try:
+                        if isinstance(content, str):
+                            content = json.loads(content)
+                        else:
+                            self.warn('Option --as is only available for message types stdout, stderr, and text.')
+                    except Exception as e:
+                        self.warn(
+                            f'Failed to capture output in JSON format, text returned: {e}')
+                elif args.as_type == 'csv':
+                    try:
+                        if isinstance(content, str):
+                            with StringIO(content) as ifile:
+                                content = pd.read_csv(ifile)
+                        else:
+                            self.warn('Option --as is only available for message types stdout, stderr, and text.')
+                    except Exception as e:
+                        self.warn(
+                            f'Failed to capture output in {args.as_type} format, text returned: {e}')
+                elif args.as_type == 'tsv':
+                    try:
+                        if isinstance(content, str):
+                            with StringIO(content) as ifile:
+                                content = pd.read_csv(ifile, sep='\t')
+                        else:
+                            self.warn('Option --as is only available for message types stdout, stderr, and text.')
+                    except Exception as e:
+                        self.warn(
+                            f'Failed to capture output in {args.as_type} format, text returned: {e}')
+                #
                 if args.__to__ and not args.__to__.isidentifier():
                     self.warn(f'Invalid variable name {args.__to__}')
                     self._meta['capture_result'] = None
@@ -2604,99 +2672,43 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     self.warn(f'Invalid variable name {args.__append__}')
                     self._meta['capture_result'] = None
                     return
-                if self._debug_mode:
-                    self.warn(f'Captured {self._meta["capture_result"][:40]}')
-                if not args.format or args.format == 'text':
-                    if args.__from__:
-                        # get content from a file
-                        try:
-                            with open(args.__from__) as ifile:
-                                new_var = ifile.read()
-                        except Exception as e:
-                            self.warn(
-                                f'Failed to capture {args.format} from output file {args.__from__}: {e}')
-                    else:
-                        new_var = self._meta['capture_result']
-                elif args.format == 'json':
-                    import json
-                    try:
-                        if args.__from__:
-                            # get content from a file
-                            try:
-                                with open(args.__from__) as ifile:
-                                    new_var = json.load(ifile)
-                            except Exception as e:
-                                self.warn(
-                                    f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
-                        else:
-                            new_var = json.loads(self._meta['capture_result'])
-                    except Exception as e:
-                        self.warn(
-                            f'Failed to capture output in JSON format, text returned: {e}')
-                        new_var = self._meta['capture_result']
-                elif args.format == 'csv':
-                    try:
-                        if args.__from__:
-                            # get content from a file
-                            try:
-                                with open(args.__from__) as ifile:
-                                    new_var = pd.read_csv(ifile)
-                            except Exception as e:
-                                self.warn(
-                                    f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
-                        else:
-                            with StringIO(self._meta['capture_result']) as ifile:
-                                new_var = pd.read_csv(ifile)
-                    except Exception as e:
-                        self.warn(
-                            f'Failed to capture output in {args.format} format, text returned: {e}')
-                        new_var = self._meta['capture_result']
-                elif args.format == 'tsv':
-                    try:
-                        if args.__from__:
-                            # get content from a file
-                            try:
-                                with open(args.__from__) as ifile:
-                                    new_var = pd.read_csv(ifile, sep='\t')
-                            except Exception as e:
-                                self.warn(
-                                    f'Failed to capture output in {args.format} format from output file {args.__from__}: {e}')
-                        else:
-                            with StringIO(self._meta['capture_result']) as ifile:
-                                new_var = pd.read_csv(ifile, sep='\t')
-                    except Exception as e:
-                        self.warn(
-                            f'Failed to capture output in {args.format} format, text returned: {e}')
-                        new_var = self._meta['capture_result']
+
                 if args.__to__:
-                    env.sos_dict.set(args.__to__, new_var)
-                else:
+                    env.sos_dict.set(args.__to__, content)
+                elif args.__append__:
                     if args.__append__ not in env.sos_dict:
-                        env.sos_dict.set(args.__append__, new_var)
+                        env.sos_dict.set(args.__append__, content)
                     elif isinstance(env.sos_dict[args.__append__], str):
-                        if isinstance(new_var, str):
-                            env.sos_dict[args.__append__] += new_var
+                        if isinstance(content, str):
+                            env.sos_dict[args.__append__] += content
                         else:
                             self.warn(
-                                f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                                f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
                     elif isinstance(env.sos_dict[args.__append__], dict):
-                        if isinstance(new_var, dict):
-                            env.sos_dict[args.__append__].update(new_var)
+                        if isinstance(content, dict):
+                            env.sos_dict[args.__append__].update(content)
                         else:
                             self.warn(
-                                f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                                f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
                     elif isinstance(env.sos_dict[args.__append__], pd.DataFrame):
-                        if isinstance(new_var, pd.DataFrame):
+                        if isinstance(content, pd.DataFrame):
                             env.sos_dict.set(
-                                args.__append__, env.sos_dict[args.__append__].append(new_var))
+                                args.__append__, env.sos_dict[args.__append__].append(content))
                         else:
                             self.warn(
-                                f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                                f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
                     elif isinstance(env.sos_dict[args.__append__], list):
-                        env.sos_dict[args.__append__].append(new_var)
+                        env.sos_dict[args.__append__].append(content)
                     else:
                         self.warn(
-                            f'Cannot append new content of type {type(new_var).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                else:
+                    env.sos_dict.set('__captured', content)
+                    import pprint
+                    self.send_frontend_msg('display_data',
+                                           {'metadata': {},
+                                            'data': {'text/plain': pprint.pformat(content) }
+                                           }, title="__captured", append=False, page='Preview')
             self._meta['capture_result'] = None
         elif self.MAGIC_SESSIONINFO.match(code):
             options, remaining_code = self.get_magic_and_code(code, False)
