@@ -1541,13 +1541,11 @@ class SoS_Kernel(IPythonKernel):
                         # not sure if it is needed
                         sub_msg['content']['execution_count'] = self._execution_count
                     #
-                    if silent and msg_type in ['display_data', 'stream', 'execute_result']:
-                        continue
-                    # NOTE: we do not send status of sub kernel alone because
-                    # these are generated automatically during the execution of
-                    # "this cell" in SoS kernel
-                    if self._meta['capture_result'] is not None:
-                        self._meta['capture_result'].append((msg_type, sub_msg['content']))
+                    if msg_type in ['display_data', 'stream', 'execute_result', 'update_display_data']:
+                        if self._meta['capture_result'] is not None:
+                            self._meta['capture_result'].append((msg_type, sub_msg['content']))
+                        if silent:
+                            continue
                     self.send_response(
                         self.iopub_socket, msg_type, sub_msg['content'])
         #
