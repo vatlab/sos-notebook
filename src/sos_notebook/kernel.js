@@ -381,7 +381,7 @@ define([
     } else if (type && window.BackgroundColor[type]) {
       col = window.BackgroundColor[type];
     }
-    var ip = cell.element[0].getElementsByClassName("input_prompt");
+    var ip = cell.element[0].getElementsByClassName("input");
     var op = cell.element[0].getElementsByClassName("out_prompt_overlay");
     if (ip.length > 0) {
       ip[0].style.backgroundColor = col;
@@ -2042,7 +2042,7 @@ table.task_table {
         return;
       }
 
-      var ip = cell.element[0].getElementsByClassName("input_prompt");
+      var ip = cell.element[0].getElementsByClassName("input");
       var op = cell.element[0].getElementsByClassName("out_prompt_overlay");
       if (window.BackgroundColor[this.value]) {
         ip[0].style.backgroundColor = window.BackgroundColor[this.value];
