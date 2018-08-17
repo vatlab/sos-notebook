@@ -1665,6 +1665,14 @@ define([
     padding-top: 0.5em;
 }
 
+#panel-wrapper .run_this_cell {
+    display: none;
+}
+
+#panel-wrapper .out_prompt_overlay.prompt {
+    display: none;
+}
+
 #panel-wrapper .cell {
     padding: 0pt;
 }
