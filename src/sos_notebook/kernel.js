@@ -1669,6 +1669,11 @@ define([
     display: none;
 }
 
+.output_area .run_this_cell {
+    display: none;
+}
+
+
 #panel-wrapper .out_prompt_overlay.prompt {
     display: none;
 }
