@@ -3013,18 +3013,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.warn(
                     f'Magic {run_code.split()[0]} after magic %run will be ignored.')
 
-            # find the global sections of the workflow
-            global_sections = ''
-            in_global = False
-            for line in self._meta['workflow'].splitlines():
-                if SOS_GLOBAL_SECTION_HEADER.match(line):
-                    in_global = True
-                elif SOS_SECTION_HEADER.match(line):
-                    in_global = False
-                if in_global:
-                    global_sections += line + '\n'
             if not any(SOS_SECTION_HEADER.match(line) for line in run_code.splitlines()):
-                global_sections += '[default]\n'
+                run_code = '[default]\n' + run_code
             # now we need to run the code multiple times with each option
             for options in run_options:
                 old_options = self.options
@@ -3036,7 +3026,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     self._meta['workflow_mode'] = True
                     if self._debug_mode:
                         self.warn(f'Executing\n{global_sections + run_code}')
-                    ret = self._do_execute(global_sections + run_code, silent, store_history, user_expressions,
+                    ret = self._do_execute(run_code, silent, store_history, user_expressions,
                                            allow_stdin)
                 except Exception as e:
                     self.warn(f'Failed to execute workflow: {e}')
