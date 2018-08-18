@@ -260,7 +260,7 @@ define([
      * %sosrun or %sossave workflowname with options
      */
     options.sos = {}
-    var run_notebook = code.match(/^%sosrun($|\s)|^%run($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m);
+    var run_notebook = code.match(/^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m);
 
     var cells = nb.get_cells();
     if (run_notebook) {
