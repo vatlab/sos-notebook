@@ -2546,7 +2546,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
     def _do_execute(self, code, silent, store_history=True, user_expressions=None,
                     allow_stdin=True):
         # handles windows/unix newline
-        code = '\n'.join(code.splitlines())
+        code = '\n'.join(code.splitlines()) + '\n'
 
         if self.original_keys is None:
             self._reset_dict()
@@ -3425,7 +3425,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 idx = empties.index(False)
                 if idx != 0:
                     # not start from empty, but might have magic etc
-                    return self._do_execute('\n'.join(lines[idx:]), silent, store_history, user_expressions, allow_stdin)
+                    return self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions, allow_stdin)
 
             # if there is no more empty, magic etc, enter workflow mode
             # run sos
