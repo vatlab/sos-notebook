@@ -725,7 +725,7 @@ class Preview_Magic(SoS_Magic):
         if previewer_func is None:
             return
         try:
-            result = previewer_func(filename, self, style)
+            result = previewer_func(filename, self.kernel, style)
             if not result:
                 return
             if isinstance(result, str):
@@ -1304,16 +1304,16 @@ class Revisions_Magic(SoS_Magic):
             except Exception as e:
                 repo = ''
                 if self._debug_mode:
-                    self.warn(f'Failed to get repo URL: {e}')
+                    self.kernel.warn(f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
                     if self._debug_mode:
-                        self.warn(
+                        self.kernel.warn(
                             f"source is set to {args.source} with repo={repo}")
                 else:
                     args.source = ''
-                    self.warn(
+                    self.kernel.warn(
                         f'A default source URL is unavailable for repository {repo}')
         text = '''
         <table class="revision_table">
@@ -1598,9 +1598,9 @@ class SessionInfo_Magic(SoS_Magic):
                         elif isinstance(sinfo, list):
                             result[kernel].extend(sinfo)
                         else:
-                            self.warn(f'Unrecognized session info: {sinfo}')
+                            self.kernel.warn(f'Unrecognized session info: {sinfo}')
                     except Exception as e:
-                        self.warn(
+                        self.kernel.warn(
                             f'Failed to obtain sessioninfo of kernel {kernel}: {e}')
         finally:
             self.kernel.switch_kernel(cur_kernel)
@@ -1621,7 +1621,7 @@ class SessionInfo_Magic(SoS_Magic):
                 elif len(item) == 2:
                     res += f'<th>{item[0]}</th><td><pre>{item[1]}</pre></td>\n'
                 else:
-                    self.warn(
+                    self.kernel.warn(
                         f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}')
                 res += '</tr>\n'
             res += '</table>\n'
