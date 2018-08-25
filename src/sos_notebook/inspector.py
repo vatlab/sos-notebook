@@ -7,7 +7,7 @@ import pydoc
 
 from sos.syntax import SOS_USAGES
 from sos.utils import env
-
+from .magics import SoS_Magics
 
 class SoS_VariableInspector(object):
     def __init__(self, kernel):
@@ -33,12 +33,13 @@ class SoS_SyntaxInspector(object):
         self.kernel = kernel
 
     def inspect(self, name, line, pos):
-        if line.startswith('%') and name in self.kernel.ALL_MAGICS and pos <= len(name) + 1:
-            if hasattr(self.kernel, f'get_{name}_parser'):
-                parser = getattr(self.kernel, f'get_{name}_parser')()
-                return {'text/plain': parser.format_help()}
-            else:
-                return {'text/plain': f'Magic %{name}'}
+        if line.startswith('%') and name in SoS_Magics.names and pos <= len(name) + 1:
+            try:
+                magic = SoS_Magics(self.kernel).get(name)
+                parser = magic.get_parser()
+                return {'text/plain': parser.format_help() }
+            except Exception as e:
+                return {'text/plain': f'Magic %{name}: {e}'}
         elif line.startswith(name + ':') and pos <= len(name):
             if self.kernel.original_keys is None:
                 self.kernel._reset_dict()

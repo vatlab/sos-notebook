@@ -1,26 +1,26 @@
 
-from collections import Sized
-import os
-import sys
 import argparse
 import fnmatch
+import os
+import pydoc
 import re
 import shlex
 import subprocess
-
-import pydoc
-import pandas as pd
+import sys
+from collections import Sized
 from io import StringIO
-from jupyter_client import find_connection_file
 from types import ModuleType
 
+import pandas as pd
 from IPython.core.display import HTML
-from sos.eval import SoS_eval, interpolate
-from sos.syntax import SOS_SECTION_HEADER
 from IPython.core.error import UsageError
 from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
-from sos.utils import (env, pretty_size, short_repr)
+from jupyter_client import find_connection_file
+from sos.eval import SoS_eval, interpolate
+from sos.syntax import SOS_SECTION_HEADER
+from sos.utils import env, pretty_size, short_repr, pexpect_run
+
 
 class SoS_Magic(object):
     name = 'BaseMagic'
@@ -35,15 +35,16 @@ class SoS_Magic(object):
             new_text = interpolate(text, local_dict=env.sos_dict._dict)
             if new_text != text and not quiet:
                 self.kernel.send_response(self.iopub_socket, 'display_data',
-                                   {
-                                       'metadata': {},
-                                       'data': {
-                                           'text/html': HTML(
-                                               f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data}
-                                   })
+                                          {
+                                              'metadata': {},
+                                              'data': {
+                                                  'text/html': HTML(
+                                                      f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data}
+                                          })
             return new_text
         except Exception as e:
-            self.kernel.warn(f'Failed to interpolate {short_repr(text)}: {e}\n')
+            self.kernel.warn(
+                f'Failed to interpolate {short_repr(text)}: {e}\n')
             return None
 
     def get_magic_and_code(self, code, warn_remaining=False):
@@ -69,11 +70,10 @@ class SoS_Magic(object):
     def match(self, code):
         return self.pattern.match(code)
 
-    def handle_shell_command(self, cmd):
+    def run_shell_command(self, cmd):
         # interpolate command
         if not cmd:
             return
-        from sos.utils import pexpect_run
         try:
             with self.kernel.redirect_sos_io():
                 pexpect_run(cmd, shell=True,
@@ -87,15 +87,18 @@ class SoS_Magic(object):
     def _parse_error(self, msg):
         self.kernel.warn(msg)
 
+
 class Command_Magic(SoS_Magic):
     name = '!'
+
     def match(self, code):
         return code.startswith('!')
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        self.handle_shell_command(code.split(' ')[0][1:] + ' ' + options)
+        self.run_shell_command(code.split(' ')[0][1:] + ' ' + options)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Capture_Magic(SoS_Magic):
     name = 'capture'
@@ -108,8 +111,8 @@ class Capture_Magic(SoS_Magic):
                                          description='''Capture output (stdout) or output file from a subkernel
                                          as variable in SoS''')
         parser.add_argument('msg_type', nargs='?', default='stdout', choices=['stdout', 'stderr', 'text', 'markdown',
-                'html', 'raw'],
-                        help='''Message type to capture, default to standard output. In terms of Jupyter message
+                                                                              'html', 'raw'],
+                            help='''Message type to capture, default to standard output. In terms of Jupyter message
                         types, "stdout" refers to "stream" message with "stdout" type, "stderr" refers to "stream"
                         message with "stderr" type, "text", "markdown" and "html" refers to "display_data" message
                         with "text/plain", "text/markdown" and "text/html" type respectively. If "raw" is specified,
@@ -174,17 +177,20 @@ class Capture_Magic(SoS_Magic):
                 content = self.kernel._meta['capture_result']
 
             if self.kernel._debug_mode:
-                self.kernel.warn(f'Captured {self.kernel._meta["capture_result"][:40]}')
+                self.kernel.warn(
+                    f'Captured {self.kernel._meta["capture_result"][:40]}')
             if not args.as_type or args.as_type == 'text':
                 if not isinstance(content, str):
-                    self.kernel.warn('Option --as is only available for message types stdout, stderr, and text.')
+                    self.kernel.warn(
+                        'Option --as is only available for message types stdout, stderr, and text.')
             elif args.as_type == 'json':
                 import json
                 try:
                     if isinstance(content, str):
                         content = json.loads(content)
                     else:
-                        self.kernel.warn('Option --as is only available for message types stdout, stderr, and text.')
+                        self.kernel.warn(
+                            'Option --as is only available for message types stdout, stderr, and text.')
                 except Exception as e:
                     self.kernel.warn(
                         f'Failed to capture output in JSON format, text returned: {e}')
@@ -194,7 +200,8 @@ class Capture_Magic(SoS_Magic):
                         with StringIO(content) as ifile:
                             content = pd.read_csv(ifile)
                     else:
-                        self.kernel.warn('Option --as is only available for message types stdout, stderr, and text.')
+                        self.kernel.warn(
+                            'Option --as is only available for message types stdout, stderr, and text.')
                 except Exception as e:
                     self.kernel.warn(
                         f'Failed to capture output in {args.as_type} format, text returned: {e}')
@@ -204,7 +211,8 @@ class Capture_Magic(SoS_Magic):
                         with StringIO(content) as ifile:
                             content = pd.read_csv(ifile, sep='\t')
                     else:
-                        self.kernel.warn('Option --as is only available for message types stdout, stderr, and text.')
+                        self.kernel.warn(
+                            'Option --as is only available for message types stdout, stderr, and text.')
                 except Exception as e:
                     self.kernel.warn(
                         f'Failed to capture output in {args.as_type} format, text returned: {e}')
@@ -251,17 +259,17 @@ class Capture_Magic(SoS_Magic):
                 env.sos_dict.set('__captured', content)
                 import pprint
                 self.kernel.send_frontend_msg('display_data',
-                                       {'metadata': {},
-                                        'data': {'text/plain': pprint.pformat(content) }
-                                       }, title="__captured", append=False, page='Preview')
+                                              {'metadata': {},
+                                               'data': {'text/plain': pprint.pformat(content)}
+                                               }, title="__captured", append=False, page='Preview')
         self.kernel._meta['capture_result'] = None
+
 
 class Cd_Magic(SoS_Magic):
     name = 'cd'
 
     def __init__(self, kernel):
         super(Cd_Magic, self).__init__(kernel)
-
 
     def handle_magic_cd(self, option):
         if not option:
@@ -270,7 +278,7 @@ class Cd_Magic(SoS_Magic):
         try:
             os.chdir(os.path.expanduser(to_dir))
             self.kernel.send_response(self.iopub_socket, 'stream',
-                               {'name': 'stdout', 'text': os.getcwd()})
+                                      {'name': 'stdout', 'text': os.getcwd()})
         except Exception as e:
             self.kernel.warn(
                 f'Failed to change dir to {os.path.expanduser(to_dir)}: {e}')
@@ -303,6 +311,7 @@ class Cd_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         self.handle_magic_cd(options)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Clear_Magic(SoS_Magic):
     name = 'clear'
@@ -343,6 +352,7 @@ class Clear_Magic(SoS_Magic):
             self.kernel.send_frontend_msg(
                 'clear-output', [cell_id, args.all, status_style, args.elem_class])
 
+
 class ConnectInfo_Magic(SoS_Magic):
     name = 'connectinfo'
 
@@ -355,8 +365,9 @@ class ConnectInfo_Magic(SoS_Magic):
         with open(cfile) as conn:
             conn_info = conn.read()
         self.kernel.send_response(self.iopub_socket, 'stream',
-                           {'name': 'stdout', 'text': 'Connection file: {}\n{}'.format(cfile, conn_info)})
+                                  {'name': 'stdout', 'text': 'Connection file: {}\n{}'.format(cfile, conn_info)})
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Debug_Magic(SoS_Magic):
     name = 'debug'
@@ -384,6 +395,7 @@ class Debug_Magic(SoS_Magic):
             self.kernel.warn(remaining_code)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
+
 class Dict_Magic(SoS_Magic):
     name = 'dict'
 
@@ -404,7 +416,6 @@ class Dict_Magic(SoS_Magic):
                             help='Remove specified variables from SoS dictionary')
         parser.error = self._parse_error
         return parser
-
 
     def handle_magic_dict(self, line):
         'Magic that displays content of the dictionary'
@@ -447,13 +458,14 @@ class Dict_Magic(SoS_Magic):
                     {x: y for x, y in env.sos_dict._dict.items() if x in args.vars})
             else:
                 self.kernel.send_result({x: y for x, y in env.sos_dict._dict.items() if
-                                  x not in self.original_keys and not x.startswith('__')})
+                                         x not in self.original_keys and not x.startswith('__')})
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         # %dict should be the last magic
         options, remaining_code = self.get_magic_and_code(code, False)
         self.handle_magic_dict(options)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Expand_Magic(SoS_Magic):
     name = 'expand'
@@ -481,7 +493,8 @@ class Expand_Magic(SoS_Magic):
         except SystemExit:
             return
         if self.kernel.lower() == 'sos':
-            self.kernel.warn('Use of %expand magic in SoS cells is deprecated.')
+            self.kernel.warn(
+                'Use of %expand magic in SoS cells is deprecated.')
         if args.sigil in ('None', None):
             sigil = None
         if args.right_sigil is not None:
@@ -490,7 +503,7 @@ class Expand_Magic(SoS_Magic):
         lines = lines[1:]
         start_line: int = 0
         for idx, line in enumerate(lines):
-            if line.strip() and not any(line.startswith(f'%{x} ') for x in self.ALL_MAGICS) and not line.startswith('!'):
+            if line.strip() and not any(line.startswith(f'%{x} ') for x in SoS_Magics.names) and not line.startswith('!'):
                 start_line = idx
                 break
         text = '\n'.join(lines[start_line:])
@@ -506,6 +519,7 @@ class Expand_Magic(SoS_Magic):
         except Exception as e:
             self.kernel.warn(e)
             return
+
 
 class Get_Magic(SoS_Magic):
     name = 'get'
@@ -524,7 +538,6 @@ class Get_Magic(SoS_Magic):
                             help='''Names of SoS variables''')
         parser.error = self._parse_error
         return parser
-
 
     def handle_magic_get(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
@@ -582,7 +595,6 @@ class Get_Magic(SoS_Magic):
                 # then switch back
                 self.kernel.switch_kernel(my_kernel)
 
-
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
@@ -601,6 +613,7 @@ class Get_Magic(SoS_Magic):
                     }
         self.handle_magic_get(args.vars, args.__from__, explicit=True)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Matplotlib_Magic(SoS_Magic):
     name = 'matplotlib'
@@ -629,16 +642,16 @@ class Matplotlib_Magic(SoS_Magic):
             return
         if args.list:
             self.kernel.send_response(self.iopub_socket, 'stream',
-                               {'name': 'stdout', 'text': 'Available matplotlib backends: {}'.format(
-                                   ['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg', 'notebook',
-                                    'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'])})
+                                      {'name': 'stdout', 'text': 'Available matplotlib backends: {}'.format(
+                                          ['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg', 'notebook',
+                                           'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'])})
             return
         try:
             _, backend = self.shell.enable_matplotlib(args.gui)
             if not args.gui or args.gui == 'auto':
                 self.kernel.send_response(self.iopub_socket, 'stream',
-                                   {'name': 'stdout',
-                                    'text': f'Using matplotlib backend {backend}'})
+                                          {'name': 'stdout',
+                                           'text': f'Using matplotlib backend {backend}'})
         except Exception as e:
             self.kernel.warn(
                 'Failed to set matplotlib backnd {}: {}'.format(options, e))
@@ -678,10 +691,11 @@ class Paste_Magic(SoS_Magic):
                 return
             #
             self.kernel.send_response(self.iopub_socket, 'stream',
-                               {'name': 'stdout', 'text': code.strip() + '\n## -- End pasted text --\n'})
+                                      {'name': 'stdout', 'text': code.strip() + '\n## -- End pasted text --\n'})
             return self.kernel._do_execute(code, silent, store_history, user_expressions, allow_stdin)
         finally:
             self.options = old_options
+
 
 class Preview_Magic(SoS_Magic):
     name = 'preview'
@@ -728,13 +742,13 @@ class Preview_Magic(SoS_Magic):
             self.kernel.warn('\n> ' + filename + ' does not exist')
             return
         self.kernel.send_frontend_msg('display_data',
-                               {'metadata': {},
-                                'data': {
-                                    'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
-                                    'text/html': HTML(
-                                        f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
-                               }
-                               }, title=title, append=True, page='Preview')
+                                      {'metadata': {},
+                                       'data': {
+                                          'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
+                                          'text/html': HTML(
+                                              f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
+                                      }
+                                      }, title=title, append=True, page='Preview')
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
@@ -757,9 +771,9 @@ class Preview_Magic(SoS_Magic):
                             previewer_func = y.load()
                         except Exception as e:
                             self.kernel.send_frontend_msg('stream',
-                                                   dict(name='stderr',
-                                                        text=f'Failed to load previewer {y}: {e}'),
-                                                   title=title, append=True, page='Preview')
+                                                          dict(name='stderr',
+                                                               text=f'Failed to load previewer {y}: {e}'),
+                                                          title=title, append=True, page='Preview')
                             continue
                         break
                 except Exception as e:
@@ -782,35 +796,36 @@ class Preview_Magic(SoS_Magic):
                     hint_line = result[0][6:].strip()
                     result = '\n'.join(result[1:])
                     self.kernel.send_frontend_msg('display_data',
-                                           {
-                                               'metadata': {},
-                                               'data': {'text/html': HTML(
-                                                   f'<div class="sos_hint">{hint_line}</div>').data}
-                                           }, title=title, append=True, page='Preview')
+                                                  {
+                                                      'metadata': {},
+                                                      'data': {'text/html': HTML(
+                                                          f'<div class="sos_hint">{hint_line}</div>').data}
+                                                  }, title=title, append=True, page='Preview')
                 if result:
                     self.kernel.send_frontend_msg('stream',
-                                           {'name': 'stdout', 'text': result},
-                                           title=title, append=True, page='Preview')
+                                                  {'name': 'stdout',
+                                                      'text': result},
+                                                  title=title, append=True, page='Preview')
             elif isinstance(result, dict):
                 self.kernel.send_frontend_msg('display_data',
-                                       {'data': result, 'metadata': {}},
-                                       title=title, append=True, page='Preview')
+                                              {'data': result, 'metadata': {}},
+                                              title=title, append=True, page='Preview')
             elif isinstance(result, [list, tuple]) and len(result) == 2:
                 self.kernel.send_frontend_msg('display_data',
-                                       {'data': result[0],
-                                           'metadata': result[1]},
-                                       title=title, append=True, page='Preview')
+                                              {'data': result[0],
+                                               'metadata': result[1]},
+                                              title=title, append=True, page='Preview')
             else:
                 self.kernel.send_frontend_msg('stream',
-                                       dict(
-                                           name='stderr', text=f'Unrecognized preview content: {result}'),
-                                       title=title, append=True, page='Preview')
+                                              dict(
+                                                  name='stderr', text=f'Unrecognized preview content: {result}'),
+                                              title=title, append=True, page='Preview')
         except Exception as e:
             if self.kernel._debug_mode:
                 self.kernel.send_frontend_msg('stream',
-                                       dict(
-                                           name='stderr', text=f'Failed to preview {filename}: {e}'),
-                                       title=title, append=True, page='Preview')
+                                              dict(
+                                                  name='stderr', text=f'Failed to preview {filename}: {e}'),
+                                              title=title, append=True, page='Preview')
 
     def get_preview_parser(self):
         parser = argparse.ArgumentParser(prog='%preview',
@@ -850,7 +865,6 @@ class Preview_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-
     def handle_magic_preview(self, items, kernel=None, style=None, title=''):
         handled = [False for x in items]
         for idx, item in enumerate(items):
@@ -871,12 +885,12 @@ class Preview_Magic(SoS_Magic):
                     handled[idx] = True
                     _, dirs, files = os.walk(item).__next__()
                     self.kernel.send_frontend_msg('display_data',
-                                           {'metadata': {},
-                                            'data': {'text/plain': '>>> ' + item + ':\n',
-                                                     'text/html': HTML(
-                                                         f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
-                                                     }
-                                            }, title=title, append=False, page='Preview')
+                                                  {'metadata': {},
+                                                   'data': {'text/plain': '>>> ' + item + ':\n',
+                                                            'text/html': HTML(
+                                                                f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
+                                                            }
+                                                   }, title=title, append=False, page='Preview')
                     continue
                 else:
                     import glob
@@ -916,15 +930,15 @@ class Preview_Magic(SoS_Magic):
                         else:
                             format_dict, md_dict = preview
                         self.kernel.send_frontend_msg('display_data',
-                                               {'metadata': {},
-                                                'data': {'text/plain': '>>> ' + item + ':\n',
-                                                         'text/html': HTML(
-                                                             f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
-                                                         }
-                                                }, title=title, append=True, page='Preview')
+                                                      {'metadata': {},
+                                                       'data': {'text/plain': '>>> ' + item + ':\n',
+                                                                'text/html': HTML(
+                                                                    f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
+                                                                }
+                                                       }, title=title, append=True, page='Preview')
                         self.kernel.send_frontend_msg('display_data',
-                                               {'execution_count': self._execution_count, 'data': format_dict,
-                                                'metadata': md_dict}, title=title, append=True, page='Preview')
+                                                      {'execution_count': self._execution_count, 'data': format_dict,
+                                                       'metadata': md_dict}, title=title, append=True, page='Preview')
                     else:
                         # evaluate
                         responses = self.get_response(
@@ -935,12 +949,12 @@ class Preview_Magic(SoS_Magic):
                                 x for x in responses if x[0] != 'error']
                         if responses:
                             self.kernel.send_frontend_msg('display_data',
-                                                   {'metadata': {},
-                                                    'data': {'text/plain': '>>> ' + item + ':\n',
-                                                             'text/html': HTML(
-                                                                 f'<div class="sos_hint">> {item}:</div>').data
-                                                             }
-                                                    }, title=title, append=True, page='Preview')
+                                                          {'metadata': {},
+                                                           'data': {'text/plain': '>>> ' + item + ':\n',
+                                                                    'text/html': HTML(
+                                                                        f'<div class="sos_hint">> {item}:</div>').data
+                                                                    }
+                                                           }, title=title, append=True, page='Preview')
                             for response in responses:
                                 # self.kernel.warn(f'{response[0]} {response[1]}' )
                                 self.kernel.send_frontend_msg(
@@ -951,10 +965,10 @@ class Preview_Magic(SoS_Magic):
                 except Exception as e:
                     if not handled[idx]:
                         self.kernel.send_frontend_msg('stream',
-                                               dict(name='stderr',
-                                                    text='> Failed to preview file or expression {}{}'.format(
-                                                        item, f': {e}' if self.kernel._debug_mode else '')),
-                                               title=title, append=True, page='Preview')
+                                                      dict(name='stderr',
+                                                           text='> Failed to preview file or expression {}{}'.format(
+                                                               item, f': {e}' if self.kernel._debug_mode else '')),
+                                                      title=title, append=True, page='Preview')
         finally:
             self.kernel.switch_kernel(orig_kernel)
 
@@ -1001,7 +1015,7 @@ class Preview_Magic(SoS_Magic):
                     'metadata': {}
                 }
                 self.kernel.send_frontend_msg('display_data', content,
-                                       title='%preview --workflow', page='Workflow')
+                                              title='%preview --workflow', page='Workflow')
                 self.kernel.send_frontend_msg('highlight-workflow', ta_id)
             if not args.off and args.items:
                 if args.host:
@@ -1011,10 +1025,10 @@ class Preview_Magic(SoS_Magic):
                 # reset preview panel
                 if not self.kernel._meta['use_panel']:
                     self.kernel.send_response(self.iopub_socket, 'display_data',
-                                       {
-                                           'metadata': {},
-                                           'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                                       })
+                                              {
+                                                  'metadata': {},
+                                                  'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
+                                              })
                 else:
                     # clear the page
                     self.kernel.send_frontend_msg(
@@ -1024,9 +1038,11 @@ class Preview_Magic(SoS_Magic):
                         args.items, args.kernel, style,
                         title=title)
                 elif args.workflow:
-                    self.kernel.warn('Invalid option --kernel with -r (--host)')
+                    self.kernel.warn(
+                        'Invalid option --kernel with -r (--host)')
                 elif args.kernel:
-                    self.kernel.warn('Invalid option --kernel with -r (--host)')
+                    self.kernel.warn(
+                        'Invalid option --kernel with -r (--host)')
                 else:
                     if args.config:
                         from sos.utils import load_config_files
@@ -1043,6 +1059,7 @@ class Preview_Magic(SoS_Magic):
                     except Exception as e:
                         self.kernel.warn('Failed to preview {} on remote host {}{}'.format(
                             args.items, args.host, f': {e}' if self.kernel._debug_mode else ''))
+
 
 class Pull_Magic(SoS_Magic):
     name = 'pull'
@@ -1069,7 +1086,6 @@ class Pull_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-
     def handle_magic_pull(self, args):
         from sos.hosts import Host
         if args.config:
@@ -1087,13 +1103,13 @@ class Pull_Magic(SoS_Magic):
                                                              '<br>'.join([f'{x} <= {received[x]}' for x in
                                                                           sorted(received.keys())]))
             self.kernel.send_response(self.iopub_socket, 'display_data',
-                               {
-                                   'metadata': {},
-                                   'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                               })
+                                      {
+                                          'metadata': {},
+                                          'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                                      })
         except Exception as e:
-            self.kernel.warn(f'Failed to retrieve {", ".join(args.items)}: {e}')
-
+            self.kernel.warn(
+                f'Failed to retrieve {", ".join(args.items)}: {e}')
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1113,6 +1129,7 @@ class Pull_Magic(SoS_Magic):
                     }
         self.handle_magic_pull(args)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Push_Magic(SoS_Magic):
     name = 'push'
@@ -1138,7 +1155,6 @@ class Push_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-
     def handle_magic_push(self, args):
         from sos.hosts import Host
         if args.config:
@@ -1155,13 +1171,12 @@ class Push_Magic(SoS_Magic):
                                                            sent) <= 1 else 's are', args.host,
                                                        '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
             self.kernel.send_response(self.iopub_socket, 'display_data',
-                               {
-                                   'metadata': {},
-                                   'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                               })
+                                      {
+                                          'metadata': {},
+                                          'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
+                                      })
         except Exception as e:
             self.kernel.warn(f'Failed to send {", ".join(args.items)}: {e}')
-
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1182,6 +1197,7 @@ class Push_Magic(SoS_Magic):
         self.handle_magic_push(args)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
+
 class Put_Magic(SoS_Magic):
     name = 'put'
 
@@ -1199,7 +1215,6 @@ class Put_Magic(SoS_Magic):
                             help='''Names of SoS variables''')
         parser.error = self._parse_error
         return parser
-
 
     def handle_magic_put(self, items, to_kernel=None, explicit=False):
         if self.kernel.lower() == 'sos':
@@ -1297,7 +1312,6 @@ class Put_Magic(SoS_Magic):
                     f'Unrecognized return value of type {object.__class__.__name__} for action %put')
                 return
 
-
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
@@ -1317,6 +1331,7 @@ class Put_Magic(SoS_Magic):
         self.handle_magic_put(args.vars, args.__to__, explicit=True)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
+
 class Render_Magic(SoS_Magic):
     name = 'render'
 
@@ -1327,7 +1342,7 @@ class Render_Magic(SoS_Magic):
         parser = argparse.ArgumentParser(prog='%render',
                                          description='''Treat the output of a SoS cell as another format, default to markdown.''')
         parser.add_argument('msg_type', default='stdout', choices=['stdout', 'text'], nargs='?',
-                        help='''Message type to capture, default to standard output. In terms of Jupyter message
+                            help='''Message type to capture, default to standard output. In terms of Jupyter message
                         types, "stdout" refers to "stream" message with "stdout" type, and "text" refers to
                         "display_data" message with "text/plain" type.''')
         parser.add_argument('--as', dest='as_type', default='Markdown', nargs='?',
@@ -1364,12 +1379,13 @@ class Render_Magic(SoS_Magic):
                     format_dict, md_dict = self.format_obj(
                         self.render_result(content))
                     self.kernel.send_response(self.iopub_socket, 'display_data',
-                                       {'metadata': md_dict,
-                                        'data': format_dict
-                                        })
+                                              {'metadata': md_dict,
+                                               'data': format_dict
+                                               })
             finally:
                 self.kernel._meta['capture_result'] = None
                 self.kernel._meta['render_result'] = False
+
 
 class Rerun_Magic(SoS_Magic):
     name = 'rerun'
@@ -1405,6 +1421,7 @@ class Rerun_Magic(SoS_Magic):
             self.kernel._meta['workflow_mode'] = False
             self.options = old_options
 
+
 class Run_Magic(SoS_Magic):
     name = 'run'
 
@@ -1425,7 +1442,7 @@ class Run_Magic(SoS_Magic):
         run_code = code
         run_options = []
         while True:
-            if self.MAGIC_RUN.match(run_code):
+            if self.pattern.match(run_code):
                 options, run_code = self.get_magic_and_code(
                     run_code, False)
                 run_options.append(options)
@@ -1451,7 +1468,7 @@ class Run_Magic(SoS_Magic):
                 if self.kernel._debug_mode:
                     self.kernel.warn(f'Executing\n{run_code}')
                 ret = self.kernel._do_execute(run_code, silent, store_history, user_expressions,
-                                       allow_stdin)
+                                              allow_stdin)
             except Exception as e:
                 self.kernel.warn(f'Failed to execute workflow: {e}')
                 raise
@@ -1461,6 +1478,7 @@ class Run_Magic(SoS_Magic):
                 self.kernel._meta['workflow_mode'] = False
                 self.options = old_options
         return ret
+
 
 class Revisions_Magic(SoS_Magic):
     name = 'revisions'
@@ -1485,7 +1503,6 @@ class Revisions_Magic(SoS_Magic):
             files (e.g. --links report URL_to_repo ) with URL interpolated as option --source.''')
         parser.error = self._parse_error
         return parser
-
 
     def handle_magic_revisions(self, args, unknown_args):
         filename = self._meta['notebook_name'] + '.ipynb'
@@ -1553,7 +1570,6 @@ class Revisions_Magic(SoS_Magic):
                                'data': {'text/html': HTML(text).data}
                            })
 
-
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, True)
         parser = self.get_revisions_parser()
@@ -1567,6 +1583,7 @@ class Revisions_Magic(SoS_Magic):
         except Exception as e:
             self.kernel.warn(f'Failed to retrieve revisions of notebook: {e}')
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Sandbox_Magic(SoS_Magic):
     name = 'sandbox'
@@ -1633,6 +1650,7 @@ class Sandbox_Magic(SoS_Magic):
             self.in_sandbox = False
             # env.exec_dir = old_dir
 
+
 class Save_Magic(SoS_Magic):
     name = 'save'
 
@@ -1658,41 +1676,42 @@ class Save_Magic(SoS_Magic):
         # if sos kernel ...
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-          parser = self.get_save_parser()
-          try:
-              args = parser.parse_args(shlex.split(options))
-          except SystemExit:
-              return
-          filename = os.path.expanduser(args.filename)
-          if os.path.isfile(filename) and not args.force:
-              raise ValueError(
-                  f'Cannot overwrite existing output file {filename}')
+            parser = self.get_save_parser()
+            try:
+                args = parser.parse_args(shlex.split(options))
+            except SystemExit:
+                return
+            filename = os.path.expanduser(args.filename)
+            if os.path.isfile(filename) and not args.force:
+                raise ValueError(
+                    f'Cannot overwrite existing output file {filename}')
 
-          with open(filename, 'a' if args.append else 'w') as script:
-              script.write(
-                  '\n'.join(remaining_code.splitlines()).rstrip() + '\n')
-          if args.setx:
-              import stat
-              os.chmod(filename, os.stat(
-                  filename).st_mode | stat.S_IEXEC)
+            with open(filename, 'a' if args.append else 'w') as script:
+                script.write(
+                    '\n'.join(remaining_code.splitlines()).rstrip() + '\n')
+            if args.setx:
+                import stat
+                os.chmod(filename, os.stat(
+                    filename).st_mode | stat.S_IEXEC)
 
-          self.kernel.send_response(self.iopub_socket, 'display_data',
-                             {'metadata': {},
-                              'data': {
-                                  'text/plain': f'Cell content saved to {filename}\n',
-                                  'text/html': HTML(
-                                      f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
-                             }
-                             })
-          return
+            self.kernel.send_response(self.iopub_socket, 'display_data',
+                                      {'metadata': {},
+                                       'data': {
+                                          'text/plain': f'Cell content saved to {filename}\n',
+                                          'text/html': HTML(
+                                              f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
+                                      }
+                                      })
+            return
         except Exception as e:
-          self.kernel.warn(f'Failed to save cell: {e}')
-          return {'status': 'error',
-                  'ename': e.__class__.__name__,
-                  'evalue': str(e),
-                  'traceback': [],
-                  'execution_count': self._execution_count,
-                  }
+            self.kernel.warn(f'Failed to save cell: {e}')
+            return {'status': 'error',
+                    'ename': e.__class__.__name__,
+                    'evalue': str(e),
+                    'traceback': [],
+                    'execution_count': self._execution_count,
+                    }
+
 
 class Set_Magic(SoS_Magic):
     name = 'set'
@@ -1706,7 +1725,6 @@ class Set_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-
     def handle_magic_set(self, options):
         if options.strip():
             # self.kernel.send_response(self.iopub_socket, 'stream',
@@ -1717,22 +1735,23 @@ class Set_Magic(SoS_Magic):
             else:
                 self.options = options.strip()
                 self.kernel.send_response(self.iopub_socket, 'stream',
-                                   dict(name='stdout', text=f'Set sos options to "{self.options}"\n'))
+                                          dict(name='stdout', text=f'Set sos options to "{self.options}"\n'))
         else:
             if self.options:
                 self.kernel.send_response(self.iopub_socket, 'stream',
-                                   dict(name='stdout', text=f'Reset sos options from "{self.options}" to ""\n'))
+                                          dict(name='stdout', text=f'Reset sos options from "{self.options}" to ""\n'))
                 self.options = ''
             else:
                 self.kernel.send_response(self.iopub_socket, 'stream',
-                                   {'name': 'stdout',
-                                    'text': 'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'})
+                                          {'name': 'stdout',
+                                           'text': 'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'})
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         self.handle_magic_set(options)
         # self.options will be set to inflence the execution of remaing_code
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class SessionInfo_Magic(SoS_Magic):
     name = 'sessioninfo'
@@ -1746,7 +1765,6 @@ class SessionInfo_Magic(SoS_Magic):
             stored in variable sessioninfo''')
         parser.error = self._parse_error
         return parser
-
 
     def handle_sessioninfo(self):
         #
@@ -1819,6 +1837,7 @@ class SessionInfo_Magic(SoS_Magic):
         self.handle_sessioninfo()
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
+
 class Shutdown_Magic(SoS_Magic):
     name = 'shutdown'
 
@@ -1846,6 +1865,7 @@ class Shutdown_Magic(SoS_Magic):
         self.shutdown_kernel(
             args.kernel if args.kernel else self.kernel, args.restart)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class SoSRun_Magic(SoS_Magic):
     name = 'sosrun'
@@ -1878,7 +1898,7 @@ class SoSRun_Magic(SoS_Magic):
                     'Nothing to execute (notebook workflow is empty).')
             else:
                 self.kernel._do_execute(self.kernel._meta['workflow'], silent,
-                                 store_history, user_expressions, allow_stdin)
+                                        store_history, user_expressions, allow_stdin)
         except Exception as e:
             self.kernel.warn(f'Failed to execute workflow: {e}')
             raise
@@ -1888,6 +1908,7 @@ class SoSRun_Magic(SoS_Magic):
             self.kernel._meta['workflow_mode'] = False
             self.options = old_options
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class SoSSave_Magic(SoS_Magic):
     name = 'sossave'
@@ -1991,19 +2012,19 @@ class SoSSave_Magic(SoS_Magic):
                                  filename, sargs=arg, unknown_args=[])
 
             self.kernel.send_response(self.iopub_socket, 'display_data',
-                               {'metadata': {},
-                                'data': {
-                                    'text/plain': f'Workflow saved to {filename}\n',
-                                    'text/html': HTML(
-                                        f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
-                               }
-                               })
+                                      {'metadata': {},
+                                       'data': {
+                                          'text/plain': f'Workflow saved to {filename}\n',
+                                          'text/html': HTML(
+                                              f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
+                                      }
+                                      })
             #
             if args.commit:
-                self.handle_shell_command({'git', 'commit', filename, '-m',
+                self.run_shell_command({'git', 'commit', filename, '-m',
                                            args.message if args.message else f'save {filename}'})
             if args.push:
-                self.handle_shell_command(['git', 'push'])
+                self.run_shell_command(['git', 'push'])
             return
         except Exception as e:
             self.kernel.warn(f'Failed to save workflow: {e}')
@@ -2013,6 +2034,7 @@ class SoSSave_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self._execution_count,
                     }
+
 
 class TaskInfo_Magic(SoS_Magic):
     name = 'taskinfo'
@@ -2034,7 +2056,6 @@ class TaskInfo_Magic(SoS_Magic):
             sos config.yml files.''')
         parser.error = self._parse_error
         return parser
-
 
     def handle_taskinfo(self, task_id, task_queue):
         # requesting information on task
@@ -2071,6 +2092,7 @@ class TaskInfo_Magic(SoS_Magic):
         self.kernel.handle_taskinfo(args.task, args.queue)
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
+
 class Tasks_Magic(SoS_Magic):
     name = 'tasks'
 
@@ -2095,7 +2117,6 @@ class Tasks_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-
     def handle_tasks(self, tasks, queue='localhost', status=None, age=None):
         from sos.hosts import Host
         try:
@@ -2105,9 +2126,9 @@ class Tasks_Magic(SoS_Magic):
             return
         # get all tasks
         for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=status, age=age):
-            self.kernel.notify_task_status(['new-status', queue, tid, tst, tdt])
+            self.kernel.notify_task_status(
+                ['new-status', queue, tid, tst, tdt])
         self.kernel.send_frontend_msg('update-duration', {})
-
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -2207,12 +2228,13 @@ class Toc_Magic(SoS_Magic):
             self.kernel.send_frontend_msg('show_toc')
         else:
             self.kernel.send_response(self.iopub_socket, 'display_data',
-                               {'metadata': {},
-                                'data': {
-                                   'text/html': header_to_toc(self.kernel._meta['toc'], args.id)
-                               },
-                               })
+                                      {'metadata': {},
+                                       'data': {
+                                          'text/html': header_to_toc(self.kernel._meta['toc'], args.id)
+                                      },
+                                      })
         return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+
 
 class Use_Magic(SoS_Magic):
     name = 'use'
@@ -2273,7 +2295,7 @@ class Use_Magic(SoS_Magic):
             self.kernel.warn(f'{args.name} is shutdown')
         try:
             self.kernel.switch_kernel(args.name, None, None, args.kernel,
-                               args.language, args.color)
+                                      args.language, args.color)
             return self.kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
             self.kernel.warn(
@@ -2284,6 +2306,7 @@ class Use_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self._execution_count,
                     }
+
 
 class With_Magic(SoS_Magic):
     name = 'with'
@@ -2340,43 +2363,46 @@ class With_Magic(SoS_Magic):
 
 
 class SoS_Magics(object):
-    def __init__(self, kernel):
-        self._magics = [
-            Command_Magic(kernel),
-            Capture_Magic(kernel),
-            Cd_Magic(kernel),
-            Clear_Magic(kernel),
-            ConnectInfo_Magic(kernel),
-            Debug_Magic(kernel),
-            Dict_Magic(kernel),
-            Expand_Magic(kernel),
-            Get_Magic(kernel),
-            Matplotlib_Magic(kernel),
-            Preview_Magic(kernel),
-            Pull_Magic(kernel),
-            Paste_Magic(kernel),
-            Push_Magic(kernel),
-            Put_Magic(kernel),
-            Render_Magic(kernel),
-            Rerun_Magic(kernel),
-            Run_Magic(kernel),
-            Revisions_Magic(kernel),
-            Save_Magic(kernel),
-            Set_Magic(kernel),
-            SessionInfo_Magic(kernel),
-            Shutdown_Magic(kernel),
-            SoSRun_Magic(kernel),
-            SoSSave_Magic(kernel),
-            TaskInfo_Magic(kernel),
-            Tasks_Magic(kernel),
-            Toc_Magic(kernel),
-            Sandbox_Magic(kernel),
-            Use_Magic(kernel),
-            With_Magic(kernel)
-        ]
+    magics = [
+        Command_Magic,
+        Capture_Magic,
+        Cd_Magic,
+        Clear_Magic,
+        ConnectInfo_Magic,
+        Debug_Magic,
+        Dict_Magic,
+        Expand_Magic,
+        Get_Magic,
+        Matplotlib_Magic,
+        Preview_Magic,
+        Pull_Magic,
+        Paste_Magic,
+        Push_Magic,
+        Put_Magic,
+        Render_Magic,
+        Rerun_Magic,
+        Run_Magic,
+        Revisions_Magic,
+        Save_Magic,
+        Set_Magic,
+        SessionInfo_Magic,
+        Shutdown_Magic,
+        SoSRun_Magic,
+        SoSSave_Magic,
+        TaskInfo_Magic,
+        Tasks_Magic,
+        Toc_Magic,
+        Sandbox_Magic,
+        Use_Magic,
+        With_Magic
+    ]
+    names = [x.name for x in magics if x.name != '!']
 
-    def names(self):
-        return [x.name for x in self._magics]
+    def __init__(self, kernel=None):
+        self._magics = {x.name: x(kernel) for x in self.magics}
 
-    def __iter__(self):
-        return self._magics
+    def get(self, name):
+        return self._magics[name]
+
+    def values(self):
+        return self._magics.values()

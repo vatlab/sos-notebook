@@ -8,7 +8,7 @@ import os
 import rlcompleter
 
 from sos.utils import env
-
+from .magics import SoS_Magics
 
 def last_valid(line):
     text = line
@@ -36,7 +36,7 @@ class SoS_MagicsCompleter:
             else:
                 return None
         elif text.startswith('%') and line.startswith(text):
-            return text, ['%' + x + ' ' for x in self.kernel.ALL_MAGICS if x.startswith(text[1:])]
+            return text, ['%' + x + ' ' for x in SoS_Magics.names if x.startswith(text[1:])]
         elif any(line.startswith(x) for x in ('%use', '%with', '%shutdown')):
             return text, [x for x in self.kernel.supported_languages.keys() if x.startswith(text)]
         elif line.startswith('%get '):

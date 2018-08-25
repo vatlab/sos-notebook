@@ -997,18 +997,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 f'Failed to get a response from message type {msg_types} for the execution of {statement}')
         return responses
 
-    def handle_shell_command(self, cmd):
-        # interpolate command
-        if not cmd:
-            return
-        from sos.utils import pexpect_run
-        try:
-            with self.redirect_sos_io():
-                pexpect_run(cmd, shell=True,
-                            win_width=40 if self._meta['cell_id'] == "" else 80)
-        except Exception as e:
-            self.warn(e)
-
     def run_sos_code(self, code, silent):
         code = dedent(code)
         with self.redirect_sos_io():
@@ -1274,7 +1262,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             # this is a special probing command from vim-ipython. Let us handle it specially
             # so that vim-python can get the pid.
             return
-        for magic in self.magics._magics:
+        for magic in self.magics.values():
             if magic.match(code):
                 return magic.handle(code, silent, store_history, user_expressions, allow_stdin)
         if self.kernel != 'SoS':
