@@ -432,7 +432,7 @@ class Dict_Magic(SoS_Magic):
                 return
 
         if args.reset:
-            self._reset_dict()
+            self.kernel._reset_dict()
             return
 
         if args.__del__:
@@ -1254,11 +1254,11 @@ class Rerun_Magic(SoS_Magic):
         try:
             self.kernel._meta['workflow_mode'] = True
             old_dict = env.sos_dict
-            self._reset_dict()
-            if not self.last_executed_code:
+            self.kernel._reset_dict()
+            if not self.kernel.last_executed_code:
                 self.kernel.warn('No saved script')
-                self.last_executed_code = ''
-            return self.kernel._do_execute(self.last_executed_code, silent, store_history, user_expressions, allow_stdin)
+                self.kernel.last_executed_code = ''
+            return self.kernel._do_execute(self.kernel.last_executed_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
             self.kernel.warn(f'Failed to execute workflow: {e}')
             raise
@@ -1310,7 +1310,7 @@ class Run_Magic(SoS_Magic):
             try:
                 # %run is executed in its own namespace
                 old_dict = env.sos_dict
-                self._reset_dict()
+                self.kernel._reset_dict()
                 self.kernel._meta['workflow_mode'] = True
                 if self.kernel._debug_mode:
                     self.kernel.warn(f'Executing\n{run_code}')
@@ -1478,7 +1478,7 @@ class Sandbox_Magic(SoS_Magic):
                 os.chdir(new_dir)
             if not args.keep_dict:
                 old_dict = env.sos_dict
-                self._reset_dict()
+                self.kernel._reset_dict()
             ret = self.kernel._do_execute(
                 remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error and ret['status'] == 'error':
@@ -1730,14 +1730,13 @@ class SoSRun_Magic(SoS_Magic):
         return parser
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
-
         options, remaining_code = self.get_magic_and_code(code, False)
         old_options = self.kernel.options
         self.kernel.options = options + ' ' + self.kernel.options
         try:
             # %run is executed in its own namespace
             old_dict = env.sos_dict
-            self._reset_dict()
+            self.kernel._reset_dict()
             self.kernel._meta['workflow_mode'] = True
             # self.kernel.send_frontend_msg('preview-workflow', self.kernel._meta['workflow'])
             if not self.kernel._meta['workflow']:
