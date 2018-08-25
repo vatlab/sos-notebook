@@ -509,7 +509,7 @@ class SoS_Kernel(IPythonKernel):
                         ['change-status', v[1], v[0], 'pending', (None, None, None)])
                 elif k == 'task-info':
                     self._meta['use_panel'] = True
-                    self.handle_taskinfo(v[0], v[1])
+                    self.update_taskinfo(v[0], v[1])
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue
@@ -566,6 +566,28 @@ class SoS_Kernel(IPythonKernel):
         'missing': 'fa-question',
         'unknown': 'fa-question',
     }
+
+    def update_taskinfo(self, task_id, task_queue):
+        # requesting information on task
+        from sos.hosts import Host
+        host = Host(task_queue)
+        result = host._task_engine.query_tasks(
+            [task_id], verbosity=2, html=True)
+        # log_to_file(result)
+        self.send_frontend_msg('display_data', {
+            'metadata': {},
+            'data': {'text/plain': result,
+                     'text/html': HTML(result).data
+                     }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
+
+        # now, there is a possibility that the status of the task is different from what
+        # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
+        # already get the status, we should update the task engine...
+        #
+        # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
+        status = result.split(
+            '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
+        host._task_engine.update_task_status(task_id, status)
 
     def notify_task_status(self, task_status):
         action_class = {
@@ -1416,12 +1438,11 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             return
         for magic in self.magics.values():
             if magic.match(code):
-                return magic.handle(code, silent, store_history, user_expressions, allow_stdin)
+                return magic.apply(code, silent, store_history, user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
             if code:
                 self.last_executed_code = code
-            # code = self._interpolate_text(code, quiet=False)
             if self._meta['cell_id']:
                 self.send_frontend_msg(
                     'cell-kernel', [self._meta['cell_id'], self.kernel])
