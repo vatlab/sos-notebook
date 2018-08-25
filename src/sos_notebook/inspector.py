@@ -12,10 +12,11 @@ from .magics import SoS_Magics
 class SoS_VariableInspector(object):
     def __init__(self, kernel):
         self.kernel = kernel
+        self.preview_magic = kernel.magics.get('preview')
 
     def inspect(self, name, line, pos):
         try:
-            obj_desc, preview = self.kernel.preview_var(name, style=None)
+            obj_desc, preview = self.preview_magic.preview_var(name, style=None)
             if preview is None:
                 return {}
             else:

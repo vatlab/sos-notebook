@@ -448,7 +448,6 @@ class SoS_Kernel(IPythonKernel):
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
-        self.previewers = None
         self.original_keys = None
         self._meta = {'use_panel': True}
         self._supported_languages = None
@@ -694,6 +693,159 @@ class SoS_Kernel(IPythonKernel):
         sys.stdout = save_stdout
         sys.stderr = save_stderr
 
+    def get_items_from(self, items, from_kernel=None, explicit=False):
+        if from_kernel is None or from_kernel.lower() == 'sos':
+            # autmatically get all variables with names start with 'sos'
+            default_items = [x for x in env.sos_dict.keys() if x.startswith(
+                'sos') and x not in self.original_keys]
+            items = default_items if not items else items + default_items
+            for item in items:
+                if item not in env.sos_dict:
+                    self.warn(f'Variable {item} does not exist')
+                    return
+            if not items:
+                return
+            if self.kernel in self.supported_languages:
+                lan = self.supported_languages[self.kernel]
+                kinfo = self.subkernels.find(self.kernel)
+                try:
+                    lan(self, kinfo.kernel).get_vars(items)
+                except Exception as e:
+                    self.warn(f'Failed to get variable: {e}\n')
+                    return
+            elif self.kernel == 'SoS':
+                self.warn(
+                    'Magic %get without option --kernel can only be executed by subkernels')
+                return
+            else:
+                if explicit:
+                    self.warn(
+                        f'Magic %get failed because the language module for {self.kernel} is not properly installed. Please install it according to language specific instructions on the Running SoS section of the SoS homepage and restart Jupyter server.')
+                return
+        elif self.kernel.lower() == 'sos':
+            # if another kernel is specified and the current kernel is sos
+            # we get from subkernel
+            try:
+                self.switch_kernel(from_kernel)
+                self.put_items_to(items)
+            except Exception as e:
+                self.warn(
+                    f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
+            finally:
+                self.switch_kernel('SoS')
+        else:
+            # if another kernel is specified, we should try to let that kernel pass
+            # the variables to this one directly
+            try:
+                my_kernel = self.kernel
+                self.switch_kernel(from_kernel)
+                # put stuff to sos or my_kernel directly
+                self.put_items_to(
+                    items, to_kernel=my_kernel, explicit=explicit)
+            except Exception as e:
+                self.warn(
+                    f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
+            finally:
+                # then switch back
+                self.switch_kernel(my_kernel)
+
+    def put_items_to(self, items, to_kernel=None, explicit=False):
+        if self.kernel.lower() == 'sos':
+            if to_kernel is None:
+                self.warn(
+                    'Magic %put without option --kernel can only be executed by subkernels')
+                return
+            # if another kernel is specified and the current kernel is sos
+            try:
+                # switch to kernel and bring in items
+                self.switch_kernel(to_kernel, in_vars=items)
+            except Exception as e:
+                self.warn(
+                    f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+            finally:
+                # switch back
+                self.switch_kernel('SoS')
+        else:
+            # put to sos kernel or another kernel
+            #
+            # items can be None if unspecified
+            if not items:
+                # we do not simply return because we need to return default variables (with name startswith sos
+                items = []
+            if self.kernel not in self.supported_languages:
+                if explicit:
+                    self.warn(
+                        f'Subkernel {self.kernel} does not support magic %put.')
+                return
+            #
+            lan = self.supported_languages[self.kernel]
+            kinfo = self.subkernels.find(self.kernel)
+            # pass language name to to_kernel
+            try:
+                if to_kernel:
+                    objects = lan(self, kinfo.kernel).put_vars(
+                        items, to_kernel=self.subkernels.find(to_kernel).language)
+                else:
+                    objects = lan(self, kinfo.kernel).put_vars(
+                        items, to_kernel='SoS')
+            except Exception as e:
+                # if somethign goes wrong in the subkernel does not matter
+                if self._debug_mode:
+                    self.warn(
+                        f'Failed to call put_var({items}) from {kinfo.kernel}')
+                objects = {}
+            if isinstance(objects, dict):
+                # returns a SOS dictionary
+                try:
+                    env.sos_dict.update(objects)
+                except Exception as e:
+                    self.warn(
+                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                    return
+
+                if to_kernel is None:
+                    return
+                # if another kernel is specified and the current kernel is not sos
+                # we need to first put to sos then to another kernel
+                try:
+                    my_kernel = self.kernel
+                    # switch to the destination kernel and bring in vars
+                    self.switch_kernel(to_kernel, in_vars=items)
+                except Exception as e:
+                    self.warn(
+                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                finally:
+                    # switch back to the original kernel
+                    self.switch_kernel(my_kernel)
+            elif isinstance(objects, str):
+                # an statement that will be executed in the destination kernel
+                if to_kernel is None or to_kernel == 'SoS':
+                    # evaluate in SoS, this should not happen or rarely happen
+                    # because the subkernel should return a dictionary for SoS kernel
+                    try:
+                        exec(objects, env.sos_dict._dict)
+                    except Exception as e:
+                        self.warn(
+                            f'Failed to put variables {items} to SoS kernel: {e}')
+                        return
+                try:
+                    my_kernel = self.kernel
+                    # switch to the destination kernel
+                    self.switch_kernel(to_kernel)
+                    # execute the statement to pass variables directly to destination kernel
+                    self.run_cell(objects, True, False)
+                except Exception as e:
+                    self.warn(
+                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                finally:
+                    # switch back to the original kernel
+                    self.switch_kernel(my_kernel)
+            else:
+                self.warn(
+                    f'Unrecognized return value of type {object.__class__.__name__} for action %put')
+                return
+
+
     def do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
@@ -884,7 +1036,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.switch_kernel('SoS')
                 self.switch_kernel(kinfo.name, in_vars, ret_vars)
         elif kinfo.name == 'SoS':
-            self.handle_magic_put(self._kernel_return_vars)
+            self.put_items_to(self._kernel_return_vars)
             self._kernel_return_vars = []
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
@@ -926,7 +1078,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             # passing
-            self.handle_magic_get(in_vars)
+            self.get_items_from(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
