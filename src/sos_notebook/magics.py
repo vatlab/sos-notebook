@@ -106,7 +106,7 @@ class Capture_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Capture_Magic, self).__init__(kernel)
 
-    def get_capture_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%capture',
                                          description='''Capture output (stdout) or output file from a subkernel
                                          as variable in SoS''')
@@ -141,7 +141,7 @@ class Capture_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
 
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_capture_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -319,7 +319,7 @@ class Clear_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Clear_Magic, self).__init__(kernel)
 
-    def get_clear_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%clear',
                                          description='''Clear the output of the current cell, or the current
             active cell if executed in the sidepanel.''')
@@ -335,7 +335,7 @@ class Clear_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_clear_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(options.split())
         except SystemExit:
@@ -375,7 +375,7 @@ class Debug_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Debug_Magic, self).__init__(kernel)
 
-    def get_debug_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%debug',
                                          description='''Turn on or off debug information''')
         parser.add_argument('status', choices=['on', 'off'],
@@ -385,7 +385,7 @@ class Debug_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_debug_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(options.split())
         except SystemExit:
@@ -402,7 +402,7 @@ class Dict_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Dict_Magic, self).__init__(kernel)
 
-    def get_dict_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%dict',
                                          description='Inspect or reset SoS dictionary')
         parser.add_argument('vars', nargs='*')
@@ -420,7 +420,7 @@ class Dict_Magic(SoS_Magic):
     def handle_magic_dict(self, line):
         'Magic that displays content of the dictionary'
         # do not return __builtins__ beacuse it is too long...
-        parser = self.get_dict_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(line))
         except SystemExit:
@@ -473,7 +473,7 @@ class Expand_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Expand_Magic, self).__init__(kernel)
 
-    def get_expand_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%expand',
                                          description='''Expand the script in the current cell with default ({}) or
                 specified sigil.''')
@@ -487,7 +487,7 @@ class Expand_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         lines = code.splitlines()
         options = lines[0]
-        parser = self.get_expand_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(options.split()[1:])
         except SystemExit:
@@ -527,7 +527,7 @@ class Get_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Get_Magic, self).__init__(kernel)
 
-    def get_get_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%get',
                                          description='''Get specified variables from another kernel, which is
                 by default the SoS kernel.''')
@@ -598,7 +598,7 @@ class Get_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_get_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(options.split())
             except SystemExit:
@@ -621,7 +621,7 @@ class Matplotlib_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Matplotlib_Magic, self).__init__(kernel)
 
-    def get_matplotlib_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%matplotlib',
                                          description='''Set matplotlib parser type''')
         parser.add_argument('gui', choices=['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg',
@@ -635,7 +635,7 @@ class Matplotlib_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_matplotlib_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -827,7 +827,7 @@ class Preview_Magic(SoS_Magic):
                                                   name='stderr', text=f'Failed to preview {filename}: {e}'),
                                               title=title, append=True, page='Preview')
 
-    def get_preview_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%preview',
                                          description='''Preview files, sos variables, or expressions in the
                 side panel, or notebook if side panel is not opened, unless
@@ -974,7 +974,7 @@ class Preview_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_preview_parser()
+        parser = self.get_parser()
         options = shlex.split(options, posix=False)
         help_option = []
         if ('-s' in options or '--style' in options) and '-h' in options:
@@ -1067,7 +1067,7 @@ class Pull_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Pull_Magic, self).__init__(kernel)
 
-    def get_pull_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser('pull',
                                          description='''Pull files or directories from remote host to local host''')
         parser.add_argument('items', nargs='+', help='''Files or directories to be
@@ -1114,7 +1114,7 @@ class Pull_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_pull_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(options.split())
             except SystemExit:
@@ -1137,7 +1137,7 @@ class Push_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Push_Magic, self).__init__(kernel)
 
-    def get_push_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser('push',
                                          description='''Push local files or directory to a remote host''')
         parser.add_argument('items', nargs='+', help='''Files or directories to be sent
@@ -1181,7 +1181,7 @@ class Push_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_push_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(options.split())
             except SystemExit:
@@ -1204,7 +1204,7 @@ class Put_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Put_Magic, self).__init__(kernel)
 
-    def get_put_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%put',
                                          description='''Put specified variables in the subkernel to another
             kernel, which is by default the SoS kernel.''')
@@ -1315,7 +1315,7 @@ class Put_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_put_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(options.split())
             except SystemExit:
@@ -1338,7 +1338,7 @@ class Render_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Render_Magic, self).__init__(kernel)
 
-    def get_render_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%render',
                                          description='''Treat the output of a SoS cell as another format, default to markdown.''')
         parser.add_argument('msg_type', default='stdout', choices=['stdout', 'text'], nargs='?',
@@ -1355,7 +1355,7 @@ class Render_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
 
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_render_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -1393,7 +1393,7 @@ class Rerun_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Rerun_Magic, self).__init__(kernel)
 
-    def get_rerun_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%rerun',
                                          description='''Re-execute the last executed code, most likely with
             different command line options''')
@@ -1428,7 +1428,7 @@ class Run_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Run_Magic, self).__init__(kernel)
 
-    def get_run_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%run',
                                          description='''Execute the current cell with specified command line
             arguments. Arguments set by magic %set will be appended at the
@@ -1486,7 +1486,7 @@ class Revisions_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Revisions_Magic, self).__init__(kernel)
 
-    def get_revisions_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%revision',
                                          description='''Revision history of the document, parsed from the log
             message of the notebook if it is kept in a git repository. Additional parameters to "git log" command
@@ -1572,7 +1572,7 @@ class Revisions_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, True)
-        parser = self.get_revisions_parser()
+        parser = self.get_parser()
         try:
             args, unknown_args = parser.parse_known_args(
                 shlex.split(options))
@@ -1591,7 +1591,7 @@ class Sandbox_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Sandbox_Magic, self).__init__(kernel)
 
-    def get_sandbox_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%sandbox',
                                          description='''Execute content of a cell in a temporary directory
                 with fresh dictionary (by default).''')
@@ -1611,7 +1611,7 @@ class Sandbox_Magic(SoS_Magic):
         import tempfile
         import shutil
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_sandbox_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -1657,7 +1657,7 @@ class Save_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Save_Magic, self).__init__(kernel)
 
-    def get_save_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%save',
                                          description='''Save the content of the cell (after the magic itself) to specified file''')
         parser.add_argument('filename',
@@ -1676,7 +1676,7 @@ class Save_Magic(SoS_Magic):
         # if sos kernel ...
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_save_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(shlex.split(options))
             except SystemExit:
@@ -1719,7 +1719,7 @@ class Set_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Set_Magic, self).__init__(kernel)
 
-    def get_set_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%set',
                                          description='''Set persistent command line options for SoS runs.''')
         parser.error = self._parse_error
@@ -1759,7 +1759,7 @@ class SessionInfo_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(SessionInfo_Magic, self).__init__(kernel)
 
-    def get_sessioninfo_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%sessioninfo',
                                          description='''List the session info of all subkernels, and information
             stored in variable sessioninfo''')
@@ -1829,7 +1829,7 @@ class SessionInfo_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_sessioninfo_parser()
+        parser = self.get_parser()
         try:
             parser.parse_known_args(shlex.split(options))
         except SystemExit:
@@ -1844,7 +1844,7 @@ class Shutdown_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Shutdown_Magic, self).__init__(kernel)
 
-    def get_shutdown_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%shutdown',
                                          description='''Shutdown or restart specified subkernel''')
         parser.add_argument('kernel', nargs='?',
@@ -1857,7 +1857,7 @@ class Shutdown_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_shutdown_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -1873,7 +1873,7 @@ class SoSRun_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(SoSRun_Magic, self).__init__(kernel)
 
-    def get_sosrun_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%sosrun',
                                          description='''Execute the entire notebook with steps consisting of SoS
             cells (cells with SoS kernel) with section header, with specified command
@@ -1916,7 +1916,7 @@ class SoSSave_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(SoSSave_Magic, self).__init__(kernel)
 
-    def get_sossave_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%sossave',
                                          description='''Save the jupyter notebook as workflow (consisting of all sos
             steps defined in cells starting with section header) or a HTML report to
@@ -1953,7 +1953,7 @@ class SoSSave_Magic(SoS_Magic):
         # get the saved filename
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_sossave_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(shlex.split(options))
             except SystemExit:
@@ -2042,7 +2042,7 @@ class TaskInfo_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(TaskInfo_Magic, self).__init__(kernel)
 
-    def get_taskinfo_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%taskinfo',
                                          description='''Get information on specified task. By default
             sos would query against all running task queues but it would
@@ -2081,7 +2081,7 @@ class TaskInfo_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_taskinfo_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(options.split())
         except SystemExit:
@@ -2099,7 +2099,7 @@ class Tasks_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Tasks_Magic, self).__init__(kernel)
 
-    def get_tasks_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%tasks',
                                          description='''Show a list of tasks from specified queue''')
         parser.add_argument('tasks', nargs='*', help='ID of tasks')
@@ -2132,7 +2132,7 @@ class Tasks_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_tasks_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(options.split())
         except SystemExit:
@@ -2200,7 +2200,7 @@ class Toc_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Toc_Magic, self).__init__(kernel)
 
-    def get_toc_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%toc',
                                          description='''Generate a table of content from the current notebook.''')
         loc = parser.add_mutually_exclusive_group()
@@ -2215,7 +2215,7 @@ class Toc_Magic(SoS_Magic):
 
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_toc_parser()
+        parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
@@ -2242,7 +2242,7 @@ class Use_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Use_Magic, self).__init__(kernel)
 
-    def get_use_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%use',
                                          description='''Switch to an existing subkernel
             or start a new subkernel.''')
@@ -2277,7 +2277,7 @@ class Use_Magic(SoS_Magic):
 
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_use_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(shlex.split(options))
             except SystemExit:
@@ -2314,7 +2314,7 @@ class With_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(With_Magic, self).__init__(kernel)
 
-    def get_with_parser(self):
+    def get_parser(self):
         parser = argparse.ArgumentParser(prog='%with',
                                          description='''Use specified subkernel to evaluate current
             cell, with optional input and output variables''')
@@ -2331,7 +2331,7 @@ class With_Magic(SoS_Magic):
     def handle(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
-            parser = self.get_with_parser()
+            parser = self.get_parser()
             try:
                 args = parser.parse_args(shlex.split(options))
             except SystemExit:
