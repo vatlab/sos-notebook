@@ -386,8 +386,6 @@ class SoS_Kernel(IPythonKernel):
     }
     banner = "SoS kernel - script of scripts"
 
-
-
     def get_supported_languages(self):
         if self._supported_languages is not None:
             return self._supported_languages
@@ -715,7 +713,7 @@ class SoS_Kernel(IPythonKernel):
         sys.stdout = save_stdout
         sys.stderr = save_stderr
 
-    def get_items_from(self, items, from_kernel=None, explicit=False):
+    def get_vars_from(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
             # autmatically get all variables with names start with 'sos'
             default_items = [x for x in env.sos_dict.keys() if x.startswith(
@@ -749,7 +747,7 @@ class SoS_Kernel(IPythonKernel):
             # we get from subkernel
             try:
                 self.switch_kernel(from_kernel)
-                self.put_items_to(items)
+                self.put_vars_to(items)
             except Exception as e:
                 self.warn(
                     f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
@@ -762,7 +760,7 @@ class SoS_Kernel(IPythonKernel):
                 my_kernel = self.kernel
                 self.switch_kernel(from_kernel)
                 # put stuff to sos or my_kernel directly
-                self.put_items_to(
+                self.put_vars_to(
                     items, to_kernel=my_kernel, explicit=explicit)
             except Exception as e:
                 self.warn(
@@ -771,7 +769,7 @@ class SoS_Kernel(IPythonKernel):
                 # then switch back
                 self.switch_kernel(my_kernel)
 
-    def put_items_to(self, items, to_kernel=None, explicit=False):
+    def put_vars_to(self, items, to_kernel=None, explicit=False):
         if self.kernel.lower() == 'sos':
             if to_kernel is None:
                 self.warn(
@@ -1058,7 +1056,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.switch_kernel('SoS')
                 self.switch_kernel(kinfo.name, in_vars, ret_vars)
         elif kinfo.name == 'SoS':
-            self.put_items_to(self._kernel_return_vars)
+            self.put_vars_to(self._kernel_return_vars)
             self._kernel_return_vars = []
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
@@ -1100,7 +1098,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             # passing
-            self.get_items_from(in_vars)
+            self.get_vars_from(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name

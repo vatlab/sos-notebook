@@ -554,7 +554,7 @@ class Get_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self.sos_kernel._execution_count,
                     }
-        self.sos_kernel.get_items_from(args.vars, args.__from__, explicit=True)
+        self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
@@ -1170,7 +1170,7 @@ class Put_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self.sos_kernel._execution_count,
                     }
-        self.sos_kernel.put_items_to(args.vars, args.__to__, explicit=True)
+        self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
