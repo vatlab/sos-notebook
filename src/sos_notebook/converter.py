@@ -12,7 +12,7 @@ from io import StringIO
 import nbformat
 from nbconvert.exporters import Exporter
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
-from sos.syntax import SOS_CELL_LINE, SOS_SECTION_HEADER
+from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env
 
 #
@@ -164,9 +164,6 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
     content = []
 
     with open(script_file) as script:
-        split_step = '%cell ' not in script.read()
-
-    with open(script_file) as script:
         first_block = True
         for line in script:
             if line.startswith('#') and first_block:
@@ -180,7 +177,7 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
 
             first_block = False
 
-            mo = SOS_CELL_LINE.match(line)
+            mo = SOS_SECTION_HEADER.match(line)
             if mo:
                 # get ride of empty content
                 if not any(x.strip() for x in content):
@@ -189,34 +186,17 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                 if content:
                     add_cell(cells, content, cell_type, cell_count, metainfo)
 
-                cell_type = mo.group('cell_type')
-                if not cell_type:
-                    cell_type = 'code'
-                cc = mo.group('cell_count')
-                if cc:
-                    cell_count = int(cc)
-                else:
-                    cell_count += 1
-                metainfo = mo.group('metainfo')
-                if metainfo:
-                    pieces = [piece.split('=', 1) for piece in metainfo.split()]
-                    for idx, piece in enumerate(pieces):
-                        if len(piece) == 1:
-                            env.logger.warning(f'Incorrect metadata {piece}')
-                            pieces[idx].append('')
-                        if piece[1] == 'True':
-                            pieces[idx][1] = True
-                        elif piece[1] == 'False':
-                            pieces[idx][1] = False
-                    metainfo = {x: y for x, y in pieces}
-                else:
-                    metainfo = {}
-                content = []
+                cell_type = 'code'
+                cell_count += 1
+                metainfo = {'kernel': 'SoS'}
+                content = [line]
                 continue
 
-            if split_step:
-                mo = SOS_SECTION_HEADER.match(line)
-                if mo:
+            if line.startswith('#!'):
+                if cell_type == 'markdown':
+                    content.append(line)
+                    continue
+                else:
                     # get ride of empty content
                     if not any(x.strip() for x in content):
                         content = []
@@ -224,28 +204,10 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                     if content:
                         add_cell(cells, content, cell_type, cell_count, metainfo)
 
-                    cell_type = 'code'
+                    cell_type = 'markdown'
                     cell_count += 1
-                    metainfo = {'kernel': 'SoS'}
                     content = [line]
                     continue
-
-                if line.startswith('#!'):
-                    if cell_type == 'markdown':
-                        content.append(line)
-                        continue
-                    else:
-                        # get ride of empty content
-                        if not any(x.strip() for x in content):
-                            content = []
-
-                        if content:
-                            add_cell(cells, content, cell_type, cell_count, metainfo)
-
-                        cell_type = 'markdown'
-                        cell_count += 1
-                        content = [line]
-                        continue
 
             # other cases
             content.append(line)
