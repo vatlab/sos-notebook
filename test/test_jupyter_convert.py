@@ -56,14 +56,6 @@ report('this is action report')
             script_to_notebook(script_file, script_file[:-4] + '.ipynb')
             notebook_to_script(script_file[:-4] + '.ipynb', script_file)
 
-    def testConvertAll(self):
-        subprocess.call('sos convert test.ipynb test_wf.sos --all', shell=True)
-        self.assertTrue(os.path.isfile('test_wf.sos'))
-        subprocess.call('sos convert test_wf.sos test2.ipynb', shell=True)
-        self.assertTrue(os.path.isfile('test2.ipynb'))
-        # --execute does not yet work
-        os.remove('test_wf.sos')
-        os.remove('test2.ipynb')
 
     def testConvertHTML(self):
         subprocess.call('sos convert test.ipynb test_wf.html', shell=True)

@@ -26,63 +26,43 @@ def get_notebook_to_script_parser():
         .sos file. The cells are presented in the .sos file as
         cell structure lines, which will be ignored if executed
         in batch mode ''')
-    parser.add_argument('-a', '--all', action='store_true', dest='__all__',
-                        help='''By default sos only export workflows from an .ipynb file, which consists
-        of only cells that starts with section headers (ignoring comments and magics before
-        them). Option `-a` allows you to export cell separator, meta data, execution count,
-        and all cells in a sos-like format although the resulting .sos file might not be
-        able to be executed in batch mode.''')
     return parser
 
 
 # This class cannot be defined in .kernel because it would cause some
 # weird problem with unittesting not able to resolve __main__
 class SoS_Exporter(Exporter):
-    def __init__(self, config=None, export_all=False, **kwargs):
+    def __init__(self, config=None, **kwargs):
         self.output_extension = '.sos'
         self.output_mimetype = 'text/x-sos'
-        self.export_all = export_all
         Exporter.__init__(self, config, **kwargs)
 
     def from_notebook_cell(self, cell, fh, idx=0):
-        if self.export_all:
-            meta = ' '.join(f'{x}={y}' for x, y in cell.metadata.items())
-            if not hasattr(cell, 'execution_count') or cell.execution_count is None:
-                fh.write(f'%cell {cell.cell_type} {meta}\n')
-            else:
-                idx += 1
-                fh.write(f'%cell {cell.cell_type} {cell.execution_count} {meta}\n')
-            if cell.cell_type == 'code':
-                fh.write(cell.source.strip() + '\n')
-            elif cell.cell_type == "markdown":
-                fh.write('\n'.join('#! ' + x for x in cell.source.split('\n')) + '\n')
+        # in non-all mode, markdown cells are ignored because they can be mistakenly
+        # treated as markdown content of an action or script #806
+        if cell.cell_type != "code":
+            return
+        #
+        # Non-sos code cells are also ignored
+        if 'kernel' in cell.metadata and cell.metadata['kernel'] not in ('sos', 'SoS', None):
+            return
+        lines = cell.source.split('\n')
+        valid_cell = False
+        for idx,line in enumerate(lines):
+            if valid_cell or (line.startswith('%include') or line.startswith('%from')):
+                fh.write(line + '\n')
+            elif SOS_SECTION_HEADER.match(line):
+                valid_cell = True
+                # look retrospectively for comments
+                c = idx - 1
+                comment = ''
+                while c >= 0 and lines[c].startswith('#'):
+                    comment = lines[c] + '\n' + comment
+                    c -= 1
+                fh.write(comment + line + '\n')
+            # other content, namely non-%include lines before section header is ignored
+        if valid_cell:
             fh.write('\n')
-        else:
-            # in non-all mode, markdown cells are ignored because they can be mistakenly
-            # treated as markdown content of an action or script #806
-            if cell.cell_type != "code":
-                return
-            #
-            # Non-sos code cells are also ignored
-            if 'kernel' in cell.metadata and cell.metadata['kernel'] not in ('sos', 'SoS', None):
-                return
-            lines = cell.source.split('\n')
-            valid_cell = False
-            for idx,line in enumerate(lines):
-                if valid_cell or (line.startswith('%include') or line.startswith('%from')):
-                    fh.write(line + '\n')
-                elif SOS_SECTION_HEADER.match(line):
-                    valid_cell = True
-                    # look retrospectively for comments
-                    c = idx - 1
-                    comment = ''
-                    while c >= 0 and lines[c].startswith('#'):
-                        comment = lines[c] + '\n' + comment
-                        c -= 1
-                    fh.write(comment + line + '\n')
-                # other content, namely non-%include lines before section header is ignored
-            if valid_cell:
-                fh.write('\n')
         return idx
 
     def from_notebook_node(self, nb, resources, **kwargs):
@@ -105,10 +85,7 @@ def notebook_to_script(notebook_file, sos_file, args=None, unknown_args=None):
     '''
     if unknown_args:
         raise ValueError(f'Unrecognized parameter {unknown_args}')
-    if args:
-        exporter = SoS_Exporter(export_all=args.__all__)
-    else:
-        exporter = SoS_Exporter()
+    exporter = SoS_Exporter()
     notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
     output, _ = exporter.from_notebook_node(notebook, {})
     if not sos_file:
