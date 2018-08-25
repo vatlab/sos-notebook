@@ -106,9 +106,6 @@ def get_script_to_notebook_parser():
     parser = argparse.ArgumentParser('sos convert FILE.sos FILE._ipynb (or --to ipynb)',
                                      description='''Convert a sos script to Jupyter notebook (.ipynb)
             so that it can be opened by Jupyter notebook.''')
-    # parser.add_argument('-e', '--execute', action='store_true',
-    #    help='''Execute the notebook as if running "Cell -> Run all" from the
-    #        Jupyter notebook interface''')
     return parser
 
 
@@ -135,20 +132,40 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
         )
 
 
-#from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
-# class SoS_ExecutePreprocessor(ExecutePreprocessor):
-#    def __init__(self, *args, **kwargs):
-#        super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
-#
-#    def run_cell(self, cell):
-#        kernel = cell.metadata.get('kernel', 'SoS')
-#        try:
-#            source = cell.source
-#            cell.source = '%frontend --default-kernel SoS --cell-kernel {}\n{}'.format(kernel, source)
-#            print(cell.source)
-#            return super(SoS_ExecutePreprocessor, self).run_cell(cell)
-#        finally:
-#            cell.source = source
+from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
+class SoS_ExecutePreprocessor(ExecutePreprocessor):
+   def __init__(self, *args, **kwargs):
+       super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
+
+   def prepare_meta(self, code):
+       options.sos = {}
+       run_notebook = re.match(r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m', code);
+       cells = nb.get_cells();
+       if run_notebook:
+           options.sos.workflow = getNotebookWorkflow(cells);
+       if re.match('/^%toc\s/m', code):
+         options.sos.toc = scan_table_of_content(cells)
+
+       options.sos.path = nb.notebook_path;
+       options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
+       options.sos.rerun = false;
+       for (var i = cells.length - 1; i >= 0; --i) {
+           if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
+               if window._auto_resume:
+                   options.sos.rerun = true
+                   window._auto_resume = false
+           options.sos.cell_id = cells[i].cell_id
+           options.sos.cell_kernel = cells[i].metadata.kernel
+
+   def run_cell(self, cell):
+       kernel = cell.metadata.get('kernel', 'SoS')
+       try:
+           source = cell.source
+           cell.source = '%frontend --default-kernel SoS --cell-kernel {}\n{}'.format(kernel, source)
+           print(cell.source)
+           return super(SoS_ExecutePreprocessor, self).run_cell(cell)
+       finally:
+           cell.source = source
 
 def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None):
     '''
@@ -237,14 +254,6 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                           }
                       }
                       )
-    #err = None
-    # if args and args.execute:
-    #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
-    #    try:
-    #        ep.preprocess(nb, {'metadata': {'path': '.'}})
-    #    except CellExecutionError as e:
-    #        err = e
-    #
     if not notebook_file:
         nbformat.write(nb, sys.stdout, 4)
     else:
@@ -330,6 +339,9 @@ def get_notebook_to_html_parser():
         of templates, with sos-report displays markdown cells and only output of cells with
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
+    parser.add_argument('-e', '--execute', action='store_true',
+                        help='''Execute the notebook in batch mode (as if running "Cell -> Run All"
+                          from Jupyter notebook interface before converting to HTML''')
     parser.add_argument('-v', '--view', action='store_true',
                         help='''Open the output file in a broswer. In case no html file is specified,
         this option will display the HTML file in a browser, instead of writing its
@@ -342,6 +354,14 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     import os
     if unknown_args is None:
         unknown_args = []
+            #err = None
+            # if args and args.execute:
+            #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
+            #    try:
+            #        ep.preprocess(nb, {'metadata': {'path': '.'}})
+            #    except CellExecutionError as e:
+            #        err = e
+            #
     if sargs.template:
         unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(sargs.template) else sargs.template] + unknown_args
     export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args, view=sargs.view)
