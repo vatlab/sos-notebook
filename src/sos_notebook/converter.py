@@ -48,7 +48,7 @@ class SoS_Exporter(Exporter):
             return
         lines = cell.source.split('\n')
         valid_cell = False
-        for idx,line in enumerate(lines):
+        for idx, line in enumerate(lines):
             if valid_cell or (line.startswith('%include') or line.startswith('%from')):
                 fh.write(line + '\n')
             elif SOS_SECTION_HEADER.match(line):
@@ -114,9 +114,11 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
     if not content:
         return
     if cell_type not in ('code', 'markdown'):
-        env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
+        env.logger.warning(
+            f'Unrecognized cell type {cell_type}, code assumed.')
     if cell_type == 'markdown' and any(x.strip() and not x.startswith('#! ') for x in content):
-        env.logger.warning('Markdown lines not starting with #!, code cell assumed.')
+        env.logger.warning(
+            'Markdown lines not starting with #!, code cell assumed.')
         cell_type = 'code'
     #
     if cell_type == 'markdown':
@@ -133,39 +135,157 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
 
 
 from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
+
+
 class SoS_ExecutePreprocessor(ExecutePreprocessor):
    def __init__(self, *args, **kwargs):
        super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
 
-   def prepare_meta(self, code):
-       options.sos = {}
-       run_notebook = re.match(r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m', code);
+   def prepare_meta(self, cell):
+       meta = {}
+       run_notebook = re.search(
+           r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$', cell.source, re.MULTILINE);
        cells = nb.get_cells();
        if run_notebook:
-           options.sos.workflow = getNotebookWorkflow(cells);
-       if re.match('/^%toc\s/m', code):
-         options.sos.toc = scan_table_of_content(cells)
+           meta['workflow'] = self._workflow
+       if re.search(r'^%toc\s/', cell.source, re.MULTILINE):
+           meta['toc'] = self._table_of_content
+       meta['path'] = self._notebook_path;
+       meta['use_panel'] = False
+       meta['rerun'] = False;
+       meta['cell_id'] = cell.cell_id
+       meta['cell_kernel'] = cell.metadata.kernel
+       return meta
 
-       options.sos.path = nb.notebook_path;
-       options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
-       options.sos.rerun = false;
-       for (var i = cells.length - 1; i >= 0; --i) {
-           if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
-               if window._auto_resume:
-                   options.sos.rerun = true
-                   window._auto_resume = false
-           options.sos.cell_id = cells[i].cell_id
-           options.sos.cell_kernel = cells[i].metadata.kernel
+   def run_cell(self, cell, cell_index=0):
+       content = dict(code=code, silent=silent, store_history=store_history,
+                       user_expressions=user_expressions,
+                       allow_stdin=allow_stdin, stop_on_error=stop_on_error,
+                       # this is the additional meta information sent to kernel
+                       sos=self._prepare_meta(cell))
+        msg = self.kc.session.msg('execute_request', content)
+        self.kc.shell_channel.send(msg)
+        msg_id = msg['header']['msg_id']
 
-   def run_cell(self, cell):
-       kernel = cell.metadata.get('kernel', 'SoS')
-       try:
-           source = cell.source
-           cell.source = '%frontend --default-kernel SoS --cell-kernel {}\n{}'.format(kernel, source)
-           print(cell.source)
-           return super(SoS_ExecutePreprocessor, self).run_cell(cell)
-       finally:
-           cell.source = source
+        ## the reset is copied from https://github.com/jupyter/nbconvert/blob/master/nbconvert/preprocessors/execute.py
+        ## because we only need to change the first line
+
+        #  msg_id = self.kc.execute(cell.source)
+
+        self.log.debug("Executing cell:\n%s", cell.source)
+        exec_reply = self._wait_for_reply(msg_id, cell)
+
+        outs = cell.outputs = []
+
+        while True:
+            try:
+                # We've already waited for execute_reply, so all output
+                # should already be waiting. However, on slow networks, like
+                # in certain CI systems, waiting < 1 second might miss messages.
+                # So long as the kernel sends a status:idle message when it
+                # finishes, we won't actually have to wait this long, anyway.
+                msg = self.kc.iopub_channel.get_msg(timeout=self.iopub_timeout)
+            except Empty:
+                self.log.warning("Timeout waiting for IOPub output")
+                if self.raise_on_iopub_timeout:
+                    raise RuntimeError("Timeout waiting for IOPub output")
+                else:
+                    break
+            if msg['parent_header'].get('msg_id') != msg_id:
+                # not an output from our execution
+                continue
+
+            msg_type = msg['msg_type']
+            self.log.debug("output: %s", msg_type)
+            content = msg['content']
+
+            # set the prompt number for the input and the output
+            if 'execution_count' in content:
+                cell['execution_count'] = content['execution_count']
+
+            if msg_type == 'status':
+                if content['execution_state'] == 'idle':
+                    break
+                else:
+                    continue
+            elif msg_type == 'execute_input':
+                continue
+            elif msg_type == 'clear_output':
+                outs[:] = []
+                # clear display_id mapping for this cell
+                for display_id, cell_map in self._display_id_map.items():
+                    if cell_index in cell_map:
+                        cell_map[cell_index] = []
+                continue
+            elif msg_type.startswith('comm'):
+                continue
+
+            display_id = None
+            if msg_type in {'execute_result', 'display_data', 'update_display_data'}:
+                display_id = msg['content'].get('transient', {}).get('display_id', None)
+                if display_id:
+                    self._update_display_id(display_id, msg)
+                if msg_type == 'update_display_data':
+                    # update_display_data doesn't get recorded
+                    continue
+
+            try:
+                out = output_from_msg(msg)
+            except ValueError:
+                self.log.error("unhandled iopub msg: " + msg_type)
+                continue
+            if display_id:
+                # record output index in:
+                #   _display_id_map[display_id][cell_idx]
+                cell_map = self._display_id_map.setdefault(display_id, {})
+                output_idx_list = cell_map.setdefault(cell_index, [])
+                output_idx_list.append(len(outs))
+
+            outs.append(out)
+
+        return exec_reply, outs
+
+    def _scan_table_of_content(self, nb):
+        cells = nb.cells
+        TOC = ''
+        for cell in cells:
+          if cell.cell_type == "markdown":
+            for line in cell.source.splitlines():
+              if re.match('^#+ ', line):
+                TOC += line + '\n';
+        return TOC;
+
+    def _extract_workflow(self, nb):
+        cells = nb.cells
+        content = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n'
+        for cell in cells:
+            if cell.cell_type != "code":
+                continue
+            # Non-sos code cells are also ignored
+            if 'kernel' in cell.metadata and cell.metadata['kernel'] not in ('sos', 'SoS', None):
+                continue
+            lines = cell.source.split('\n')
+            valid_cell = False
+            for idx, line in enumerate(lines):
+                if valid_cell or (line.startswith('%include') or line.startswith('%from')):
+                    content += line + '\n'
+                elif SOS_SECTION_HEADER.match(line):
+                    valid_cell = True
+                    # look retrospectively for comments
+                    c = idx - 1
+                    comment = ''
+                    while c >= 0 and lines[c].startswith('#'):
+                        comment = lines[c] + '\n' + comment
+                        c -= 1
+                    content += comment + line + '\n'
+            if valid_cell:
+                content += '\n'
+        return content
+
+    def preprocess(self, nb, resources, km=None):
+        self._workflow = self._extract_workflow(nb)
+        self._toc = self._scan_table_of_content(nb)
+        return super(SoS_ExecutePreprocessor, self).preprocessl(nb, resources, km)
 
 def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None):
     '''
@@ -354,7 +474,7 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     import os
     if unknown_args is None:
         unknown_args = []
-            #err = None
+            # err = None
             # if args and args.execute:
             #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
             #    try:
