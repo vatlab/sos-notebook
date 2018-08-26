@@ -11,7 +11,10 @@ from io import StringIO
 
 import nbformat
 from nbconvert.exporters import Exporter
+from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
+
+from sos.converter import extract_workflow
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env
 
@@ -134,41 +137,37 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
         )
 
 
-from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
-
-
 class SoS_ExecutePreprocessor(ExecutePreprocessor):
-   def __init__(self, *args, **kwargs):
-       super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
 
-   def prepare_meta(self, cell):
-       meta = {}
-       run_notebook = re.search(
-           r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$', cell.source, re.MULTILINE);
-       cells = nb.get_cells();
-       if run_notebook:
-           meta['workflow'] = self._workflow
-       if re.search(r'^%toc\s/', cell.source, re.MULTILINE):
-           meta['toc'] = self._table_of_content
-       meta['path'] = self._notebook_path;
-       meta['use_panel'] = False
-       meta['rerun'] = False;
-       meta['cell_id'] = cell.cell_id
-       meta['cell_kernel'] = cell.metadata.kernel
-       return meta
+    def _prepare_meta(self, cell):
+        meta = {}
+        run_notebook = re.search(
+            r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$', cell.source, re.MULTILINE)
+        if run_notebook:
+            meta['workflow'] = self._workflow
+        if re.search(r'^%toc\s/', cell.source, re.MULTILINE):
+            meta['toc'] = self._toc
+        meta['path'] = ''
+        meta['use_panel'] = False
+        meta['rerun'] = False
+        meta['cell_id'] = cell.cell_id
+        meta['cell_kernel'] = cell.metadata.kernel
+        return meta
 
-   def run_cell(self, cell, cell_index=0):
-       content = dict(code=code, silent=silent, store_history=store_history,
-                       user_expressions=user_expressions,
-                       allow_stdin=allow_stdin, stop_on_error=stop_on_error,
-                       # this is the additional meta information sent to kernel
+    def run_cell(self, cell, cell_index=0):
+        # sos is the additional meta information sent to kernel
+        content = dict(code=cell.source, silent=False, store_history=False,
+                       user_expressions='',
+                       allow_stdin=False, stop_on_error=False,
                        sos=self._prepare_meta(cell))
         msg = self.kc.session.msg('execute_request', content)
         self.kc.shell_channel.send(msg)
         msg_id = msg['header']['msg_id']
 
-        ## the reset is copied from https://github.com/jupyter/nbconvert/blob/master/nbconvert/preprocessors/execute.py
-        ## because we only need to change the first line
+        # the reset is copied from https://github.com/jupyter/nbconvert/blob/master/nbconvert/preprocessors/execute.py
+        # because we only need to change the first line
 
         #  msg_id = self.kc.execute(cell.source)
 
@@ -212,7 +211,7 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
                 continue
             elif msg_type == 'clear_output':
                 outs[:] = []
-                # clear display_id mapping for this cell
+               # clear display_id mapping for this cell
                 for display_id, cell_map in self._display_id_map.items():
                     if cell_index in cell_map:
                         cell_map[cell_index] = []
@@ -222,7 +221,8 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
 
             display_id = None
             if msg_type in {'execute_result', 'display_data', 'update_display_data'}:
-                display_id = msg['content'].get('transient', {}).get('display_id', None)
+                display_id = msg['content'].get(
+                    'transient', {}).get('display_id', None)
                 if display_id:
                     self._update_display_id(display_id, msg)
                 if msg_type == 'update_display_data':
@@ -249,43 +249,17 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
         cells = nb.cells
         TOC = ''
         for cell in cells:
-          if cell.cell_type == "markdown":
-            for line in cell.source.splitlines():
-              if re.match('^#+ ', line):
-                TOC += line + '\n';
-        return TOC;
+            if cell.cell_type == "markdown":
+                for line in cell.source.splitlines():
+                    if re.match('^#+ ', line):
+                        TOC += line + '\n'
+        return TOC
 
-    def _extract_workflow(self, nb):
-        cells = nb.cells
-        content = '#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n'
-        for cell in cells:
-            if cell.cell_type != "code":
-                continue
-            # Non-sos code cells are also ignored
-            if 'kernel' in cell.metadata and cell.metadata['kernel'] not in ('sos', 'SoS', None):
-                continue
-            lines = cell.source.split('\n')
-            valid_cell = False
-            for idx, line in enumerate(lines):
-                if valid_cell or (line.startswith('%include') or line.startswith('%from')):
-                    content += line + '\n'
-                elif SOS_SECTION_HEADER.match(line):
-                    valid_cell = True
-                    # look retrospectively for comments
-                    c = idx - 1
-                    comment = ''
-                    while c >= 0 and lines[c].startswith('#'):
-                        comment = lines[c] + '\n' + comment
-                        c -= 1
-                    content += comment + line + '\n'
-            if valid_cell:
-                content += '\n'
-        return content
-
-    def preprocess(self, nb, resources, km=None):
-        self._workflow = self._extract_workflow(nb)
+    def preprocess(self, nb, *args, **kwargs):
+        self._workflow = extract_workflow(nb)
         self._toc = self._scan_table_of_content(nb)
-        return super(SoS_ExecutePreprocessor, self).preprocessl(nb, resources, km)
+        return super(SoS_ExecutePreprocessor, self).preprocess(nb, *args, **kwargs)
+
 
 def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None):
     '''
@@ -339,7 +313,8 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
                         content = []
 
                     if content:
-                        add_cell(cells, content, cell_type, cell_count, metainfo)
+                        add_cell(cells, content, cell_type,
+                                 cell_count, metainfo)
 
                     cell_type = 'markdown'
                     cell_count += 1
@@ -409,8 +384,10 @@ c.TemplateExporter.template_path.extend([
 ''')
     if not output_file:
         import tempfile
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.' + to_format).name
-        tmp_stderr = tempfile.NamedTemporaryFile(delete=False, suffix='.' + to_format).name
+        tmp = tempfile.NamedTemporaryFile(
+            delete=False, suffix='.' + to_format).name
+        tmp_stderr = tempfile.NamedTemporaryFile(
+            delete=False, suffix='.' + to_format).name
         with open(tmp_stderr, 'w') as err:
             ret = subprocess.call(['jupyter', 'nbconvert', notebook_file, '--to', to_format,
                                    '--output', tmp, '--config', cfg_file] + ([] if unknown_args is None else unknown_args), stderr=err)
@@ -418,7 +395,8 @@ c.TemplateExporter.template_path.extend([
             err_msg = err.read()
         if ret != 0:
             env.logger.error(err_msg)
-            env.logger.error(f'Failed to convert {notebook_file} to {to_format} format')
+            env.logger.error(
+                f'Failed to convert {notebook_file} to {to_format} format')
         else:
             # identify output files
             dest_file = err_msg.rsplit()[-1]
@@ -443,7 +421,8 @@ c.TemplateExporter.template_path.extend([
         ret = subprocess.call(['jupyter', 'nbconvert', os.path.abspath(notebook_file), '--to', to_format,
                                '--output', os.path.abspath(output_file), '--config', cfg_file] + ([] if unknown_args is None else unknown_args))
         if ret != 0:
-            env.logger.error(f'Failed to convert {notebook_file} to {to_format} format')
+            env.logger.error(
+                f'Failed to convert {notebook_file} to {to_format} format')
         else:
             env.logger.info(f'Output saved to {output_file}')
 
@@ -474,17 +453,19 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     import os
     if unknown_args is None:
         unknown_args = []
-            # err = None
-            # if args and args.execute:
-            #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
-            #    try:
-            #        ep.preprocess(nb, {'metadata': {'path': '.'}})
-            #    except CellExecutionError as e:
-            #        err = e
-            #
+        # err = None
+        # if args and args.execute:
+        #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
+        #    try:
+        #        ep.preprocess(nb, {'metadata': {'path': '.'}})
+        #    except CellExecutionError as e:
+        #        err = e
+        #
     if sargs.template:
-        unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(sargs.template) else sargs.template] + unknown_args
-    export_notebook(HTMLExporter, 'html', notebook_file, output_file, unknown_args, view=sargs.view)
+        unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(
+            sargs.template) else sargs.template] + unknown_args
+    export_notebook(HTMLExporter, 'html', notebook_file,
+                    output_file, unknown_args, view=sargs.view)
 
 
 def get_notebook_to_pdf_parser():
@@ -507,11 +488,13 @@ def notebook_to_pdf(notebook_file, output_file, sargs=None, unknown_args=None):
     if unknown_args is None:
         unknown_args = []
     if sargs.template:
-        unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(sargs.template) else sargs.template] + unknown_args
+        unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(
+            sargs.template) else sargs.template] + unknown_args
     # jupyter convert will add extension to output file...
     if output_file is not None and output_file.endswith('.pdf'):
         output_file = output_file[:-4]
-    export_notebook(PDFExporter, 'pdf', notebook_file, output_file, unknown_args)
+    export_notebook(PDFExporter, 'pdf', notebook_file,
+                    output_file, unknown_args)
 
 
 def get_notebook_to_md_parser():
@@ -525,7 +508,8 @@ def get_notebook_to_md_parser():
 
 def notebook_to_md(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.markdown import MarkdownExporter
-    export_notebook(MarkdownExporter, 'markdown', notebook_file, output_file, unknown_args)
+    export_notebook(MarkdownExporter, 'markdown',
+                    notebook_file, output_file, unknown_args)
 
 
 def get_notebook_to_notebook_parser():
@@ -545,7 +529,8 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
     # get the kernel of the notebook
     # this is like 'R', there is another 'display_name'
     lan_name = notebook['metadata']['kernelspec']['language']
-    kernel_name = notebook['metadata']['kernelspec']['name']  # this is like 'ir'
+    # this is like 'ir'
+    kernel_name = notebook['metadata']['kernelspec']['name']
     if kernel_name == 'sos':
         # already a SoS notebook?
         if sargs.inplace:
@@ -590,7 +575,8 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
                           'sos': {
                               'kernels': [
                                   ['SoS', 'sos', '', '']] +
-                              ([[to_lan, to_kernel, '', '']] if to_lan != 'SoS' else []),
+                              ([[to_lan, to_kernel, '', '']]
+                               if to_lan != 'SoS' else []),
                               'default_kernel': to_lan
                           }
                       }
