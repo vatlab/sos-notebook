@@ -7,12 +7,13 @@ import os
 import shutil
 import subprocess
 import unittest
+import nbformat
 
 from sos.utils import env
-from sos_notebook.converter import notebook_to_script, script_to_notebook
+from sos_notebook.converter import notebook_to_script, script_to_notebook, SoS_ExecutePreprocessor
 
 
-class TestConvert(unittest.TestCase):
+class TestJupyterConvert(unittest.TestCase):
     def setUp(self):
         env.reset()
         self.olddir = os.getcwd()
@@ -105,6 +106,16 @@ report('this is action report')
         self.assertTrue(wf.count('this comment will become the comment for parameter d'), 1)
         self.assertFalse('this is a cell with another kernel' in wf)
         self.assertFalse('this comment will not be included in exported workflow' in wf)
+
+    def testPreprocess(self):
+        '''Test executing the notebook with a preprocessor'''
+        nb = nbformat.read('test.ipynb', nbformat.NO_CONVERT)
+        e = SoS_ExecutePreprocessor()
+        toc = e._scan_table_of_content(nb)
+        self.assertTrue('## Notebook for testing purpose' in toc)
+        self.assertTrue('## Section 1' in toc)
+        #
+        e.preprocess(nb, {})
 
 if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
