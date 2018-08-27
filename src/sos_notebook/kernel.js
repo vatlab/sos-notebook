@@ -1919,10 +1919,10 @@ table.task_table {
 }
 
 .cm-sos-interpolated {
-  background-color: rgb(237, 213, 243, 0.4);
+  background-color: rgb(223, 144, 207, 0.4);
 }
 .cm-sos-sigil {
-  background-color: rgb(237, 213, 243, 0.4);
+  background-color: rgb(223, 144, 207, 0.4);
 }
 /*
 .cm-sos-script {
