@@ -109,13 +109,16 @@ report('this is action report')
 
     def testPreprocess(self):
         '''Test executing the notebook with a preprocessor'''
+        if os.path.isfile('test_r.pdf'):
+            os.remove('test_r.pdf')
         nb = nbformat.read('test.ipynb', nbformat.NO_CONVERT)
-        e = SoS_ExecutePreprocessor()
+        e = SoS_ExecutePreprocessor('test.ipynb')
         toc = e._scan_table_of_content(nb)
         self.assertTrue('## Notebook for testing purpose' in toc)
         self.assertTrue('## Section 1' in toc)
         #
         e.preprocess(nb, {})
+        self.assertTrue(os.path.isfile('test_r.pdf'))
 
 if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
