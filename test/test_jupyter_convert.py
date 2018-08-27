@@ -119,6 +119,15 @@ report('this is action report')
         #
         e.preprocess(nb, {})
         self.assertTrue(os.path.isfile('test_r.pdf'))
+        #
+        if os.path.isfile('test_r.pdf'):
+            os.remove('test_r.pdf')
+        if os.path.isfile('test_wf8.html'):
+            os.remove('test_wf8.html')
+        subprocess.call('sos convert --execute test.ipynb test_wf.html', shell=True)
+        self.assertTrue(os.path.isfile('test_wf8.html'))
+        self.assertTrue(os.path.isfile('test_r.pdf'))
+
 
 if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
