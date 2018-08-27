@@ -456,14 +456,19 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     import os
     if unknown_args is None:
         unknown_args = []
-        # err = None
-        # if args and args.execute:
-        #    ep = SoS_ExecutePreprocessor(timeout=600, kernel_name='sos')
-        #    try:
-        #        ep.preprocess(nb, {'metadata': {'path': '.'}})
-        #    except CellExecutionError as e:
-        #        err = e
-        #
+    if sargs and sargs.execute:
+        # the step can take long time to complete
+        ep = SoS_ExecutePreprocessor(notebook_file, timeout=60000)
+        try:
+            nb = nbformat.read(notebook_file, nbformat.NO_CONVERT)
+            ep.preprocess(nb, {'metadata': {'path': '.'}})
+            import tempfile
+            tmp_file = os.path.join(env.temp_dir, os.path.basename(notebook_file))
+            with open(tmp_file, 'w') as tmp_nb:
+                nbformat.write(nb, tmp_nb, 4)
+            notebook_file = tmp_file
+        except CellExecutionError as e:
+            env.logger.error(f'Failed to execute notebook: {e}')
     if sargs.template:
         unknown_args = ['--template', os.path.abspath(sargs.template) if os.path.isfile(
             sargs.template) else sargs.template] + unknown_args
