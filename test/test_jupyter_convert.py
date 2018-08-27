@@ -109,8 +109,8 @@ report('this is action report')
 
     def testPreprocess(self):
         '''Test executing the notebook with a preprocessor'''
-        if os.path.isfile('test_r.pdf'):
-            os.remove('test_r.pdf')
+        if os.path.isfile('test_output.txt'):
+            os.remove('test_output.txt')
         nb = nbformat.read('test.ipynb', nbformat.NO_CONVERT)
         e = SoS_ExecutePreprocessor('test.ipynb')
         toc = e._scan_table_of_content(nb)
@@ -118,15 +118,15 @@ report('this is action report')
         self.assertTrue('## Section 1' in toc)
         #
         e.preprocess(nb, {})
-        self.assertTrue(os.path.isfile('test_r.pdf'))
+        self.assertTrue(os.path.isfile('test_output.txt'))
         #
-        if os.path.isfile('test_r.pdf'):
-            os.remove('test_r.pdf')
+        if os.path.isfile('test_output.txt'):
+            os.remove('test_output.txt')
         if os.path.isfile('test_wf8.html'):
             os.remove('test_wf8.html')
-        subprocess.call('sos convert --execute test.ipynb test_wf.html', shell=True)
+        subprocess.call('sos convert --execute test.ipynb test_wf8.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf8.html'))
-        self.assertTrue(os.path.isfile('test_r.pdf'))
+        self.assertTrue(os.path.isfile('test_output.txt'))
 
 
 if __name__ == '__main__':
