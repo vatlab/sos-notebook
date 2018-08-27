@@ -344,6 +344,8 @@ class Clear_Magic(SoS_Magic):
         try:
             return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
+            if self.sos_kernel._meta.get('batch_mode', False):
+                return
             if args.status:
                 status_style = [self.status_class[x] for x in args.status]
             else:
@@ -608,18 +610,20 @@ class Paste_Magic(SoS_Magic):
         super(Paste_Magic, self).__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+        if self.sos_kernel._meta.get('batch_mode', False):
+            return
         options, remaining_code = self.get_magic_and_code(code, True)
         try:
             old_options = self.sos_kernel.options
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
-                    if sys.platform == 'darwin':
-                        try:
-                            code = osx_clipboard_get()
-                        except Exception:
-                            code = tkinter_clipboard_get()
-                    else:
+                if sys.platform == 'darwin':
+                    try:
+                        code = osx_clipboard_get()
+                    except Exception:
                         code = tkinter_clipboard_get()
+                else:
+                    code = tkinter_clipboard_get()
             except ClipboardEmpty:
                 raise UsageError("The clipboard appears to be empty")
             except Exception as e:

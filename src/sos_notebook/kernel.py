@@ -1318,6 +1318,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 'cell_kernel': self.kernel,
                 'resume_execution': False,
                 'toc': '',
+                'batch_mode': False
             }
             return self._meta
 
@@ -1335,6 +1336,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'resume_execution': True if 'rerun' in meta and meta['rerun'] else False,
             'toc': meta.get('toc', ''),
+            'batch_mode': meta.get('batch_mode', False)
         }
         # remove path and extension
         self._meta['notebook_name'] = os.path.basename(
