@@ -127,6 +127,13 @@ report('this is action report')
         subprocess.call('sos convert --execute test.ipynb test_wf8.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf8.html'))
         self.assertTrue(os.path.isfile('test_output.txt'))
+        #
+        for f in ('test_magic.html', 'test_magic.py'):
+            if os.path.isfile(f):
+                os.remove(f)
+        subprocess.call('sos convert --execute test_magic.ipynb test_magic.html', shell=True)
+        self.assertTrue(os.path.isfile('test_magic.py'))
+
 
 
 if __name__ == '__main__':
