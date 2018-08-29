@@ -1670,7 +1670,7 @@ define([
 }
 
 .output_area .run_this_cell {
-    display: none;
+    visibility: hidden;
 }
 
 
