@@ -133,6 +133,9 @@ report('this is action report')
                 os.remove(f)
         subprocess.call('sos convert --execute test_magic.ipynb test_magic.html', shell=True)
         self.assertTrue(os.path.isfile('test_magic.py'))
+        with open('test_magic.html') as html:
+            # listdir only shows the current file once because of magic %cd
+            self.assertTrue(html.read().count('test_jupyter_convert.py'), 1)
 
 
 
