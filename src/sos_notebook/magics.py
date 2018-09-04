@@ -1595,7 +1595,7 @@ class SessionInfo_Magic(SoS_Magic):
                 lan = self.sos_kernel.supported_languages[kernel]
                 if hasattr(lan, 'sessioninfo'):
                     try:
-                        sinfo = lan(self, kinfo.kernel).sessioninfo()
+                        sinfo = lan(self.sos_kernel, kinfo.kernel).sessioninfo()
                         if isinstance(sinfo, str):
                             result[kernel].append([sinfo])
                         elif isinstance(sinfo, dict):
