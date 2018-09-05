@@ -1855,6 +1855,7 @@ class SoSSave_Magic(SoS_Magic):
                 else:
                     arg.template = args.template
                 arg.view = False
+                arg.execute = False
                 notebook_to_html(self.sos_kernel._meta['notebook_name'] + '.ipynb',
                                  filename, sargs=arg, unknown_args=[])
 
