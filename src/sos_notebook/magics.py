@@ -7,7 +7,7 @@ import re
 import shlex
 import subprocess
 import sys
-from collections import Sized
+from collections import Sized, OrderedDict
 from io import StringIO
 from types import ModuleType
 
@@ -20,6 +20,7 @@ from jupyter_client import find_connection_file
 from sos.eval import SoS_eval, interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env, pretty_size, short_repr, pexpect_run
+from sos._version import  __version__
 
 
 class SoS_Magic(object):
@@ -1292,8 +1293,8 @@ class Revisions_Magic(SoS_Magic):
         return parser
 
     def handle_magic_revisions(self, args, unknown_args):
-        filename = self._meta['notebook_name'] + '.ipynb'
-        path = self._meta['notebook_path']
+        filename = self.sos_kernel._meta['notebook_name'] + '.ipynb'
+        path = self.sos_kernel._meta['notebook_path']
         revisions = subprocess.check_output(['git', 'log'] + unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
                                                                              '--', filename]).decode().splitlines()
         if not revisions:
@@ -1307,12 +1308,12 @@ class Revisions_Magic(SoS_Magic):
                 repo = origin[:-4] if origin.endswith('.git') else origin
             except Exception as e:
                 repo = ''
-                if self._debug_mode:
+                if self.sos_kernel._debug_mode:
                     self.sos_kernel.warn(f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
-                    if self._debug_mode:
+                    if self.sos_kernel._debug_mode:
                         self.sos_kernel.warn(
                             f"source is set to {args.source} with repo={repo}")
                 else:
@@ -1351,7 +1352,7 @@ class Revisions_Magic(SoS_Magic):
             text += '<tr>' + \
                 '\n'.join(f'<td>{x}</td>' for x in fields) + '</tr>'
         text += '</table>'
-        self.send_response(self.sos_kernel.iopub_socket, 'display_data',
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
                            {
                                'metadata': {},
                                'data': {'text/html': HTML(text).data}
@@ -1582,7 +1583,7 @@ class SessionInfo_Magic(SoS_Magic):
         #
         cur_kernel = self.sos_kernel.kernel
         try:
-            for kernel in elf.kernel.kernels.keys():
+            for kernel in self.sos_kernel.kernels.keys():
                 kinfo = self.sos_kernel.subkernels.find(kernel)
                 self.sos_kernel.switch_kernel(kernel)
                 result[kernel] = [
@@ -1594,7 +1595,7 @@ class SessionInfo_Magic(SoS_Magic):
                 lan = self.sos_kernel.supported_languages[kernel]
                 if hasattr(lan, 'sessioninfo'):
                     try:
-                        sinfo = lan(self, kinfo.kernel).sessioninfo()
+                        sinfo = lan(self.sos_kernel, kinfo.kernel).sessioninfo()
                         if isinstance(sinfo, str):
                             result[kernel].append([sinfo])
                         elif isinstance(sinfo, dict):
@@ -1629,7 +1630,7 @@ class SessionInfo_Magic(SoS_Magic):
                         f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}')
                 res += '</tr>\n'
             res += '</table>\n'
-        self.send_response(self.sos_kernel.iopub_socket, 'display_data',
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
                            {'metadata': {},
                             'data': {'text/html': HTML(res).data}})
 

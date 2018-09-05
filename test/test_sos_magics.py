@@ -239,15 +239,27 @@ with open('test_blah.txt', 'w') as tb:
 ''')
             wait_for_idle(kc)
 
-    def testMagicSessioninfo(self):
+    def testMagicSessionInfo(self):
         with sos_kernel() as kc:
+            iopub = kc.iopub_channel
             # preview variable
             execute(kc=kc, code='''
 %use Python3
 %use SoS
 %sessioninfo
 ''')
-            wait_for_idle(kc)
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic sessioninfo")
+
+    def testMagicRevisions(self):
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            # preview variable
+            execute(kc=kc, code='''
+%revisions
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
 
     def testMagicRender(self):
         with sos_kernel() as kc:
