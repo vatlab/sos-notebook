@@ -311,5 +311,21 @@ print('[1,2,3]')
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr}")
 
+    def testSoSSave(self):
+        # the test would not work because ipython file does not exist
+        if os.path.isfile('sossave.html'):
+            os.remove('sossave.html')
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            # preview variable
+            execute(kc=kc, code='''
+%sossave sossave.html --force
+[10]
+print('kkk')
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertTrue('.ipynb does not exist' in stderr, f"Get error {stderr}")
+
+
 if __name__ == '__main__':
     unittest.main()
