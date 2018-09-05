@@ -1832,6 +1832,7 @@ class SoSSave_Magic(SoS_Magic):
                     # convert to sos report
                     from .converter import notebook_to_script
                     arg = argparse.Namespace()
+                    arg.execute = False
                     arg.all = True
                     notebook_to_script(
                         self.sos_kernel._meta['notebook_name'] + '.ipynb', filename, args=arg, unknown_args=[])
