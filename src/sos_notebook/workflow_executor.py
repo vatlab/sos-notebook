@@ -225,6 +225,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
                 s.write(code)
 
         # copy script to remote host...
+        env.logger.info(f'Sending workflow to {args.__remote__}')
         host.send_to_host(script)
         from sos.utils import remove_arg
         argv = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
@@ -232,6 +233,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         argv = remove_arg(argv, '-c')
         # execute the command on remote host
         try:
+            env.logger.info(f'Executing workflow on {args.__remote__}')
             with kernel.redirect_sos_io():
                 ret = host._host_agent.run_command(['sos', 'run', script] + argv, wait_for_task=True,
                                                    realtime=True)
