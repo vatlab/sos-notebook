@@ -251,6 +251,21 @@ with open('test_blah.txt', 'w') as tb:
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr} for magic sessioninfo")
 
+    def testMagicWith(self):
+        if os.path.isfile('py3_file.txt'):
+            os.remove('py3_file.txt')
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            # preview variable
+            execute(kc=kc, code='''
+%with Python3
+with open('py3_file.txt', 'w') as pf:
+    pf.write('a')
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
+            self.assertTrue(os.path.isfile('py3_file.txt'))
+
     def testMagicRevisions(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
