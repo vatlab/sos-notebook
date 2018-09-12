@@ -258,13 +258,37 @@ with open('test_blah.txt', 'w') as tb:
             iopub = kc.iopub_channel
             # preview variable
             execute(kc=kc, code='''
-%with Python3
-with open('py3_file.txt', 'w') as pf:
-    pf.write('a')
+%with Python3 --out a
+a = f'{22}'
 ''')
             _, stderr = get_std_output(iopub)
             self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
-            self.assertTrue(os.path.isfile('py3_file.txt'))
+            execute(kc=kc, code='''
+print(a)
+''')
+            stdout, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
+            self.assertEqual(stdout, '22\n', f"Get stdout {stdout} for magic revisions")
+
+    def testSoSVar(self):
+        if os.path.isfile('py3_file.txt'):
+            os.remove('py3_file.txt')
+        with sos_kernel() as kc:
+            iopub = kc.iopub_channel
+            # preview variable
+            execute(kc=kc, code='''\
+%use Python3
+sosa = f'{24}'
+''')
+            _, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
+            execute(kc=kc, code='''\
+%use sos
+print(sosa)
+''')
+            stdout, stderr = get_std_output(iopub)
+            self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
+            self.assertEqual(stdout, '24\n', f"Get stdout {stdout} for magic revisions")
 
     def testMagicRevisions(self):
         with sos_kernel() as kc:
