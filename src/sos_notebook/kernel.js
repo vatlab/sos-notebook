@@ -2072,6 +2072,7 @@ table.task_table {
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
       cell.code_mirror.setOption('mode', cell.user_highlight);
+      save_kernel_info();
     });
 
     cell.element.find("div.input_area").prepend(select);
