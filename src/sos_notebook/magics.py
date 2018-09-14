@@ -2170,7 +2170,8 @@ class With_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self.sos_kernel._execution_count,
                     }
-        original_kernel = self.sos_kernel
+
+        original_kernel = self.sos_kernel.kernel
         try:
             self.sos_kernel.switch_kernel(args.name, args.in_vars, args.out_vars)
         except Exception as e:
