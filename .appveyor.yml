@@ -32,6 +32,8 @@ install:
     - conda update -q conda
     # Useful for debugging any issues with conda
     - conda info -a
+    - conda install -c conda-forge feather-format
+      # 
     # 
     # add docker
     #- pip install docker
