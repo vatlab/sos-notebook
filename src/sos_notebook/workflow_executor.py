@@ -6,7 +6,7 @@ import re
 import os
 import datetime
 import logging
-
+from threading import Event
 import shlex
 import sys
 
@@ -19,11 +19,13 @@ from sos.targets import (RemovedTarget, UnavailableLock,
                          UnknownTarget, sos_targets)
 from sos.utils import _parse_error, env, get_traceback
 from sos.workflow_executor import Base_Executor
+from sos.controller import Controller, connect_controllers, disconnect_controllers
 
 from collections import defaultdict
 from typing import Union, DefaultDict
 
 from .step_executor import Interactive_Step_Executor
+
 
 
 class NotebookLoggingHandler(logging.Handler):
@@ -70,6 +72,13 @@ class Interactive_Executor(Base_Executor):
            for nested workflow.
         3. Optionally execute the workflow in preparation mode for debugging purposes.
         '''
+        if not hasattr(env, 'controller_push_socket'):
+            ready = Event()
+            self.controller = Controller(ready)
+            self.controller.start()
+            # wait for the thread to start with a signature_req saved to env.config
+            ready.wait()
+            connect_controllers()
         # if there is no valid code do nothing
         self.reset_dict()
         if not mode:
