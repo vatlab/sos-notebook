@@ -9,6 +9,7 @@ import logging
 from threading import Event
 import shlex
 import sys
+import zmq
 
 from sos.__main__ import get_run_parser
 from sos.eval import SoS_exec
@@ -63,6 +64,23 @@ class Interactive_Executor(Base_Executor):
             env.sos_dict.pop(key, None)
 
     def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode=None):
+        if not hasattr(env, 'zmq_context'):
+            env.zmq_context = zmq.Context()
+        ready = Event()
+        controller = Controller(ready)
+        controller.start()
+        # wait for the thread to start with a signature_req saved to env.config
+        ready.wait()
+        connect_controllers(env.zmq_context)
+        try:
+            self._run(targets=targets, parent_pipe=parent_pipe, my_workflow_id=my_workflow_id, mode=mode)
+        finally:
+            env.controller_req_socket.send_pyobj(['done'])
+            env.controller_req_socket.recv()
+            disconnect_controllers(env.zmq_context)
+            controller.join()
+
+    def _run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode=None):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
         The code can be simple SoS/Python statements, one SoS step, or more
         or more SoS workflows with multiple steps. This executor,
@@ -72,13 +90,6 @@ class Interactive_Executor(Base_Executor):
            for nested workflow.
         3. Optionally execute the workflow in preparation mode for debugging purposes.
         '''
-        if not hasattr(env, 'controller_push_socket'):
-            ready = Event()
-            self.controller = Controller(ready)
-            self.controller.start()
-            # wait for the thread to start with a signature_req saved to env.config
-            ready.wait()
-            connect_controllers()
         # if there is no valid code do nothing
         self.reset_dict()
         if not mode:
