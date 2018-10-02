@@ -63,7 +63,7 @@ class Interactive_Executor(Base_Executor):
         for key in ('_input', 'step_input'):
             env.sos_dict.pop(key, None)
 
-    def run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode=None):
+    def run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
         if not hasattr(env, 'zmq_context'):
             env.zmq_context = zmq.Context()
         ready = Event()
@@ -73,14 +73,14 @@ class Interactive_Executor(Base_Executor):
         ready.wait()
         connect_controllers(env.zmq_context)
         try:
-            return self._run(targets=targets, parent_pipe=parent_pipe, my_workflow_id=my_workflow_id, mode=mode)
+            return self._run(targets=targets, parent_socket=parent_socket, my_workflow_id=my_workflow_id, mode=mode)
         finally:
             env.controller_req_socket.send_pyobj(['done'])
             env.controller_req_socket.recv()
-            disconnect_controllers(env.zmq_context)
+            disconnect_controllers()
             controller.join()
 
-    def _run(self, targets=None, parent_pipe=None, my_workflow_id=None, mode=None):
+    def _run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
         The code can be simple SoS/Python statements, one SoS step, or more
         or more SoS workflows with multiple steps. This executor,
