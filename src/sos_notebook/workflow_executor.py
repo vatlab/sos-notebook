@@ -73,7 +73,7 @@ class Interactive_Executor(Base_Executor):
         ready.wait()
         connect_controllers(env.zmq_context)
         try:
-            self._run(targets=targets, parent_pipe=parent_pipe, my_workflow_id=my_workflow_id, mode=mode)
+            return self._run(targets=targets, parent_pipe=parent_pipe, my_workflow_id=my_workflow_id, mode=mode)
         finally:
             env.controller_req_socket.send_pyobj(['done'])
             env.controller_req_socket.recv()
