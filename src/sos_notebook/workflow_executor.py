@@ -90,7 +90,12 @@ class Interactive_Executor(Base_Executor):
            for nested workflow.
         3. Optionally execute the workflow in preparation mode for debugging purposes.
         '''
-        # if there is no valid code do nothing
+        if not env.config['master_id']:
+            # if this is the executor for the master workflow, start controller
+            env.config['master_id'] = self.md5
+        self.write_workflow_info()
+        self.handle_resumed()        # if there is no valid code do nothing
+
         self.reset_dict()
         if not mode:
             mode = env.config.get('run_mode', 'interactive')
