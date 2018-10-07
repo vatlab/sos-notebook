@@ -1139,7 +1139,10 @@ define([
 
     // Ensure position is fixed
     $("#panel-wrapper").css("position", "fixed");
-
+    
+    // let the code stay but disable panel draggability for now
+    $("#panel-wrapper").draggable('disable');
+    
     // if panel-wrapper is undefined (first run(?), then hide it)
     // if ($("#panel-wrapper").css("display") === undefined) $("#panel-wrapper").css("display", "none") //block
     if (!$("#panel-wrapper").css("display")) {
