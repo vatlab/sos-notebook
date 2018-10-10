@@ -476,7 +476,6 @@ class SoS_Kernel(IPythonKernel):
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
-    _resume_execution = property(lambda self: self._meta['resume_execution'])
 
     def sos_comm(self, comm, msg):
         # record frontend_comm to send messages
@@ -1179,9 +1178,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     code=code, raw_args=self.options + fopt, kernel=self)
                 self.send_result(res, silent)
             except PendingTasks as e:
-                # send cell index and task IDs to frontend
-                self.send_frontend_msg(
-                    'tasks-pending', [self._meta['cell_id'], e.tasks])
                 return
             except Exception as e:
                 sys.stderr.flush()
@@ -1316,7 +1312,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 'use_panel': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
-                'resume_execution': False,
                 'toc': '',
                 'batch_mode': False
             }
@@ -1334,7 +1329,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
-            'resume_execution': True if 'rerun' in meta and meta['rerun'] else False,
             'toc': meta.get('toc', ''),
             'batch_mode': meta.get('batch_mode', False)
         }
@@ -1395,8 +1389,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     'traceback': [],
                     'execution_count': self._execution_count,
                     }
-        finally:
-            self._meta['resume_execution'] = False
 
         if ret is None:
             ret = {'status': 'ok',

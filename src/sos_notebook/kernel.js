@@ -33,7 +33,6 @@ define([
   window.CodeCell = require("notebook/js/codecell").CodeCell;
 
   window.my_panel = null;
-  window.pending_cells = {};
 
   window.sos_comm = null;
 
@@ -280,10 +279,6 @@ define([
       // also, because a cell might be starting without a previous cell
       // being finished, we should start from reverse and check actual code
       if (cells[i].input_prompt_number === "*" && code === cells[i].get_text()) {
-        if (window._auto_resume) {
-          options.sos.rerun = true;
-          window._auto_resume = false;
-        }
         options.sos.cell_id = cells[i].cell_id;
         options.sos.cell_kernel = cells[i].metadata.kernel;
         return this.orig_execute(code, callbacks, options);
@@ -573,14 +568,6 @@ define([
           "mode": "sos",
           "theme": "ipython"
         })
-      } else if (msg_type === "tasks-pending") {
-        // console.log(data);
-        /* we record the pending tasks of cells so that we could
-           rerun cells once all tasks have been completed */
-        /* let us get a more perminant id for cell so that we
-           can still locate the cell once its tasks are completed. */
-        cell = get_cell_by_id(data[0]);
-        window.pending_cells[cell.cell_id] = data[1];
       } else if (msg_type === "remove-task") {
         var item = document.getElementById("table_" + data[0] + "_" + data[1]);
         if (item) {
@@ -620,35 +607,6 @@ define([
               let item = document.getElementById("duration_" + data[0] + "_" + data[1]);
               if (item) {
                 item.className = 'completed';
-              }
-            }
-          }
-          /* if successful, let us re-run the cell to submt another task
-             or get the result */
-          for (cell in window.pending_cells) {
-            /* remove task from pending_cells */
-            for (var idx = 0; idx < window.pending_cells[cell].length; ++idx) {
-              if (window.pending_cells[cell][idx][0] !== data[0] ||
-                window.pending_cells[cell][idx][1] !== data[1]) {
-                continue;
-              }
-              window.pending_cells[cell].splice(idx, 1);
-              if (window.pending_cells[cell].length === 0) {
-                delete window.pending_cells[cell];
-                /* if the does not have any pending one, re-run it. */
-                var cells = nb.get_cells();
-                var rerun = null;
-                for (i = 0; i < cells.length; ++i) {
-                  if (cells[i].cell_id === cell) {
-                    rerun = cells[i];
-                    break;
-                  }
-                }
-                if (rerun) {
-                  window._auto_resume = true;
-                  rerun.execute();
-                }
-                break;
               }
             }
           }

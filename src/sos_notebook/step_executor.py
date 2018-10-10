@@ -58,9 +58,9 @@ class Interactive_Step_Executor(Step_Executor):
                 self.host._task_engine.remove_tasks(tasks)
                 return self.host.retrieve_results(tasks)
             # no pending
-            elif not env.config['wait_for_task']:
-                raise PendingTasks([(self.host.alias, x) for x, y in zip(tasks, res)
-                                    if y in ('pending', 'submitted', 'running')])
+            # elif not env.config['wait_for_task']:
+            #     raise PendingTasks([(self.host.alias, x) for x, y in zip(tasks, res)
+            #                         if y in ('pending', 'submitted', 'running')])
             time.sleep(1)
 
     def run(self):
