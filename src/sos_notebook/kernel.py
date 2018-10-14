@@ -472,7 +472,14 @@ class SoS_Kernel(IPythonKernel):
         # remove all other ahdnlers
         env.logger.handlers = []
         env.logger.addHandler(
-            NotebookLoggingHandler(logging.DEBUG, kernel=self))
+            NotebookLoggingHandler({
+                        0: logging.ERROR,
+                        1: logging.WARNING,
+                        2: logging.INFO,
+                        3: logging.DEBUG,
+                        4: logging.TRACE,
+                        None: logging.INFO
+                    }[env.verbosity], kernel=self))
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -630,7 +637,7 @@ class SoS_Kernel(IPythonKernel):
                             onmouseleave="'{action_class[tst]} task_hover'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.remove(x));'{self.status_class[tst]}'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.add(x));"
                             onclick="{action_func[tst]}('{tid}', '{tqu}')"
                         ></i> </td>
-                        <td style="border:0px"><a href='#' onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
+                        <td style="border:0px"><a onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
                         <td style="border:0px">&nbsp;</td>
                         <td style="border:0px;text-align=right;">
                         <pre><span id="tagline_{tqu}_{tid}">{timer}</span></pre></td>
