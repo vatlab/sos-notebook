@@ -57,7 +57,6 @@ def start_controller():
     # wait for the thread to start with a signature_req saved to env.config
     ready.wait()
     connect_controllers(env.zmq_context)
-    env.logger.warning(f'start controller at {os.getpid()}')
     return controller
 
 def stop_controller(controller):
