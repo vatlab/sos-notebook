@@ -29,7 +29,7 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .step_executor import PendingTasks
-from .workflow_executor import runfile, NotebookLoggingHandler
+from .workflow_executor import run_sos_workflow, NotebookLoggingHandler
 from .magics import SoS_Magics
 
 class FlushableStringIO:
@@ -1181,8 +1181,9 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             try:
                 # record input and output
                 fopt = ''
-                res = runfile(
-                    code=code, raw_args=self.options + fopt, kernel=self)
+                res = run_sos_workflow(
+                    code=code, raw_args=self.options + fopt, kernel=self,
+                    workflow_mode=self._workflow_mode)
                 self.send_result(res, silent)
             except PendingTasks as e:
                 return

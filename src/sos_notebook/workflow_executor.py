@@ -167,11 +167,7 @@ class Interactive_Executor(Base_Executor):
         return wf_result
 
 #
-# function runfile that is used by spyder to execute complete script
-#
-
-
-def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs):
+def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
     # this has something to do with Prefix matching rule of parse_known_args
     #
     # That is to say
@@ -189,7 +185,7 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
     raw_args = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
-    if (script is None and code is None) or '-h' in raw_args:
+    if code is None or '-h' in raw_args:
         parser = get_run_parser(interactive=True, with_workflow=True)
         parser.print_help()
         return
@@ -242,12 +238,11 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
         from sos.hosts import Host
         host = Host(args.__remote__)
         #
-        if script is None:
-            if not code.strip():
-                return
-            script = os.path.join('.sos', '__interactive__.sos')
-            with open(script, 'w') as s:
-                s.write(code)
+        if not code.strip():
+            return
+        script = os.path.join('.sos', '__interactive__.sos')
+        with open(script, 'w') as s:
+            s.write(code)
 
         # copy script to remote host...
         print(f'HINT: Executing workflow on {args.__remote__}')
@@ -285,30 +280,29 @@ def runfile(script=None, raw_args='', wdir='.', code=None, kernel=None, **kwargs
               'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
 
+
     try:
-        if script is None:
-            if not code.strip():
-                return
-            if kernel is None:
+        if not code.strip():
+            return
+        if kernel is None:
+            script = SoS_Script(content=code)
+        else:
+            if workflow_mode:
+                # in workflow mode, the content is sent by magics %run and %sosrun
                 script = SoS_Script(content=code)
             else:
-                if kernel._workflow_mode:
-                    # in workflow mode, the content is sent by magics %run and %sosrun
+                # this is a scratch step...
+                # if there is no section header, add a header so that the block
+                # appears to be a SoS script with one section
+                if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
+                    code = '[scratch_0]\n' + code
                     script = SoS_Script(content=code)
                 else:
-                    # this is a scratch step...
-                    # if there is no section header, add a header so that the block
-                    # appears to be a SoS script with one section
-                    if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
-                        code = '[scratch_0]\n' + code
-                        script = SoS_Script(content=code)
-                    else:
-                        #kernel.send_frontend_msg('stream',
-                        #                         {'name': 'stdout', 'text': 'Workflow cell can only be executed with magic %run or %sosrun.'},
-                        #                         title='# SoS warning')
-                        return
-        else:
-            script = SoS_Script(filename=script)
+                    #kernel.send_frontend_msg('stream',
+                    #                         {'name': 'stdout', 'text': 'Workflow cell can only be executed with magic %run or %sosrun.'},
+                    #                         title='# SoS warning')
+                    return
+
         workflow = script.workflow(
             args.workflow, use_default=not args.__targets__)
         env.config: DefaultDict[str, Union[None, bool, str]] = defaultdict(str)

@@ -101,9 +101,6 @@ setup(name="sos-notebook",
           'sos-sas>=0.9.12.2',
       ],
       entry_points='''
-[sos_functions]
-runfile = sos_notebook.workflow_executor:runfile
-
 [sos_converters]
 sos-ipynb.parser = sos_notebook.converter:get_script_to_notebook_parser
 sos-ipynb.func = sos_notebook.converter:script_to_notebook
