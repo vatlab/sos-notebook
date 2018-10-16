@@ -20,6 +20,7 @@ from sos.targets import (RemovedTarget, UnavailableLock,
                          UnknownTarget, sos_targets)
 from sos.utils import _parse_error, env, get_traceback
 from sos.workflow_executor import Base_Executor
+from sos.executor_utils import prepare_env
 from sos.controller import Controller, connect_controllers, disconnect_controllers
 
 from collections import defaultdict
@@ -45,6 +46,47 @@ class NotebookLoggingHandler(logging.Handler):
             'metadata': {},
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
         }, title=self.title, append=True, page='SoS')
+
+
+
+class Persistent_Interactive_Executor(object):
+    '''Interactive executor called from by iPython Jupyter or Spyder'''
+
+    def __init__(self):
+        if not hasattr(env, 'zmq_context'):
+            env.zmq_context = zmq.Context()
+        ready = Event()
+        controller = Controller(ready)
+        controller.start()
+        # wait for the thread to start with a signature_req saved to env.config
+        ready.wait()
+        prepare_env('')
+        connect_controllers(env.zmq_context)
+
+    def __del__(self):
+        env.controller_req_socket.send_pyobj(['done'])
+        env.controller_req_socket.recv()
+        disconnect_controllers()
+        controller.join()
+
+    def run(self, section):
+        env.config['run_mode'] = 'interactive'
+        env.config['sig_mode'] = 'ignore'
+        env.sos_dict.set('workflow_id', '0')
+        env.sos_dict.set('__signature_vars__', set())
+
+        # clear existing keys, otherwise the results from some random result
+        # might mess with the execution of another step that does not define input
+        for k in ['_input', 'step_input', '__step_input__', '__default_output__', '__step_output__']:
+            env.sos_dict.pop(k, None)
+        try:
+            # the global section might have parameter definition etc
+            executor = Interactive_Step_Executor(section, mode='interactive')
+            return executor.run()
+        except (UnknownTarget, RemovedTarget) as e:
+            raise RuntimeError(f'Unknown target {res.target}')
+        except PendingTasks as e:
+            raise
 
 
 class Interactive_Executor(Base_Executor):
@@ -166,6 +208,9 @@ class Interactive_Executor(Base_Executor):
         wf_result['__completed__'] = self.completed
         return wf_result
 
+# this executor will be used to execute all scratch cells.
+persistent_executor = None
+
 #
 def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
     # this has something to do with Prefix matching rule of parse_known_args
@@ -280,55 +325,58 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
               'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
 
+    config={
+        'config_file': args.__config__,
+        'output_dag': args.__dag__,
+        'output_report': args.__report__,
+        'sig_mode': 'ignore' if args.dryrun else args.__sig_mode__,
+        'default_queue': '' if args.__queue__ is None else args.__queue__,
+        'wait_for_task': True if args.__wait__ is True or args.dryrun else (False if args.__no_wait__ else None),
+        'resume_mode': False,
+        'run_mode': 'dryrun' if args.dryrun else 'interactive',
+        'verbosity': args.verbosity,
+
+        # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
+        'max_procs': args.__max_procs__,
+        'max_running_jobs': args.__max_running_jobs__,
+        # for infomration and resume only
+        'workdir': os.getcwd(),
+        'script': "interactive",
+        'workflow': args.workflow,
+        'targets': args.__targets__,
+        'bin_dirs': args.__bin_dirs__,
+        'workflow_args': workflow_args
+    }
+    env.config = defaultdict(str)
 
     try:
         if not code.strip():
             return
-        if kernel is None:
+        if workflow_mode:
+            # in workflow mode, the content is sent by magics %run and %sosrun
             script = SoS_Script(content=code)
+            workflow = script.workflow(
+                args.workflow, use_default=not args.__targets__)
+            executor = Interactive_Executor(workflow, args=workflow_args, config=config)
+            return executor.run(args.__targets__)['__last_res__']
         else:
-            if workflow_mode:
-                # in workflow mode, the content is sent by magics %run and %sosrun
+            # this is a scratch step...
+            # if there is no section header, add a header so that the block
+            # appears to be a SoS script with one section
+            if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
+                code = '[scratch_0]\n' + code
                 script = SoS_Script(content=code)
             else:
-                # this is a scratch step...
-                # if there is no section header, add a header so that the block
-                # appears to be a SoS script with one section
-                if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
-                    code = '[scratch_0]\n' + code
-                    script = SoS_Script(content=code)
-                else:
-                    #kernel.send_frontend_msg('stream',
-                    #                         {'name': 'stdout', 'text': 'Workflow cell can only be executed with magic %run or %sosrun.'},
-                    #                         title='# SoS warning')
-                    return
+                return
 
-        workflow = script.workflow(
-            args.workflow, use_default=not args.__targets__)
-        env.config: DefaultDict[str, Union[None, bool, str]] = defaultdict(str)
-        executor = Interactive_Executor(workflow, args=workflow_args, config={
-            'config_file': args.__config__,
-            'output_dag': args.__dag__,
-            'output_report': args.__report__,
-            'sig_mode': 'ignore' if args.dryrun else args.__sig_mode__,
-            'default_queue': '' if args.__queue__ is None else args.__queue__,
-            'wait_for_task': True if args.__wait__ is True or args.dryrun else (False if args.__no_wait__ else None),
-            'resume_mode': False,
-            'run_mode': 'dryrun' if args.dryrun else 'interactive',
-            'verbosity': args.verbosity,
+            global persistent_executor
+            if persistent_executor is None:
+                persistent_executor = Persistent_Interactive_Executor()
+            # remove some variables because they would interfere with step analysis
+            workflow = script.workflow(
+                args.workflow, use_default=not args.__targets__)
+            return persistent_executor.run(workflow.sections[0])['__last_res__']
 
-            # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
-            'max_procs': args.__max_procs__,
-            'max_running_jobs': args.__max_running_jobs__,
-            # for infomration and resume only
-            'workdir': os.getcwd(),
-            'script': "interactive",
-            'workflow': args.workflow,
-            'targets': args.__targets__,
-            'bin_dirs': args.__bin_dirs__,
-            'workflow_args': workflow_args
-        })
-        return executor.run(args.__targets__)['__last_res__']
     except PendingTasks:
         raise
     except SystemExit:
