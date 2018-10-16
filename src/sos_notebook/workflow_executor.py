@@ -49,10 +49,24 @@ class NotebookLoggingHandler(logging.Handler):
 
 
 
-class Persistent_Interactive_Executor(object):
+class Persistent_Interactive_Executor(Base_Executor):
     '''Interactive executor called from by iPython Jupyter or Spyder'''
 
-    def __init__(self):
+
+    def __init__(self, workflow=None, args=None, shared=None, config={}):
+        # we actually do not have our own workflow, everything is passed from ipython
+        # by nested = True we actually mean no new dictionary
+        Base_Executor.__init__(self, workflow=workflow,
+                               args=args, shared=shared, config=config)
+
+    def reset_dict(self):
+        # do not reset the entire env.sos_dict
+        self.init_dict()
+        # remove some variables because they would interfere with step analysis
+        for key in ('_input', 'step_input'):
+            env.sos_dict.pop(key, None)
+
+    def run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
         if not hasattr(env, 'zmq_context'):
             env.zmq_context = zmq.Context()
         ready = Event()
@@ -60,33 +74,100 @@ class Persistent_Interactive_Executor(object):
         controller.start()
         # wait for the thread to start with a signature_req saved to env.config
         ready.wait()
-        prepare_env('')
         connect_controllers(env.zmq_context)
-
-    def __del__(self):
-        env.controller_req_socket.send_pyobj(['done'])
-        env.controller_req_socket.recv()
-        disconnect_controllers()
-        controller.join()
-
-    def run(self, section):
-        env.config['run_mode'] = 'interactive'
-        env.config['sig_mode'] = 'ignore'
-        env.sos_dict.set('workflow_id', '0')
-        env.sos_dict.set('__signature_vars__', set())
-
-        # clear existing keys, otherwise the results from some random result
-        # might mess with the execution of another step that does not define input
-        for k in ['_input', 'step_input', '__step_input__', '__default_output__', '__step_output__']:
-            env.sos_dict.pop(k, None)
         try:
-            # the global section might have parameter definition etc
-            executor = Interactive_Step_Executor(section, mode='interactive')
-            return executor.run()
-        except (UnknownTarget, RemovedTarget) as e:
-            raise RuntimeError(f'Unknown target {res.target}')
-        except PendingTasks as e:
-            raise
+            return self._run(targets=targets, parent_socket=parent_socket, my_workflow_id=my_workflow_id, mode=mode)
+        finally:
+            env.controller_req_socket.send_pyobj(['done'])
+            env.controller_req_socket.recv()
+            disconnect_controllers()
+            controller.join()
+
+    def _run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
+        '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
+        The code can be simple SoS/Python statements, one SoS step, or more
+        or more SoS workflows with multiple steps. This executor,
+        1. adds a section header to the script if there is no section head
+        2. execute the workflow in interactive mode, which is different from
+           batch mode in a number of ways, which most notably without support
+           for nested workflow.
+        3. Optionally execute the workflow in preparation mode for debugging purposes.
+        '''
+        if not env.config['master_id']:
+            # if this is the executor for the master workflow, start controller
+            env.config['master_id'] = self.md5
+        self.write_workflow_info()
+        self.handle_resumed()        # if there is no valid code do nothing
+
+        self.reset_dict()
+        if not mode:
+            mode = env.config.get('run_mode', 'interactive')
+        # if user specified wrong mode with this executor, correct it.
+        if mode == 'run':
+            mode = 'interactive'
+        env.config['run_mode'] = mode
+        env.sos_dict.set('run_mode', mode)
+        self.completed = defaultdict(int)
+
+        # this is the result returned by the workflow, if the
+        # last stement is an expression.
+        wf_result = {'__workflow_id__': my_workflow_id,
+                     'shared': {}, '__last_res__': None}
+
+        # process step of the pipelinp
+        if isinstance(targets, str):
+            targets = [targets]
+        #
+        # if targets are specified and there are only signatures for them, we need
+        # to remove the signature and really generate them
+        if targets:
+            targets = self.check_targets(targets)
+            if len(targets) == 0:
+                return wf_result
+
+        #
+        dag = self.initialize_dag(targets=targets)
+        while True:
+            # find any step that can be executed and run it, and update the DAT
+            # with status.
+            runnable = dag.find_executable()
+            if runnable is None:
+                break
+            # find the section from runnable
+            section = self.workflow.section_by_id(runnable._step_uuid)
+            # clear existing keys, otherwise the results from some random result
+            # might mess with the execution of another step that does not define input
+            for k in ['__step_input__', '__default_output__', '__step_output__']:
+                env.sos_dict.pop(k, None)
+            # if the step has its own context
+            env.sos_dict.quick_update(runnable._context)
+            # execute section with specified input
+            runnable._status = 'running'
+            dag.save(env.config['output_dag'])
+            try:
+                # the global section might have parameter definition etc
+                SoS_exec(section.global_def)
+                executor = Interactive_Step_Executor(section, mode=mode)
+                res = executor.run()
+                self.step_completed(res, dag, runnable)
+                wf_result['__last_res__'] = res['__last_res__']
+            except (UnknownTarget, RemovedTarget) as e:
+                self.handle_unknown_target(e, dag, runnable)
+            except UnavailableLock as e:
+                self.handle_unavailable_lock(e, dag, runnable)
+            except PendingTasks as e:
+                self.record_quit_status(e.tasks)
+                raise
+            # if the job is failed
+            except Exception as e:
+                runnable._status = 'failed'
+                dag.save(env.config['output_dag'])
+                raise
+        self.finalize_and_report()
+        wf_result['shared'] = {x: env.sos_dict[x]
+                               for x in self.shared.keys() if x in env.sos_dict}
+        wf_result['__completed__'] = self.completed
+        return wf_result
 
 
 class Interactive_Executor(Base_Executor):
@@ -207,9 +288,6 @@ class Interactive_Executor(Base_Executor):
                                for x in self.shared.keys() if x in env.sos_dict}
         wf_result['__completed__'] = self.completed
         return wf_result
-
-# this executor will be used to execute all scratch cells.
-persistent_executor = None
 
 #
 def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
@@ -368,14 +446,10 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
                 script = SoS_Script(content=code)
             else:
                 return
-
-            global persistent_executor
-            if persistent_executor is None:
-                persistent_executor = Persistent_Interactive_Executor()
-            # remove some variables because they would interfere with step analysis
             workflow = script.workflow(
                 args.workflow, use_default=not args.__targets__)
-            return persistent_executor.run(workflow.sections[0])['__last_res__']
+            executor = Persistent_Interactive_Executor(workflow, config=config)
+            return executor.run()
 
     except PendingTasks:
         raise
