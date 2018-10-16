@@ -48,18 +48,13 @@ class NotebookLoggingHandler(logging.Handler):
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
         }, title=self.title, append=True, page='SoS')
 
-
-
-class Persistent_Interactive_Executor(Base_Executor):
-    '''Interactive executor called from by iPython Jupyter or Spyder'''
-
-    def __init__(self, workflow=None, args=None, shared=None, config={}):
+class Scratch_Cell_Executor(Base_Executor):
+    def __init__(self):
         # we actually do not have our own workflow, everything is passed from ipython
         # by nested = True we actually mean no new dictionary
-        Base_Executor.__init__(self, workflow=workflow,
-                               args=args, shared=shared, config=config)
+        Base_Executor.__init__(self)
 
-    def run(self):
+    def run(self, workflow, config):
         if not hasattr(env, 'zmq_context'):
             env.zmq_context = zmq.Context()
         ready = Event()
@@ -69,19 +64,20 @@ class Persistent_Interactive_Executor(Base_Executor):
         ready.wait()
         connect_controllers(env.zmq_context)
         try:
-            return self._run()
+            env.config.update(config)
+            return self._run(workflow)
         finally:
             env.controller_req_socket.send_pyobj(['done'])
             env.controller_req_socket.recv()
             disconnect_controllers()
             controller.join()
 
-    def _run(self):
+    def _run(self, workflow):
         env.sos_dict.set('__signature_vars__', set())
         prepare_env('')
 
         # find the section from runnable
-        section = self.workflow.sections[0]
+        section = workflow.sections[0]
         # clear existing keys, otherwise the results from some random result
         # might mess with the execution of another step that does not define input
         for k in ['__step_input__', '__default_output__', '__step_output__']:
@@ -382,8 +378,8 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
                 return
             workflow = script.workflow(
                 args.workflow, use_default=not args.__targets__)
-            executor = Persistent_Interactive_Executor(workflow, config=config)
-            return executor.run()['__last_res__']
+            executor = Scratch_Cell_Executor()
+            return executor.run(workflow, config=config)['__last_res__']
 
     except PendingTasks:
         raise
