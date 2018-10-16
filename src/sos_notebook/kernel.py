@@ -29,7 +29,8 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .step_executor import PendingTasks
-from .workflow_executor import run_sos_workflow, NotebookLoggingHandler
+from .workflow_executor import (run_sos_workflow, NotebookLoggingHandler,
+    start_controller, stop_controller)
 from .magics import SoS_Magics
 
 class FlushableStringIO:
@@ -480,6 +481,8 @@ class SoS_Kernel(IPythonKernel):
                         4: logging.TRACE,
                         None: logging.INFO
                     }[env.verbosity], kernel=self))
+        #
+        self.controller = None
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -1139,8 +1142,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.send_response(self.iopub_socket, 'stream',
                                dict(name='stdout', text='Specify one of the kernels to shutdown: SoS{}\n'
                                     .format(''.join(f', {x}' for x in self.kernels))))
-
-
+        stop_controller(self.controller)
 
 
     def get_response(self, statement, msg_types, name=None):
@@ -1357,6 +1359,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                    allow_stdin=True):
         if self._debug_mode:
             self.warn(code)
+        if not self.controller:
+            self.controller = start_controller()
         self._forward_input(allow_stdin)
         # switch to global default kernel
         try:

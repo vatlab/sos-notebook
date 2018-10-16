@@ -48,36 +48,34 @@ class NotebookLoggingHandler(logging.Handler):
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
         }, title=self.title, append=True, page='SoS')
 
+def start_controller():
+    if not hasattr(env, 'zmq_context'):
+        env.zmq_context = zmq.Context()
+    ready = Event()
+    controller = Controller(ready)
+    controller.start()
+    # wait for the thread to start with a signature_req saved to env.config
+    ready.wait()
+    connect_controllers(env.zmq_context)
+    env.logger.warning(f'start controller at {os.getpid()}')
+    return controller
+
+def stop_controller(controller):
+    if not controller:
+        return
+    env.controller_req_socket.send_pyobj(['done'])
+    env.controller_req_socket.recv()
+    disconnect_controllers()
+    controller.join()
+
 class Scratch_Cell_Executor(Base_Executor):
     def __init__(self):
-        # we actually do not have our own workflow, everything is passed from ipython
-        # by nested = True we actually mean no new dictionary
         Base_Executor.__init__(self)
 
-    def run(self, workflow, config):
-        if not hasattr(env, 'zmq_context'):
-            env.zmq_context = zmq.Context()
-        ready = Event()
-        controller = Controller(ready)
-        controller.start()
-        # wait for the thread to start with a signature_req saved to env.config
-        ready.wait()
-        connect_controllers(env.zmq_context)
-        try:
-            env.config.update(config)
-            return self._run(workflow)
-        finally:
-            env.controller_req_socket.send_pyobj(['done'])
-            env.controller_req_socket.recv()
-            disconnect_controllers()
-            controller.join()
-
-    def _run(self, workflow):
-        env.sos_dict.set('__signature_vars__', set())
+    def run(self, section, config):
+        env.config.update(config)
         prepare_env('')
 
-        # find the section from runnable
-        section = workflow.sections[0]
         # clear existing keys, otherwise the results from some random result
         # might mess with the execution of another step that does not define input
         for k in ['__step_input__', '__default_output__', '__step_output__']:
@@ -115,23 +113,6 @@ class Interactive_Executor(Base_Executor):
             env.sos_dict.pop(key, None)
 
     def run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
-        if not hasattr(env, 'zmq_context'):
-            env.zmq_context = zmq.Context()
-        ready = Event()
-        controller = Controller(ready)
-        controller.start()
-        # wait for the thread to start with a signature_req saved to env.config
-        ready.wait()
-        connect_controllers(env.zmq_context)
-        try:
-            return self._run(targets=targets, parent_socket=parent_socket, my_workflow_id=my_workflow_id, mode=mode)
-        finally:
-            env.controller_req_socket.send_pyobj(['done'])
-            env.controller_req_socket.recv()
-            disconnect_controllers()
-            controller.join()
-
-    def _run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
         '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
         The code can be simple SoS/Python statements, one SoS step, or more
         or more SoS workflows with multiple steps. This executor,
@@ -354,7 +335,6 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
         'bin_dirs': args.__bin_dirs__,
         'workflow_args': workflow_args
     }
-    env.config = defaultdict(str)
 
     try:
         if not code.strip():
@@ -379,7 +359,7 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
             workflow = script.workflow(
                 args.workflow, use_default=not args.__targets__)
             executor = Scratch_Cell_Executor()
-            return executor.run(workflow, config=config)['__last_res__']
+            return executor.run(workflow.sections[0], config=config)['__last_res__']
 
     except PendingTasks:
         raise
