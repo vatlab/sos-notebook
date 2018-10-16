@@ -67,32 +67,29 @@ def stop_controller(controller):
     disconnect_controllers()
     controller.join()
 
-class Scratch_Cell_Executor(Base_Executor):
-    def __init__(self):
-        Base_Executor.__init__(self)
+def execute_scratch_cell(section, config):
+    env.config['workflow_id'] = '0'
+    env.sos_dict.set('workflow_id', '0')
+    env.config.update(config)
+    prepare_env('')
 
-    def run(self, section, config):
-        env.config.update(config)
-        prepare_env('')
-
-        # clear existing keys, otherwise the results from some random result
-        # might mess with the execution of another step that does not define input
-        for k in ['__step_input__', '__default_output__', '__step_output__']:
-            env.sos_dict.pop(k, None)
-        # if the step has its own context
-        # execute section with specified input
-        try:
-            res = analyze_section(section)
-            env.sos_dict.quick_update({
-                '__signature_vars__': res['signature_vars'],
-                '__environ_vars__': res['environ_vars'],
-                '__changed_vars__': res['changed_vars']
-            })
-            executor = Interactive_Step_Executor(section, mode='interactive')
-            res = executor.run()
-        except (UnknownTarget, RemovedTarget) as e:
-            raise RuntimeError(f'Unavailable target {e.target}')
-        return res
+    # clear existing keys, otherwise the results from some random result
+    # might mess with the execution of another step that does not define input
+    for k in ['__step_input__', '__default_output__', '__step_output__']:
+        env.sos_dict.pop(k, None)
+    # if the step has its own context
+    # execute section with specified input
+    try:
+        res = analyze_section(section)
+        env.sos_dict.quick_update({
+            '__signature_vars__': res['signature_vars'],
+            '__environ_vars__': res['environ_vars'],
+            '__changed_vars__': res['changed_vars']
+        })
+        executor = Interactive_Step_Executor(section, mode='interactive')
+        return executor.run()
+    except (UnknownTarget, RemovedTarget) as e:
+        raise RuntimeError(f'Unavailable target {e.target}')
 
 
 class Interactive_Executor(Base_Executor):
@@ -355,10 +352,8 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
                 script = SoS_Script(content=code)
             else:
                 return
-            workflow = script.workflow(
-                args.workflow, use_default=not args.__targets__)
-            executor = Scratch_Cell_Executor()
-            return executor.run(workflow.sections[0], config=config)['__last_res__']
+            workflow = script.workflow(args.workflow)
+            return execute_scratch_cell(workflow.sections[0], config=config)['__last_res__']
 
     except PendingTasks:
         raise
