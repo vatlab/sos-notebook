@@ -30,6 +30,7 @@ from collections import defaultdict
 from typing import Union, DefaultDict
 
 from .step_executor import Interactive_Step_Executor
+from IPython.core.display import HTML
 
 
 class NotebookLoggingHandler(logging.Handler):
@@ -195,7 +196,36 @@ class Tapped_Executor(mp.Process):
             stdout_socket.close()
             context.term()
 
+g_running_workflows = {}
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     env.config['slave_id'] = kernel.cell_id
+    global g_running_workflows
+    if kernel.cell_id in g_running_workflows and g_running_workflows[kernel.cell_id].is_alive():
+        kernel.send_frontend_msg('alert', 'Workflow is still active. Cancel it before re-try.')
+        return
     executor = Tapped_Executor(code, raw_args, env.config)
     executor.start()
+
+    kernel.send_response(kernel.iopub_socket, 'display_data', {
+        'metadata': {},
+        'data': {'text/html':
+                HTML(f'''<table id="table_{kernel.cell_id}" class="workflow_table">
+                <tr style="border: 0px">
+    <td style="border: 0px">
+    <i id="status_{kernel.cell_id}"
+        class="fa fa-2x fa-fw fa-spinner fa-pulse fa-spin"
+        onmouseover="'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.remove(x));'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.add(x));"
+        onmouseleave="'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.remove(x));'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.add(x));"
+        onclick="cancel_workflow('{kernel.cell_id}')"
+    ></i> </td>
+    <td style="border:0px">&nbsp;</td>
+    <td style="border:0px;text-align:left;width:200px;">
+    <pre><span>
+    <time id="duration_{kernel.cell_id}" class='running', datetime="{time.time()*1000}"></time>
+    </span></pre>
+    <td style="border:0px;text-align:left;width:200px;">
+    <pre><span id="tagline_{kernel.cell_id}">started</span></pre></td>
+    </tr>
+    </table>''').data}})
+    kernel.send_frontend_msg('update-duration')
+    g_running_workflows[kernel.cell_id] = executor
