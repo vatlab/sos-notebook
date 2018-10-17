@@ -29,7 +29,7 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .step_executor import PendingTasks
-from .workflow_executor import (run_sos_workflow, NotebookLoggingHandler,
+from .workflow_executor import (run_sos_workflow, execute_scratch_cell, NotebookLoggingHandler,
     start_controller, stop_controller)
 from .magics import SoS_Magics
 
@@ -1181,11 +1181,12 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         code = dedent(code)
         with self.redirect_sos_io():
             try:
-                # record input and output
-                fopt = ''
-                res = run_sos_workflow(
-                    code=code, raw_args=self.options + fopt, kernel=self,
-                    workflow_mode=self._workflow_mode)
+                if self._workflow_mode:
+                    res = run_sos_workflow(
+                        code=code, raw_args=self.options, kernel=self)
+                else:
+                    res = execute_scratch_cell(code=code, raw_args=self.options,
+                        kernel=self)
                 self.send_result(res, silent)
             except PendingTasks as e:
                 return
