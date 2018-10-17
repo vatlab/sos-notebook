@@ -10,6 +10,7 @@ from threading import Event
 import shlex
 import sys
 import zmq
+import multiprocessing as mp
 
 from sos.__main__ import get_run_parser
 from sos.eval import SoS_exec
@@ -49,8 +50,10 @@ class NotebookLoggingHandler(logging.Handler):
         }, title=self.title, append=True, page='SoS')
 
 def start_controller():
-    if not hasattr(env, 'zmq_context'):
-        env.zmq_context = zmq.Context()
+    env.zmq_context = zmq.Context()
+    # ready to monitor other workflows
+    env.config['tapping'] = 'master'
+
     ready = Event()
     controller = Controller(ready)
     controller.start()
@@ -92,125 +95,40 @@ def execute_scratch_cell(section, config):
         raise RuntimeError(f'Unavailable target {e.target}')
 
 
-class Interactive_Executor(Base_Executor):
-    '''Interactive executor called from by iPython Jupyter or Spyder'''
 
-    def __init__(self, workflow=None, args=None, shared=None, config={}):
-        # we actually do not have our own workflow, everything is passed from ipython
-        # by nested = True we actually mean no new dictionary
-        Base_Executor.__init__(self, workflow=workflow,
-                               args=args, shared=shared, config=config)
+class Tapped_Executor(mp.Process):
+    '''
+    Worker process to process SoS step or workflow in separate process.
+    '''
 
-    def reset_dict(self):
-        # do not reset the entire env.sos_dict
-        self.init_dict()
-        # remove some variables because they would interfere with step analysis
-        for key in ('_input', 'step_input'):
-            env.sos_dict.pop(key, None)
-
-    def run(self, targets=None, parent_socket=None, my_workflow_id=None, mode=None):
-        '''Execute a block of SoS script that is sent by iPython/Jupyer/Spyer
-        The code can be simple SoS/Python statements, one SoS step, or more
-        or more SoS workflows with multiple steps. This executor,
-        1. adds a section header to the script if there is no section head
-        2. execute the workflow in interactive mode, which is different from
-           batch mode in a number of ways, which most notably without support
-           for nested workflow.
-        3. Optionally execute the workflow in preparation mode for debugging purposes.
-        '''
-        if not env.config['master_id']:
-            # if this is the executor for the master workflow, start controller
-            env.config['master_id'] = self.md5
-        self.write_workflow_info()
-        self.handle_resumed()        # if there is no valid code do nothing
-
-        self.reset_dict()
-        if not mode:
-            mode = env.config.get('run_mode', 'interactive')
-        # if user specified wrong mode with this executor, correct it.
-        if mode == 'run':
-            mode = 'interactive'
-        env.config['run_mode'] = mode
-        env.sos_dict.set('run_mode', mode)
-        self.completed = defaultdict(int)
-
-        # this is the result returned by the workflow, if the
-        # last stement is an expression.
-        wf_result = {'__workflow_id__': my_workflow_id,
-                     'shared': {}, '__last_res__': None}
-
-        # process step of the pipelinp
-        if isinstance(targets, str):
-            targets = [targets]
+    def __init__(self, workflow, args=None, config={}, targets=None) -> None:
+        # the worker process knows configuration file, command line argument etc
+        super(Tapped_Executor, self).__init__()
+        self.daemon = True
         #
-        # if targets are specified and there are only signatures for them, we need
-        # to remove the signature and really generate them
-        if targets:
-            targets = self.check_targets(targets)
-            if len(targets) == 0:
-                return wf_result
+        self.workflow = workflow
+        self.args = args
+        self.config = config
+        self.targets = targets
 
-        #
-        dag = self.initialize_dag(targets=targets)
-        while True:
-            # find any step that can be executed and run it, and update the DAT
-            # with status.
-            runnable = dag.find_executable()
-            if runnable is None:
-                break
-            # find the section from runnable
-            section = self.workflow.section_by_id(runnable._step_uuid)
-            # clear existing keys, otherwise the results from some random result
-            # might mess with the execution of another step that does not define input
-            for k in ['__step_input__', '__default_output__', '__step_output__']:
-                env.sos_dict.pop(k, None)
-            # if the step has its own context
-            env.sos_dict.quick_update(runnable._context)
-            # execute section with specified input
-            runnable._status = 'running'
-            dag.save(env.config['output_dag'])
-            try:
-                # the global section might have parameter definition etc
-                SoS_exec(section.global_def)
-                executor = Interactive_Step_Executor(section, mode=mode)
-                res = executor.run()
-                self.step_completed(res, dag, runnable)
-                wf_result['__last_res__'] = res['__last_res__']
-            except (UnknownTarget, RemovedTarget) as e:
-                self.handle_unknown_target(e, dag, runnable)
-            except UnavailableLock as e:
-                self.handle_unavailable_lock(e, dag, runnable)
-            except PendingTasks as e:
-                self.record_quit_status(e.tasks)
-                raise
-            # if the job is failed
-            except Exception as e:
-                runnable._status = 'failed'
-                dag.save(env.config['output_dag'])
-                raise
-        self.finalize_and_report()
-        wf_result['shared'] = {x: env.sos_dict[x]
-                               for x in self.shared.keys() if x in env.sos_dict}
-        wf_result['__completed__'] = self.completed
-        return wf_result
+    def run(self):
+        from sos.utils import log_to_file
 
-#
+        try:
+            self.config['verbosity'] = 4
+            executor = Base_Executor(self.workflow, args=self.args, config=self.config)
+            log_to_file('create executor')
+            ret = executor.run(self.targets)
+            env.tapping_logging_socket.send_multipart([b'info', b'DONE'])
+            env.tapping_controller_socket.send_pyobj(ret)
+            ret = env.tapping_controller.socket.recv()
+            log_to_file('done')
+        except Exception as e:
+            log_to_file(str(e))
+            env.tapping_logging_socket.send_multipart([b'info', str(e).encode()])
+
 def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
 
-    # this has something to do with Prefix matching rule of parse_known_args
-    #
-    # That is to say
-    #
-    #   --rep 3
-    #
-    # would be parsed as
-    #
-    #   args.workflow=3, unknown --rep
-    #
-    # instead of
-    #
-    #   args.workflow=None, unknown --rep 3
-    #
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
     raw_args = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
@@ -309,7 +227,7 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
               'step_depends', '_input', '_output', '_depends']:
         env.sos_dict.pop(k, None)
 
-    config={
+    config = {
         'config_file': args.__config__,
         'output_dag': args.__dag__,
         'output_report': args.__report__,
@@ -340,8 +258,15 @@ def run_sos_workflow(code=None, raw_args='', kernel=None, workflow_mode=False):
             script = SoS_Script(content=code)
             workflow = script.workflow(
                 args.workflow, use_default=not args.__targets__)
-            executor = Interactive_Executor(workflow, args=workflow_args, config=config)
-            return executor.run(args.__targets__)['__last_res__']
+            config['tapping'] = 'slave'
+            config['sockets'] = {
+                'tapping_logging': env.config['sockets']['tapping_logging'],
+                'tapping_controller': env.config['sockets']['tapping_controller']
+            }
+            executor = Tapped_Executor(workflow, args=workflow_args, config=config,
+                targets=args.__targets__)
+            executor.start()
+            return
         else:
             env.config['master_id'] = '0'
             # this is a scratch step...
