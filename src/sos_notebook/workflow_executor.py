@@ -48,7 +48,29 @@ class NotebookLoggingHandler(logging.Handler):
             'metadata': {},
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
         }, title=self.title, append=True, page='SoS')
+        self.kernel.send_response(self.kernel.iopub_socket, 'stream',
+                           {'name': 'stdout', 'text': record.msg})
 
+def start_controller():
+    env.zmq_context = zmq.Context()
+    # ready to monitor other workflows
+    env.config['exec_mode'] = 'master'
+
+    ready = Event()
+    controller = Controller(ready)
+    controller.start()
+    # wait for the thread to start with a signature_req saved to env.config
+    ready.wait()
+    connect_controllers(env.zmq_context)
+    return controller
+
+def stop_controller(controller):
+    if not controller:
+        return
+    env.controller_req_socket.send_pyobj(['done'])
+    env.controller_req_socket.recv()
+    disconnect_controllers()
+    controller.join()
 
 def execute_scratch_cell(code, raw_args, kernel):
     # we then have to change the parse to disable args.workflow when
@@ -158,20 +180,15 @@ class Tapped_Executor(mp.Process):
         context = zmq.Context()
         stdout_socket = context.socket(zmq.PUSH)
         stdout_socket.connect((f'tcp://127.0.0.1:{self.config["sockets"]["tapping_logging"]}'))
+        env.config.update(self.config)
         try:
-            while True:
-                stdout_socket.send_multipart([b'INFO', b'HELLO'])
-                log_to_file(f'alive and sent {stdout_socket.closed}')
-                time.sleep(1)
-            #
-            # filename = os.path.join(env.exec_dir, '.sos', 'interactive.sos')
-            # with open(filename, 'w') as script_file:
-            #     script_file.write(self.code)
-            #
-            # cmd = f'sos run {filename} {raw_args} -m tapping {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_controller"]}'
-            # pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
+            filename = os.path.join(env.exec_dir, '.sos', 'interactive.sos')
+            with open(filename, 'w') as script_file:
+                script_file.write(self.code)
+
+            cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_controller"]}'
+            pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
         except Exception as e:
-            log_to_file(e)
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
         finally:
             stdout_socket.LINGER = 0
@@ -179,6 +196,6 @@ class Tapped_Executor(mp.Process):
             context.term()
 
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
-    log_to_file(f'run sos workflow {env.config}')
+    env.config['slave_id'] = kernel.cell_id
     executor = Tapped_Executor(code, raw_args, env.config)
     executor.start()

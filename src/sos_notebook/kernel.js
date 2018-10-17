@@ -637,6 +637,14 @@ define([
         }
       } else if (msg_type === "show_toc") {
         show_toc();
+      } else if (msg_type == 'print') {
+        cell = get_cell_by_id(data[0]);
+        console.log(cell.output_area.outputs)
+        cell.output_area.append_output({
+          'output_type': 'stream',
+          'name': 'stdout',
+          'text': data[1]
+        })
       } else if (msg_type === "paste-table") {
         var cm = nb.get_selected_cell().code_mirror;
         cm.replaceRange(data, cm.getCursor());

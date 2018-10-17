@@ -34,10 +34,6 @@ from .workflow_executor import (run_sos_workflow, execute_scratch_cell, Notebook
 from .magics import SoS_Magics
 
 class FlushableStringIO:
-    '''This is a string buffer for output, but it will only
-    keep the first 200 lines and the last 10 lines.
-    '''
-
     def __init__(self, kernel, name, *args, **kwargs):
         self.kernel = kernel
         self.name = name
@@ -481,7 +477,8 @@ class SoS_Kernel(IPythonKernel):
                         4: logging.TRACE,
                         None: logging.INFO
                     }[env.verbosity], kernel=self))
-        #
+        env.logger.print = lambda cell_id, msg, *args: \
+            self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
 
     cell_id = property(lambda self: self._meta['cell_id'])
