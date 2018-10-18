@@ -27,7 +27,6 @@ from sos.utils import format_duration, WorkflowDict, env, short_repr
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
-from .step_executor import PendingTasks
 from .workflow_executor import (run_sos_workflow, execute_scratch_cell, NotebookLoggingHandler,
     start_controller, stop_controller)
 from .magics import SoS_Magics
@@ -1187,8 +1186,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     res = execute_scratch_cell(code=code, raw_args=self.options,
                         kernel=self)
                 self.send_result(res, silent)
-            except PendingTasks as e:
-                return
             except Exception as e:
                 sys.stderr.flush()
                 sys.stdout.flush()

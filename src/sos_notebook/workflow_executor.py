@@ -17,7 +17,6 @@ import multiprocessing as mp
 from sos.__main__ import get_run_parser
 from sos.eval import SoS_exec
 from sos.parser import SoS_Script
-from sos.step_executor import PendingTasks
 from sos.syntax import SOS_SECTION_HEADER
 from sos.targets import (RemovedTarget, UnavailableLock,
                          UnknownTarget, sos_targets)

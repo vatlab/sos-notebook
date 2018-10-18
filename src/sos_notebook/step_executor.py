@@ -7,7 +7,7 @@
 import time
 
 from sos.hosts import Host
-from sos.step_executor import Base_Step_Executor, PendingTasks, Step_Executor
+from sos.step_executor import Base_Step_Executor, Step_Executor
 from sos.utils import env, short_repr
 
 
@@ -57,10 +57,6 @@ class Interactive_Step_Executor(Step_Executor):
                 #completed = [task for task, status in zip(tasks, res) if status == 'completed']
                 self.host._task_engine.remove_tasks(tasks)
                 return self.host.retrieve_results(tasks)
-            #
-            elif not env.config['wait_for_task']:
-                raise PendingTasks([(self.host.alias, x) for x, y in zip(tasks, res)
-                                    if y in ('pending', 'submitted', 'running')])
             time.sleep(0.1)
 
     def run(self):
