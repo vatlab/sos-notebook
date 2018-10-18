@@ -51,7 +51,6 @@ install:
 
 test_script:
     - cd test
-    - git clone https://github.com/vatlab/sos.git sos_tests
     - pytest -x -v 
 
 #on_finish:
