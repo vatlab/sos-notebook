@@ -436,6 +436,98 @@ define([
     adjustPanel();
   };
 
+  function update_duration() {
+    if (!window._duration_updater) {
+      window._duration_updater = window.setInterval(function() {
+        $("[id^=duration_]").text(function() {
+          // if class != running, show "started "
+          if ($(this).attr("class") != "running")
+            return $(this).text();
+          return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"));
+        });
+      }, 5000);
+    }
+  }
+  // add workflow status indicator table
+  function update_workflow_status(info) {
+      // find the cell
+      let cell_id = info.cell_id
+      let cell = get_cell_by_id(cell_id);
+      if (!cell) {
+          console.log(`Cannot find cell by ID ${info.cell_id}`)
+          return;
+      }
+
+      // find the status table
+      let status_table = document.getElementById(`workflow_${cell_id}`);
+      // if there is no status table, create one
+      // the easiest method seems to be adding display_data
+      if (!status_table) {
+          data = {
+              'output_type': 'display_data',
+              'metadata': {},
+              'data': {
+                  'text/html': `
+<table id="workflow_${cell_id}" class="workflow_table">
+    <tr>
+          <td>
+            <i id="status_${cell_id}"
+              class="fa fa-2x fa-fw fa-spinner fa-pulse fa-spin"
+              onmouseover="'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));"
+              onmouseleave="'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));"
+              onclick="cancel_workflow('${cell_id}')" ></i>
+          </td>
+          <td class="workflow_info">
+            <pre>ID:   ${info.workflow_id}\nName: ${info.workflow_name}</pre>
+          </td>
+          <td>
+            <pre>
+            <time id="duration_${cell_id}" class='running', datetime="${new Date()}">Just started</time>
+            </pre>
+          </td>
+    </tr>
+</table>
+`
+              }
+          }
+          cell.output_area.append_output(data);
+          update_duration();
+      }
+
+      if (info.status === 'canceled') {
+          // look for status etc and update them.
+          let status = document.getElementById(`status_${cell_id}`);
+          if (status) {
+              status.removeAttribute('onmouseover');
+              status.removeAttribute('onmouseleave');
+              status.removeAttribute('onclick');
+              status.className = 'fa fa-2x fa-fw fa-frown-o';
+          }
+          let timer = document.getElementById(`duration_${cell_id}`);
+          if (timer) {
+              timer.className = 'failed';
+          }
+      } else if (info.status === 'completed') {
+          // look for status etc and update them.
+          let status = document.getElementById(`status_${cell_id}`);
+          if (status) {
+              status.className = 'fa fa-2x fa-fw fa-check-square-o';
+              status.removeAttribute('onmouseover');
+              status.removeAttribute('onmouseleave');
+              status.removeAttribute('onclick');
+          }
+          let timer = document.getElementById(`duration_${cell_id}`);
+          if (timer) {
+              timer.className = 'completed';
+          }
+      }
+  }
+
+
+  function update_task_status(cell_id, tid, tqu, info) {
+
+  }
+
   function register_sos_comm() {
     // comm message sent from the kernel
     window.sos_comm = Jupyter.notebook.kernel.comm_manager.new_comm("sos_comm", {});
@@ -574,16 +666,7 @@ define([
           item.parentNode.removeChild(item);
         }
       } else if (msg_type === "update-duration") {
-        if (!window._duration_updater) {
-          window._duration_updater = window.setInterval(function() {
-            $("[id^=duration_]").text(function() {
-              // if class != running, show "started "
-              if ($(this).attr("class") != "running")
-                return $(this).text();
-              return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"));
-            });
-          }, 5000);
-        }
+        update_duration();
       } else if (msg_type === "task-status") {
         // console.log(data);
         var item = document.getElementById("status_" + data[0] + "_" + data[1]);
@@ -646,33 +729,7 @@ define([
         })
       } else if (msg_type == 'workflow_status') {
         console.log(data);
-        if (data[1] === 'canceled') {
-          // look for status etc and update them.
-          let status = document.getElementById(`status_${data[0]}`);
-          if (status) {
-            status.removeAttribute('onmouseover');
-            status.removeAttribute('onmouseleave');
-            status.removeAttribute('onclick');
-            status.className = 'fa fa-2x fa-fw fa-frown-o';
-          }
-          let timer = document.getElementById(`duration_${data[0]}`);
-          if (timer) {
-            timer.className = 'failed';
-          }
-        } else if (data[1] === 'completed') {
-          // look for status etc and update them.
-          let status = document.getElementById(`status_${data[0]}`);
-          if (status) {
-            status.className = 'fa fa-2x fa-fw fa-check-square-o';
-            status.removeAttribute('onmouseover');
-            status.removeAttribute('onmouseleave');
-            status.removeAttribute('onclick');
-          }
-          let timer = document.getElementById(`duration_${data[0]}`);
-          if (timer) {
-            timer.className = 'completed';
-          }
-        }
+        update_workflow_status(data);
       } else if (msg_type === "paste-table") {
         var cm = nb.get_selected_cell().code_mirror;
         cm.replaceRange(data, cm.getCursor());
@@ -1907,6 +1964,10 @@ table.task_table {
  display: none;
 }
 
+td.workflow_info {
+  width: 20em;
+  text-align: left;
+}
 #panel-wrapper #panel div.output_area {
   display: -webkit-box;
 }

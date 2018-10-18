@@ -195,15 +195,20 @@ class Tapped_Executor(mp.Process):
             ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
             informer_socket.send_pyobj(
                 {'msg_type': 'workflow_status',
-                 'slave_id': env.config['slave_id'],
-                 'ret_code': ret_code })
+                 'data': {
+                    'cell_id': env.config['slave_id'],
+                    'status': 'completed'
+                  }
+                })
         except Exception as e:
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
             informer_socket.send_pyobj({
                 'msg_type': 'workflow_status',
-                'ret_code': 1,
-                'slave_id': env.config['slave_id'],
-                'exception': e
+                'data': {
+                    'cell_id': env.config['slave_id'],
+                    'status': 'failed',
+                    'exception': str(e)
+                }
             })
         finally:
             stdout_socket.LINGER = 0
@@ -220,28 +225,8 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
         executor = Tapped_Executor(code, raw_args, env.config)
         executor.start()
         g_running_workflows[kernel.cell_id] = executor
-
-    kernel.send_response(kernel.iopub_socket, 'display_data', {
-        'metadata': {},
-        'data': {'text/html':
-                HTML(f'''<table id="table_{kernel.cell_id}" class="workflow_table">
-                <tr style="border: 0px">
-    <td style="border: 0px">
-    <i id="status_{kernel.cell_id}"
-        class="fa fa-2x fa-fw fa-spinner fa-pulse fa-spin"
-        onmouseover="'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.remove(x));'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.add(x));"
-        onmouseleave="'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.remove(x));'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_{kernel.cell_id}').classList.add(x));"
-        onclick="cancel_workflow('{kernel.cell_id}')"
-    ></i> </td>
-    <td style="border:0px">&nbsp;</td>
-    <td style="border:0px;text-align:left;width:200px;">
-    <pre><span>
-    <time id="duration_{kernel.cell_id}" class='running', datetime="{time.time()*1000}">Just started</time>
-    </span></pre></td>
-    </tr>
-    </table>''').data}})
-    kernel.send_frontend_msg('update-duration')
-
+        # should wait for the starting of the workflow to return??
+        time.sleep(1)
 
 def cancel_workflow(cell_id, kernel):
     global g_running_workflows
@@ -254,4 +239,7 @@ def cancel_workflow(cell_id, kernel):
         proc.terminate()
     if not psutil.pid_exists(proc.pid):
         g_running_workflows.pop(cell_id)
-    kernel.send_frontend_msg('workflow_status', [cell_id, 'canceled'])
+    kernel.send_frontend_msg('workflow_status', {
+        'cell_id': cell_id,
+        'status': 'canceled'
+    })
