@@ -639,12 +639,40 @@ define([
         show_toc();
       } else if (msg_type == 'print') {
         cell = get_cell_by_id(data[0]);
-        console.log(cell.output_area.outputs)
         cell.output_area.append_output({
           'output_type': 'stream',
           'name': 'stdout',
           'text': data[1]
         })
+      } else if (msg_type == 'workflow_status') {
+        console.log(data);
+        if (data[1] === 'canceled') {
+          // look for status etc and update them.
+          let status = document.getElementById(`status_${data[0]}`);
+          if (status) {
+            status.removeAttribute('onmouseover');
+            status.removeAttribute('onmouseleave');
+            status.removeAttribute('onclick');
+            status.className = 'fa fa-2x fa-fw fa-frown-o';
+          }
+          let timer = document.getElementById(`duration_${data[0]}`);
+          if (timer) {
+            timer.className = 'failed';
+          }
+        } else if (data[1] === 'completed') {
+          // look for status etc and update them.
+          let status = document.getElementById(`status_${data[0]}`);
+          if (status) {
+            status.className = 'fa fa-2x fa-fw fa-check-square-o';
+            status.removeAttribute('onmouseover');
+            status.removeAttribute('onmouseleave');
+            status.removeAttribute('onclick');
+          }
+          let timer = document.getElementById(`duration_${data[0]}`);
+          if (timer) {
+            timer.className = 'completed';
+          }
+        }
       } else if (msg_type === "paste-table") {
         var cm = nb.get_selected_cell().code_mirror;
         cm.replaceRange(data, cm.getCursor());
@@ -779,6 +807,13 @@ define([
     }
   }
 
+
+  window.cancel_workflow = function(cell_id) {
+    console.log("Cancel workflow " + cell_id);
+    send_kernel_msg({
+      "cancel-workflow": [cell_id],
+    });
+  };
 
   window.kill_task = function(task_id, task_queue) {
     console.log("Kill " + task_id);

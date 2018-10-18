@@ -6,6 +6,7 @@ import re
 import os
 import datetime
 import logging
+import psutil
 from threading import Event
 import time
 import shlex
@@ -20,7 +21,7 @@ from sos.step_executor import PendingTasks
 from sos.syntax import SOS_SECTION_HEADER
 from sos.targets import (RemovedTarget, UnavailableLock,
                          UnknownTarget, sos_targets)
-from sos.utils import _parse_error, env, get_traceback, pexpect_run, log_to_file
+from sos.utils import _parse_error, env, get_traceback, pexpect_run
 from sos.workflow_executor import Base_Executor
 from sos.executor_utils import prepare_env
 from sos.controller import Controller, connect_controllers, disconnect_controllers
@@ -52,13 +53,13 @@ class NotebookLoggingHandler(logging.Handler):
         self.kernel.send_response(self.kernel.iopub_socket, 'stream',
                            {'name': 'stdout', 'text': record.msg})
 
-def start_controller():
+def start_controller(kernel):
     env.zmq_context = zmq.Context()
     # ready to monitor other workflows
     env.config['exec_mode'] = 'master'
 
     ready = Event()
-    controller = Controller(ready)
+    controller = Controller(ready, kernel)
     controller.start()
     # wait for the thread to start with a signature_req saved to env.config
     ready.wait()
@@ -177,20 +178,34 @@ class Tapped_Executor(mp.Process):
         self.config = config
 
     def run(self):
+        env.config.update(self.config)
         # start a socket?
         context = zmq.Context()
         stdout_socket = context.socket(zmq.PUSH)
         stdout_socket.connect((f'tcp://127.0.0.1:{self.config["sockets"]["tapping_logging"]}'))
-        env.config.update(self.config)
+
+        informer_socket = context.socket(zmq.PUSH)
+        informer_socket.connect((f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
+
         try:
             filename = os.path.join(env.exec_dir, '.sos', 'interactive.sos')
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
-            cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_controller"]}'
-            pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
+            cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
+            ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
+            informer_socket.send_pyobj(
+                {'msg_type': 'workflow_status',
+                 'slave_id': env.config['slave_id'],
+                 'ret_code': ret_code })
         except Exception as e:
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
+            informer_socket.send_pyobj({
+                'msg_type': 'workflow_status',
+                'ret_code': 1,
+                'slave_id': env.config['slave_id'],
+                'exception': e
+            })
         finally:
             stdout_socket.LINGER = 0
             stdout_socket.close()
@@ -200,11 +215,12 @@ g_running_workflows = {}
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     env.config['slave_id'] = kernel.cell_id
     global g_running_workflows
-    if kernel.cell_id in g_running_workflows and g_running_workflows[kernel.cell_id].is_alive():
-        kernel.send_frontend_msg('alert', 'Workflow is still active. Cancel it before re-try.')
-        return
-    executor = Tapped_Executor(code, raw_args, env.config)
-    executor.start()
+    if kernel.cell_id in g_running_workflows and g_running_workflows[kernel.cell_id].is_alive() and psutil.pid_exists(g_running_workflows[kernel.cell_id].pid):
+        kernel.send_frontend_msg('alert', 'Workflow is still active but output will be cleared. Cancel it before re-try.')
+    else:
+        executor = Tapped_Executor(code, raw_args, env.config)
+        executor.start()
+        g_running_workflows[kernel.cell_id] = executor
 
     kernel.send_response(kernel.iopub_socket, 'display_data', {
         'metadata': {},
@@ -221,11 +237,22 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     <td style="border:0px">&nbsp;</td>
     <td style="border:0px;text-align:left;width:200px;">
     <pre><span>
-    <time id="duration_{kernel.cell_id}" class='running', datetime="{time.time()*1000}"></time>
-    </span></pre>
-    <td style="border:0px;text-align:left;width:200px;">
-    <pre><span id="tagline_{kernel.cell_id}">started</span></pre></td>
+    <time id="duration_{kernel.cell_id}" class='running', datetime="{time.time()*1000}">Just started</time>
+    </span></pre></td>
     </tr>
     </table>''').data}})
     kernel.send_frontend_msg('update-duration')
-    g_running_workflows[kernel.cell_id] = executor
+
+
+def cancel_workflow(cell_id, kernel):
+    global g_running_workflows
+    if cell_id not in g_running_workflows:
+        return
+    proc = g_running_workflows[cell_id]
+    if proc.is_alive():
+        from sos.executor_utils import kill_all_subprocesses
+        kill_all_subprocesses(proc.pid, include_self=True)
+        proc.terminate()
+    if not psutil.pid_exists(proc.pid):
+        g_running_workflows.pop(cell_id)
+    kernel.send_frontend_msg('workflow_status', [cell_id, 'canceled'])

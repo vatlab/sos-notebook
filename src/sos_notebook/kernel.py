@@ -22,8 +22,7 @@ from jupyter_client import manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_SECTION_HEADER
-from sos.utils import (format_duration, WorkflowDict, env, log_to_file,
-                        short_repr)
+from sos.utils import format_duration, WorkflowDict, env, short_repr
 
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
@@ -505,6 +504,9 @@ class SoS_Kernel(IPythonKernel):
                     Host(v[1])._task_engine.kill_tasks([v[0]])
                     self.notify_task_status(
                         ['change-status', v[1], v[0], 'aborted', (None, None, None)])
+                elif k == 'cancel-workflow':
+                    from .workflow_executor import cancel_workflow
+                    cancel_workflow(v[0], self)
                 elif k == 'resume-task':
                     # kill specified task
                     from sos.hosts import Host
@@ -536,7 +538,7 @@ class SoS_Kernel(IPythonKernel):
                             h = Host(tqu)
                         except Exception:
                             continue
-                        for _, tst, tdt in h._task_engine.monitor_tasks(tids):
+                        for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
                             self.notify_task_status(
                                 ['change-status', tqu, tid, tst, tdt])
                     self.send_frontend_msg('update-duration', {})
@@ -547,7 +549,7 @@ class SoS_Kernel(IPythonKernel):
                         tbl = tabulate(df, headers='keys', tablefmt='pipe')
                         self.send_frontend_msg('paste-table', tbl)
                         if self._debug_mode:
-                            log_to_file(tbl)
+                            env.log_to_file(tbl)
                     except Exception as e:
                         self.send_frontend_msg(
                             'alert', f'Failed to paste clipboard as table: {e}')
@@ -910,7 +912,7 @@ class SoS_Kernel(IPythonKernel):
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 if self._debug_mode:
-                    log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                    env.log_to_file(f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
@@ -922,12 +924,12 @@ class SoS_Kernel(IPythonKernel):
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
                         if self._debug_mode:
-                            log_to_file(
+                            env.log_to_file(
                                 f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
                         break
             except Exception as e:
                 if self._debug_mode:
-                    log_to_file(f'Completion fail with exception: {e}')
+                    env.log_to_file(f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
@@ -943,7 +945,7 @@ class SoS_Kernel(IPythonKernel):
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 if self._debug_mode:
-                    log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                    env.log_to_file(f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.complete(code, cursor_pos)
@@ -955,12 +957,12 @@ class SoS_Kernel(IPythonKernel):
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
                         if self._debug_mode:
-                            log_to_file(
+                            env.log_to_file(
                                 f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
                         break
             except Exception as e:
                 if self._debug_mode:
-                    log_to_file(f'Completion fail with exception: {e}')
+                    env.log_to_file(f'Completion fail with exception: {e}')
 
     def warn(self, message):
         message = str(message).rstrip() + '\n'
@@ -990,8 +992,8 @@ class SoS_Kernel(IPythonKernel):
             while self.KC.stdin_channel.msg_ready():
                 sub_msg = self.KC.stdin_channel.get_msg()
                 if self._debug_mode:
-                    log_to_file(f"MSG TYPE {sub_msg['header']['msg_type']}")
-                    log_to_file(f'CONTENT  {sub_msg}')
+                    env.log_to_file(f"MSG TYPE {sub_msg['header']['msg_type']}")
+                    env.log_to_file(f'CONTENT  {sub_msg}')
                 if sub_msg['header']['msg_type'] != 'input_request':
                     self.send_response(
                         self.stdin_socket, sub_msg['header']['msg_type'], sub_msg["content"])
@@ -1006,8 +1008,8 @@ class SoS_Kernel(IPythonKernel):
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    log_to_file(f'MSG TYPE {msg_type}')
-                    log_to_file(f'CONTENT  {sub_msg["content"]}')
+                    env.log_to_file(f'MSG TYPE {msg_type}')
+                    env.log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
@@ -1154,18 +1156,18 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    log_to_file(f'Received {msg_type} {sub_msg["content"]}')
+                    env.log_to_file(f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
                     if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name):
                         if self._debug_mode:
-                            log_to_file(
+                            env.log_to_file(
                                 f'Capture response: {msg_type}: {sub_msg["content"]}')
                         responses.append([msg_type, sub_msg['content']])
                     else:
                         if self._debug_mode:
-                            log_to_file(
+                            env.log_to_file(
                                 f'Non-response: {msg_type}: {sub_msg["content"]}')
                         self.send_response(
                             self.iopub_socket, msg_type, sub_msg['content'])
@@ -1358,7 +1360,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
         if self._debug_mode:
             self.warn(code)
         if not self.controller:
-            self.controller = start_controller()
+            self.controller = start_controller(self)
         self._forward_input(allow_stdin)
         # switch to global default kernel
         try:
