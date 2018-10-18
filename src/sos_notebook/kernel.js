@@ -524,8 +524,115 @@ define([
   }
 
 
-  function update_task_status(cell_id, tid, tqu, info) {
+  function update_task_status(info) {
+    // find the cell
+    console.log(info);
+    let elem_id = `${info.queue}_${info.task_id}`
 
+    // find the status table
+    let status_table = document.getElementById(`task_${elem_id}`);
+    // if there is no status table, create one
+    // the easiest method seems to be adding display_data
+    let action_class = {
+        'pending': 'fa-stop',
+        'submitted': 'fa-stop',
+        'running': 'fa-stop',
+        'completed': 'fa-play',
+        'failed': 'fa-play',
+        'aborted': 'fa-play',
+        'missing': 'fa-question',
+        'unknown': 'fa-question',
+    }
+
+    let status_class = {
+        'pending': 'fa-square-o',
+        'submitted': 'fa-spinner',
+        'running': 'fa-spinner fa-pulse fa-spin',
+        'completed': 'fa-check-square-o',
+        'failed': 'fa-times-circle-o',
+        'aborted': 'fa-frown-o',
+        'missing': 'fa-question',
+        'unknown': 'fa-question',
+    }
+
+    let action_func = {
+        'pending': 'kill_task',
+        'submitted': 'kill_task',
+        'running': 'kill_task',
+        'completed': 'resume_task',
+        'failed': 'resume_task',
+        'aborted': 'resume_task',
+        'missing': 'function(){}',
+        'unknown': 'function(){}',
+    }
+
+    if (!status_table) {
+        let cell_id = info.cell_id
+        if (!cell_id) {
+          return;
+        }
+        let cell = get_cell_by_id(cell_id);
+        if (!cell) {
+          console.log(`Cannot find cell by ID ${info.cell_id}`)
+          return;
+        }
+
+        data = {
+            'output_type': 'display_data',
+            'metadata': {},
+            'data': {
+                'text/html': `
+<table id="task_${elem_id}" class="task_table">
+<tr>
+  <td style="border: 0px">
+    <i id="status_${elem_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
+    onmouseover="'${status_class[info.status]}'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.remove(x));'${action_class[info.status]} task_hover'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.add(x));"
+    onmouseleave="'${action_class[info.status]} task_hover'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.remove(x));'${status_class[info.status]}'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.add(x));"
+    onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}')"
+    ></i>
+ </td>
+  <td ><a onclick="task_info('${info.task_id}', '${info.queue}')">
+    <pre>${info.task_id}</pre></a></td>
+  <td >&nbsp;</td>
+  <td >
+    <pre><span id="tagline_${elem_id}">${info.status}</span></pre>
+  </td>
+</tr>
+</table>
+`
+            }
+        }
+        cell.output_area.append_output(data);
+        update_duration();
+    }
+
+    if (info.status === 'canceled') {
+        // look for status etc and update them.
+        let status = document.getElementById(`status_${elem_id}`);
+        if (status) {
+            status.removeAttribute('onmouseover');
+            status.removeAttribute('onmouseleave');
+            status.removeAttribute('onclick');
+            status.className = 'fa fa-2x fa-fw fa-frown-o';
+        }
+        let timer = document.getElementById(`duration_${elem_id}`);
+        if (timer) {
+            timer.className = 'failed';
+        }
+    } else if (info.status === 'completed') {
+        // look for status etc and update them.
+        let status = document.getElementById(`status_${elem_id}`);
+        if (status) {
+            status.className = 'fa fa-2x fa-fw fa-check-square-o';
+            status.removeAttribute('onmouseover');
+            status.removeAttribute('onmouseleave');
+            status.removeAttribute('onclick');
+        }
+        let timer = document.getElementById(`duration_${elem_id}`);
+        if (timer) {
+            timer.className = 'completed';
+        }
+    }
   }
 
   function register_sos_comm() {
@@ -667,57 +774,8 @@ define([
         }
       } else if (msg_type === "update-duration") {
         update_duration();
-      } else if (msg_type === "task-status") {
-        // console.log(data);
-        var item = document.getElementById("status_" + data[0] + "_" + data[1]);
-        if (!item) {
-          return;
-        } else {
-          // id, status, status_class, action_class, action_func
-          item.className = "fa fa-fw fa-2x " + data[4];
-          item.setAttribute("onmouseover", `'${data[4]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[5]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
-          item.setAttribute("onmouseleave", `'${data[5]} task_hover'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.remove(x));'${data[4]}'.split(' ').map(x => document.getElementById('status_${data[0]}_${data[1]}').classList.add(x));`);
-          item.setAttribute("onClick", data[6] + "('" + data[1] + "', '" + data[0] + "')");
-        }
-        if (data[2] === "completed") {
-          var item = document.getElementById("tagline_" + data[0] + "_" + data[1]);
-          item.className = 'completed'
-          if (item) {
-            if (data[3][2]) {
-              // duration is specified
-              item.innerText = `Ran for ${window.durationFormatter(data[3][2]*1000)}`;
-            } else {
-              let item = document.getElementById("duration_" + data[0] + "_" + data[1]);
-              if (item) {
-                item.className = 'completed';
-              }
-            }
-          }
-        } else if (data[2] === "running") {
-          var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
-          if (item) {
-            item.className = data[2];
-            if (data[3][1]) {
-              item.setAttribute("datetime", data[3][1] * 1000);
-            }
-          } else {
-            // if the timer is not found, it was changed from a terminal status
-            // without this item, so we need to create one
-            var item = document.getElementById("tagline_" + data[0] + "_" + data[1]);
-            if (item) {
-              item.innerHTML = `<time id="duration_${data[0]}_${data[1]}" class="running" datetime="${data[3][1]*1000}">Ran for ${window.durationFormatter(new Date() - data[3][1]*1000)}</time>`
-            }
-          }
-        } else {
-          // paused, aborted etc
-          var item = document.getElementById("duration_" + data[0] + "_" + data[1]);
-          if (item) {
-            if (data[3][1]) {
-              item.setAttribute("datetime", data[3][1] * 1000);
-            }
-            item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"));
-          }
-        }
+      } else if (msg_type === "task_status") {
+        update_task_status(data);
       } else if (msg_type === "show_toc") {
         show_toc();
       } else if (msg_type == 'print') {
@@ -728,7 +786,6 @@ define([
           'text': data[1]
         })
       } else if (msg_type == 'workflow_status') {
-        console.log(data);
         update_workflow_status(data);
       } else if (msg_type === "paste-table") {
         var cm = nb.get_selected_cell().code_mirror;

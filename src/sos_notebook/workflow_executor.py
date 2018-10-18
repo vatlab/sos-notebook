@@ -133,7 +133,10 @@ def execute_scratch_cell(code, raw_args, kernel):
         'workflow': args.workflow,
         'targets': args.__targets__,
         'workflow_args': workflow_args,
-        'workflow_id': '0'
+        'workflow_id': '0',
+
+        # interactive work is also a slave of the controller
+        'slave_id': kernel.cell_id,
     }
 
     env.sos_dict.set('workflow_id', '0')

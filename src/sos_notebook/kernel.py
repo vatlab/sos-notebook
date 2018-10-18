@@ -456,7 +456,6 @@ class SoS_Kernel(IPythonKernel):
         self.last_executed_code = ''
         self._kernel_return_vars = []
         self._failed_languages = {}
-        env.__task_notifier__ = self.notify_task_status
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
         # sos does not yet support MaxOSX backend to start a new window
@@ -501,8 +500,12 @@ class SoS_Kernel(IPythonKernel):
                     # kill specified task
                     from sos.hosts import Host
                     Host(v[1])._task_engine.kill_tasks([v[0]])
-                    self.notify_task_status(
-                        ['change-status', v[1], v[0], 'aborted', (None, None, None)])
+                    self.send_frontend_msg('task_status',
+                        {
+                            'task_id': v[0],
+                            'queue': v[1],
+                            'status': 'abort'
+                        })
                 elif k == 'cancel-workflow':
                     from .workflow_executor import cancel_workflow
                     cancel_workflow(v[0], self)
@@ -510,11 +513,35 @@ class SoS_Kernel(IPythonKernel):
                     # kill specified task
                     from sos.hosts import Host
                     Host(v[1])._task_engine.resume_task(v[0])
-                    self.notify_task_status(
-                        ['change-status', v[1], v[0], 'pending', (None, None, None)])
+                    self.send_frontend_msg('task_status',
+                        {
+                            'task_id': v[0],
+                            'queue': v[1],
+                            'status': 'pending'
+                        })
                 elif k == 'task-info':
                     self._meta['use_panel'] = True
-                    self.update_taskinfo(v[0], v[1])
+                    from sos.hosts import Host
+                    task_queue = v[1]
+                    task_id = v[0]
+                    host = Host(task_queue)
+                    result = host._task_engine.query_tasks(
+                        [task_id], verbosity=2, html=True)
+                    # log_to_file(result)
+                    self.send_frontend_msg('display_data', {
+                        'metadata': {},
+                        'data': {'text/plain': result,
+                                 'text/html': HTML(result).data
+                                 }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
+
+                    # now, there is a possibility that the status of the task is different from what
+                    # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
+                    # already get the status, we should update the task engine...
+                    #
+                    # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
+                    status = result.split(
+                        '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
+                    host._task_engine.update_task_status(task_id, status)
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue
@@ -538,8 +565,14 @@ class SoS_Kernel(IPythonKernel):
                         except Exception:
                             continue
                         for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
-                            self.notify_task_status(
-                                ['change-status', tqu, tid, tst, tdt])
+                            self.send_frontend_msg('task_status',
+                                {
+                                    'task_id': tid,
+                                    'queue': tqu,
+                                    'status': tst,
+                                    'duration': tdt
+                                })
+
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
                     try:
@@ -560,125 +593,6 @@ class SoS_Kernel(IPythonKernel):
                 else:
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
-
-    status_class = {
-        'pending': 'fa-square-o',
-        'submitted': 'fa-spinner',
-        'running': 'fa-spinner fa-pulse fa-spin',
-        'completed': 'fa-check-square-o',
-        'failed': 'fa-times-circle-o',
-        'aborted': 'fa-frown-o',
-        'missing': 'fa-question',
-        'unknown': 'fa-question',
-    }
-
-    def update_taskinfo(self, task_id, task_queue):
-        # requesting information on task
-        from sos.hosts import Host
-        host = Host(task_queue)
-        result = host._task_engine.query_tasks(
-            [task_id], verbosity=2, html=True)
-        # log_to_file(result)
-        self.send_frontend_msg('display_data', {
-            'metadata': {},
-            'data': {'text/plain': result,
-                     'text/html': HTML(result).data
-                     }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
-
-        # now, there is a possibility that the status of the task is different from what
-        # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
-        # already get the status, we should update the task engine...
-        #
-        # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
-        status = result.split(
-            '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
-        host._task_engine.update_task_status(task_id, status)
-
-    def notify_task_status(self, task_status):
-        action_class = {
-            'pending': 'fa-stop',
-            'submitted': 'fa-stop',
-            'running': 'fa-stop',
-            'completed': 'fa-play',
-            'failed': 'fa-play',
-            'aborted': 'fa-play',
-            'missing': 'fa-question',
-            'unknown': 'fa-question',
-        }
-
-        action_func = {
-            'pending': 'kill_task',
-            'submitted': 'kill_task',
-            'running': 'kill_task',
-            'completed': 'resume_task',
-            'failed': 'resume_task',
-            'aborted': 'resume_task',
-            'missing': 'function(){}',
-            'unknown': 'function(){}',
-        }
-        if task_status[0] == 'new-status':
-            tqu, tid, tst, tdt = task_status[1:]
-            # tdt contains cretion time, start running time, and duration time.
-            if tdt[2]:
-                timer = f'Ran for {format_duration(tdt[2])}</time>'
-            elif tdt[1]:
-                # start running
-                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt[1]*1000}">Ran for {format_duration(time.time() - tdt[1])}</time>'
-            else:
-                timer = f'<time id="duration_{tqu}_{tid}" class="{tst}" datetime="{tdt[0]*1000}">Pending for {format_duration(time.time() - tdt[0])}</time>'
-            self.send_response(self.iopub_socket, 'display_data',
-                               {
-                                   'metadata': {},
-                                   'data': {'text/html':
-                                            HTML(f'''<table id="table_{tqu}_{tid}" class="task_table"><tr style="border: 0px">
-                        <td style="border: 0px">
-                        <i id="status_{tqu}_{tid}"
-                            class="fa fa-2x fa-fw {self.status_class[tst]}"
-                            onmouseover="'{self.status_class[tst]}'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.remove(x));'{action_class[tst]} task_hover'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.add(x));"
-                            onmouseleave="'{action_class[tst]} task_hover'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.remove(x));'{self.status_class[tst]}'.split(' ').map(x => document.getElementById('status_{tqu}_{tid}').classList.add(x));"
-                            onclick="{action_func[tst]}('{tid}', '{tqu}')"
-                        ></i> </td>
-                        <td style="border:0px"><a onclick="task_info('{tid}', '{tqu}')"><pre>{tid}</pre></a></td>
-                        <td style="border:0px">&nbsp;</td>
-                        <td style="border:0px;text-align=right;">
-                        <pre><span id="tagline_{tqu}_{tid}">{timer}</span></pre></td>
-                        </tr>
-                        </table>''').data}})
-            # keep tracks of my tasks to avoid updating status of
-            # tasks that does not belong to the notebook
-            self.my_tasks[(tqu, tid)] = time.time()
-        elif task_status[0] == 'remove-task':
-            tqu, tid = task_status[1:]
-            if (tqu, tid) in self.my_tasks:
-                self.send_frontend_msg('remove-task', [tqu, tid])
-        elif task_status[0] == 'change-status':
-            tqu, tid, tst, tdt = task_status[1:]
-            if tst not in ('pending', 'submitted', 'running', 'completed',
-                           'failed', 'aborted'):
-                tst = 'unknown'
-            self.send_frontend_msg('task-status',
-                                   [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
-            self.my_tasks[(tqu, tid)] = time.time()
-        elif task_status[0] == 'pulse-status':
-            tqu, tid, tst, tdt = task_status[1:]
-            if tst not in ('pending', 'submitted', 'running', 'completed',
-                           'failed', 'aborted'):
-                tst = 'unknown'
-            if (tqu, tid) in self.my_tasks:
-                if time.time() - self.my_tasks[(tqu, tid)] < 20:
-                    # if it has been within the first 20 seconds of new or updated message
-                    # can confirm to verify it has been successfully delivered. Otherwise
-                    # ignore such message
-                    self.send_frontend_msg('task-status',
-                                           [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
-            else:
-                # perhaps the pulse one does not have an initial value yet
-                self.send_frontend_msg('task-status',
-                                       [tqu, tid, tst, tdt, self.status_class[tst], action_class[tst], action_func[tst]])
-                self.my_tasks[(tqu, tid)] = time.time()
-        else:
-            raise RuntimeError(
-                f'Unrecognized status change message {task_status}')
 
     def send_frontend_msg(self, msg_type, msg=None, title='', append=False, page='Info'):
         # if comm is never created by frontend, the kernel is in test mode without frontend
