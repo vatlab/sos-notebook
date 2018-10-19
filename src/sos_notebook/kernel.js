@@ -450,6 +450,8 @@ define([
   }
   // add workflow status indicator table
   function update_workflow_status(info) {
+      //console.log(info);
+
       // find the cell
       let cell_id = info.cell_id
       let cell = get_cell_by_id(cell_id);
@@ -501,7 +503,7 @@ define([
         }
         let text = document.getElementById(`status_text_${cell_id}`);
         if (text) {
-            timer.className = info.status;
+            timer.innerText = info.status;
         }
       }
 
@@ -514,25 +516,27 @@ define([
       }
 
       // look for status etc and update them.
-      let status_elem = document.getElementById(`status_icon_${cell_id}`);
-      status_elem.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
-      if (info.status === 'running') {
-          status_elem.onmouseover = () => {
-            status_class["running"].split(' ').map(x => this.classList.remove(x));
-            status_class["aborted"].split(' ').map(x => this.classList.add(x));
-          }
-          status_elem.onmouseleave = () => {
-            status_class["aborted"].split(' ').map(x => this.classList.remove(x));
-            status_class["running"].split(' ').map(x => this.classList.add(x));
-          }          
-          status_elem.onclick = () => {
-              cancel_workflow(this.id.substring(12)));
-             }
+      let icon = document.getElementById(`status_icon_${cell_id}`);
+      if (icon) {
+        icon.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
 
-      } else if (status_elem.hasAttribute('onmouseover')) {
-          status_elem.removeAttribute('onmouseover');
-          status_elem.removeAttribute('onmouseleave');
-          status_elem.removeAttribute('onclick');
+        if (info.status === 'running') {
+            icon.onmouseover = function() {
+              status_class["running"].split(' ').map(x => this.classList.remove(x));
+              status_class["aborted"].split(' ').map(x => this.classList.add(x));
+            };
+            icon.onmouseleave = function() {
+              status_class["aborted"].split(' ').map(x => this.classList.remove(x));
+              status_class["running"].split(' ').map(x => this.classList.add(x));
+            };
+            icon.onclick = function() {
+                cancel_workflow(this.id.substring(12));
+            };
+        } else {
+          icon.onmouseover = function() {};
+          icon.onmouseleave = function() {};
+          icon.onclick = function() {};
+        }
       }
       update_duration();
   }
@@ -935,7 +939,6 @@ define([
     }
   }
 
-
   window.cancel_workflow = function(cell_id) {
     console.log("Cancel workflow " + cell_id);
     send_kernel_msg({
@@ -1014,7 +1017,7 @@ define([
     window.unknown_tasks = [];
     for (i = 0; i < tasks.length; ++i) {
       // status_localhost_5ea9232779ca1959
-      if (tasks[i].id.match("^status_.+_[0-9a-f]{16,32}$")) {
+      if (tasks[i].id.match("^status_icon_.+_[0-9a-f]{16,32}$")) {
         tasks[i].className = "fa fa-fw fa-2x fa-refresh fa-spin";
         window.unknown_tasks.push(tasks[i].id);
       }
@@ -2028,7 +2031,7 @@ table.workflow_table.completed pre {
 }
 
 table.workflow_table.aborted pre {
-  color: #9d9d9d; /* gray */
+  color: #FFA07A; /* salmon */
 }
 
 table.workflow_table.failed pre {

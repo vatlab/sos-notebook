@@ -234,12 +234,12 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
 
 def cancel_workflow(cell_id, kernel):
     global g_running_workflows
-    if cell_id not in g_running_workflows:
-        return
     kernel.send_frontend_msg('workflow_status', {
         'cell_id': cell_id,
         'status': 'aborted'
     })
+    if cell_id not in g_running_workflows:
+        return
     proc = g_running_workflows[cell_id]
     if proc.is_alive():
         from sos.executor_utils import kill_all_subprocesses
