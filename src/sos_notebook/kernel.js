@@ -517,9 +517,18 @@ define([
       let status_elem = document.getElementById(`status_icon_${cell_id}`);
       status_elem.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
       if (info.status === 'running') {
-          status_elem.setAttribute("onmouseover", `'${status_class["running"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'${status_class["aborted"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));`)
-          status_elem.setAttribute("onmouseleave", `'${status_class["aborted"]} task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'${status_class["running"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));`)
-          status_elem.setAttribute("onclick", "cancel_workflow('${cell_id}')")
+          status_elem.onmouseover = () => {
+            status_class["running"].split(' ').map(x => this.classList.remove(x));
+            status_class["aborted"].split(' ').map(x => this.classList.add(x));
+          }
+          status_elem.onmouseleave = () => {
+            status_class["aborted"].split(' ').map(x => this.classList.remove(x));
+            status_class["running"].split(' ').map(x => this.classList.add(x));
+          }          
+          status_elem.onclick = () => {
+              cancel_workflow(this.id.substring(12)));
+             }
+
       } else if (status_elem.hasAttribute('onmouseover')) {
           status_elem.removeAttribute('onmouseover');
           status_elem.removeAttribute('onmouseleave');
