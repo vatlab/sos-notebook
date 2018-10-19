@@ -3,7 +3,7 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-
+import sys
 import time
 
 from sos.hosts import Host
@@ -35,9 +35,12 @@ class Interactive_Step_Executor(Step_Executor):
         for task in tasks:
             self.host.submit_task(task)
 
-    def wait_for_tasks(self, tasks):
+    def wait_for_tasks(self, tasks, all_submitted):
         if not tasks:
             return {}
+        if all_submitted and 'shared' not in env.sos_dict['_runtime']:
+            # if no shared and all taks have been submited return
+            sys.exit(0)
         # wait till the executor responde
         if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
