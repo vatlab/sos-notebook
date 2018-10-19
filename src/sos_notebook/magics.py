@@ -1952,9 +1952,11 @@ class Tasks_Magic(SoS_Magic):
             return
         # get all tasks
         for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=status, age=age):
-            self.sos_kernel.notify_task_status(
-                ['new-status', queue, tid, tst, tdt])
-        self.sos_kernel.send_frontend_msg('update-duration', {})
+            self.sos_kernel.send_frontend_msg('task_status',
+                {'cell_id': self.sos_kernel.cell_id,
+                 'queue': queue,
+                 'task_id': tid,
+                 'status': tst})
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
