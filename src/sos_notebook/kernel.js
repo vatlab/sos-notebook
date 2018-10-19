@@ -448,6 +448,7 @@ define([
       }, 5000);
     }
   }
+
   // add workflow status indicator table
   function update_workflow_status(info) {
       //console.log(info);
@@ -522,12 +523,10 @@ define([
 
         if (info.status === 'running') {
             icon.onmouseover = function() {
-              status_class["running"].split(' ').map(x => this.classList.remove(x));
-              status_class["aborted"].split(' ').map(x => this.classList.add(x));
+              this.classList = `fa fa-2x fa-fw ${status_class["aborted"]}`;
             };
             icon.onmouseleave = function() {
-              status_class["aborted"].split(' ').map(x => this.classList.remove(x));
-              status_class["running"].split(' ').map(x => this.classList.add(x));
+              this.classList = `fa fa-2x fa-fw ${status_class["running"]}`;
             };
             icon.onclick = function() {
                 cancel_workflow(this.id.substring(12));
@@ -545,44 +544,11 @@ define([
   function update_task_status(info) {
     // find the cell
     console.log(info);
+
     let elem_id = `${info.queue}_${info.task_id}`
 
     // find the status table
     let status_table = document.getElementById(`task_${elem_id}`);
-    // if there is no status table, create one
-    // the easiest method seems to be adding display_data
-    let action_class = {
-        'pending': 'fa-stop',
-        'submitted': 'fa-stop',
-        'running': 'fa-stop',
-        'completed': 'fa-play',
-        'failed': 'fa-play',
-        'aborted': 'fa-play',
-        'missing': 'fa-question',
-        'unknown': 'fa-question',
-    }
-
-    let status_class = {
-        'pending': 'fa-square-o',
-        'submitted': 'fa-spinner',
-        'running': 'fa-spinner fa-pulse fa-spin',
-        'completed': 'fa-check-square-o',
-        'failed': 'fa-times-circle-o',
-        'aborted': 'fa-frown-o',
-        'missing': 'fa-question',
-        'unknown': 'fa-question',
-    }
-
-    let action_func = {
-        'pending': 'kill_task',
-        'submitted': 'kill_task',
-        'running': 'kill_task',
-        'completed': 'resume_task',
-        'failed': 'resume_task',
-        'aborted': 'resume_task',
-        'missing': 'function(){}',
-        'unknown': 'function(){}',
-    }
 
     if (!status_table) {
         let cell_id = info.cell_id
@@ -600,57 +566,95 @@ define([
             'metadata': {},
             'data': {
                 'text/html': `
-<table id="task_${elem_id}" class="task_table">
-<tr>
-  <td style="border: 0px">
-    <i id="status_${elem_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
-    onmouseover="'${status_class[info.status]}'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.remove(x));'${action_class[info.status]} task_hover'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.add(x));"
-    onmouseleave="'${action_class[info.status]} task_hover'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.remove(x));'${status_class[info.status]}'.split(' ').map(x => document.getElementById('status_${elem_id}').classList.add(x));"
-    onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}')"
-    ></i>
- </td>
-  <td ><a onclick="task_info('${info.task_id}', '${info.queue}')">
-    <pre>${info.task_id}</pre></a></td>
-  <td >&nbsp;</td>
-  <td >
-    <pre><span id="tagline_${elem_id}">${info.status}</span></pre>
-  </td>
-</tr>
+<table id="task_${elem_id}" class="task_table  ${info.status}">
+    <tr>
+          <td class="task_icon">
+            <i id="status_icon_${elem_id}" class="fa fa-2x fa-fw fa-square-o"></i>
+          </td>
+          <td class="task_id">
+            <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
+          </td>
+          <td class="task_timer">
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}"> Ran for 0 sec</time></pre>
+          </td>
+          <td class="task_status">
+            <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}">${info.status}</span></pre>
+          </td>
+    </tr>
 </table>
 `
             }
         }
         cell.output_area.append_output(data);
-        update_duration();
+    } else {
+      // existing table ...
+      let table = document.getElementById(`task_${elem_id}`);
+      if (table) {
+          table.className = `task_table ${info.status}`;
+      }
+      let timer = document.getElementById(`status_duration_${elem_id}`);
+      if (timer) {
+          timer.className = info.status;
+      }
+      let text = document.getElementById(`status_text_${elem_id}`);
+      if (text) {
+          text.innerText = info.status;
+      }
     }
 
-    if (info.status === 'canceled') {
-        // look for status etc and update them.
-        let status = document.getElementById(`status_${elem_id}`);
-        if (status) {
-            status.removeAttribute('onmouseover');
-            status.removeAttribute('onmouseleave');
-            status.removeAttribute('onclick');
-            status.className = 'fa fa-2x fa-fw fa-frown-o';
-        }
-        let timer = document.getElementById(`duration_${elem_id}`);
-        if (timer) {
-            timer.className = 'failed';
-        }
-    } else if (info.status === 'completed') {
-        // look for status etc and update them.
-        let status = document.getElementById(`status_${elem_id}`);
-        if (status) {
-            status.className = 'fa fa-2x fa-fw fa-check-square-o';
-            status.removeAttribute('onmouseover');
-            status.removeAttribute('onmouseleave');
-            status.removeAttribute('onclick');
-        }
-        let timer = document.getElementById(`duration_${elem_id}`);
-        if (timer) {
-            timer.className = 'completed';
-        }
+    let action_class = {
+        'pending': 'fa-stop',
+        'submitted': 'fa-stop',
+        'running': 'fa-stop',
+        'completed': 'fa-play',
+        'failed': 'fa-play',
+        'aborted': 'fa-play',
+        'missing': 'fa-question',
     }
+
+    let status_class = {
+        'pending': 'fa-square-o',
+        'submitted': 'fa-spinner',
+        'running': 'fa-spinner fa-pulse fa-spin',
+        'completed': 'fa-check-square-o',
+        'failed': 'fa-times-circle-o',
+        'aborted': 'fa-frown-o',
+        'missing': 'fa-question',
+    }
+
+    let action_func = {
+        'pending': kill_task,
+        'submitted': kill_task,
+        'running': kill_task,
+        'completed': resume_task,
+        'failed': resume_task,
+        'aborted': resume_task,
+        'missing': function(){},
+    }
+
+    // look for status etc and update them.
+    let icon = document.getElementById(`status_icon_${elem_id}`);
+    if (icon) {
+      icon.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
+
+      icon.onmouseover = function() {
+        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
+        this.classList = `fa fa-2x fa-fw ${action_class[info.status]}`;
+      };
+      icon.onmouseleave = function() {
+        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
+        this.classList = `fa fa-2x fa-fw ${statys_class[info.status]}`;
+      };
+      icon.onclick = function() {
+        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
+        let elem_id = this.id.substring(12)
+        let task_id = elem_id.split('_').pop()
+        let task_queue = elem_id.split('_').slice(0, -1).join('_');
+        action_func[status](task_id, task_queue);
+      };
+    }
+    update_duration();
+
   }
 
   function register_sos_comm() {
@@ -1986,11 +1990,13 @@ pre.section-header.CodeMirror-line {
 time.pending, time.submitted, time.running,
 
 
-table.workflow_table {
+table.workflow_table,
+table.task_table {
   border: 0px;
 }
 
-table.workflow_table i {
+table.workflow_table i,
+table.task_table i  {
   margin-right: 5px;
 }
 
@@ -2000,19 +2006,32 @@ td.workflow_name
   text-align: left;
 }
 
-td.workflow_name pre {
+td.workflow_name pre,
+td.task_name pre {
   font-size: 1.2em;
 }
 
-td.workflow_id
+td.workflow_id,
+td.task_id,
 {
   width: 15em;
   text-align: left;
 }
 
-td.workflow_status
+td.workflow_status,
+td.task_timer
 {
   width: 20em;
+  text-align: left;
+}
+
+td.task_icon {
+    font-size: 0.75em;
+}
+
+td.task_status,
+{
+  width: 15em;
   text-align: left;
 }
 
@@ -2022,19 +2041,34 @@ table.workflow_table span {
   font-family: monospace;
 }
 
-table.workflow_table.running  pre {
+table.task_table span {
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+table.task_table.pending pre,
+table.task_table.submitted pre,
+table.task_table.missing pre {
+  color: #9d9d9d; /* gray */
+}
+
+table.workflow_table.running pre,
+table.task_table.running pre {
   color: #cdb62c; /* yellow */
 }
 
-table.workflow_table.completed pre {
+table.workflow_table.completed pre,
+table.task_table.completed pre {
   color: #39aa56; /* green */
 }
 
-table.workflow_table.aborted pre {
+table.workflow_table.aborted pre,
+table.task_table.aborted pre {
   color: #FFA07A; /* salmon */
 }
 
-table.workflow_table.failed pre {
+table.workflow_table.failed pre,
+table.task_table.failed pre {
   color: #db4545; /* red */
 }
 
