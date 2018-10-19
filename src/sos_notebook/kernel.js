@@ -503,7 +503,7 @@ define([
         }
         let text = document.getElementById(`status_text_${cell_id}`);
         if (text) {
-            timer.innerText = info.status;
+            text.innerText = info.status;
         }
       }
 
