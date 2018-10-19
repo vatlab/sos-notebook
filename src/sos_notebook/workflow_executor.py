@@ -223,18 +223,23 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     env.config['slave_id'] = kernel.cell_id
     global g_running_workflows
     if kernel.cell_id in g_running_workflows and g_running_workflows[kernel.cell_id].is_alive() and psutil.pid_exists(g_running_workflows[kernel.cell_id].pid):
-        kernel.send_frontend_msg('alert', 'Workflow is still active but output will be cleared. Cancel it before re-try.')
-    else:
-        executor = Tapped_Executor(code, raw_args, env.config)
-        executor.start()
-        g_running_workflows[kernel.cell_id] = executor
-        # should wait for the starting of the workflow to return??
-        time.sleep(1)
+        # kill previous workflows....
+        cancel_workflow(kernel.cell_id, kernel)
+    #
+    executor = Tapped_Executor(code, raw_args, env.config)
+    executor.start()
+    g_running_workflows[kernel.cell_id] = executor
+    # should wait for the starting of the workflow to return??
+    time.sleep(1)
 
 def cancel_workflow(cell_id, kernel):
     global g_running_workflows
     if cell_id not in g_running_workflows:
         return
+    kernel.send_frontend_msg('workflow_status', {
+        'cell_id': cell_id,
+        'status': 'aborted'
+    })
     proc = g_running_workflows[cell_id]
     if proc.is_alive():
         from sos.executor_utils import kill_all_subprocesses
@@ -242,7 +247,3 @@ def cancel_workflow(cell_id, kernel):
         proc.terminate()
     if not psutil.pid_exists(proc.pid):
         g_running_workflows.pop(cell_id)
-    kernel.send_frontend_msg('workflow_status', {
-        'cell_id': cell_id,
-        'status': 'canceled'
-    })

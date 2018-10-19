@@ -439,7 +439,7 @@ define([
   function update_duration() {
     if (!window._duration_updater) {
       window._duration_updater = window.setInterval(function() {
-        $("[id^=duration_]").text(function() {
+        $("[id^=status_duration_]").text(function() {
           // if class != running, show "started "
           if ($(this).attr("class") != "running")
             return $(this).text();
@@ -468,59 +468,64 @@ define([
               'metadata': {},
               'data': {
                   'text/html': `
-<table id="workflow_${cell_id}" class="workflow_table">
+<table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
     <tr>
-          <td>
-            <i id="status_${cell_id}"
-              class="fa fa-2x fa-fw fa-spinner fa-pulse fa-spin"
-              onmouseover="'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));"
-              onmouseleave="'fa-frown-o task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'fa-spinner fa-pulse fa-spin'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));"
-              onclick="cancel_workflow('${cell_id}')" ></i>
+          <td class="workflow_icon">
+            <i id="status_icon_${cell_id}" class="fa fa-2x fa-fw fa-square-o"></i>
           </td>
-          <td class="workflow_info">
-            <pre>ID:   ${info.workflow_id}\nName: ${info.workflow_name}</pre>
+          <td class="workflow_name">
+            <pre> ${info.workflow_name}</pre>
           </td>
-          <td>
-            <pre>
-            <time id="duration_${cell_id}" class='running', datetime="${new Date()}">Just started</time>
-            </pre>
+          <td class="workflow_id">
+            <span>Workflow ID</span></br>
+            <pre><i class="fa fa-fw fa-sitemap"></i>${info.workflow_id}</pre>
+          </td>
+          <td class="workflow_status">
+            <span id="status_text_${cell_id}">${info.status}</span></br>
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}"> Ran for 0 sec</time></pre>
           </td>
     </tr>
 </table>
-`
-              }
+` }
           }
           cell.output_area.append_output(data);
-          update_duration();
+      } else {
+        // existing table ...
+        let table = document.getElementById(`workflow_${cell_id}`);
+        if (table) {
+            table.className = `workflow_table ${info.status}`;
+        }
+        let timer = document.getElementById(`status_duration_${cell_id}`);
+        if (timer) {
+            timer.className = info.status;
+        }
+        let text = document.getElementById(`status_text_${cell_id}`);
+        if (text) {
+            timer.className = info.status;
+        }
       }
 
-      if (info.status === 'canceled') {
-          // look for status etc and update them.
-          let status = document.getElementById(`status_${cell_id}`);
-          if (status) {
-              status.removeAttribute('onmouseover');
-              status.removeAttribute('onmouseleave');
-              status.removeAttribute('onclick');
-              status.className = 'fa fa-2x fa-fw fa-frown-o';
-          }
-          let timer = document.getElementById(`duration_${cell_id}`);
-          if (timer) {
-              timer.className = 'failed';
-          }
-      } else if (info.status === 'completed') {
-          // look for status etc and update them.
-          let status = document.getElementById(`status_${cell_id}`);
-          if (status) {
-              status.className = 'fa fa-2x fa-fw fa-check-square-o';
-              status.removeAttribute('onmouseover');
-              status.removeAttribute('onmouseleave');
-              status.removeAttribute('onclick');
-          }
-          let timer = document.getElementById(`duration_${cell_id}`);
-          if (timer) {
-              timer.className = 'completed';
-          }
+      // new and existing, check icon
+      let status_class = {
+          'running': 'fa-spinner fa-pulse fa-spin',
+          'completed': 'fa-check-square-o',
+          'failed': 'fa-times-circle-o',
+          'aborted': 'fa-frown-o',
       }
+
+      // look for status etc and update them.
+      let status_elem = document.getElementById(`status_icon_${cell_id}`);
+      status_elem.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
+      if (info.status === 'running') {
+          status_elem.setAttribute("onmouseover", `'${status_class["running"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'${status_class["aborted"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));`)
+          status_elem.setAttribute("onmouseleave", `'${status_class["aborted"]} task_hover'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.remove(x));'${status_class["running"]}'.split(' ').map(x => document.getElementById('status_${cell_id}').classList.add(x));`)
+          status_elem.setAttribute("onclick", "cancel_workflow('${cell_id}')")
+      } else if (status_elem.hasAttribute('onmouseover')) {
+          status_elem.removeAttribute('onmouseover');
+          status_elem.removeAttribute('onmouseleave');
+          status_elem.removeAttribute('onclick');
+      }
+      update_duration();
   }
 
 
@@ -1966,28 +1971,59 @@ pre.section-header.CodeMirror-line {
 .lev7 {margin-left: 10px}
 .lev8 {margin-left: 10px}
 
-time.pending, time.submitted, time.running  {
+time.pending, time.submitted, time.running,
+
+
+table.workflow_table {
+  border: 0px;
+}
+
+table.workflow_table i {
+  margin-right: 5px;
+}
+
+td.workflow_name
+{
+  width: 10em;
+  text-align: left;
+}
+
+td.workflow_name pre {
+  font-size: 1.2em;
+}
+
+td.workflow_id
+{
+  width: 15em;
+  text-align: left;
+}
+
+td.workflow_status
+{
+  width: 20em;
+  text-align: left;
+}
+
+table.workflow_table span {
+  color: #9d9d9d;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+table.workflow_table.running  pre {
   color: #cdb62c; /* yellow */
 }
 
-time.completed {
+table.workflow_table.completed pre {
   color: #39aa56; /* green */
 }
 
-span.completed {
-  color: #39aa56; /* green */
-}
-
-time.failed {
-  color: #db4545; /* red */
-}
-
-time.aborted, time.unknown {
+table.workflow_table.aborted pre {
   color: #9d9d9d; /* gray */
 }
 
-.task_table a pre, .task_table i {
-  color: #666;
+table.workflow_table.failed pre {
+  color: #db4545; /* red */
 }
 
 table.task_table {
@@ -2021,10 +2057,7 @@ table.task_table {
  display: none;
 }
 
-td.workflow_info {
-  width: 20em;
-  text-align: left;
-}
+
 #panel-wrapper #panel div.output_area {
   display: -webkit-box;
 }
