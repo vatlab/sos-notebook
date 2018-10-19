@@ -548,10 +548,8 @@ class SoS_Kernel(IPythonKernel):
                     # split by host ...
                     host_status = defaultdict(list)
                     for name in v:
-                        if not name.startswith('status_'):
-                            continue
                         try:
-                            tqu, tid = name[7:].rsplit('_', 1)
+                            tqu, tid = rsplit('_', 1)
                         except Exception:
                             # incorrect ID...
                             continue

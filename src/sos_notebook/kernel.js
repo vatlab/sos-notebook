@@ -474,7 +474,7 @@ define([
 <table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
     <tr>
           <td class="workflow_icon">
-            <i id="status_icon_${cell_id}" class="fa fa-2x fa-fw fa-square-o"></i>
+            <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw fa-square-o"></i>
           </td>
           <td class="workflow_name">
             <pre> ${info.workflow_name}</pre>
@@ -517,7 +517,7 @@ define([
       }
 
       // look for status etc and update them.
-      let icon = document.getElementById(`status_icon_${cell_id}`);
+      let icon = document.getElementById(`workflow_status_icon_${cell_id}`);
       if (icon) {
         icon.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
 
@@ -529,7 +529,7 @@ define([
               this.classList = `fa fa-2x fa-fw ${status_class["running"]}`;
             };
             icon.onclick = function() {
-                cancel_workflow(this.id.substring(12));
+                cancel_workflow(this.id.substring(21));
             };
         } else {
           icon.onmouseover = function() {};
@@ -569,7 +569,7 @@ define([
 <table id="task_${elem_id}" class="task_table  ${info.status}">
     <tr>
           <td class="task_icon">
-            <i id="status_icon_${elem_id}" class="fa fa-2x fa-fw fa-square-o"></i>
+            <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw fa-square-o"></i>
           </td>
           <td class="task_id">
             <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
@@ -633,21 +633,22 @@ define([
     }
 
     // look for status etc and update them.
-    let icon = document.getElementById(`status_icon_${elem_id}`);
+    let icon = document.getElementById(`task_status_icon_${elem_id}`);
     if (icon) {
       icon.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
 
       icon.onmouseover = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
-        this.classList = `fa fa-2x fa-fw ${action_class[info.status]}`;
+        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
+        this.classList = `fa fa-2x fa-fw ${action_class[status]}`;
       };
       icon.onmouseleave = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
-        this.classList = `fa fa-2x fa-fw ${statys_class[info.status]}`;
+        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
+        console.log(`laving ${status}`)
+        this.classList = `fa fa-2x fa-fw ${status_class[status]}`;
       };
       icon.onclick = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(12)).className;
-        let elem_id = this.id.substring(12)
+        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
+        let elem_id = this.id.substring(17)
         let task_id = elem_id.split('_').pop()
         let task_queue = elem_id.split('_').slice(0, -1).join('_');
         action_func[status](task_id, task_queue);
@@ -1021,9 +1022,9 @@ define([
     window.unknown_tasks = [];
     for (i = 0; i < tasks.length; ++i) {
       // status_localhost_5ea9232779ca1959
-      if (tasks[i].id.match("^status_icon_.+_[0-9a-f]{16,32}$")) {
+      if (tasks[i].id.match("^task_status_icon_.+_[0-9a-f]{16,32}$")) {
         tasks[i].className = "fa fa-fw fa-2x fa-refresh fa-spin";
-        window.unknown_tasks.push(tasks[i].id);
+        window.unknown_tasks.push(tasks[i].id.substring(17));
       }
     }
   }
@@ -2012,7 +2013,7 @@ td.task_name pre {
 }
 
 td.workflow_id,
-td.task_id,
+td.task_id
 {
   width: 15em;
   text-align: left;
