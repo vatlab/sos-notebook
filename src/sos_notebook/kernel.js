@@ -551,6 +551,13 @@ define([
           icon.onclick = function() {};
         }
       }
+      // if there is additional message, put it under timer.
+      if (info.msg) {
+        let timer = document.getElementById(`status_duration_${cell_id}`);
+        if (timer) {
+            timer.innerText = info.msg;
+        }
+      }
       update_duration();
   }
 

@@ -262,7 +262,8 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     kernel.send_frontend_msg('workflow_status',
                              {
                                  'cell_id': kernel.cell_id,
-                                 'status': 'pending'
+                                 'status': 'pending',
+                                 'msg': f'#{list(g_workflow_queue.keys()).index(kernel.cell_id) + 1} in queue'
                              })
 
 
