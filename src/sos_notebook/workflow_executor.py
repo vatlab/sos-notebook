@@ -10,7 +10,7 @@ import re
 import shlex
 import sys
 import time
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from threading import Event
 from typing import DefaultDict, Union
 
@@ -227,35 +227,38 @@ class Tapped_Executor(mp.Process):
             context.term()
 
 
+def execute_pending_workflow(cell_ids, kernel):
+    env.log_to_file(f'Asked to Execute {cell_ids}')
+
+
 g_workflow_queue = OrderedDict()
 
 
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
-    env.config['slave_id'] = kernel.cell_id
+    env.log_to_file(f'add {kernel.cell_id}')
+
+    # when user asks to execute a cell as workflow. We either
+    # execute the workflow or put it in queue
     global g_workflow_queue
-    # if on the same cell there are running workflows,
-    # we kill existing workflow
-    if kernel.cell_id in g_workflow_queue and \
-            g_workflow_queue[kernel.cell_id].is_alive() and \
-    psutil.pid_exists(g_workflow_queue[kernel.cell_id].pid):
-        # kill previous workflows....
+
+    if kernel.cell_id in g_workflow_queue:
         cancel_workflow(kernel.cell_id, kernel)
-    # if there is another workflow running
-    elif g_workflow_queue:
-        proc = next(iter(g_workflow_queue.values()))
-        if proc.is_alive() and psutil.pid_exists(proc.pid):
-            kernel.send_response(kernel.iopub_socket,
-                                 'stream', {
-                                     'name': 'stderr',
-                                     'text': 'Cannot start a workflow while another workflow is running'
-                                 })
-            return
-        else:
-            g_workflow_queue.clear()
-    #
-    executor = Tapped_Executor(code, raw_args, env.config)
-    executor.start()
-    g_workflow_queue[kernel.cell_id] = executor
+    g_workflow_queue[kernel.cell_id] = (code, raw_args, env.config)
+    # find all valid ones
+    g_workflow_queue = OrderedDict([(x, y) for x, y in g_workflow_queue.items(
+    ) \
+        if isinstance(y, tuple) or (y.is_alive() and psutil.pid_exists(y.pid))])
+    env.log_to_file(f'get {g_workflow_queue}')
+
+    # now, the first  one should be running, or need to be run
+    cell_id, item = next(iter(g_workflow_queue.items()))
+    if isinstance(item, tuple):
+        env.config['slave_id'] = cell_id
+        executor = Tapped_Executor(*item)
+        executor.start()
+        g_workflow_queue[cell_id] = executor
+
+    # in any case, we start with a pending status
     kernel.send_frontend_msg('workflow_status',
                              {
                                  'cell_id': kernel.cell_id,
@@ -264,6 +267,7 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
 
 
 def cancel_workflow(cell_id, kernel):
+    env.log_to_file(f'cancel {cell_id}')
     global g_workflow_queue
     kernel.send_frontend_msg('workflow_status', {
         'cell_id': cell_id,
@@ -272,9 +276,11 @@ def cancel_workflow(cell_id, kernel):
     if cell_id not in g_workflow_queue:
         return
     proc = g_workflow_queue[cell_id]
-    if proc.is_alive():
+    if not isinstance(proc, tuple) and \
+            proc.is_alive() and psutil.pid_exists(proc.pid):
         from sos.executor_utils import kill_all_subprocesses
         kill_all_subprocesses(proc.pid, include_self=True)
         proc.terminate()
-    if not psutil.pid_exists(proc.pid):
-        g_workflow_queue.pop(cell_id)
+        if psutil.pid_exists(proc.pid):
+            raise RuntimeError('Failed to kill workflow')
+    g_workflow_queue.pop(cell_id)

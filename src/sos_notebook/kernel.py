@@ -509,6 +509,9 @@ class SoS_Kernel(IPythonKernel):
                 elif k == 'cancel-workflow':
                     from .workflow_executor import cancel_workflow
                     cancel_workflow(v[0], self)
+                elif k == 'execute-workflow':
+                    from .workflow_executor import execute_pending_workflow
+                    execute_pending_workflow(v, self)
                 elif k == 'resume-task':
                     # kill specified task
                     from sos.hosts import Host

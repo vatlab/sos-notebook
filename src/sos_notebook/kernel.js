@@ -824,6 +824,18 @@ define([
         })
       } else if (msg_type == 'workflow_status') {
         update_workflow_status(data);
+        // if this is a terminal status, try to execute the
+        // next pending workflow
+        if (data.status === 'completed' || data.status === 'canceled' || data.status === 'failed') {
+          // find all cell_ids with pending workflows
+          let elems = document.querySelector("[id^='status_duration_']");
+          let pending = Array.from(elems).filter(
+            () => { this.className == 'pending' && this.id.includes('_') }
+          ).map( () => { this.id.substring(16)} )
+          if (pending) {
+            execute_workflow(pending);
+          }
+        }
       } else if (msg_type === "paste-table") {
         var cm = nb.get_selected_cell().code_mirror;
         cm.replaceRange(data, cm.getCursor());
@@ -962,6 +974,13 @@ define([
     console.log("Cancel workflow " + cell_id);
     send_kernel_msg({
       "cancel-workflow": [cell_id],
+    });
+  };
+
+  window.execute_workflow = function(cell_ids) {
+    console.log("Run workflows " + cell_ids);
+    send_kernel_msg({
+      "execute-workflow": cell_ids,
     });
   };
 
@@ -2051,7 +2070,6 @@ td.task_status,
 }
 
 table.workflow_table span {
-  color: #9d9d9d;
   text-transform: uppercase;
   font-family: monospace;
 }
