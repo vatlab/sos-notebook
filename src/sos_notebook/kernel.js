@@ -437,16 +437,18 @@ define([
   };
 
   function update_duration() {
-    if (!window._duration_updater) {
-      window._duration_updater = window.setInterval(function() {
-        $("[id^=status_duration_]").text(function() {
-          // if class != running, show "started "
-          if ($(this).attr("class") != "running")
-            return $(this).text();
-          return 'Ran for ' + window.durationFormatter(new Date() - $(this).attr("datetime"));
-        });
-      }, 5000);
-    }
+    if (window._duration_updater)
+      return
+    window._duration_updater = window.setInterval(function() {
+      document.querySelectorAll("[id^='status_duration_']").forEach(
+        (item) => {
+          if (item.className != 'running') {
+            return
+          }
+          item.innerText = 'Ran for ' + window.durationFormatter(new Date() - item.getAttribute("datetime"));
+        }
+      );
+    }, 5000);
   }
 
   // add workflow status indicator table
@@ -489,7 +491,7 @@ define([
           </td>
           <td class="workflow_status">
             <span id="status_text_${cell_id}">${info.status}</span></br>
-            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}">Ran for 0 sec</time></pre>
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}"></time></pre>
           </td>
     </tr>
 </table>
@@ -505,6 +507,9 @@ define([
         let timer = document.getElementById(`status_duration_${cell_id}`);
         if (timer) {
             timer.className = info.status;
+            if (info.start_time) {
+              timer.setAttribute('datetime', info.start_time);
+            }
         }
         let text = document.getElementById(`status_text_${cell_id}`);
         if (text) {
@@ -562,8 +567,6 @@ define([
           icon.onclick = function() {};
         }
       }
-
-      update_duration();
   }
 
 
@@ -598,10 +601,12 @@ define([
             <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw fa-square-o"></i>
           </td>
           <td class="task_id">
+            <a href='#' onclick="task_info('${info.task_id}', '${info.queue}')">
             <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
+            </a>
           </td>
           <td class="task_timer">
-            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}">Ran for 0 sec</time></pre>
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}"></time></pre>
           </td>
           <td class="task_status">
             <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}">${info.status}</span></pre>
@@ -680,8 +685,6 @@ define([
         action_func[status](task_id, task_queue);
       };
     }
-    update_duration();
-
   }
 
   function register_sos_comm() {
@@ -825,6 +828,9 @@ define([
         update_duration();
       } else if (msg_type === "task_status") {
         update_task_status(data);
+        if (data.status === 'running') {
+          update_duration();
+        }
       } else if (msg_type === "show_toc") {
         show_toc();
       } else if (msg_type == 'print') {
@@ -836,6 +842,9 @@ define([
         })
       } else if (msg_type == 'workflow_status') {
         update_workflow_status(data);
+        if (data.status === 'running') {
+          update_duration();
+        }
         // if this is a terminal status, try to execute the
         // next pending workflow
         if (data.status === 'completed' || data.status === 'canceled' || data.status === 'failed') {
