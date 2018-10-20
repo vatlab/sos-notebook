@@ -485,7 +485,7 @@ define([
           </td>
           <td class="workflow_status">
             <span id="status_text_${cell_id}">${info.status}</span></br>
-            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}"> Ran for 0 sec</time></pre>
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}">Ran for 0 sec</time></pre>
           </td>
     </tr>
 </table>
@@ -575,7 +575,7 @@ define([
             <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
           </td>
           <td class="task_timer">
-            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}"> Ran for 0 sec</time></pre>
+            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}">Ran for 0 sec</time></pre>
           </td>
           <td class="task_status">
             <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}">${info.status}</span></pre>
