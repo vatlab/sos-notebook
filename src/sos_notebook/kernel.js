@@ -451,7 +451,7 @@ define([
 
   // add workflow status indicator table
   function update_workflow_status(info) {
-      //console.log(info);
+      console.log(info);
 
       // find the cell
       let cell_id = info.cell_id
@@ -477,11 +477,11 @@ define([
             <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw fa-square-o"></i>
           </td>
           <td class="workflow_name">
-            <pre> ${info.workflow_name}</pre>
+            <pre><span id="workflow_name_${cell_id}">${info.workflow_name}</span></pre>
           </td>
           <td class="workflow_id">
             <span>Workflow ID</span></br>
-            <pre><i class="fa fa-fw fa-sitemap"></i>${info.workflow_id}</pre>
+            <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id}</span></pre>
           </td>
           <td class="workflow_status">
             <span id="status_text_${cell_id}">${info.status}</span></br>
@@ -506,10 +506,24 @@ define([
         if (text) {
             text.innerText = info.status;
         }
+        // if new id is specified
+        if (info.workflow_id) {
+          let wid = document.getElementById(`workflow_id_${cell_id}`);
+          if (wid) {
+              wid.innerText = info.workflow_id;
+          }
+        }
+        if (info.workflow_name) {
+          let wname = document.getElementById(`workflow_name_${cell_id}`);
+          if (wname) {
+              wname.innerText = info.workflow_name;
+          }
+        }
       }
 
       // new and existing, check icon
       let status_class = {
+          'pending': 'fa-square-o',
           'running': 'fa-spinner fa-pulse fa-spin',
           'completed': 'fa-check-square-o',
           'failed': 'fa-times-circle-o',
@@ -543,7 +557,7 @@ define([
 
   function update_task_status(info) {
     // find the cell
-    console.log(info);
+    //console.log(info);
 
     let elem_id = `${info.queue}_${info.task_id}`
 
@@ -2047,6 +2061,7 @@ table.task_table span {
   font-family: monospace;
 }
 
+table.workflow_table.pending pre,
 table.task_table.pending pre,
 table.task_table.submitted pre,
 table.task_table.missing pre {
@@ -2284,7 +2299,7 @@ table.task_table {
         // console.log(`set ${cells[i].user_highlight} for cell ${i}`);
         cells[i].code_mirror.setOption('mode', cells[i].user_highlight === 'auto' ? 'sos' : cells[i].user_highlight);
       }
-      if (i < cells.length)
+      if (i < cells.length - 1)
         highlight_cells(cells, i + 1, interval);
     }, interval);
   }

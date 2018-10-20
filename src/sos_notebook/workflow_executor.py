@@ -2,35 +2,35 @@
 #
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
-import re
-import os
 import datetime
 import logging
-import psutil
-from threading import Event
-import time
+import multiprocessing as mp
+import os
+import re
 import shlex
 import sys
-import zmq
-import multiprocessing as mp
+import time
+from collections import defaultdict
+from threading import Event
+from typing import DefaultDict, Union
 
+import psutil
+import zmq
+from IPython.core.display import HTML
 from sos.__main__ import get_run_parser
+from sos.controller import (Controller, connect_controllers,
+                            disconnect_controllers)
 from sos.eval import SoS_exec
+from sos.executor_utils import prepare_env
 from sos.parser import SoS_Script
+from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import (RemovedTarget, UnavailableLock,
-                         UnknownTarget, sos_targets)
+from sos.targets import (RemovedTarget, UnavailableLock, UnknownTarget,
+                         sos_targets)
 from sos.utils import _parse_error, env, get_traceback, pexpect_run
 from sos.workflow_executor import Base_Executor
-from sos.executor_utils import prepare_env
-from sos.controller import Controller, connect_controllers, disconnect_controllers
-from sos.section_analyzer import analyze_section
-
-from collections import defaultdict
-from typing import Union, DefaultDict
 
 from .step_executor import Interactive_Step_Executor
-from IPython.core.display import HTML
 
 
 class NotebookLoggingHandler(logging.Handler):
@@ -50,7 +50,8 @@ class NotebookLoggingHandler(logging.Handler):
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
         }, title=self.title, append=True, page='SoS')
         self.kernel.send_response(self.kernel.iopub_socket, 'stream',
-                           {'name': 'stdout', 'text': record.msg})
+                                  {'name': 'stdout', 'text': record.msg})
+
 
 def start_controller(kernel):
     env.zmq_context = zmq.Context()
@@ -65,6 +66,7 @@ def start_controller(kernel):
     connect_controllers(env.zmq_context)
     return controller
 
+
 def stop_controller(controller):
     if not controller:
         return
@@ -72,6 +74,7 @@ def stop_controller(controller):
     env.controller_req_socket.recv()
     disconnect_controllers()
     controller.join()
+
 
 def execute_scratch_cell(code, raw_args, kernel):
     # we then have to change the parse to disable args.workflow when
@@ -184,10 +187,12 @@ class Tapped_Executor(mp.Process):
         # start a socket?
         context = zmq.Context()
         stdout_socket = context.socket(zmq.PUSH)
-        stdout_socket.connect((f'tcp://127.0.0.1:{self.config["sockets"]["tapping_logging"]}'))
+        stdout_socket.connect(
+            (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_logging"]}'))
 
         informer_socket = context.socket(zmq.PUSH)
-        informer_socket.connect((f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
+        informer_socket.connect(
+            (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
 
         try:
             filename = os.path.join(env.exec_dir, '.sos', 'interactive.sos')
@@ -195,14 +200,15 @@ class Tapped_Executor(mp.Process):
                 script_file.write(self.code)
 
             cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
-            ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
+            ret_code = pexpect_run(
+                cmd, shell=True, stdout_socket=stdout_socket)
             informer_socket.send_pyobj(
                 {'msg_type': 'workflow_status',
                  'data': {
-                    'cell_id': env.config['slave_id'],
-                    'status': 'completed'
-                  }
-                })
+                     'cell_id': env.config['slave_id'],
+                     'status': 'completed'
+                 }
+                 })
         except Exception as e:
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
             informer_socket.send_pyobj({
@@ -216,21 +222,46 @@ class Tapped_Executor(mp.Process):
         finally:
             stdout_socket.LINGER = 0
             stdout_socket.close()
+            informer_socket.LINGER = 0
+            informer_socket.close()
             context.term()
 
+
 g_running_workflows = {}
+
+
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     env.config['slave_id'] = kernel.cell_id
     global g_running_workflows
-    if kernel.cell_id in g_running_workflows and g_running_workflows[kernel.cell_id].is_alive() and psutil.pid_exists(g_running_workflows[kernel.cell_id].pid):
+    # if on the same cell there are running workflows,
+    # we kill existing workflow
+    if kernel.cell_id in g_running_workflows and \
+            g_running_workflows[kernel.cell_id].is_alive() and \
+    psutil.pid_exists(g_running_workflows[kernel.cell_id].pid):
         # kill previous workflows....
         cancel_workflow(kernel.cell_id, kernel)
+    # if there is another workflow running
+    elif g_running_workflows:
+        proc = next(iter(g_running_workflows.values()))
+        if proc.is_alive() and psutil.pid_exists(proc.pid):
+            kernel.send_response(kernel.iopub_socket,
+                                 'stream', {
+                                     'name': 'stderr',
+                                     'text': 'Cannot start a workflow while another workflow is running'
+                                 })
+            return
+        else:
+            g_running_workflows.clear()
     #
     executor = Tapped_Executor(code, raw_args, env.config)
     executor.start()
     g_running_workflows[kernel.cell_id] = executor
-    # should wait for the starting of the workflow to return??
-    time.sleep(1)
+    kernel.send_frontend_msg('workflow_status',
+                             {
+                                 'cell_id': kernel.cell_id,
+                                 'status': 'pending'
+                             })
+
 
 def cancel_workflow(cell_id, kernel):
     global g_running_workflows
