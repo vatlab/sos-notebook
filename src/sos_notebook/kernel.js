@@ -483,6 +483,10 @@ define([
             <span>Workflow ID</span></br>
             <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id}</span></pre>
           </td>
+          <td class="workflow_index">
+            <span>Index</span></br>
+            <pre>#<span id="workflow_index_${cell_id}">${info.index}</span></pre>
+          </td>
           <td class="workflow_status">
             <span id="status_text_${cell_id}">${info.status}</span></br>
             <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}">Ran for 0 sec</time></pre>
@@ -519,6 +523,13 @@ define([
               wname.innerText = info.workflow_name;
           }
         }
+        // if there is additional message, put it under timer.
+        if (info.index) {
+          let index = document.getElementById(`workflow_index_${cell_id}`);
+          if (index) {
+              index.innerText = info.index;
+          }
+        }
       }
 
       // new and existing, check icon
@@ -551,13 +562,7 @@ define([
           icon.onclick = function() {};
         }
       }
-      // if there is additional message, put it under timer.
-      if (info.msg) {
-        let timer = document.getElementById(`status_duration_${cell_id}`);
-        if (timer) {
-            timer.innerText = info.msg;
-        }
-      }
+
       update_duration();
   }
 
@@ -835,10 +840,14 @@ define([
         // next pending workflow
         if (data.status === 'completed' || data.status === 'canceled' || data.status === 'failed') {
           // find all cell_ids with pending workflows
-          let elems = document.querySelector("[id^='status_duration_']");
+          let elems = document.querySelectorAll("[id^='status_duration_']");
           let pending = Array.from(elems).filter(
-            () => { this.className == 'pending' && this.id.includes('_') }
-          ).map( () => { this.id.substring(16)} )
+            (item) => {
+              return  item.className == 'pending' && !   item.id.substring(16).includes('_');
+            }
+          ).map( (item) => {
+            return item.id.substring(16);
+          } )
           if (pending) {
             execute_workflow(pending);
           }
@@ -2056,6 +2065,12 @@ td.workflow_id,
 td.task_id
 {
   width: 15em;
+  text-align: left;
+}
+
+td.workflow_index
+{
+  width: 5em;
   text-align: left;
 }
 

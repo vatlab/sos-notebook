@@ -10,7 +10,7 @@ import re
 import shlex
 import sys
 import time
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from threading import Event
 from typing import DefaultDict, Union
 
@@ -227,11 +227,37 @@ class Tapped_Executor(mp.Process):
             context.term()
 
 
+# workflow queue that holds all workflow
+g_workflow_queue = []
+
+def run_next_workflow_in_queue():
+    # execute the first available item
+    global g_workflow_queue
+
+    for idx, (cid, proc) in enumerate(g_workflow_queue):
+        if proc is None:
+            continue
+        # this is ordered
+        elif isinstance(proc, tuple):
+            env.config['slave_id'] = cid
+            executor = Tapped_Executor(*proc)
+            executor.start()
+            g_workflow_queue[idx][1] = executor
+            break
+        elif not (proc.is_alive() and psutil.pid_exists(proc.pid)):
+            g_workflow_queue[idx][1] = None
+            continue
+        else:
+            # if already running, do not submit new one
+            break
+
 def execute_pending_workflow(cell_ids, kernel):
-    env.log_to_file(f'Asked to Execute {cell_ids}')
-
-
-g_workflow_queue = OrderedDict()
+    # we are giving a list of cell_ids because some cells might be removed
+    # we use this list to clear workflow queue of removed cells
+    for idx, (cid, proc) in enumerate(g_workflow_queue):
+        if isinstance(proc, tuple) and cid not in cell_ids:
+            g_workflow_queue[idx][1] = None
+    run_next_workflow_in_queue()
 
 
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
@@ -241,31 +267,20 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     # execute the workflow or put it in queue
     global g_workflow_queue
 
-    if kernel.cell_id in g_workflow_queue:
+    # if a cell already exist, remove previous pending job (a tuple)
+    # completed job (dead process), or running job.
+    if kernel.cell_id in [cid for cid, proc in g_workflow_queue if proc is not None]:
         cancel_workflow(kernel.cell_id, kernel)
-    g_workflow_queue[kernel.cell_id] = (code, raw_args, env.config)
-    # find all valid ones
-    g_workflow_queue = OrderedDict([(x, y) for x, y in g_workflow_queue.items(
-    ) \
-        if isinstance(y, tuple) or (y.is_alive() and psutil.pid_exists(y.pid))])
-    env.log_to_file(f'get {g_workflow_queue}')
-
-    # now, the first  one should be running, or need to be run
-    cell_id, item = next(iter(g_workflow_queue.items()))
-    if isinstance(item, tuple):
-        env.config['slave_id'] = cell_id
-        executor = Tapped_Executor(*item)
-        executor.start()
-        g_workflow_queue[cell_id] = executor
-
+    # put to the back
+    g_workflow_queue.append([kernel.cell_id, (code, raw_args, env.config)])
     # in any case, we start with a pending status
     kernel.send_frontend_msg('workflow_status',
                              {
                                  'cell_id': kernel.cell_id,
                                  'status': 'pending',
-                                 'msg': f'#{list(g_workflow_queue.keys()).index(kernel.cell_id) + 1} in queue'
+                                 'index': len(g_workflow_queue)
                              })
-
+    run_next_workflow_in_queue()
 
 def cancel_workflow(cell_id, kernel):
     env.log_to_file(f'cancel {cell_id}')
@@ -274,14 +289,15 @@ def cancel_workflow(cell_id, kernel):
         'cell_id': cell_id,
         'status': 'aborted'
     })
-    if cell_id not in g_workflow_queue:
-        return
-    proc = g_workflow_queue[cell_id]
-    if not isinstance(proc, tuple) and \
-            proc.is_alive() and psutil.pid_exists(proc.pid):
-        from sos.executor_utils import kill_all_subprocesses
-        kill_all_subprocesses(proc.pid, include_self=True)
-        proc.terminate()
-        if psutil.pid_exists(proc.pid):
-            raise RuntimeError('Failed to kill workflow')
-    g_workflow_queue.pop(cell_id)
+
+    for idx, (cid, proc) in enumerate(g_workflow_queue):
+        if cid != cell_id or proc is None:
+            continue
+        if not isinstance(proc, tuple) and \
+            (proc.is_alive() and psutil.pid_exists(proc.pid)):
+            from sos.executor_utils import kill_all_subprocesses
+            kill_all_subprocesses(proc.pid, include_self=True)
+            proc.terminate()
+            if psutil.pid_exists(proc.pid):
+                raise RuntimeError('Failed to kill workflow')
+        g_workflow_queue[idx][1] = None
