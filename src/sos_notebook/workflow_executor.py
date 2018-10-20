@@ -10,7 +10,7 @@ import re
 import shlex
 import sys
 import time
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from threading import Event
 from typing import DefaultDict, Union
 
@@ -227,22 +227,22 @@ class Tapped_Executor(mp.Process):
             context.term()
 
 
-g_running_workflows = {}
+g_workflow_queue = OrderedDict()
 
 
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
     env.config['slave_id'] = kernel.cell_id
-    global g_running_workflows
+    global g_workflow_queue
     # if on the same cell there are running workflows,
     # we kill existing workflow
-    if kernel.cell_id in g_running_workflows and \
-            g_running_workflows[kernel.cell_id].is_alive() and \
-    psutil.pid_exists(g_running_workflows[kernel.cell_id].pid):
+    if kernel.cell_id in g_workflow_queue and \
+            g_workflow_queue[kernel.cell_id].is_alive() and \
+    psutil.pid_exists(g_workflow_queue[kernel.cell_id].pid):
         # kill previous workflows....
         cancel_workflow(kernel.cell_id, kernel)
     # if there is another workflow running
-    elif g_running_workflows:
-        proc = next(iter(g_running_workflows.values()))
+    elif g_workflow_queue:
+        proc = next(iter(g_workflow_queue.values()))
         if proc.is_alive() and psutil.pid_exists(proc.pid):
             kernel.send_response(kernel.iopub_socket,
                                  'stream', {
@@ -251,11 +251,11 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
                                  })
             return
         else:
-            g_running_workflows.clear()
+            g_workflow_queue.clear()
     #
     executor = Tapped_Executor(code, raw_args, env.config)
     executor.start()
-    g_running_workflows[kernel.cell_id] = executor
+    g_workflow_queue[kernel.cell_id] = executor
     kernel.send_frontend_msg('workflow_status',
                              {
                                  'cell_id': kernel.cell_id,
@@ -264,17 +264,17 @@ def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
 
 
 def cancel_workflow(cell_id, kernel):
-    global g_running_workflows
+    global g_workflow_queue
     kernel.send_frontend_msg('workflow_status', {
         'cell_id': cell_id,
         'status': 'aborted'
     })
-    if cell_id not in g_running_workflows:
+    if cell_id not in g_workflow_queue:
         return
-    proc = g_running_workflows[cell_id]
+    proc = g_workflow_queue[cell_id]
     if proc.is_alive():
         from sos.executor_utils import kill_all_subprocesses
         kill_all_subprocesses(proc.pid, include_self=True)
         proc.terminate()
     if not psutil.pid_exists(proc.pid):
-        g_running_workflows.pop(cell_id)
+        g_workflow_queue.pop(cell_id)
