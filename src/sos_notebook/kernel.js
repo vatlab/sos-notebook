@@ -510,6 +510,9 @@ define([
             if (info.start_time) {
               timer.setAttribute('datetime', info.start_time * 1000);
             }
+            if (timer.innerText === '' && (info.status === 'completed' || info.status === 'failed' || info.status === 'aborted')) {
+              timer.innerText = 'Ran for < 5 seconds'
+            }
         }
         let text = document.getElementById(`status_text_${cell_id}`);
         if (text) {
@@ -628,6 +631,9 @@ define([
           timer.className = info.status;
           if (info.start_time) {
             timer.setAttribute('datetime', info.start_time * 1000);
+          }
+          if (timer.innerText === '' && (info.status === 'completed' || info.status === 'failed' || info.status === 'aborted')) {
+            timer.innerText = 'Ran for < 5 seconds'
           }
       }
       let text = document.getElementById(`status_text_${elem_id}`);
