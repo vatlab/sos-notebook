@@ -508,7 +508,7 @@ define([
         if (timer) {
             timer.className = info.status;
             if (info.start_time) {
-              timer.setAttribute('datetime', info.start_time);
+              timer.setAttribute('datetime', info.start_time * 1000);
             }
         }
         let text = document.getElementById(`status_text_${cell_id}`);
@@ -553,7 +553,7 @@ define([
 
         if (info.status === 'running') {
             icon.onmouseover = function() {
-              this.classList = `fa fa-2x fa-fw ${status_class["aborted"]}`;
+              this.classList = `fa fa-2x fa-fw fa-stop`;
             };
             icon.onmouseleave = function() {
               this.classList = `fa fa-2x fa-fw ${status_class["running"]}`;
@@ -626,6 +626,9 @@ define([
       let timer = document.getElementById(`status_duration_${elem_id}`);
       if (timer) {
           timer.className = info.status;
+          if (info.start_time) {
+            timer.setAttribute('datetime', info.start_time * 1000);
+          }
       }
       let text = document.getElementById(`status_text_${elem_id}`);
       if (text) {
