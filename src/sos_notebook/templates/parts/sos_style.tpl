@@ -119,6 +119,100 @@ div.cell {
 }
 
 
+
+table.workflow_table,
+table.task_table {
+  border: 0px;
+}
+
+table.workflow_table i,
+table.task_table i  {
+  margin-right: 5px;
+}
+
+td.workflow_name
+{
+  width: 10em;
+  text-align: left;
+}
+
+td.workflow_name pre,
+td.task_name pre {
+  font-size: 1.2em;
+}
+
+td.workflow_id,
+td.task_id
+{
+  width: 15em;
+  text-align: left;
+}
+
+td.workflow_index
+{
+  width: 5em;
+  text-align: left;
+}
+
+td.workflow_status,
+td.task_timer
+{
+  width: 20em;
+  text-align: left;
+}
+
+td.task_icon {
+    font-size: 0.75em;
+}
+
+td.task_status,
+{
+  width: 15em;
+  text-align: left;
+}
+
+table.workflow_table span {
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+table.task_table span {
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+table.workflow_table.pending pre,
+table.task_table.pending pre,
+table.task_table.submitted pre,
+table.task_table.missing pre {
+  color: #9d9d9d; /* gray */
+}
+
+table.workflow_table.running pre,
+table.task_table.running pre {
+  color: #cdb62c; /* yellow */
+}
+
+table.workflow_table.completed pre,
+table.task_table.completed pre {
+  color: #39aa56; /* green */
+}
+
+table.workflow_table.aborted pre,
+table.task_table.aborted pre {
+  color: #FFA07A; /* salmon */
+}
+
+table.workflow_table.failed pre,
+table.task_table.failed pre {
+  color: #db4545; /* red */
+}
+
+table.task_table {
+  border: 0px;
+  border-style: solid;
+}
+
 </style>
 
 
