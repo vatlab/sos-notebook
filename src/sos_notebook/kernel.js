@@ -500,18 +500,16 @@ define([
     }
 
     // look for status etc and update them.
+    let onmouseover = ''
+    let onmouseleave = ''
+    let onclick = ''
     if (info.status === 'running') {
       onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-stop"'`;
       onmouseleave = `onmouseover='this.classList="fa fa-2x fa-fw ${status_class.running}"'`;
       onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
-    } else {
-      onmouseover = ''
-      onmouseleave = ''
-      onclick = ''
     }
-    console.log(info);
 
-    data = {
+    let data = {
       'output_type': has_status_table ? 'update_display_data': 'display_data',
       'transient': {'display_id': `workflow_${cell_id}`},
       'metadata': {},
@@ -610,10 +608,10 @@ define([
     }
 
     // look for status etc and update them.
-    onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
-    onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
-    onclick = `onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}');"`;
-    data = {
+    let onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
+    let onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
+    let onclick = `onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}');"`;
+    let data = {
       'output_type': has_status_table ? 'update_display_data': 'display_data',
       'transient': {'display_id': `task_${elem_id}`},
       'metadata': {},
