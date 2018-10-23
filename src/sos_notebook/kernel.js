@@ -512,11 +512,11 @@ define([
     console.log(info);
 
     data = {
-            'output_type': has_status_table ? 'update_display_data': 'display_data',
-            'transient': {'display_id': `workflow_${cell_id}`},
-            'metadata': {},
-            'data': {
-                'text/html': `
+      'output_type': has_status_table ? 'update_display_data': 'display_data',
+      'transient': {'display_id': `workflow_${cell_id}`},
+      'metadata': {},
+      'data': {
+          'text/html': `
 <table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
   <tr>
         <td class="workflow_icon">
@@ -552,67 +552,30 @@ define([
     //console.log(info);
 
     let elem_id = `${info.queue}_${info.task_id}`
-
+    let cell_id = info.cell_id
+    let cell = get_cell_by_id(cell_id);
+    if (!cell) {
+      console.log(`Cannot find cell by ID ${info.cell_id}`)
+      return;
+    }
+    // convert between Python and JS float time
+    if (info.start_time) {
+      info.start_time = info.start_time * 1000;
+    }
     // find the status table
-    let status_table = document.getElementById(`task_${elem_id}`);
-
-    if (!status_table) {
-        let cell_id = info.cell_id
-        if (!cell_id) {
-          return;
-        }
-        let cell = get_cell_by_id(cell_id);
-        if (!cell) {
-          console.log(`Cannot find cell by ID ${info.cell_id}`)
-          return;
-        }
-
-        data = {
-            'output_type': 'display_data',
-            'metadata': {},
-            'data': {
-                'text/html': `
-<table id="task_${elem_id}" class="task_table  ${info.status}">
-    <tr>
-          <td class="task_icon">
-            <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw fa-square-o"></i>
-          </td>
-          <td class="task_id">
-            <a href='#' onclick="task_info('${info.task_id}', '${info.queue}')">
-            <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
-            </a>
-          </td>
-          <td class="task_timer">
-            <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}"></time></pre>
-          </td>
-          <td class="task_status">
-            <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}">${info.status}</span></pre>
-          </td>
-    </tr>
-</table>
-`
-            }
-        }
-        cell.output_area.append_output(data);
-    } else {
-      // existing table ...
-      let table = document.getElementById(`task_${elem_id}`);
-      if (table) {
-          table.className = `task_table ${info.status}`;
-      }
+    let has_status_table = document.getElementById(`task_${elem_id}`);
+    // if there is an existing status table, try to retrieve its information
+    // the new data does not have it
+    let timer_text = '';
+    if (has_status_table) {
+      // if we already have timer, let us try to "fix" it in the notebook
       let timer = document.getElementById(`status_duration_${elem_id}`);
-      if (timer) {
-          timer.className = info.status;
-          if (info.start_time) {
-            timer.setAttribute('datetime', info.start_time * 1000);
-          }
-          if (timer.innerText === '' && (info.status === 'completed' || info.status === 'failed' || info.status === 'aborted')) {
-            timer.innerText = 'Ran for < 5 seconds'
-          }
+      timer_text = timer.innerText;
+      if (timer_text === '' && (info.status === 'completed' || info.status === 'failed' || info.status === 'aborted')) {
+        timer_text = 'Ran for < 5 seconds'
       }
-      let text = document.getElementById(`status_text_${elem_id}`);
-      if (text) {
-          text.innerText = info.status;
+      if (!info.start_time) {
+        info.start_time = timer.getAttribute('datetime');
       }
     }
 
@@ -647,27 +610,38 @@ define([
     }
 
     // look for status etc and update them.
-    let icon = document.getElementById(`task_status_icon_${elem_id}`);
-    if (icon) {
-      icon.className = `fa fa-2x fa-fw ${status_class[info.status]}`;
-
-      icon.onmouseover = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
-        this.classList = `fa fa-2x fa-fw ${action_class[status]}`;
-      };
-      icon.onmouseleave = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
-        console.log(`laving ${status}`)
-        this.classList = `fa fa-2x fa-fw ${status_class[status]}`;
-      };
-      icon.onclick = function() {
-        let status = document.getElementById('status_duration_' + this.id.substring(17)).className;
-        let elem_id = this.id.substring(17)
-        let task_id = elem_id.split('_').pop()
-        let task_queue = elem_id.split('_').slice(0, -1).join('_');
-        action_func[status](task_id, task_queue);
-      };
+    onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
+    onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
+    onclick = `onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}');"`;
+    data = {
+      'output_type': has_status_table ? 'update_display_data': 'display_data',
+      'transient': {'display_id': `task_${elem_id}`},
+      'metadata': {},
+      'data': {
+          'text/html': `
+<table id="task_${elem_id}" class="task_table ${info.status}">
+<tr>
+    <td class="task_icon">
+      <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
+      ${onmouseover} ${onmouseleave} ${onclick}></i>
+    </td>
+    <td class="task_id">
+      <a href='#' onclick="task_info('${info.task_id}', '${info.queue}')">
+      <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
+      </a>
+    </td>
+    <td class="task_timer">
+      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
+    </td>
+    <td class="task_status">
+      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}">${info.status}</span></pre>
+    </td>
+</tr>
+</table>
+`
+      }
     }
+    cell.output_area.append_output(data);
   }
 
   function register_sos_comm() {
