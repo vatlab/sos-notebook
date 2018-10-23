@@ -23,13 +23,15 @@ from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import format_duration, WorkflowDict, env, short_repr
+from sos.targets import file_target
 
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .workflow_executor import (run_sos_workflow, execute_scratch_cell, NotebookLoggingHandler,
-    start_controller, stop_controller)
-from .magics import SoS_Magics
+                                start_controller, stop_controller)
+from .magics import SoS_Magics, Preview_Magic
+
 
 class FlushableStringIO:
     def __init__(self, kernel, name, *args, **kwargs):
@@ -59,6 +61,7 @@ class FlushableStringIO:
 
 
 __all__ = ['SoS_Kernel']
+
 
 class subkernel(object):
     # a class to information on subkernel
@@ -467,13 +470,13 @@ class SoS_Kernel(IPythonKernel):
         env.logger.handlers = []
         env.logger.addHandler(
             NotebookLoggingHandler({
-                        0: logging.ERROR,
-                        1: logging.WARNING,
-                        2: logging.INFO,
-                        3: logging.DEBUG,
-                        4: logging.TRACE,
-                        None: logging.INFO
-                    }[env.verbosity], kernel=self))
+                0: logging.ERROR,
+                1: logging.WARNING,
+                2: logging.INFO,
+                3: logging.DEBUG,
+                4: logging.TRACE,
+                None: logging.INFO
+            }[env.verbosity], kernel=self))
         env.logger.print = lambda cell_id, msg, *args: \
             self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
@@ -501,11 +504,11 @@ class SoS_Kernel(IPythonKernel):
                     from sos.hosts import Host
                     Host(v[1])._task_engine.kill_tasks([v[0]])
                     self.send_frontend_msg('task_status',
-                        {
-                            'task_id': v[0],
-                            'queue': v[1],
-                            'status': 'abort'
-                        })
+                                           {
+                                               'task_id': v[0],
+                                               'queue': v[1],
+                                               'status': 'abort'
+                                           })
                 elif k == 'cancel-workflow':
                     from .workflow_executor import cancel_workflow
                     cancel_workflow(v[0], self)
@@ -517,11 +520,11 @@ class SoS_Kernel(IPythonKernel):
                     from sos.hosts import Host
                     Host(v[1])._task_engine.resume_task(v[0])
                     self.send_frontend_msg('task_status',
-                        {
-                            'task_id': v[0],
-                            'queue': v[1],
-                            'status': 'pending'
-                        })
+                                           {
+                                               'task_id': v[0],
+                                               'queue': v[1],
+                                               'status': 'pending'
+                                           })
                 elif k == 'task-info':
                     self._meta['use_panel'] = True
                     from sos.hosts import Host
@@ -567,12 +570,12 @@ class SoS_Kernel(IPythonKernel):
                             continue
                         for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
                             self.send_frontend_msg('task_status',
-                                {
-                                    'task_id': tid,
-                                    'queue': tqu,
-                                    'status': tst,
-                                    'duration': tdt
-                                })
+                                                   {
+                                                       'task_id': tid,
+                                                       'queue': tqu,
+                                                       'status': tst,
+                                                       'duration': tdt
+                                                   })
 
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
@@ -787,7 +790,6 @@ class SoS_Kernel(IPythonKernel):
                     f'Unrecognized return value of type {object.__class__.__name__} for action %put')
                 return
 
-
     def do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
@@ -826,7 +828,8 @@ class SoS_Kernel(IPythonKernel):
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 if self._debug_mode:
-                    env.log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                    env.log_to_file(
+                        f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
@@ -859,7 +862,8 @@ class SoS_Kernel(IPythonKernel):
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 if self._debug_mode:
-                    env.log_to_file(f'Failed to get subkernels {cell_kernel.name}')
+                    env.log_to_file(
+                        f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.complete(code, cursor_pos)
@@ -884,8 +888,6 @@ class SoS_Kernel(IPythonKernel):
             self.send_response(self.iopub_socket, 'stream',
                                {'name': 'stderr', 'text': message})
 
-
-
     def run_cell(self, code, silent, store_history, on_error=None):
         #
         if not self.KM.is_alive():
@@ -906,7 +908,8 @@ class SoS_Kernel(IPythonKernel):
             while self.KC.stdin_channel.msg_ready():
                 sub_msg = self.KC.stdin_channel.get_msg()
                 if self._debug_mode:
-                    env.log_to_file(f"MSG TYPE {sub_msg['header']['msg_type']}")
+                    env.log_to_file(
+                        f"MSG TYPE {sub_msg['header']['msg_type']}")
                     env.log_to_file(f'CONTENT  {sub_msg}')
                 if sub_msg['header']['msg_type'] != 'input_request':
                     self.send_response(
@@ -934,7 +937,8 @@ class SoS_Kernel(IPythonKernel):
                     #
                     if msg_type in ['display_data', 'stream', 'execute_result', 'update_display_data']:
                         if self._meta['capture_result'] is not None:
-                            self._meta['capture_result'].append((msg_type, sub_msg['content']))
+                            self._meta['capture_result'].append(
+                                (msg_type, sub_msg['content']))
                         if silent:
                             continue
                     self.send_response(
@@ -1057,7 +1061,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                     .format(''.join(f', {x}' for x in self.kernels))))
         stop_controller(self.controller)
 
-
     def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
         responses = []
@@ -1070,7 +1073,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    env.log_to_file(f'Received {msg_type} {sub_msg["content"]}')
+                    env.log_to_file(
+                        f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
                     _execution_state = sub_msg["content"]["execution_state"]
                 else:
@@ -1099,7 +1103,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                         code=code, raw_args=self.options, kernel=self)
                 else:
                     res = execute_scratch_cell(code=code, raw_args=self.options,
-                        kernel=self)
+                                               kernel=self)
                 self.send_result(res, silent)
             except Exception as e:
                 sys.stderr.flush()
@@ -1117,79 +1121,45 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 sys.stderr.flush()
                 sys.stdout.flush()
         #
-        if not silent and (not hasattr(self, 'preview_output') or self.preview_output):
-            # Send standard output
-            # if os.path.isfile('.sos/report.md'):
-            #    with open('.sos/report.md') as sr:
-            #        sos_report = sr.read()
-            # with open(self.report_file, 'a') as summary_report:
-            #    summary_report.write(sos_report + '\n\n')
-            #    if sos_report.strip():
-            #        self.send_response(self.iopub_socket, 'display_data',
-            #            {
-            #                'metadata': {},
-            #                'data': {'text/markdown': sos_report}
-            #            })
-            #
-            if 'step_input' in env.sos_dict:
-                input_files = env.sos_dict['step_input']
-                if input_files is None:
-                    input_files = []
-                else:
-                    input_files = [
-                        x for x in input_files if isinstance(x, str)]
-            else:
-                input_files = []
-            if 'step_output' in env.sos_dict:
-                output_files = env.sos_dict['step_output']
-                if output_files is None:
-                    output_files = []
-                else:
-                    output_files = [
-                        x for x in output_files if isinstance(x, str)]
-            else:
-                output_files = []
+        if not silent:
+            input_files = [str(x) for x in env.sos_dict.get('step_input', []) if isinstance(x, file_target)]
+            output_files = [str(x) for x in env.sos_dict.get('step_output', []) if isinstance(x, file_target)]
+
             # use a table to list input and/or output file if exist
             if output_files:
                 title = f'%preview {" ".join(output_files)}'
                 if not self._meta['use_panel']:
-                    self.send_response(self.iopub_socket, 'display_data',
-                                       {
-                                           'metadata': {},
-                                           'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                                       })
+                    self.send_response(self.iopub_socket, 'display_data', {
+                        'metadata': {},
+                        'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
+                    })
 
                 if hasattr(self, 'in_sandbox') and self.in_sandbox:
                     # if in sand box, do not link output to their files because these
                     # files will be removed soon.
-                    self.send_frontend_msg('display_data',
-                                           {
-                                               'metadata': {},
-                                               'data': {'text/html':
-                                                        HTML(
-                                                            '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
-                                                                ', '.join(
-                                                                    x for x in input_files),
-                                                                ', '.join(x for x in output_files))).data
-                                                        }
-                                           }, title=title, page='Preview')
+                    self.send_frontend_msg('display_data', {
+                        'metadata': {},
+                        'data': {'text/html':
+                            '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
+                                 ', '.join(x for x in input_files),
+                                ', '.join(x for x in output_files))
+                        }
+                    }, title=title, page='Preview')
                 else:
-                    self.send_frontend_msg('display_data',
-                                           {
-                                               'metadata': {},
-                                               'data': {'text/html':
-                                                        HTML(
-                                                            '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
-                                                                ', '.join(
-                                                                    f'<a target="_blank" href="{x}">{x}</a>' for x
-                                                                    in input_files),
-                                                                ', '.join(
-                                                                    f'<a target="_blank" href="{x}">{x}</a>' for x
-                                                                    in output_files))).data
-                                                        }
-                                           }, title=title, page='Preview')
-                for filename in output_files:
-                    self.preview_file(filename, style=None, title=title)
+                    self.send_frontend_msg('display_data', {
+                        'metadata': {},
+                        'data': {
+                        'text/html':
+                            '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''.format(
+                                 ', '.join(
+                                     f'<a target="_blank" href="{x}">{x}</a>' for x in input_files),
+                                 ', '.join(
+                                     f'<a target="_blank" href="{x}">{x}</a>' for x in output_files))
+                        }
+                    }, title=title, page='Preview')
+
+                Preview_Magic(self).handle_magic_preview(output_files, "SoS",
+                                                         title=f'%preview {" ".join(output_files)}')
 
     def render_result(self, res):
         if not self._meta['render_result']:
