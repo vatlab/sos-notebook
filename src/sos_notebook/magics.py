@@ -795,8 +795,6 @@ class Preview_Magic(SoS_Magic):
         parser.add_argument('-r', '--host', dest='host', metavar='HOST',
                             help='''Preview files on specified remote host, which should
             be one of the hosts defined in sos configuration files.''')
-        parser.add_argument('--off', action='store_true',
-                            help='''Turn off file preview''')
         loc = parser.add_mutually_exclusive_group()
         loc.add_argument('-p', '--panel', action='store_true',
                          help='''Preview in side panel even if the panel is currently closed''')
@@ -932,19 +930,18 @@ class Preview_Magic(SoS_Magic):
         style_options.extend(help_option)
         style = {'style': args.style, 'options': style_options}
         #
-        if args.off:
-            self.preview_output = False
-        else:
-            self.preview_output = True
-        #
         if args.panel:
             self.sos_kernel._meta['use_panel'] = True
         elif args.notebook:
             self.sos_kernel._meta['use_panel'] = False
         # else, use default _use_panel
         try:
+            # inside a %preview magic, auto preview will be disabled
+            self.sos_kernel._no_auto_preview = True
+            self.sos_kernel._meta['auto_preview'] = False
             return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
+            self.sos_kernel._no_auto_preview = False
             # preview workflow
             if args.workflow:
                 import random
@@ -960,48 +957,49 @@ class Preview_Magic(SoS_Magic):
                 self.sos_kernel.send_frontend_msg('display_data', content,
                                               title='%preview --workflow', page='Workflow')
                 self.sos_kernel.send_frontend_msg('highlight-workflow', ta_id)
-            if not args.off and args.items:
-                if args.host:
-                    title = f'%preview {" ".join(args.items)} -r {args.host}'
-                else:
-                    title = f'%preview {" ".join(args.items)}'
-                # reset preview panel
-                if not self.sos_kernel._meta['use_panel']:
-                    self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                              {
-                                                  'metadata': {},
-                                                  'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                                              })
-                else:
-                    # clear the page
-                    self.sos_kernel.send_frontend_msg(
-                        'display_data', {}, page='Preview')
-                if args.host is None:
-                    self.handle_magic_preview(
-                        args.items, args.kernel, style,
-                        title=title)
-                elif args.workflow:
-                    self.sos_kernel.warn(
-                        'Invalid option --kernel with -r (--host)')
-                elif args.kernel:
-                    self.sos_kernel.warn(
-                        'Invalid option --kernel with -r (--host)')
-                else:
-                    if args.config:
-                        from sos.utils import load_config_files
-                        load_config_files(args.config)
-                    try:
-                        rargs = ['sos', 'preview', '--html'] + options
-                        rargs = [x for x in rargs if x not in (
-                            '-n', '--notebook', '-p', '--panel')]
-                        if self.sos_kernel._debug_mode:
-                            self.sos_kernel.warn(f'Running "{" ".join(rargs)}"')
-                        for msg in eval(subprocess.check_output(rargs)):
-                            self.sos_kernel.send_frontend_msg(
-                                msg[0], msg[1], title=title, append=True, page='Preview')
-                    except Exception as e:
-                        self.sos_kernel.warn('Failed to preview {} on remote host {}{}'.format(
-                            args.items, args.host, f': {e}' if self.sos_kernel._debug_mode else ''))
+            if not args.items:
+                return
+            if args.host:
+                title = f'%preview {" ".join(args.items)} -r {args.host}'
+            else:
+                title = f'%preview {" ".join(args.items)}'
+            # reset preview panel
+            if not self.sos_kernel._meta['use_panel']:
+                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
+                                          {
+                                              'metadata': {},
+                                              'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
+                                          })
+            else:
+                # clear the page
+                self.sos_kernel.send_frontend_msg(
+                    'display_data', {}, page='Preview')
+            if args.host is None:
+                self.handle_magic_preview(
+                    args.items, args.kernel, style,
+                    title=title)
+            elif args.workflow:
+                self.sos_kernel.warn(
+                    'Invalid option --kernel with -r (--host)')
+            elif args.kernel:
+                self.sos_kernel.warn(
+                    'Invalid option --kernel with -r (--host)')
+            else:
+                if args.config:
+                    from sos.utils import load_config_files
+                    load_config_files(args.config)
+                try:
+                    rargs = ['sos', 'preview', '--html'] + options
+                    rargs = [x for x in rargs if x not in (
+                        '-n', '--notebook', '-p', '--panel')]
+                    if self.sos_kernel._debug_mode:
+                        self.sos_kernel.warn(f'Running "{" ".join(rargs)}"')
+                    for msg in eval(subprocess.check_output(rargs)):
+                        self.sos_kernel.send_frontend_msg(
+                            msg[0], msg[1], title=title, append=True, page='Preview')
+                except Exception as e:
+                    self.sos_kernel.warn('Failed to preview {} on remote host {}{}'.format(
+                        args.items, args.host, f': {e}' if self.sos_kernel._debug_mode else ''))
 
 
 class Pull_Magic(SoS_Magic):

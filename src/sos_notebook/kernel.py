@@ -81,10 +81,12 @@ class subkernel(object):
 
 def make_transient_msg(msg_type, content, title, append=False, page='Info'):
     if msg_type == 'display_data':
+        meta = {'append': append, 'page': page}
+        meta.update(content.get('metadata', {}))
         return {
             'title': title,
             'data': content.get('data', {}),
-            'metadata': {'append': append, 'page': page}
+            'metadata': meta
         }
     elif msg_type == 'stream':
         if content['name'] == 'stdout':
@@ -1126,7 +1128,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             output_files = [str(x) for x in env.sos_dict.get('step_output', []) if isinstance(x, file_target)]
 
             # use a table to list input and/or output file if exist
-            if output_files:
+            if output_files and not (hasattr(self, '_no_auto_preview') and self._no_auto_preview):
                 title = f'%preview {" ".join(output_files)}'
                 if not self._meta['use_panel']:
                     self.send_response(self.iopub_socket, 'display_data', {
