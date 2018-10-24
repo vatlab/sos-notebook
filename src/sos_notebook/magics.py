@@ -753,7 +753,7 @@ class Preview_Magic(SoS_Magic):
                 self.sos_kernel.send_frontend_msg('display_data',
                                               {'data': result, 'metadata': {}},
                                               title=title, append=True, page='Preview')
-            elif isinstance(result, [list, tuple]) and len(result) == 2:
+            elif isinstance(result, (list, tuple)) and len(result) == 2:
                 self.sos_kernel.send_frontend_msg('display_data',
                                               {'data': result[0],
                                                'metadata': result[1]},
