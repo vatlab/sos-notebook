@@ -294,17 +294,24 @@ def script_to_notebook(script_file, notebook_file, args=None, unknown_args=None)
 
             mo = SOS_SECTION_HEADER.match(line)
             if mo:
-                # get ride of empty content
+                # get rid of empty content
                 if not any(x.strip() for x in content):
                     content = []
 
                 if content:
-                    add_cell(cells, content, cell_type, cell_count, metainfo)
+                    # the comment should be absorbed into the next section
+                    i = len(content) - 1
+                    while i >= 0 and content[i].startswith('#'):
+                        i -= 1
+                    # i point to the last non comment line
+                    if i >= 0:
+                        add_cell(cells, content[:i+1], cell_type, cell_count, metainfo)
+                    content = content[i+1:]
 
                 cell_type = 'code'
                 cell_count += 1
                 metainfo = {'kernel': 'SoS'}
-                content = [line]
+                content += [line]
                 continue
 
             if line.startswith('#!'):
