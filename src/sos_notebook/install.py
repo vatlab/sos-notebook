@@ -13,6 +13,11 @@ import sys
 from IPython.utils.tempdir import TemporaryDirectory
 from jupyter_client.kernelspec import KernelSpecManager
 
+_py_ver = sys.version_info
+if _py_ver.major == 2 or (_py_ver.major == 3 and (_py_ver.minor, _py_ver.micro) < (6, 0)):
+    raise SystemError('sos requires Python 3.6 or higher. Please upgrade your Python {}.{}.{}.'
+                      .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
+
 kernel_json = {
     "argv":         [sys.executable, "-m", "sos_notebook.kernel", "-f", "{connection_file}"],
     "display_name": "SoS",
