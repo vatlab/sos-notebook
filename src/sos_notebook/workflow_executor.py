@@ -206,7 +206,7 @@ class Tapped_Executor(mp.Process):
                 {'msg_type': 'workflow_status',
                  'data': {
                      'cell_id': env.config['slave_id'],
-                     'status': 'completed'
+                     'status': 'completed' if ret_code == 0 else 'failed'
                  }
                  })
         except Exception as e:
