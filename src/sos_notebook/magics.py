@@ -1032,7 +1032,6 @@ class Pull_Magic(SoS_Magic):
         if args.config:
             from sos.utils import load_config_files
             load_config_files(args.config)
-        env.sos_dict['CONFIG']
         try:
             host = Host(args.host)
             #
@@ -1101,7 +1100,6 @@ class Push_Magic(SoS_Magic):
         if args.config:
             from sos.utils import load_config_files
             load_config_files(args.config)
-        env.sos_dict['CONFIG']
         try:
             host = Host(args.host)
             #

@@ -22,7 +22,7 @@ from jupyter_client import manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_SECTION_HEADER
-from sos.utils import format_duration, WorkflowDict, env, short_repr
+from sos.utils import format_duration, WorkflowDict, env, short_repr, load_config_files
 from sos.targets import file_target
 
 from ._version import __version__ as __notebook_version__
@@ -1245,6 +1245,14 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.warn(code)
         if not self.controller:
             self.controller = start_controller(self)
+        # load basic configuration each time in case user modifies the configuration during
+        # runs. This is not very efficient but should not matter much during interactive
+        # data analysis
+        try:
+            load_config_files()
+        except Exception as e:
+            self.warn(f'Failed to load configuration files: {e}')
+
         self._forward_input(allow_stdin)
         # switch to global default kernel
         try:
