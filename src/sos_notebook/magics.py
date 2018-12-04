@@ -1414,6 +1414,8 @@ class Run_Magic(SoS_Magic):
                 self.sos_kernel._meta['workflow_mode'] = True
                 if self.sos_kernel._debug_mode:
                     self.sos_kernel.warn(f'Executing\n{run_code}')
+                if self.sos_kernel.kernel != 'SoS':
+                    self.sos_kernel.switch_kernel('SoS')
                 ret = self.sos_kernel._do_execute(run_code, silent, store_history, user_expressions,
                                               allow_stdin)
             except Exception as e:
@@ -1730,6 +1732,8 @@ class SoSRun_Magic(SoS_Magic):
         old_options = self.sos_kernel.options
         self.sos_kernel.options = options + ' ' + self.sos_kernel.options
         try:
+            if self.sos_kernel.kernel != 'SoS':
+                self.sos_kernel.switch_kernel('SoS')
             # %run is executed in its own namespace
             old_dict = env.sos_dict
             self.sos_kernel._reset_dict()
