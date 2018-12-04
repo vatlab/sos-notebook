@@ -79,33 +79,28 @@ class subkernel(object):
 # translate a message to transient_display_data message
 
 
-def make_transient_msg(msg_type, content, title, append=False, page='Info'):
+def make_transient_msg(msg_type, content):
     if msg_type == 'display_data':
-        meta = {'append': append, 'page': page}
-        meta.update(content.get('metadata', {}))
         return {
-            'title': title,
             'data': content.get('data', {}),
-            'metadata': meta
+            'metadata': content.get('metadata', {})
         }
     elif msg_type == 'stream':
         if content['name'] == 'stdout':
             return {
-                'title': title,
                 'data': {
                     'text/plain': content['text'],
                     'application/vnd.jupyter.stdout': content['text']
                 },
-                'metadata': {'append': append, 'page': page}
+                'metadata': {}
             }
         else:
             return {
-                'title': title,
                 'data': {
                     'text/plain': content['text'],
                     'application/vnd.jupyter.stderr': content['text']
                 },
-                'metadata': {'append': append, 'page': page}
+                'metadata': {}
             }
     else:
         raise ValueError(
@@ -540,7 +535,7 @@ class SoS_Kernel(IPythonKernel):
                         'metadata': {},
                         'data': {'text/plain': result,
                                  'text/html': HTML(result).data
-                                 }}, title=f'%taskinfo {task_id} -q {task_queue}', page='Tasks')
+                                 }})
 
                     # now, there is a possibility that the status of the task is different from what
                     # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
@@ -600,7 +595,7 @@ class SoS_Kernel(IPythonKernel):
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
 
-    def send_frontend_msg(self, msg_type, msg=None, title='', append=False, page='Info'):
+    def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
             if self._meta['use_panel'] is False:
@@ -610,7 +605,7 @@ class SoS_Kernel(IPythonKernel):
             else:
                 self.frontend_comm.send(
                     make_transient_msg(
-                        msg_type, msg, append=append, title=title, page=page),
+                        msg_type, msg),
                     {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
@@ -1146,7 +1141,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                  ', '.join(x for x in input_files),
                                 ', '.join(x for x in output_files))
                         }
-                    }, title=title, page='Preview')
+                    })
                 else:
                     self.send_frontend_msg('display_data', {
                         'metadata': {},
@@ -1158,7 +1153,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                  ', '.join(
                                      f'<a target="_blank" href="{x}">{x}</a>' for x in output_files))
                         }
-                    }, title=title, page='Preview')
+                    })
 
                 Preview_Magic(self).handle_magic_preview(output_files, "SoS",
                                                          title=f'%preview {" ".join(output_files)}')

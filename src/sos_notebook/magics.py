@@ -261,7 +261,7 @@ class Capture_Magic(SoS_Magic):
                 self.sos_kernel.send_frontend_msg('display_data',
                                               {'metadata': {},
                                                'data': {'text/plain': pprint.pformat(content)}
-                                               }, title="__captured", append=False, page='Preview')
+                                               })
         self.sos_kernel._meta['capture_result'] = None
 
 
@@ -680,7 +680,41 @@ class Preview_Magic(SoS_Magic):
         else:
             return txt, self.sos_kernel.format_obj(obj)
 
-    def preview_file(self, filename, style=None, title=''):
+    def show_preview_result(self, result):
+        if not result:
+            return
+        if isinstance(result, str):
+            if result.startswith('HINT: '):
+                result = result.splitlines()
+                hint_line = result[0][6:].strip()
+                result = '\n'.join(result[1:])
+                self.sos_kernel.send_frontend_msg('display_data',
+                                              {
+                                                  'metadata': {},
+                                                  'data': {'text/html': HTML(
+                                                      f'<div class="sos_hint">{hint_line}</div>').data}
+                                              })
+            if result:
+                self.sos_kernel.send_frontend_msg('stream',
+                                              {'name': 'stdout',
+                                                  'text': result},
+                                              )
+        elif isinstance(result, dict):
+            self.sos_kernel.send_frontend_msg('display_data',
+                                          {'data': result, 'metadata': {}},
+                                          )
+        elif isinstance(result, (list, tuple)) and len(result) == 2:
+            self.sos_kernel.send_frontend_msg('display_data',
+                                          {'data': result[0],
+                                           'metadata': result[1]},
+                                          )
+        else:
+            self.sos_kernel.send_frontend_msg('stream',
+                                          dict(
+                                              name='stderr', text=f'Unrecognized preview content: {result}'),
+                                          )
+
+    def preview_file(self, filename, style=None):
         if not os.path.isfile(filename):
             self.sos_kernel.warn('\n> ' + filename + ' does not exist')
             return
@@ -691,7 +725,7 @@ class Preview_Magic(SoS_Magic):
                                           'text/html': HTML(
                                               f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
                                       }
-                                      }, title=title, append=True, page='Preview')
+                                      })
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
@@ -716,14 +750,14 @@ class Preview_Magic(SoS_Magic):
                             self.sos_kernel.send_frontend_msg('stream',
                                                           dict(name='stderr',
                                                                text=f'Failed to load previewer {y}: {e}'),
-                                                          title=title, append=True, page='Preview')
+                                                          )
                             continue
                         break
                 except Exception as e:
                     self.sos_kernel.send_frontend_msg('stream', {
                         'name': 'stderr',
-                        'text': str(e)},
-                        title=title, append=True, page='Preview')
+                        'text': str(e)}
+                        )
                     continue
         #
         # if no previewer can be found
@@ -731,44 +765,13 @@ class Preview_Magic(SoS_Magic):
             return
         try:
             result = previewer_func(filename, self.sos_kernel, style)
-            if not result:
-                return
-            if isinstance(result, str):
-                if result.startswith('HINT: '):
-                    result = result.splitlines()
-                    hint_line = result[0][6:].strip()
-                    result = '\n'.join(result[1:])
-                    self.sos_kernel.send_frontend_msg('display_data',
-                                                  {
-                                                      'metadata': {},
-                                                      'data': {'text/html': HTML(
-                                                          f'<div class="sos_hint">{hint_line}</div>').data}
-                                                  }, title=title, append=True, page='Preview')
-                if result:
-                    self.sos_kernel.send_frontend_msg('stream',
-                                                  {'name': 'stdout',
-                                                      'text': result},
-                                                  title=title, append=True, page='Preview')
-            elif isinstance(result, dict):
-                self.sos_kernel.send_frontend_msg('display_data',
-                                              {'data': result, 'metadata': {}},
-                                              title=title, append=True, page='Preview')
-            elif isinstance(result, (list, tuple)) and len(result) == 2:
-                self.sos_kernel.send_frontend_msg('display_data',
-                                              {'data': result[0],
-                                               'metadata': result[1]},
-                                              title=title, append=True, page='Preview')
-            else:
-                self.sos_kernel.send_frontend_msg('stream',
-                                              dict(
-                                                  name='stderr', text=f'Unrecognized preview content: {result}'),
-                                              title=title, append=True, page='Preview')
+            self.show_preview_result(result)
         except Exception as e:
             if self.sos_kernel._debug_mode:
                 self.sos_kernel.send_frontend_msg('stream',
                                               dict(
                                                   name='stderr', text=f'Failed to preview {filename}: {e}'),
-                                              title=title, append=True, page='Preview')
+                                              )
 
     def get_parser(self):
         parser = argparse.ArgumentParser(prog='%preview',
@@ -806,7 +809,7 @@ class Preview_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_preview(self, items, kernel=None, style=None, title=''):
+    def handle_magic_preview(self, items, kernel=None, style=None):
         handled = [False for x in items]
         for idx, item in enumerate(items):
             try:
@@ -819,7 +822,7 @@ class Preview_Magic(SoS_Magic):
                         pass
                 item = os.path.expanduser(item)
                 if os.path.isfile(item):
-                    self.preview_file(item, style, title=title)
+                    self.preview_file(item, style)
                     handled[idx] = True
                     continue
                 if os.path.isdir(item):
@@ -831,14 +834,14 @@ class Preview_Magic(SoS_Magic):
                                                             'text/html': HTML(
                                                                 f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
                                                             }
-                                                   }, title=title, append=False, page='Preview')
+                                                   })
                     continue
                 else:
                     import glob
                     files = glob.glob(item)
                     if files:
                         for pfile in files:
-                            self.preview_file(pfile, style, title=title)
+                            self.preview_file(pfile, style)
                         handled[idx] = True
                         continue
             except Exception as e:
@@ -853,7 +856,7 @@ class Preview_Magic(SoS_Magic):
             self.sos_kernel.switch_kernel(kernel)
         if self.sos_kernel._meta['use_panel']:
             self.sos_kernel.send_frontend_msg(
-                'preview-kernel', self.sos_kernel.kernel, page='Preview')
+                'preview-kernel', self.sos_kernel.kernel)
         try:
             for idx, item in enumerate(items):
                 try:
@@ -866,50 +869,64 @@ class Preview_Magic(SoS_Magic):
                             pass
                     if use_sos:
                         obj_desc, preview = self.preview_var(item, style)
-                        if preview is None:
-                            continue
-                        else:
-                            format_dict, md_dict = preview
                         self.sos_kernel.send_frontend_msg('display_data',
                                                       {'metadata': {},
                                                        'data': {'text/plain': '>>> ' + item + ':\n',
                                                                 'text/html': HTML(
                                                                     f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
                                                                 }
-                                                       }, title=title, append=True, page='Preview')
+                                                       })
+                        self.show_preview_result(preview)
+                        continue
+                    # not sos
+                    if self.sos_kernel.kernel in self.sos_kernel.supported_languages:
+                        lan = self.sos_kernel.supported_languages[self.sos_kernel.kernel]
+                        kinfo = self.sos_kernel.subkernels.find(self.sos_kernel.kernel)
+                        lan_obj = lan(self.sos_kernel, kinfo.kernel)
+                        if hasattr(lan_obj, 'preview') and callable(lan_obj.preview):
+                            try:
+                                obj_desc, preview = lan_obj.preview(item)
+                                self.sos_kernel.send_frontend_msg('display_data',
+                                          {'metadata': {},
+                                           'data': {'text/plain': '>>> ' + item + ':\n',
+                                                    'text/html': HTML(
+                                                        f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
+                                                    }
+                                           })
+                                self.show_preview_result(preview)
+                            except Exception as e:
+                                self.warn(f'Failed to preview {item}: {e}')
+                            continue
+                    # if no preview function defined
+                    # evaluate the expression itself
+                    responses = self.sos_kernel.get_response(
+                        item, ['stream', 'display_data', 'execution_result', 'error'])
+                    if not self.sos_kernel._debug_mode:
+                        # if the variable or expression is invalid, do not do anything
+                        responses = [
+                            x for x in responses if x[0] != 'error']
+                    if responses:
                         self.sos_kernel.send_frontend_msg('display_data',
-                                                      {'execution_count': self.sos_kernel._execution_count, 'data': format_dict,
-                                                       'metadata': md_dict}, title=title, append=True, page='Preview')
+                                                      {'metadata': {},
+                                                       'data': {'text/plain': '>>> ' + item + ':\n',
+                                                                'text/html': HTML(
+                                                                    f'<div class="sos_hint">> {item}:</div>').data
+                                                                }
+                                                       })
+                        for response in responses:
+                            # self.sos_kernel.warn(f'{response[0]} {response[1]}' )
+                            self.sos_kernel.send_frontend_msg(
+                                response[0], response[1])
                     else:
-                        # evaluate
-                        responses = self.sos_kernel.get_response(
-                            item, ['stream', 'display_data', 'execution_result', 'error'])
-                        if not self.sos_kernel._debug_mode:
-                            # if the variable or expression is invalid, do not do anything
-                            responses = [
-                                x for x in responses if x[0] != 'error']
-                        if responses:
-                            self.sos_kernel.send_frontend_msg('display_data',
-                                                          {'metadata': {},
-                                                           'data': {'text/plain': '>>> ' + item + ':\n',
-                                                                    'text/html': HTML(
-                                                                        f'<div class="sos_hint">> {item}:</div>').data
-                                                                    }
-                                                           }, title=title, append=True, page='Preview')
-                            for response in responses:
-                                # self.sos_kernel.warn(f'{response[0]} {response[1]}' )
-                                self.sos_kernel.send_frontend_msg(
-                                    response[0], response[1], title=title, append=True, page='Preview')
-                        else:
-                            raise ValueError(
-                                f'Cannot preview expresison {item}')
+                        raise ValueError(
+                            f'Cannot preview expresison {item}')
                 except Exception as e:
                     if not handled[idx]:
                         self.sos_kernel.send_frontend_msg('stream',
                                                       dict(name='stderr',
                                                            text='> Failed to preview file or expression {}{}'.format(
-                                                               item, f': {e}' if self.sos_kernel._debug_mode else '')),
-                                                      title=title, append=True, page='Preview')
+                                                               item, f': {e}' if self.sos_kernel._debug_mode else ''))
+                                                      )
         finally:
             self.sos_kernel.switch_kernel(orig_kernel)
 
@@ -954,8 +971,7 @@ class Preview_Magic(SoS_Magic):
                     },
                     'metadata': {}
                 }
-                self.sos_kernel.send_frontend_msg('display_data', content,
-                                              title='%preview --workflow', page='Workflow')
+                self.sos_kernel.send_frontend_msg('display_data', content)
                 self.sos_kernel.send_frontend_msg('highlight-workflow', ta_id)
             if not args.items:
                 return
@@ -973,11 +989,10 @@ class Preview_Magic(SoS_Magic):
             else:
                 # clear the page
                 self.sos_kernel.send_frontend_msg(
-                    'display_data', {}, page='Preview')
+                    'display_data', {})
             if args.host is None:
                 self.handle_magic_preview(
-                    args.items, args.kernel, style,
-                    title=title)
+                    args.items, args.kernel, style)
             elif args.workflow:
                 self.sos_kernel.warn(
                     'Invalid option --kernel with -r (--host)')
@@ -996,7 +1011,7 @@ class Preview_Magic(SoS_Magic):
                         self.sos_kernel.warn(f'Running "{" ".join(rargs)}"')
                     for msg in eval(subprocess.check_output(rargs)):
                         self.sos_kernel.send_frontend_msg(
-                            msg[0], msg[1], title=title, append=True, page='Preview')
+                            msg[0], msg[1])
                 except Exception as e:
                     self.sos_kernel.warn('Failed to preview {} on remote host {}{}'.format(
                         args.items, args.host, f': {e}' if self.sos_kernel._debug_mode else ''))
