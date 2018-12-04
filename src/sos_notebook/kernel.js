@@ -27,6 +27,7 @@ define([
   window.KernelName = {};
   window.LanguageName = {};
   window.KernelList = [];
+  window.JsLoaded = new Map();
   window.KernelOptions = {};
   window.events = require("base/js/events");
   window.Jupyter = require("base/js/namespace");
@@ -98,6 +99,7 @@ define([
   if (!nb.metadata["sos"]["version"]) {
     save_kernel_info();
   }
+
   window.filterDataFrame = function(id) {
     var input = document.getElementById("search_" + id);
     var filter = input.value.toUpperCase();
@@ -184,30 +186,26 @@ define([
     // if some kernel is not registered add them
   }
 
-  function load_kernel_js() {
+  function load_kernel_js(kernel_name) {
     let specs = IPython.kernelselector.kernelspecs;
-    Object.keys(specs).forEach(
-      key => {
-        let ks = specs[key];
-        if (key === 'sos' || !ks.resources["kernel.js"]) {
-          return;
-        }
-        console.info(`Dynamically requiring ${ks.resources["kernel.js"]}`);
-        requirejs([ks.resources['kernel.js']],
-          function (kernel_mod) {
-            if (kernel_mod && kernel_mod.onload) {
-              kernel_mod.onload();
-            } else {
-              console.warn("Kernel " + ks.name + " has a kernel.js file that does not contain "+
-                         "any asynchronous module definition. This is undefined behavior "+
-                         "and not recommended.");
-              }
-            }, function (err) {
-              console.warn("Failed to load kernel.js from ", ks.resources['kernel.js'], err);
+    let ks = specs[kernel_name];
+    if (ks.resources["kernel.js"]) {
+      console.info(`Dynamically requiring ${ks.resources["kernel.js"]}`);
+      requirejs([ks.resources['kernel.js']],
+        function (kernel_mod) {
+          if (kernel_mod && kernel_mod.onload) {
+            kernel_mod.onload();
+          } else {
+            console.warn("Kernel " + ks.name + " has a kernel.js file that does not contain "+
+                       "any asynchronous module definition. This is undefined behavior "+
+                       "and not recommended.");
             }
-          );
-      }
-    )
+          }, function (err) {
+            console.warn("Failed to load kernel.js from ", ks.resources['kernel.js'], err);
+          }
+        );
+    }
+    window.JsLoaded.set(kernel_name, true);
   }
 
   function hasTOCMagic(code) {
@@ -412,7 +410,11 @@ define([
     }
 
     if (type) {
-      var base_mode = window.LanguageName[type] || window.KernelName[type] || type;
+      let kernel_name = window.KernelName[type];
+      if (kernel_name !== 'sos' && !window.JsLoaded[kernel_name]) {
+        load_kernel_js(kernel_name);
+      }
+      var base_mode = window.LanguageName[type] || kernel_name || type;
       if (!base_mode || base_mode.toLowerCase() === 'sos') {
         cell.user_highlight = 'auto';
         cell.code_mirror.setOption('mode', 'sos');
@@ -763,7 +765,6 @@ define([
         }
         //add dropdown menu of kernels in frontend
         load_select_kernel();
-        load_kernel_js();
         console.log("kernel list updated");
       } else if (msg_type === "cell-kernel") {
         // get cell from passed cell index, which was sent through the
@@ -2310,10 +2311,14 @@ table.task_table {
         ip[0].style.backgroundColor = "";
         op[0].style.backgroundColor = "";
       }
+      let kernel_name = window.KernelName[this.value];
+      if (kernel_name !== 'sos' && !window.JsLoaded[kernel_name]) {
+        load_kernel_js(kernel_name);
+      }
       // https://github.com/vatlab/sos-notebook/issues/55
       cell.user_highlight = {
         name: 'sos',
-        base_mode: window.LanguageName[this.value] || window.KernelName[this.value] || this.value,
+        base_mode: window.LanguageName[this.value] || kernel_name || this.value,
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
       cell.code_mirror.setOption('mode', cell.user_highlight);
