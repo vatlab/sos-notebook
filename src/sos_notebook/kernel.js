@@ -184,6 +184,32 @@ define([
     // if some kernel is not registered add them
   }
 
+  function load_kernel_js() {
+    let specs = IPython.kernelselector.kernelspecs;
+    Object.keys(specs).forEach(
+      key => {
+        let ks = specs[key];
+        if (key === 'sos' || !ks.resources["kernel.js"]) {
+          return;
+        }
+        console.info(`Dynamically requiring ${ks.resources["kernel.js"]}`);
+        requirejs([ks.resources['kernel.js']],
+          function (kernel_mod) {
+            if (kernel_mod && kernel_mod.onload) {
+              kernel_mod.onload();
+            } else {
+              console.warn("Kernel " + ks.name + " has a kernel.js file that does not contain "+
+                         "any asynchronous module definition. This is undefined behavior "+
+                         "and not recommended.");
+              }
+            }, function (err) {
+              console.warn("Failed to load kernel.js from ", ks.resources['kernel.js'], err);
+            }
+          );
+      }
+    )
+  }
+
   function hasTOCMagic(code) {
     let lines = code.split("\n");
     for (let l = 0; l < lines.length; ++l) {
@@ -737,6 +763,7 @@ define([
         }
         //add dropdown menu of kernels in frontend
         load_select_kernel();
+        load_kernel_js();
         console.log("kernel list updated");
       } else if (msg_type === "cell-kernel") {
         // get cell from passed cell index, which was sent through the
@@ -2538,6 +2565,8 @@ table.task_table {
           let mode = findMode(parserConf.base_mode.toLowerCase());
           if (mode) {
             base_mode = CodeMirror.getMode(conf, mode);
+          } else {
+            base_mode = CodeMirror.getMode(conf, parserConf.base_mode.toLowerCase())
           }
           // } else {
           //   console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);

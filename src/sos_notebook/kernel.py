@@ -150,7 +150,7 @@ class Subkernels(object):
                               color=lan_map[spec][1], options=lan_map[spec][2]))
             else:
                 # undefined language also use default theme color
-                self._kernel_list.append(subkernel(name=spec, kernel=spec))
+                self._kernel_list.append(subkernel(name=spec, kernel=spec, language=km.get_kernel_spec(spec).language))
 
     def kernel_list(self):
         return self._kernel_list

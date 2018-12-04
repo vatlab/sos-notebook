@@ -199,7 +199,7 @@ class Tapped_Executor(mp.Process):
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
-            cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
+            cmd = f'sos run .sos/interactive.sos {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
             ret_code = pexpect_run(
                 cmd, shell=True, stdout_socket=stdout_socket)
             informer_socket.send_pyobj(
@@ -261,8 +261,6 @@ def execute_pending_workflow(cell_ids, kernel):
 
 
 def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False):
-    env.log_to_file(f'add {kernel.cell_id}')
-
     # when user asks to execute a cell as workflow. We either
     # execute the workflow or put it in queue
     global g_workflow_queue
