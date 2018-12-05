@@ -10,9 +10,6 @@
 [submodule "src/sos-matlab"]
 	path = src/sos-matlab
 	url = https://github.com/vatlab/sos-matlab.git
-[submodule "src/sos-julia"]
-	path = src/sos-julia
-	url = https://github.com/vatlab/sos-julia.git
 [submodule "src/sos-ruby"]
 	path = src/sos-ruby
 	url = https://github.com/vatlab/sos-ruby.git
