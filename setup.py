@@ -64,7 +64,7 @@ setup(name="sos-notebook",
       classifiers=[
           'Development Status :: 4 - Beta',
           'Environment :: Console',
-          'License :: OSI Approved :: BSD',
+          'License :: OSI Approved :: BSD License',
           'Natural Language :: English',
           'Operating System :: POSIX :: Linux',
           'Operating System :: MacOS :: MacOS X',
