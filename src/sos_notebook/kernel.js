@@ -1379,21 +1379,21 @@ define([
       tooltip: nb.tooltip,
     });
     cell.metadata.kernel = 'SoS';
-    add_lan_selector(cell).css("margin-top", "-17pt").css("margin-right", "0pt");
+    add_lan_selector(cell); // .css("margin-top", "-17pt").css("margin-right", "0pt");
     cell.set_input_prompt();
     cell.is_panel = true;
     $("#panel").append(this.cell.element);
 
     cell.render();
     cell.refresh();
-    this.cell.element.hide();
+    this.cell.element.addClass('panel-cell').hide();
 
     // remove cell toolbar
     $(".celltoolbar", cell.element).remove();
     $(".ctb_hideshow", cell.element).remove();
     //this.cell.element.find("code_cell").css("position", "absolute").css("top", "1.5em");
-    this.cell.element.find("div.input_prompt").addClass("panel_input_prompt").text("In [-]:");
-    this.cell.element.find("div.input_area").css("margin-top", "20pt");
+    this.cell.element.find("div.input_prompt").addClass("panel_input_prompt").text("[ ]:");
+    // this.cell.element.find("div.input_area").css("margin-top", "20pt");
 
     // make the font of the panel slightly smaller than the main notebook
     // unfortunately the code mirror input cell has fixed font size that cannot
@@ -1692,8 +1692,8 @@ define([
 .sidebar-wrapper {
     height: 100%;
     left: 5px;
-    padding: 5px;
-    padding-top: 10px;
+    margin: 5px;
+    /* padding-top: 10px; */
     position: fixed !important;
     width: 25%;
     max-width: 50%;
@@ -1776,7 +1776,10 @@ define([
 }
 
 #panel-wrapper .cell {
-    padding: 0pt;
+    padding-right: 5pt;
+    padding-top: 10px;
+    border-top-style: solid;
+    border-top-color: rgb(171, 171, 171);
 }
 
 #panel-wrapper .panel-item-num {
@@ -1820,8 +1823,8 @@ pre.section-header.CodeMirror-line {
 }
 
 .panel_input_prompt {
-    position: absolute;
-    min-width: 0pt;
+  /*  position: absolute;
+    min-width: 0pt; */
 }
 
 .input_dropdown {
@@ -2058,8 +2061,9 @@ table.task_table {
 
 /* side panel */
 #panel-wrapper #panel .prompt {
- min-width: 0px;
-}
+  /* min-width: 0px; */
+ }
+
 #panel-wrapper #panel .output_prompt,
 #panel-wrapper #panel .output_prompt_overplay {
  min-width: 0px;
@@ -2077,6 +2081,12 @@ table.task_table {
 
 #panel-wrapper #panel .output_scroll {
   height: auto;
+}
+
+.panel-cell {
+  position: absolute !important;
+  bottom: 5px;
+  margin-right: 5px;
 }
 
 .cm-sos-interpolated {
