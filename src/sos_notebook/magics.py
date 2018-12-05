@@ -975,21 +975,6 @@ class Preview_Magic(SoS_Magic):
                 self.sos_kernel.send_frontend_msg('highlight-workflow', ta_id)
             if not args.items:
                 return
-            if args.host:
-                title = f'%preview {" ".join(args.items)} -r {args.host}'
-            else:
-                title = f'%preview {" ".join(args.items)}'
-            # reset preview panel
-            if not self.sos_kernel._meta['use_panel']:
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                          {
-                                              'metadata': {},
-                                              'data': {'text/html': HTML(f'<div class="sos_hint">{title}</div>').data}
-                                          })
-            else:
-                # clear the page
-                self.sos_kernel.send_frontend_msg(
-                    'display_data', {})
             if args.host is None:
                 self.handle_magic_preview(
                     args.items, args.kernel, style)

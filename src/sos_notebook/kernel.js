@@ -930,15 +930,15 @@ define([
           nb.select(active[0]);
         }
       } else if (msg_type === 'transient_display_data') {
-        cell = window.my_panel.cell;
+        cell = create_panel_cell('', 'SoS');
         // append the output
         data.output_type = 'display_data';
         cell.output_area.append_output(data);
       } else {
         // this is preview output
-        cell = window.my_panel.cell;
+        cell = create_panel_cell('', 'SoS');
         data.output_type = msg_type;
-        cell.output_area.append_output(data);
+        last_cell.output_area.append_output(data);
       }
       adjustPanel();
     });
@@ -1361,6 +1361,45 @@ define([
     $(window).trigger("resize");
   }
 
+  function create_panel_cell(text, kernel) {
+    if (!text && window.last_panel_output_cell) {
+      return window.last_panel_output_cell
+    }
+
+    // create my cell
+    var cell = new CodeCell(nb.kernel, {
+      events: nb.events,
+      config: nb.config,
+      //keyboard_manager: nb.keyboard_manager,
+      notebook: nb,
+      tooltip: nb.tooltip,
+    });
+    cell.element.addClass(text ? 'console-cell' : 'console-output-cell');
+    cell.metadata.kernel = kernel;
+    if (text) {
+      add_lan_selector(cell);
+      cell.set_input_prompt();
+      cell.set_text(text)
+      cell.code_mirror.setOption('readOnly', true);
+      changeStyleOnKernel(cell);
+    }
+
+    // remove cell toolbar
+    $(".celltoolbar", cell.element).remove();
+    $(".ctb_hideshow", cell.element).remove();
+    cell.element[0].style.fontSize = "90%";
+
+    $("#panel").append(cell.element);
+    cell.render();
+    cell.refresh();
+
+    window.last_panel_output_cell = text ? null : cell;
+    $('#panel').animate({scrollTop:
+      $('#panel').scrollTop() +
+      ($(cell.element[0]).offset().top - $('#panel').offset().top)});
+    return cell;
+  }
+
   var panel = function(nb) {
     var panel = this;
     this.notebook = nb;
@@ -1382,11 +1421,11 @@ define([
     add_lan_selector(cell); // .css("margin-top", "-17pt").css("margin-right", "0pt");
     cell.set_input_prompt();
     cell.is_panel = true;
-    $("#panel").append(this.cell.element);
+    $("#panel-wrapper").append(this.cell.element);
 
     cell.render();
     cell.refresh();
-    this.cell.element.addClass('panel-cell').hide();
+    this.cell.element.addClass('anchor-cell');
 
     // remove cell toolbar
     $(".celltoolbar", cell.element).remove();
@@ -1461,7 +1500,10 @@ define([
     wrap_execute();
 
     if (this.cell.element[0].contains(document.activeElement)) {
-      this.cell.execute();
+      let cell = create_panel_cell(this.cell.get_text(),
+        this.cell.metadata.kernel);
+      cell.execute();
+      this.cell.clear_input();
     } else {
       this.notebook.execute_cell_and_select_below();
     }
@@ -1473,7 +1515,10 @@ define([
     wrap_execute();
 
     if (this.cell.element[0].contains(document.activeElement)) {
-      this.cell.execute();
+      let cell = create_panel_cell(this.cell.get_text(),
+        this.cell.metadata.kernel);
+      cell.execute();
+      this.cell.clear_input();
     } else {
       this.notebook.execute_selected_cells();
     }
@@ -1590,20 +1635,8 @@ define([
     if (!nb.metadata["sos"]["panel"].displayed)
       toggle_panel();
     //
-    var panel_cell = window.my_panel.cell;
-    // change cell kernel to sending cell if sending cell is code
-    if (cell.cell_type === "code") {
-      // set the kernel of the panel cell as the sending cell
-      var col = cell.element[0].getElementsByClassName("input_prompt")[0].style.backgroundColor;
-      if (panel_cell.metadata.kernel !== cell.metadata.kernel) {
-        panel_cell.metadata.kernel = cell.metadata.kernel;
-        col = changeStyleOnKernel(panel_cell);
-      }
-      // if in sos mode and is single line, enable automatic preview
-      var cell_kernel = cell.metadata.kernel;
-    } else {
-      var cell_kernel = panel_cell.metadata.kernel;
-    }
+    let cell_kernel = cell.metadata.kernel;
+
     if (KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
       text = "%preview " + text;
     } else if (KernelOptions[cell_kernel]["assignment_pattern"]) {
@@ -1613,10 +1646,7 @@ define([
         text = "%preview -o " + matched[1] + "\n" + text;
       }
     }
-    panel_cell.clear_input();
-    panel_cell.set_text(text);
-    panel_cell.clear_output();
-    panel_cell.execute();
+    create_panel_cell(text, cell_kernel).execute();
     return false;
   };
 
@@ -1671,7 +1701,7 @@ define([
   color: #333333;
   /* white-space: nowrap; */
   overflow-x: auto;
-  height: 100%;
+  height: calc(100% - 50px);
 }
 
 .float-wrapper {
@@ -1775,11 +1805,24 @@ define([
     display: none;
 }
 
-#panel-wrapper .cell {
+#panel-wrapper .anchor-cell {
     padding-right: 5pt;
     padding-top: 10px;
     border-top-style: solid;
     border-top-color: rgb(171, 171, 171);
+}
+
+#panel-wrapper .console-cell .input_area {
+  border: none;
+  background: none;
+}
+
+#panel-wrapper .console-output-cell .input {
+  display: none;
+}
+
+#panel-wrapper .console-output-cell .output_area .prompt {
+  display: none;
 }
 
 #panel-wrapper .panel-item-num {
@@ -2083,7 +2126,7 @@ table.task_table {
   height: auto;
 }
 
-.panel-cell {
+.anchor-cell {
   position: absolute !important;
   bottom: 5px;
   margin-right: 5px;
@@ -2302,10 +2345,6 @@ table.task_table {
     events.on("kernel_connected.Kernel", function() {
       // Issue #1: need to re-register sos_comm after kernel is restarted.
       register_sos_comm();
-      var cell = window.my_panel.cell;
-      // do not clear existing content
-      if (!cell.get_text())
-        show_toc()
     });
     // #550
     events.on("select.Cell", set_codemirror_option);
