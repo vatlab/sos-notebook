@@ -1370,17 +1370,18 @@ define([
     var cell = new CodeCell(nb.kernel, {
       events: nb.events,
       config: nb.config,
-      //keyboard_manager: nb.keyboard_manager,
+      keyboard_manager: nb.keyboard_manager,
       notebook: nb,
       tooltip: nb.tooltip,
     });
     cell.element.addClass(text ? 'console-cell' : 'console-output-cell');
     cell.metadata.kernel = kernel;
+    cell.metadata.editable = false;
     if (text) {
-      add_lan_selector(cell);
+      add_lan_selector(cell).prop('disabled', true);
       cell.set_input_prompt();
       cell.set_text(text)
-      cell.code_mirror.setOption('readOnly', true);
+
       changeStyleOnKernel(cell);
     }
 
@@ -1504,8 +1505,6 @@ define([
         this.cell.metadata.kernel);
       cell.execute();
       this.cell.clear_input();
-    } else {
-      this.notebook.execute_cell_and_select_below();
     }
   };
 
@@ -1519,8 +1518,6 @@ define([
         this.cell.metadata.kernel);
       cell.execute();
       this.cell.clear_input();
-    } else {
-      this.notebook.execute_selected_cells();
     }
   };
 
@@ -1637,9 +1634,9 @@ define([
     //
     let cell_kernel = cell.metadata.kernel;
 
-    if (KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
+    if (KernelOptions[cell_kernel] && KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
       text = "%preview " + text;
-    } else if (KernelOptions[cell_kernel]["assignment_pattern"]) {
+    } else if (KernelOptions[cell_kernel] && KernelOptions[cell_kernel]["assignment_pattern"]) {
       var matched = text.match(KernelOptions[cell_kernel]["assignment_pattern"]);
       if (matched) {
         // keep output in the panel cell...
