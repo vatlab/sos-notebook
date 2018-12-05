@@ -311,7 +311,7 @@ define([
     options.sos.cell_kernel = window.my_panel.cell.metadata.kernel;
     options.sos.cell_id = '';
     options.silent = false;
-    options.store_history = false;
+    options.store_history = true;
     // if this is a command from scratch pad (not part of the notebook)
     return this.orig_execute(code, callbacks, options);
   };
