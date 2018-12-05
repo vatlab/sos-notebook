@@ -4,9 +4,6 @@
 [submodule "src/sos-python"]
 	path = src/sos-python
 	url = https://github.com/vatlab/sos-python.git
-[submodule "src/sos-javascript"]
-	path = src/sos-javascript
-	url = https://github.com/vatlab/sos-javascript.git
 [submodule "src/sos-sas"]
 	path = src/sos-sas
 	url = https://github.com/vatlab/sos-sas.git
