@@ -1505,6 +1505,8 @@ define([
         this.cell.metadata.kernel);
       cell.execute();
       this.cell.clear_input();
+    } else if (this.notebook.element[0].contains(document.activeElement)) {
+      this.notebook.execute_cell_and_select_below();
     }
   };
 
@@ -1518,6 +1520,8 @@ define([
         this.cell.metadata.kernel);
       cell.execute();
       this.cell.clear_input();
+    } else if (this.notebook.element[0].contains(document.activeElement)) {
+      this.notebook.execute_selected_cells();
     }
   };
 

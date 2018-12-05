@@ -895,7 +895,7 @@ class Preview_Magic(SoS_Magic):
                                            })
                                 self.show_preview_result(preview)
                             except Exception as e:
-                                self.warn(f'Failed to preview {item}: {e}')
+                                self.sos_kernel.warn(f'Failed to preview {item}: {e}')
                             continue
                     # if no preview function defined
                     # evaluate the expression itself
