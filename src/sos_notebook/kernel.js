@@ -1388,6 +1388,7 @@ define([
     // remove cell toolbar
     $(".celltoolbar", cell.element).remove();
     $(".ctb_hideshow", cell.element).remove();
+    $(".output_wrapper", cell.element).remove();
     cell.element[0].style.fontSize = "90%";
 
     $("#panel").append(cell.element);
@@ -1702,7 +1703,8 @@ define([
   color: #333333;
   /* white-space: nowrap; */
   overflow-x: auto;
-  height: calc(100% - 50px);
+  flex: 1 1 auto;
+  margin-bottom: 10px;
 }
 
 .float-wrapper {
@@ -1733,6 +1735,8 @@ define([
     border-color: #eeeeee;
     opacity: .99;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .col-md-9 {
@@ -1808,9 +1812,6 @@ define([
 
 #panel-wrapper .anchor-cell {
     padding-right: 5pt;
-    padding-top: 10px;
-    border-top-style: solid;
-    border-top-color: rgb(171, 171, 171);
 }
 
 #panel-wrapper .console-cell .input_area {
@@ -2128,9 +2129,9 @@ table.task_table {
 }
 
 .anchor-cell {
-  position: absolute !important;
   bottom: 5px;
   margin-right: 5px;
+  flex: 0 1 auto;
 }
 
 .cm-sos-interpolated {
