@@ -1,9 +1,6 @@
 [submodule "src/sos-r"]
 	path = src/sos-r
 	url = https://github.com/vatlab/sos-r.git
-[submodule "src/sos-bash"]
-	path = src/sos-bash
-	url = https://github.com/vatlab/sos-bash.git
 [submodule "src/sos-python"]
 	path = src/sos-python
 	url = https://github.com/vatlab/sos-python.git
