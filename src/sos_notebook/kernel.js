@@ -1247,48 +1247,7 @@ define([
     });
 
     // enable dragging and save position on stop moving
-    $("#panel-wrapper").draggable({
-
-      drag: function(event, ui) {
-
-        // If dragging to the left side, then transforms in sidebar
-        if ((ui.position.left <= 0) && (nb.metadata["sos"]["panel"].style === "float")) {
-          nb.metadata["sos"]["panel"].style = "side";
-          nb.metadata["sos"]["panel"].height = $("#panel-wrapper").css("height");
-          panel_wrapper.removeClass("float-wrapper").addClass("sidebar-wrapper");
-          $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 30);
-          $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 30);
-          ui.position.top = $("#header").height();
-          ui.position.left = 0;
-          $("#panel-wrapper").css("height", $("#site").height());
-        }
-        if (ui.position.left <= 0) {
-          ui.position.left = 0;
-          ui.position.top = $("#header").height();
-        }
-        if ((ui.position.left > 0) && (nb.metadata["sos"]["panel"].style === "side")) {
-          nb.metadata["sos"]["panel"].style = "float";
-          if (nb.metadata["sos"]["panel"].height === 0) {
-            nb.metadata["sos"]["panel"].height = Math.max($("#site").height() / 2, 200);
-          }
-          $("#panel-wrapper").css("height", nb.metadata["sos"]["panel"].height);
-          panel_wrapper.removeClass("sidebar-wrapper").addClass("float-wrapper");
-          $("#notebook-container").css("margin-left", 30);
-          $("#notebook-container").css("width", $("#notebook").width() - 30);
-        }
-
-      }, //end of drag function
-      start: function(event, ui) {
-        $(this).width($(this).width());
-      },
-      stop: function(event, ui) {
-        // Ensure position is fixed (again)
-        $("#panel-wrapper").css("position", "fixed");
-      },
-      // can only drag from the border, not the panel and the cell. This
-      // allows us to, for example, copy/paste output area.
-      cancel: "#panel, #input"
-    });
+    $("#panel-wrapper").draggable({ disabled: true });
 
     $("#panel-wrapper").resizable({
       resize: function(event, ui) {
@@ -1705,21 +1664,6 @@ define([
   overflow-x: auto;
   flex: 1 1 auto;
   margin-bottom: 10px;
-}
-
-.float-wrapper {
-  position: fixed !important;
-  top: 120px;
-  /* max-width:600px; */
-  right: 20px;
-  border: thin solid rgba(0, 0, 0, 0.38);
-  border-radius: 5px;
-  /* padding:5px;
-  padding-top:10px;
-  background-color: #F8F5E1; */
-  opacity: .8;
-  z-index: 100;
-  overflow: hidden;
 }
 
 .sidebar-wrapper {
