@@ -1379,7 +1379,8 @@ define([
       tooltip: nb.tooltip,
     });
     cell.metadata.kernel = 'SoS';
-    add_lan_selector(cell); // .css("margin-top", "-17pt").css("margin-right", "0pt");
+    add_lan_selector(cell);
+    add_panel_icons(cell);
     cell.set_input_prompt();
     cell.is_panel = true;
     $("#panel-wrapper").append(this.cell.element);
@@ -1772,9 +1773,21 @@ define([
 }
 
 #panel-wrapper .panel-item-num {
-    font-style: normal;
-    font-family: Georgia, Times New Roman, Times, serif;
-    color: black;
+  font-style: normal;
+  font-family: Georgia, Times New Roman, Times, serif;
+  color: black;
+}
+
+ul.panel-icons {
+  list-style: none;
+  display: flex;
+  margin-top: -22px;
+  position: absolute;
+  left: 25px;
+}
+
+.panel-icons li {
+  padding-right: 0.5em;
 }
 
 pre.section-header.CodeMirror-line {
@@ -1821,6 +1834,11 @@ pre.section-header.CodeMirror-line {
     margin-right: 2pt;
     margin-top: 5pt;
     z-index: 1000;
+}
+
+#panel-wrapper .cell_kernel_selector {
+  margin-top: -17pt;
+  margin-right: 0pt;
 }
 
 
@@ -2076,6 +2094,8 @@ table.task_table {
   bottom: 5px;
   margin-right: 5px;
   flex: 0 1 auto;
+  margin-top: 2em !important;
+  margin-bottom: 10px !important;
 }
 
 .cm-sos-interpolated {
@@ -2241,6 +2261,16 @@ table.task_table {
 
     cell.element.find("div.input_area").prepend(select);
     return select;
+  }
+
+
+  function add_panel_icons(cell) {
+    let ul = $("<ul/>").addClass('panel-icons').append(
+      '<li><a href="" target="_blank"><i class="fa fa-save"></i></a></li>'
+    ).append(
+      '<li><a href="" target="_blank"><i class="fa fa-code"></i></a></li>'
+    );
+    cell.element.find("div.input_area").prepend(ul);
   }
 
   function highlight_cells(cells, i, interval) {
