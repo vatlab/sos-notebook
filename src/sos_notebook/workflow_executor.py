@@ -48,7 +48,7 @@ class NotebookLoggingHandler(logging.Handler):
         self.kernel.send_frontend_msg('display_data', {
             'metadata': {},
             'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
-        }, title=self.title, append=True, page='SoS')
+        })
         #self.kernel.send_response(self.kernel.iopub_socket, 'stream',
         #                          {'name': 'stdout', 'text': record.msg})
 
