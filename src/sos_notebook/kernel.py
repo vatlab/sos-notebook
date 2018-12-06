@@ -496,16 +496,6 @@ class SoS_Kernel(IPythonKernel):
                     self.subkernels.notify_frontend()
                 elif k == 'set-editor-kernel':
                     self.editor_kernel = v
-                elif k == 'kill-task':
-                    # kill specified task
-                    from sos.hosts import Host
-                    Host(v[1])._task_engine.kill_tasks([v[0]])
-                    self.send_frontend_msg('task_status',
-                                           {
-                                               'task_id': v[0],
-                                               'queue': v[1],
-                                               'status': 'abort'
-                                           })
                 elif k == 'cancel-workflow':
                     from .workflow_executor import cancel_workflow
                     cancel_workflow(v[0], self)

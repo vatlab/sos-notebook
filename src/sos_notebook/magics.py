@@ -2033,16 +2033,15 @@ class Task_Magic(SoS_Magic):
                 try:
                     # return creation time, start time, and duration
                     tid, tags, _, tst = line.split('\t')
-                    env.tapping_listener_socket.send_pyobj({
-                        'msg_type': 'task_status',
-                        'data': {
+                    self.sos_kernel.send_frontend_msg('task_status',
+                        {
                             'update_only': True,
                             'queue': args.queue,
                             'task_id': tid,
                             'status': tst,
                             'tags': tags
                         }
-                    })
+                    )
                 except Exception as e:
                     env.logger.warning(
                         f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
@@ -2052,8 +2051,16 @@ class Task_Magic(SoS_Magic):
         return
 
     def kill(self, args):
-        self.sos_kernel.warn(args)
-        return
+        # kill specified task
+        from sos.hosts import Host
+        Host(args.queue)._task_engine.kill_tasks(args.tasks)
+        for tid in args.tasks:
+            self.sos_kernel.send_frontend_msg('task_status',
+               {
+                   'task_id': tid,
+                   'queue': args.queue,
+                   'status': 'abort'
+               })
 
     def purge(self, args):
         self.sos_kernel.warn(args)
