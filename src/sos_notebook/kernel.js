@@ -1710,6 +1710,7 @@ define([
   font-family: monospace;
 }
 
+.ui-icon { display: none !important; }
 
 /* dont waste so much screen space... */
 #panel-wrapper .panel-item{
@@ -1750,7 +1751,7 @@ define([
 
 #panel-wrapper .console-cell .input_area {
   border: none;
-  background: none;
+  /* background: none */;
 }
 
 #panel-wrapper .console-output-cell .input {
@@ -2108,9 +2109,8 @@ table.task_table {
 .anchor-cell {
   bottom: 5px;
   margin-right: 5px;
-  flex: 0 1 auto;
+  flex: 1 0 auto;
   margin-top: 2em !important;
-  margin-bottom: 10px !important;
 }
 
 .cm-sos-interpolated {
