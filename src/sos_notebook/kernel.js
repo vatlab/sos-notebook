@@ -621,19 +621,19 @@ define([
     }
 
     let action_func = {
-        'pending': kill_task,
-        'submitted': kill_task,
-        'running': kill_task,
-        'completed': resume_task,
-        'failed': resume_task,
-        'aborted': resume_task,
-        'missing': function(){},
+        'pending': 'kill',
+        'submitted': 'kill',
+        'running': 'kill',
+        'completed': 'resume',
+        'failed': 'resume',
+        'aborted': 'resume',
+        'missing': '',
     }
 
     // look for status etc and update them.
     let onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
     let onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
-    let onclick = `onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}');"`;
+    let onclick = `onclick="task_action({action: '${action_func[info.status]}', task: '${info.task_id}', queue:'${info.queue}'});"`;
     let tags = info.tags.split(/\s+/g);
     let tags_elems = ''
     for (let ti=0; ti < tags.length; ++ti) {
@@ -641,7 +641,12 @@ define([
       if (!tag) {
         continue;
       }
-      tags_elems += `<pre class="task_tag_${tag}">${tag}</pre>`;
+      tags_elems += `<pre class="task_tags task_tag_${tag}">${tag}` +
+        `<div class="task_tag_actions">` +
+        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `</div></pre>`;
     }
 
     let data = {
@@ -657,7 +662,7 @@ define([
       ${onmouseover} ${onmouseleave} ${onclick}></i>
     </td>
     <td class="task_id">
-      <div onclick="task_info('${info.task_id}', '${info.queue}')">
+      <div onclick="task_action({action:'status', task:'${info.task_id}', queue:'${info.queue}'})">
       <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
       </div>
     </td>
@@ -989,22 +994,14 @@ define([
     });
   };
 
-  window.kill_task = function(task_id, task_queue) {
-    console.log("Kill " + task_id);
-    send_kernel_msg({
-      "kill-task": [task_id, task_queue],
-    });
-  };
-
-  window.resume_task = function(task_id, task_queue) {
-    console.log("Resume " + task_id);
-    send_kernel_msg({
-      "resume-task": [task_id, task_queue],
-    });
-  };
-
-  window.task_info = function(task_id, task_queue) {
-    create_panel_cell(`%taskinfo ${task_id} -q ${task_queue}`).execute();
+  window.task_action = function(param) {
+    console.log(param)
+    if (!param.action) {
+      return;
+    }
+    create_panel_cell(`%task ${param.action} ${param.task}` +
+      (param.tag ? ` -t ${param.tag}` : '') +
+      (param.queue ? ` -q ${param.queue}` : '')).execute();
     scrollPanel();
   };
 
@@ -1951,6 +1948,19 @@ time.pending, time.submitted, time.running,
 table.workflow_table,
 table.task_table {
   border: 0px;
+}
+
+.task_tag_actions {
+  display: none;
+}
+
+.task_tag_actions .fa:hover {
+  color: blue;
+}
+
+.task_tags:hover .task_tag_actions {
+  display: flex;
+  flex-direction: row;
 }
 
 table.workflow_table i,
