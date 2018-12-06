@@ -1321,7 +1321,6 @@ define([
     // remove cell toolbar
     $(".celltoolbar", cell.element).remove();
     $(".ctb_hideshow", cell.element).remove();
-    $(".output_wrapper", cell.element).remove();
     cell.element[0].style.fontSize = "90%";
 
     $("#panel").append(cell.element);
@@ -1356,6 +1355,8 @@ define([
     add_lan_selector(cell);
     add_panel_icons(cell);
     cell.set_input_prompt();
+    $(".output_wrapper", cell.element).remove();
+
     cell.is_panel = true;
     $("#panel-wrapper").append(this.cell.element);
 
@@ -1417,6 +1418,13 @@ define([
     }
     this.km.edit_shortcuts.add_shortcuts(shortcuts);
     this.km.command_shortcuts.add_shortcuts(shortcuts);
+
+    create_panel_cell('').output_area.append_output(
+    {
+      'output_type': 'stream',
+      'name': 'stdout',
+      'text': 'Execute command in the scratch cell below or use shortcut "Ctrl-Shift-Enter" to execute current line or selected text of cells.'
+    });
 
     this.cell.element.show();
     this.cell.focus_editor();
@@ -1798,10 +1806,14 @@ pre.section-header.CodeMirror-line {
 }
 
 .input_dropdown {
-    float: right;
-    margin-right: 2pt;
-    margin-top: 5pt;
-    z-index: 1000;
+  float: right;
+  margin-right: 2pt;
+  margin-top: 5pt;
+  z-index: 1000;
+}
+
+#panel-wrapper .console-cell .cell_kernel_selector {
+  display: none;
 }
 
 #panel-wrapper .anchor-cell .cell_kernel_selector {
@@ -1811,7 +1823,7 @@ pre.section-header.CodeMirror-line {
 
 
 .code_cell .cell_kernel_selector {
-    width:70pt;
+    /* width:70pt; */
     background: none;
     z-index: 1000;
     position: absolute;
@@ -2276,6 +2288,7 @@ table.task_table {
 
     load_panel();
     add_panel_button();
+
     // add_download_menu();
     patch_CodeCell_get_callbacks();
 
