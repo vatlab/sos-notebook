@@ -524,7 +524,7 @@ define([
     let onclick = ''
     if (info.status === 'running') {
       onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-stop"'`;
-      onmouseleave = `onmouseover='this.classList="fa fa-2x fa-fw ${status_class.running}"'`;
+      onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class.running}"'`;
       onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
     }
 
