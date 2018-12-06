@@ -2212,7 +2212,7 @@ table.task_table {
 
   function add_panel_icons(cell) {
     let ul = $("<ul/>").addClass('panel-icons').append(
-      '<li class="icon_save"><i class="fa fa-save"></i></li>'
+      '<li class="icon_save"><i class="fa fa-file-text-o"></i></li>'
     ).append(
       '<li class="icon_workflow"><i class="fa fa-code"></i></li>'
     ).append(
