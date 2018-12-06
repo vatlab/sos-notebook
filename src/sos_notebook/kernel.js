@@ -594,6 +594,9 @@ define([
       if (!info.start_time) {
         info.start_time = timer.getAttribute('datetime');
       }
+      if (!info.tags) {
+        info.tags = document.getElementById(`status_tags_${elem_id}`).innerText;
+      }
     }
 
     let action_class = {
@@ -643,9 +646,12 @@ define([
       ${onmouseover} ${onmouseleave} ${onclick}></i>
     </td>
     <td class="task_id">
-      <a href='#' onclick="task_info('${info.task_id}', '${info.queue}')">
+      <div onclick="task_info('${info.task_id}', '${info.queue}')">
       <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
-      </a>
+      </div>
+    </td>
+    <td class="task_tags">
+      <pre><i class="fa fa-fw fa-info-circle"></i><span id="status_tags_${elem_id}">${info.tags}</span></pre>
     </td>
     <td class="task_timer">
       <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
@@ -1962,16 +1968,32 @@ td.task_id
   text-align: left;
 }
 
+.task_id pre:hover
+{
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 td.workflow_index
 {
   width: 5em;
   text-align: left;
 }
 
-td.workflow_status,
-td.task_timer
+td.workflow_status
 {
   width: 20em;
+  text-align: left;
+}
+
+td.task_timer
+{
+  width: 15em;
+  text-align: left;
+}
+
+td.task_tags
+{
   text-align: left;
 }
 
