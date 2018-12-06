@@ -522,29 +522,6 @@ class SoS_Kernel(IPythonKernel):
                                                'queue': v[1],
                                                'status': 'pending'
                                            })
-                elif k == 'task-info':
-                    self._meta['use_panel'] = True
-                    from sos.hosts import Host
-                    task_queue = v[1]
-                    task_id = v[0]
-                    host = Host(task_queue)
-                    result = host._task_engine.query_tasks(
-                        [task_id], verbosity=2, html=True)
-                    # log_to_file(result)
-                    self.send_frontend_msg('display_data', {
-                        'metadata': {},
-                        'data': {'text/plain': result,
-                                 'text/html': HTML(result).data
-                                 }})
-
-                    # now, there is a possibility that the status of the task is different from what
-                    # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
-                    # already get the status, we should update the task engine...
-                    #
-                    # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
-                    status = result.split(
-                        '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
-                    host._task_engine.update_task_status(task_id, status)
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue

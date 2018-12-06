@@ -1004,10 +1004,8 @@ define([
   };
 
   window.task_info = function(task_id, task_queue) {
-    console.log("Request info on " + task_id);
-    send_kernel_msg({
-      "task-info": [task_id, task_queue],
-    });
+    create_panel_cell(`%taskinfo ${task_id} -q ${task_queue}`).execute();
+    scrollPanel();
   };
 
   window.durationFormatter = function(ms) {

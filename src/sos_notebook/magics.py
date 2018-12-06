@@ -1914,7 +1914,26 @@ class TaskInfo_Magic(SoS_Magic):
         if args.config:
             from sos.utils import load_cfg_files
             load_cfg_files(args.config)
-        self.sos_kernel.update_taskinfo(args.task, args.queue)
+
+        from sos.hosts import Host
+        host = Host(args.queue)
+        result = host._task_engine.query_tasks(
+            [args.task], verbosity=2, html=True)
+        # log_to_file(result)
+        self.sos_kernel.send_frontend_msg('display_data', {
+            'metadata': {},
+            'data': {'text/plain': result,
+                     'text/html': HTML(result).data
+                     }})
+
+        # now, there is a possibility that the status of the task is different from what
+        # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
+        # already get the status, we should update the task engine...
+        #
+        # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
+        status = result.split(
+            '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
+        host._task_engine.update_task_status(args.task, status)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
