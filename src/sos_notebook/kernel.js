@@ -633,6 +633,16 @@ define([
     let onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
     let onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
     let onclick = `onclick="${action_func[info.status]}('${info.task_id}', '${info.queue}');"`;
+    let tags = info.tags.split(/\s+/g);
+    let tags_elems = ''
+    for (let ti=0; ti < tags.length; ++ti) {
+      let tag = tags[ti];
+      if (!tag) {
+        continue;
+      }
+      tags_elems += `<pre class="task_tag_${tag}">${tag}</pre>`;
+    }
+
     let data = {
       'output_type': has_status_table ? 'update_display_data': 'display_data',
       'transient': {'display_id': `task_${elem_id}`},
@@ -651,7 +661,7 @@ define([
       </div>
     </td>
     <td class="task_tags">
-      <pre><i class="fa fa-fw fa-info-circle"></i><span id="status_tags_${elem_id}">${info.tags}</span></pre>
+      <span id="status_tags_${elem_id}"><pre><i class="fa fa-fw fa-info-circle"></i></pre>${tags_elems}</span>
     </td>
     <td class="task_timer">
       <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
@@ -1966,6 +1976,18 @@ td.task_id
 {
   width: 15em;
   text-align: left;
+}
+
+td.task_tags span {
+  display: inline-flex;
+}
+
+td.task_tags span pre {
+  padding-right: 0.5em;
+}
+
+td.task_tags i  {
+  margin-right: 0px;
 }
 
 .task_id pre:hover
