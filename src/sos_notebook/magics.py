@@ -2001,28 +2001,51 @@ class Task_Magic(SoS_Magic):
         return parser
 
     def status(self, args):
-        self.sos_kernel.warn(args)
-        return
         from sos.hosts import Host
         host = Host(args.queue)
-        result = host._task_engine.query_tasks(
-            [args.task], verbosity=2, html=True)
-        # log_to_file(result)
-        self.sos_kernel.send_frontend_msg('display_data', {
-            'metadata': {},
-            'data': {'text/plain': result,
-                     'text/html': HTML(result).data
-                     }})
 
-        # now, there is a possibility that the status of the task is different from what
-        # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
-        # already get the status, we should update the task engine...
-        #
-        # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
-        status = result.split(
-            '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
-        host._task_engine.update_task_status(args.task, status)
-
+        if args.tasks:
+            result = host._task_engine.query_tasks(
+                args.tasks, verbosity=2, html=True)
+            # log_to_file(result)
+            self.sos_kernel.send_frontend_msg('display_data', {
+                'metadata': {},
+                'data': {'text/plain': result,
+                         'text/html': HTML(result).data
+                         }})
+            # now, there is a possibility that the status of the task is different from what
+            # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
+            # already get the status, we should update the task engine...
+            #
+            # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
+            status = result.split(
+                '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
+            host._task_engine.update_task_status(args.tasks[0], status)
+        elif args.tags:
+            status_output = host._task_engine.query_tasks(tags=args.tags, verbosity=2)
+            env.log_to_file(f'tags={args.tags}')
+            env.log_to_file(status_output)
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
+                {'name': 'stdout', 'text': status_output })
+            for line in status_output.split('\n'):
+                if not line.strip():
+                    continue
+                try:
+                    # return creation time, start time, and duration
+                    tid, tags, _, tst = line.split('\t')
+                    env.tapping_listener_socket.send_pyobj({
+                        'msg_type': 'task_status',
+                        'data': {
+                            'update_only': True,
+                            'queue': args.queue,
+                            'task_id': tid,
+                            'status': tst,
+                            'tags': tags
+                        }
+                    })
+                except Exception as e:
+                    env.logger.warning(
+                        f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
 
     def resume(self, args):
         self.sos_kernel.warn(args)

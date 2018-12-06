@@ -351,6 +351,10 @@ define([
     }
   }
 
+  function get_cell_by_elem(elem) {
+    return nb.get_cells().find(cell => cell.element[0] === elem);
+  }
+
   function changeStyleOnKernel(cell) {
     var type = cell.cell_type === 'code' ? cell.metadata.kernel : '';
     // type should be  displayed name of kernel
@@ -569,19 +573,27 @@ define([
     // find the cell
     //console.log(info);
 
-    let elem_id = `${info.queue}_${info.task_id}`
-    let cell_id = info.cell_id
-    let cell = get_cell_by_id(cell_id);
-    if (!cell) {
-      console.log(`Cannot find cell by ID ${info.cell_id}`)
-      return;
-    }
+    let elem_id = `${info.queue}_${info.task_id}`;
     // convert between Python and JS float time
     if (info.start_time) {
       info.start_time = info.start_time * 1000;
     }
     // find the status table
     let has_status_table = document.getElementById(`task_${elem_id}`);
+    if (info.update_only && !has_status_table) {
+      return;
+    }
+    let cell_id = info.cell_id;
+    let cell = null;
+    if (cell_id) {
+      cell = get_cell_by_id(cell_id);
+    } else if (has_status_table) {
+      cell = get_cell_by_elem(has_status_table.closest('.code_cell'));
+    }
+    if (!cell) {
+      console.log(`Cannot find cell by cell ID ${info.cell_id} or task ID ${info.task_id}`)
+      return;
+    }
     // if there is an existing status table, try to retrieve its information
     // the new data does not have it
     let timer_text = '';
@@ -999,7 +1011,8 @@ define([
     if (!param.action) {
       return;
     }
-    create_panel_cell(`%task ${param.action} ${param.task}` +
+    create_panel_cell(`%task ${param.action}` +
+      (param.task ? ` ${param.task}` : '') +
       (param.tag ? ` -t ${param.tag}` : '') +
       (param.queue ? ` -q ${param.queue}` : '')).execute();
     scrollPanel();
