@@ -1732,16 +1732,7 @@ define([
     text-align: left;
 }
 
-#panel-wrapper .prompt.input_prompt {
-    padding: 0pt;
-    padding-top: 0.5em;
-}
-
 #panel-wrapper .run_this_cell {
-    display: none;
-}
-
-.output_area .run_this_cell {
     visibility: hidden;
 }
 
@@ -2089,11 +2080,6 @@ table.task_table {
 }
 
 /* side panel */
-#panel-wrapper #panel .prompt {
-  /* min-width: 0px; */
- }
-
-
 #panel-wrapper #panel div.output_area {
   display: -webkit-box;
 }
@@ -2109,7 +2095,7 @@ table.task_table {
 .anchor-cell {
   bottom: 5px;
   margin-right: 5px;
-  flex: 1 0 auto;
+  flex: 0 0 auto;
   margin-top: 2em !important;
 }
 
