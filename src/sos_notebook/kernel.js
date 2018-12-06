@@ -453,6 +453,7 @@ define([
     var cell = create_panel_cell('');
     var toc = cell.output_area.create_output_area().append(table_of_contents());
     cell.output_area._safe_append(toc);
+    scrollConsole();
   };
 
   function update_duration() {
@@ -941,11 +942,14 @@ define([
         // append the output
         data.output_type = 'display_data';
         cell.output_area.append_output(data);
+        scrollConsole();
       } else {
         // this is preview output
         cell = create_panel_cell('');
         data.output_type = msg_type;
         last_cell.output_area.append_output(data);
+        scrollPanel(cell);
+        scrollConsole();
       }
     });
 
@@ -1344,10 +1348,13 @@ define([
     cell.refresh();
 
     window.last_panel_output_cell = text ? null : cell;
+    return cell;
+  }
+
+  function scrollPanel(cell) {
     $('#panel').animate({scrollTop:
       $('#panel').scrollTop() +
       ($(cell.element[0]).offset().top - $('#panel').offset().top)});
-    return cell;
   }
 
   var panel = function(nb) {
@@ -1460,6 +1467,7 @@ define([
       let cell = create_panel_cell(this.cell.get_text(),
         this.cell.metadata.kernel);
       cell.execute();
+      scrollConsole();
       this.cell.clear_input();
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_cell_and_select_below();
@@ -1475,6 +1483,7 @@ define([
       let cell = create_panel_cell(this.cell.get_text(),
         this.cell.metadata.kernel);
       cell.execute();
+      scrollConsole();
       this.cell.clear_input();
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_selected_cells();
@@ -1604,6 +1613,7 @@ define([
       }
     }
     create_panel_cell(text, cell_kernel).execute();
+    scrollConsole();
     return false;
   };
 
@@ -2315,12 +2325,15 @@ table.task_table {
 
     $('li.icon_save').on('click', function () {  // we are letting the li bind to the event
       create_panel_cell('%sossave --to html --force').execute();
+      scrollConsole();
     });
     $('li.icon_workflow').on('click', function () {  // we are letting the li bind to the event
       create_panel_cell('%preview --workflow').execute();
+      scrollConsole();
     });
     $('li.icon_toc').on('click', function () {  // we are letting the li bind to the event
       create_panel_cell('%toc').execute();
+      scrollConsole();
     });
 
     events.on("kernel_ready.Kernel", function() {
