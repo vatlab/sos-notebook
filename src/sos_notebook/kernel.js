@@ -1726,11 +1726,6 @@ define([
     visibility: hidden;
 }
 
-
-#panel-wrapper .out_prompt_overlay.prompt {
-    display: none;
-}
-
 #panel-wrapper .anchor-cell {
     padding-right: 5pt;
 }
@@ -2050,12 +2045,6 @@ table.task_table {
 #panel-wrapper #panel .prompt {
   /* min-width: 0px; */
  }
-
-#panel-wrapper #panel .output_prompt,
-#panel-wrapper #panel .output_prompt_overplay {
- min-width: 0px;
- display: none;
-}
 
 
 #panel-wrapper #panel div.output_area {

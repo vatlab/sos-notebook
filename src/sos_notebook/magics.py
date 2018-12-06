@@ -963,8 +963,7 @@ class Preview_Magic(SoS_Magic):
             if args.workflow:
                 import random
                 ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                    'display_data',  {
+                self.sos_kernel.send_frontend_msg('display_data',  {
                                         'data': {
                                             'text/plßain': self.sos_kernel._meta['workflow'],
                                             'text/html': HTML(
