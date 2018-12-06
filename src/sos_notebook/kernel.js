@@ -450,10 +450,7 @@ define([
   }
 
   var show_toc = function(evt) {
-    var cell = window.my_panel.cell;
-    cell.clear_input();
-    cell.set_text("%toc");
-    cell.clear_output();
+    var cell = create_panel_cell('');
     var toc = cell.output_area.create_output_area().append(table_of_contents());
     cell.output_area._safe_append(toc);
   };
@@ -924,13 +921,13 @@ define([
           nb.select(active[0]);
         }
       } else if (msg_type === 'transient_display_data') {
-        cell = create_panel_cell('', 'SoS');
+        cell = create_panel_cell('');
         // append the output
         data.output_type = 'display_data';
         cell.output_area.append_output(data);
       } else {
         // this is preview output
-        cell = create_panel_cell('', 'SoS');
+        cell = create_panel_cell('');
         data.output_type = msg_type;
         last_cell.output_area.append_output(data);
       }
@@ -1297,7 +1294,7 @@ define([
     $(window).trigger("resize");
   }
 
-  function create_panel_cell(text, kernel) {
+  function create_panel_cell(text, kernel="SoS") {
     if (!text && window.last_panel_output_cell) {
       return window.last_panel_output_cell
     }
@@ -1394,10 +1391,6 @@ define([
       help: "run selected text in panel cell",
       handler: execute_in_panel,
     }, "execute-selected");
-    var show_toc_in_panel = this.km.actions.register({
-      help: "show toc in panel",
-      handler: show_toc,
-    }, "show-toc");
     var paste_table = this.km.actions.register({
       help: "paste table as markdown",
       handler: paste_table_as_markdown,
@@ -1418,7 +1411,6 @@ define([
       // Ctrl-e does not work as it will somehow make the
       // code_mirror.getSelection() line getting only blank string.
       "ctrl-shift-enter": execute_selected_in_panel,
-      "ctrl-shift-t": show_toc_in_panel,
       "ctrl-shift-o": toggle_output,
       "ctrl-shift-v": paste_table,
       "ctrl-shift-m": toggle_markdown,
@@ -1763,7 +1755,7 @@ ul.panel-icons {
 }
 
 .panel-icons li {
-  padding-right: 0.5em;
+  padding-right: 1em;
 }
 
 pre.section-header.CodeMirror-line {
@@ -1812,7 +1804,7 @@ pre.section-header.CodeMirror-line {
     z-index: 1000;
 }
 
-#panel-wrapper .cell_kernel_selector {
+#panel-wrapper .anchor-cell .cell_kernel_selector {
   margin-top: -17pt;
   margin-right: 0pt;
 }
@@ -2088,6 +2080,11 @@ table.task_table {
 .cm-sos-option {
   font-style: italic;
 } */
+
+
+.panel-icons li:hover {
+  color: green;
+}
 `;
       document.body.appendChild(css);
     };
@@ -2214,9 +2211,11 @@ table.task_table {
 
   function add_panel_icons(cell) {
     let ul = $("<ul/>").addClass('panel-icons').append(
-      '<li><a href="" target="_blank"><i class="fa fa-save"></i></a></li>'
+      '<li class="icon_save"><i class="fa fa-save"></i></li>'
     ).append(
-      '<li><a href="" target="_blank"><i class="fa fa-code"></i></a></li>'
+      '<li class="icon_workflow"><i class="fa fa-code"></i></li>'
+    ).append(
+      '<li class="icon_toc"><i class="fa fa-map-o"></i></li>'
     );
     cell.element.find("div.input_area").prepend(ul);
   }
@@ -2279,6 +2278,16 @@ table.task_table {
     add_panel_button();
     // add_download_menu();
     patch_CodeCell_get_callbacks();
+
+    $('li.icon_save').on('click', function () {  // we are letting the li bind to the event
+      create_panel_cell('%sossave --to html --force').execute();
+    });
+    $('li.icon_workflow').on('click', function () {  // we are letting the li bind to the event
+      create_panel_cell('%preview --workflow').execute();
+    });
+    $('li.icon_toc').on('click', function () {  // we are letting the li bind to the event
+      create_panel_cell('%toc').execute();
+    });
 
     events.on("kernel_ready.Kernel", function() {
       /* #524. After kernel ready, jupyter would broad cast
