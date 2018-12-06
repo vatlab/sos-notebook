@@ -49,20 +49,15 @@ define([
       // panel displayed, position (float or side), old panel height
       "panel": {
         "displayed": true,
-        "style": "side",
         "height": 0
       },
     };
   } else if (!nb.metadata["sos"].panel) {
     nb.metadata["sos"].panel = {
       "displayed": true,
-      "style": "side",
       "height": 0
     };
   }
-  // Initial style is always side but the style is saved and we can honor this
-  // configuration later on.
-  nb.metadata["sos"]["panel"].style = "side";
 
   var data = nb.metadata["sos"]["kernels"];
   // upgrade existing meta data if it uses the old 3 item format
@@ -461,7 +456,6 @@ define([
     cell.clear_output();
     var toc = cell.output_area.create_output_area().append(table_of_contents());
     cell.output_area._safe_append(toc);
-    adjustPanel();
   };
 
   function update_duration() {
@@ -940,7 +934,6 @@ define([
         data.output_type = msg_type;
         last_cell.output_area.append_output(data);
       }
-      adjustPanel();
     });
 
     window.sos_comm.send({
@@ -1226,17 +1219,13 @@ define([
     $("body").append(panel_wrapper);
 
     $([Jupyter.events]).on("resize-header.Page", function() {
-      if (nb.metadata["sos"]["panel"].style === "side") {
-        $("#panel-wrapper").css("top", $("#header").height());
-        $("#panel-wrapper").css("height", $("#site").height());
-      }
+      $("#panel-wrapper").css("top", $("#header").height());
+      $("#panel-wrapper").css("height", $("#site").height());
     });
     $([Jupyter.events]).on("toggle-all-headers", function() {
-      if (nb.metadata["sos"]["panel"].style === "side") {
-        var headerVisibleHeight = $("#header").is(":visible") ? $("#header").height() : 0;
-        $("#panel-wrapper").css("top", headerVisibleHeight);
-        $("#panel-wrapper").css("height", $("#site").height());
-      }
+      var headerVisibleHeight = $("#header").is(":visible") ? $("#header").height() : 0;
+      $("#panel-wrapper").css("top", headerVisibleHeight);
+      $("#panel-wrapper").css("height", $("#site").height());
     });
 
     $(".output_scroll").on("resizeOutput", function() {
@@ -1251,10 +1240,8 @@ define([
 
     $("#panel-wrapper").resizable({
       resize: function(event, ui) {
-        if (nb.metadata["sos"]["panel"].style === "side") {
-          $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 30);
-          $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 30);
-        }
+        $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 25);
+        $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 40);
       },
       start: function(event, ui) {
         $(this).width($(this).width());
@@ -1268,7 +1255,7 @@ define([
     // if panel-wrapper is undefined (first run(?), then hide it)
     // if ($("#panel-wrapper").css("display") === undefined) $("#panel-wrapper").css("display", "none") //block
     if (!$("#panel-wrapper").css("display")) {
-      $("#panel-wrapper").css("display", "block"); //block
+      $("#panel-wrapper").css("display", "flex");
     }
     $("#site").bind("siteHeight", function() {
       $("#panel-wrapper").css("height", $("#site").height());
@@ -1276,25 +1263,23 @@ define([
 
     $("#site").trigger("siteHeight");
 
-
-    if (nb.metadata["sos"]["panel"].style === "side") {
-      $("#panel-wrapper").addClass("sidebar-wrapper");
-      setTimeout(function() {
-        $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 30);
-        $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 30);
-      }, 500);
-      setTimeout(function() {
-        $("#panel-wrapper").css("height", $("#site").height());
-      }, 500);
-      setTimeout(function() {
-        $("#panel-wrapper").css("top", $("#header").height());
-      }, 500); //wait a bit
-      $("#panel-wrapper").css("left", 0);
-
-    }
-
+    $("#panel-wrapper").addClass("sidebar-wrapper");
+    setTimeout(function() {
+      $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 40);
+      $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 25);
+    }, 500);
+    setTimeout(function() {
+      $("#panel-wrapper").css("height", $("#site").height());
+    }, 500);
+    setTimeout(function() {
+      $("#panel-wrapper").css("top", $("#header").height());
+    }, 500); //wait a bit
+    $("#panel-wrapper").css("left", 0);
 
     $(window).resize(function() {
+      if ($("#panel-wrapper").css("display") !== "flex") {
+        return;
+      }
       $("#panel").css({
         maxHeight: $(window).height() - 30
       });
@@ -1302,19 +1287,11 @@ define([
         maxHeight: $(window).height() - 10
       });
 
-      if (nb.metadata["sos"]["panel"].style === "side") {
-        if ($("#panel-wrapper").css("display") !== "block") {
-          $("#notebook-container").css("margin-left", 30);
-          $("#notebook-container").css("width", $("#notebook").width() - 30);
-        } else {
-          $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 30);
-          $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 30);
-          $("#panel-wrapper").css("height", $("#site").height());
-          $("#panel-wrapper").css("top", $("#header").height());
-        }
-      } else {
-        $("#notebook-container").css("margin-left", 30);
-        $("#notebook-container").css("width", $("#notebook").width() - 30);
+      if ($("#panel-wrapper").css("display") === "flex") {
+        $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 25);
+        $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 40);
+        $("#panel-wrapper").css("height", $("#site").height());
+        $("#panel-wrapper").css("top", $("#header").height());
       }
     });
     $(window).trigger("resize");
@@ -1631,20 +1608,19 @@ define([
     //$("#panel-wrapper").toggle({"complete":function(){
     $("#panel-wrapper").toggle({
       "progress": function() {
-        if ($("#panel-wrapper").css("display") !== "block") {
-          $("#notebook-container").css("margin-left", 15);
-          $("#notebook-container").css("width", $("#site").width());
-        } else {
-          $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 30)
-          $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 30)
-        }
+        $("#notebook-container").css("margin-left", $("#panel-wrapper").width() + 25)
+        $("#notebook-container").css("width", $("#notebook").width() - $("#panel-wrapper").width() - 40)
       },
       "complete": function() {
-        nb.metadata["sos"]["panel"].displayed = $("#panel-wrapper").css("display") === "block"
+        nb.metadata["sos"]["panel"].displayed = $("#panel-wrapper").css("display") === "flex"
         if (nb.metadata["sos"]["panel"].displayed) {
-          console.log("panel open toc close")
+          console.log("panel open")
           window.my_panel.cell.focus_editor();
           $("#panel-wrapper").css("z-index", 10)
+        } else {
+          $("#notebook-container").css("margin-left", "auto");
+          $("#notebook-container").css("margin-right", "auto");
+          $("#notebook-container").css("width", "fit-content");
         }
       }
     });
@@ -2132,38 +2108,13 @@ table.task_table {
     }
     if ($("#panel_button").length === 0) {
       IPython.toolbar.add_buttons_group([{
-        "label": "scratch tab",
+        "label": "Console",
         "icon": "fa-cube",
         "callback": toggle_panel,
         "id": "panel_button"
       }]);
     }
   };
-
-  /*
-  function add_download_menu() {
-      if ($("sos_download").length === 0) {
-          menu = $("<li id='sos_download'></li>")
-              .append($("<a href="#"></a>").html("Report (.html)").onclick(
-                  function(){
-                      alert("selected");
-                  }
-              ))
-          download_menu = document.getElementById("download_html");
-          download_menu.parentNode.insertBefore(menu[0], download_menu.nextSibling);
-      }
-  }
-  */
-
-  function adjustPanel() {
-    if ($("#panel-wrapper").css("display") !== "none") {
-      var panel_width = nb.metadata["sos"]["panel"].style === "side" ? $("#panel-wrapper").width() : 0;
-      $("#notebook-container").css("margin-left", panel_width + 30);
-      $("#notebook-container").css("width", $("#site").width() - panel_width - 30);
-    }
-    var cell = window.my_panel.cell;
-    cell.output_area.expand();
-  }
 
   function patch_CodeCell_get_callbacks() {
     var previous_get_callbacks = CodeCell.prototype.get_callbacks;
@@ -2172,9 +2123,6 @@ table.task_table {
       var callbacks = previous_get_callbacks.apply(this, arguments);
       var prev_reply_callback = callbacks.shell.reply;
       callbacks.shell.reply = function(msg) {
-        if (msg.msg_type === "execute_reply") {
-          adjustPanel()
-        }
         return prev_reply_callback(msg);
       };
       return callbacks;
@@ -2332,11 +2280,7 @@ table.task_table {
     // add_download_menu();
     patch_CodeCell_get_callbacks();
 
-    $("#to_markdown").click(function() {
-      adjustPanel();
-    });
     events.on("kernel_ready.Kernel", function() {
-      adjustPanel();
       /* #524. After kernel ready, jupyter would broad cast
        * codemirror mode to all cells, which will overwrite the
        * user mode we have just set. We have no choice but to
