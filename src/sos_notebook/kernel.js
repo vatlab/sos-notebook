@@ -1421,9 +1421,11 @@ define([
 
     create_panel_cell('').output_area.append_output(
     {
-      'output_type': 'stream',
-      'name': 'stdout',
-      'text': 'Execute command in the scratch cell below or use shortcut "Ctrl-Shift-Enter" to execute current line or selected text of cells.'
+      'output_type': 'display_data',
+      'data': {
+        'text/plain': 'Execute commands in the scratch cell below or use shortcut "Ctrl-Shift-Enter" to execute current line or selected text of cells here.',
+        'text/html': 'Execute commands in the scratch cell below or use shortcut <code>Ctrl-Shift-Enter</code> to execute current line or selected text of cells here.'
+      }
     });
 
     this.cell.element.show();
