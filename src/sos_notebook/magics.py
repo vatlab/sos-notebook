@@ -1933,20 +1933,25 @@ class Task_Magic(SoS_Magic):
                             help=argparse.SUPPRESS)
         status.set_defaults(func=self.status)
 
-        resume = subparsers.add_parser('resume', help='task status')
-        resume.add_argument('tasks', nargs='*', help='''ID of the tasks to be removed.
+        execute = subparsers.add_parser('execute', help='execute task')
+        execute.add_argument('tasks', nargs='*', help='''ID of the tasks to be removed.
             There is no need to specify compelete task IDs because SoS will match specified
             name with tasks starting with these names. If no task ID is specified,
             all tasks related to specified workflows (option -w) will be removed.''')
-        resume.add_argument('-q', '--queue',
+        execute.add_argument('-q', '--queue',
                             help='''Remove tasks on specified tasks queue or remote host
             if the tasks . The queue can be defined in global or local sos
             configuration file, or a file specified by option  --config. A host is
             assumed to be a remote machine with process type if no configuration
             is found. ''')
-        resume.set_defaults(func=self.resume)
+        execute.add_argument('-c', '--config', help='''A configuration file with host
+            definitions, in case the definitions are not defined in global sos config.yml files.''')
+        execute.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
+                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                information to standard output (default to 2).''')
+        execute.set_defaults(func=self.execute)
 
-        kill = subparsers.add_parser('kill', help='task status')
+        kill = subparsers.add_parser('kill', help='kill single task or tasks with the same tags')
         kill.add_argument('tasks', nargs='*', help='''IDs of the tasks
             that will be killed. There is no need to specify compelete task IDs because
             SoS will match specified name with tasks starting with these names.''')
@@ -1967,7 +1972,7 @@ class Task_Magic(SoS_Magic):
                 information to standard output (default to 2).''')
         kill.set_defaults(func=self.kill)
 
-        purge = subparsers.add_parser('purge', help='task status')
+        purge = subparsers.add_parser('purge', help='kill and purge task')
         purge.add_argument('tasks', nargs='*', help='''ID of the tasks to be removed.
             There is no need to specify compelete task IDs because SoS will match specified
             name with tasks starting with these names. If no task ID is specified,
@@ -2051,9 +2056,20 @@ class Task_Magic(SoS_Magic):
                     env.logger.warning(
                         f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
 
-    def resume(self, args):
-        self.sos_kernel.warn(args)
-        return
+    def execute(self, args):
+        from sos.hosts import Host
+        host = Host(args.queue)
+
+        for task in args.tasks:
+            result = host._task_engine.submit_task(task)
+            self.sos_kernel.send_frontend_msg('task_status',
+                {
+                    'update_only': True,
+                    'queue': args.queue,
+                    'task_id': task,
+                    'status': 'pening',
+                }
+            )
 
     def kill(self, args):
         # kill specified task

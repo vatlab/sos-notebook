@@ -502,16 +502,6 @@ class SoS_Kernel(IPythonKernel):
                 elif k == 'execute-workflow':
                     from .workflow_executor import execute_pending_workflow
                     execute_pending_workflow(v, self)
-                elif k == 'resume-task':
-                    # kill specified task
-                    from sos.hosts import Host
-                    Host(v[1])._task_engine.resume_task(v[0])
-                    self.send_frontend_msg('task_status',
-                                           {
-                                               'task_id': v[0],
-                                               'queue': v[1],
-                                               'status': 'pending'
-                                           })
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
                         continue

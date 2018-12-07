@@ -653,7 +653,7 @@ define([
         cell.output_area.append_output(data);
       }
       return;
-    }    
+    }
     // if there is an existing status table, try to retrieve its information
     // the new data does not have it
     let timer_text = '';
@@ -672,16 +672,6 @@ define([
       }
     }
 
-    let action_class = {
-        'pending': 'fa-stop',
-        'submitted': 'fa-stop',
-        'running': 'fa-stop',
-        'completed': 'fa-play',
-        'failed': 'fa-play',
-        'aborted': 'fa-play',
-        'missing': 'fa-question',
-    }
-
     let status_class = {
         'pending': 'fa-square-o',
         'submitted': 'fa-spinner',
@@ -692,20 +682,15 @@ define([
         'missing': 'fa-question',
     }
 
-    let action_func = {
-        'pending': 'kill',
-        'submitted': 'kill',
-        'running': 'kill',
-        'completed': 'resume',
-        'failed': 'resume',
-        'aborted': 'resume',
-        'missing': '',
-    }
-
     // look for status etc and update them.
-    let onmouseover = `onmouseover="this.classList='fa fa-2x fa-fw ${action_class[info.status]}'"`;
-    let onmouseleave = `onmouseleave="this.classList='fa fa-2x fa-fw ${status_class[info.status]}'"`;
-    let onclick = `onclick="task_action({action: '${action_func[info.status]}', task: '${info.task_id}', queue:'${info.queue}'});"`;
+    let id_elems = `<pre>${info.task_id}` +
+      `<div class="task_id_actions">` +
+      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `</div></pre>`;
+
     let tags = info.tags.split(/\s+/g);
     let tags_elems = ''
     for (let ti=0; ti < tags.length; ++ti) {
@@ -730,13 +715,10 @@ define([
 <table id="task_${elem_id}" class="task_table ${info.status}">
 <tr>
     <td class="task_icon">
-      <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
-      ${onmouseover} ${onmouseleave} ${onclick}></i>
+      <i id="task_status_icon_${elem_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"</i>
     </td>
     <td class="task_id">
-      <div onclick="task_action({action:'status', task:'${info.task_id}', queue:'${info.queue}'})">
-      <pre><i class="fa fa-fw fa-sitemap"></i>${info.task_id}</pre>
-      </div>
+      <span><pre><i class="fa fa-fw fa-sitemap"></i></pre>${id_elems}</span>
     </td>
     <td class="task_tags">
       <span id="status_tags_${elem_id}"><pre><i class="fa fa-fw fa-info-circle"></i></pre>${tags_elems}</span>
@@ -2023,18 +2005,6 @@ table.task_table {
   border: 0px;
 }
 
-.task_tag_actions {
-  display: none;
-}
-
-.task_tag_actions .fa:hover {
-  color: blue;
-}
-
-.task_tags:hover .task_tag_actions {
-  display: flex;
-  flex-direction: row;
-}
 
 table.workflow_table i,
 table.task_table i  {
@@ -2059,6 +2029,18 @@ td.task_id
   text-align: left;
 }
 
+td.task_tags
+{
+  text-align: left;
+  max-width: 33em;
+}
+
+td.task_id
+{
+  text-align: left;
+}
+
+td.task_id span,
 td.task_tags span {
   display: inline-flex;
 }
@@ -2071,10 +2053,20 @@ td.task_tags i  {
   margin-right: 0px;
 }
 
-.task_id pre:hover
-{
-  cursor: pointer;
-  text-decoration: underline;
+.task_id_actions,
+.task_tag_actions {
+  display: none;
+}
+
+.task_id_actions .fa:hover,
+.task_tag_actions .fa:hover {
+  color: blue;
+}
+
+.task_id:hover .task_id_actions,
+.task_tags:hover .task_tag_actions {
+  display: flex;
+  flex-direction: row;
 }
 
 td.workflow_index
@@ -2102,12 +2094,6 @@ td.task_timer pre
   white-space: nowrap;
 }
 
-
-td.task_tags
-{
-  text-align: left;
-  max-width: 33em;
-}
 
 td.task_icon {
     font-size: 0.75em;
