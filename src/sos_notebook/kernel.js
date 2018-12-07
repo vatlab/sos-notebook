@@ -640,6 +640,20 @@ define([
       console.log(`Cannot find cell by cell ID ${info.cell_id} or task ID ${info.task_id}`)
       return;
     }
+    if (info.status == 'purged') {
+      if (has_status_table) {
+        let data = {
+          'output_type': 'update_display_data',
+          'transient': {'display_id': `task_${elem_id}`},
+          'metadata': {},
+          'data': {
+              'text/html': ''
+          }
+        }
+        cell.output_area.append_output(data);
+      }
+      return;
+    }    
     // if there is an existing status table, try to retrieve its information
     // the new data does not have it
     let timer_text = '';
@@ -2081,9 +2095,18 @@ td.task_timer
   text-align: left;
 }
 
+td.task_timer pre
+{
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+
 td.task_tags
 {
   text-align: left;
+  max-width: 33em;
 }
 
 td.task_icon {
@@ -2097,12 +2120,12 @@ td.task_status,
 }
 
 table.workflow_table span {
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   font-family: monospace;
 }
 
 table.task_table span {
-  text-transform: uppercase;
+  /* text-transform: uppercase; */
   font-family: monospace;
 }
 

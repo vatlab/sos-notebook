@@ -2020,11 +2020,16 @@ class Task_Magic(SoS_Magic):
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
             status = result.split(
                 '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
-            host._task_engine.update_task_status(args.tasks[0], status)
+            self.sos_kernel.send_frontend_msg('task_status',
+                {
+                    'update_only': True,
+                    'queue': args.queue,
+                    'task_id': args.tasks[0],
+                    'status': status,
+                }
+            )
         elif args.tags:
             status_output = host._task_engine.query_tasks(tags=args.tags, verbosity=2)
-            env.log_to_file(f'tags={args.tags}')
-            env.log_to_file(status_output)
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
                 {'name': 'stdout', 'text': status_output })
             for line in status_output.split('\n'):
@@ -2053,18 +2058,71 @@ class Task_Magic(SoS_Magic):
     def kill(self, args):
         # kill specified task
         from sos.hosts import Host
-        Host(args.queue)._task_engine.kill_tasks(args.tasks)
-        for tid in args.tasks:
-            self.sos_kernel.send_frontend_msg('task_status',
-               {
-                   'task_id': tid,
-                   'queue': args.queue,
-                   'status': 'abort'
-               })
+        host = Host(args.queue)
+        if args.tasks:
+            # kill specified task
+            ret = host._task_engine.kill_tasks(args.tasks)
+        elif args.tags:
+            ret = host._task_engine.kill_tasks([], tags=args.tags)
+        else:
+            self.sos_kernel.warn('Please specify either a list of task or a tag')
+            return
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
+            {'name': 'stdout', 'text': ret })
+        for line in ret.split('\n'):
+            if not line.strip():
+                continue
+            try:
+                # return creation time, start time, and duration
+                tid, tst = line.split('\t')
+                self.sos_kernel.send_frontend_msg('task_status',
+                    {
+                        'update_only': True,
+                        'queue': args.queue,
+                        'task_id': tid,
+                        'status': tst
+                    }
+                )
+            except Exception as e:
+                env.logger.warning(
+                    f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
+
 
     def purge(self, args):
-        self.sos_kernel.warn(args)
-        return
+        # kill specified task
+        from sos.hosts import Host
+        host = Host(args.queue)
+        if args.tasks:
+            # kill specified task
+            ret = host._task_engine.purge_tasks(args.tasks)
+        elif args.tags:
+            ret = host._task_engine.purge_tasks([], tags=args.tags)
+        else:
+            self.sos_kernel.warn('Please specify either a list of task or a tag')
+            return
+        if ret:
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
+                {'name': 'stdout', 'text': ret })
+        else:
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
+                {'name': 'stderr', 'text': 'No matching task to purge' })
+        for line in ret.split('\n'):
+            if not line.strip():
+                continue
+            try:
+                # return creation time, start time, and duration
+                tid, tst = line.split('\t')
+                self.sos_kernel.send_frontend_msg('task_status',
+                    {
+                        'update_only': True,
+                        'queue': args.queue,
+                        'task_id': tid,
+                        'status': tst
+                    }
+                )
+            except Exception as e:
+                env.logger.warning(
+                    f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
