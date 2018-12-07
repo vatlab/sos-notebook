@@ -475,6 +475,50 @@ define([
     }, 5000);
   }
 
+
+  /* When a notebook is opened with multiple workflow or task tables,
+   * the tables have display_id but the ID maps will not be properly
+   * setup so that the tables cannot be updated with another
+   * update_display_data message. To fix this problem, we will have
+   * to manually populate the
+   *   output_area._display_id_targets
+   * structure.
+  */
+  function isEmpty(map) {
+    for(var key in map) {
+      if (map.hasOwnProperty(key)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  function fix_display_id(cell) {
+    if (! isEmpty(cell.output_area._display_id_targets)) {
+      return;
+    }
+    for (let idx=0; idx < cell.output_area.outputs.length; ++idx ) {
+      let output = cell.output_area.outputs[idx];
+      if (output.output_type != 'display_data' || !output.data['text/html']) {
+        continue;
+      }
+      // the HTML should look like
+      // <table id="task_macpro_90775d4e30583c18" class="task_table running">
+      let id = output.data['text/html'].match(/id="([^"]*)"/)[1];
+      if (!id) {
+        continue;
+      }
+      let targets = cell.output_area._display_id_targets[id];
+      if (!targets) {
+          targets = cell.output_area._display_id_targets[id] = [];
+      }
+      targets.push({
+          index: idx,
+          element: $(document.getElementById(id).parentNode.parentNode)
+      });
+    }
+  }
+
   // add workflow status indicator table
   function update_workflow_status(info) {
     // find the cell
@@ -590,7 +634,9 @@ define([
     } else if (has_status_table) {
       cell = get_cell_by_elem(has_status_table.closest('.code_cell'));
     }
-    if (!cell) {
+    if (cell) {
+      fix_display_id(cell);
+    } else {
       console.log(`Cannot find cell by cell ID ${info.cell_id} or task ID ${info.task_id}`)
       return;
     }
