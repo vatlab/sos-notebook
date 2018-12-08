@@ -86,13 +86,33 @@ define([
     window.LanguageName[data[i][0]] = data[i][2];
     window.LanguageName[data[i][1]] = data[i][2];
     // KernelList, use displayed name
-    window.KernelList.push([data[i][0], data[i][0]]);
+    window.KernelList.push(data[i][0]);
   }
 
   // if not defined sos version, remove extra kernels saved by
   // sos-notebook 0.9.12.7 or earlier
   if (!nb.metadata["sos"]["version"]) {
     save_kernel_info();
+  }
+
+  function load_css(text) {
+    var css = document.createElement("style");
+    css.type = "text/css";
+    css.innerHTML = text;
+    document.body.appendChild(css);
+  };
+
+  // add language specific css
+  function lan_css(lan) {
+    if (window.BackgroundColor[lan]) {
+      return `.code_cell.sos_lan_${lan} .input_prompt,
+        .code_cell.sos_lan_${lan} .output_prompt {
+          background: ${window.BackgroundColor[lan]};
+        }
+      `;
+    } else {
+      return null;
+    }
   }
 
   window.filterDataFrame = function(id) {
@@ -377,36 +397,20 @@ define([
     } else {
       $(".output_wrapper", cell.element).removeClass("report_output");
     }
-
+    $(cell.element).removeClass( (index, className) => {
+       return (className.match(/(^|\s)sos_lan_\S+/g) || []).join(' ');
+     }).addClass(`sos_lan_${type}`)
     // cell in panel does not have prompt area
-    var col = "";
     if (cell.is_panel) {
-      if (type && window.BackgroundColor[type]) {
-        col = window.BackgroundColor[type];
-      }
-      cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = col;
       cell.user_highlight = {
         name: 'sos',
         base_mode: window.LanguageName[type] || window.KernelName[type] || type,
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
       cell.code_mirror.setOption('mode', cell.user_highlight);
-      return col;
+      return;
     }
 
-    if (type === "sos" && getCellWorkflow(cell)) {
-      col = "#F0F0F0";
-    } else if (type && window.BackgroundColor[type]) {
-      col = window.BackgroundColor[type];
-    }
-    var ip = cell.element[0].getElementsByClassName("input");
-    var op = cell.element[0].getElementsByClassName("out_prompt_overlay");
-    if (ip.length > 0) {
-      ip[0].style.backgroundColor = col;
-    }
-    if (op.length > 0) {
-      op[0].style.backgroundColor = col;
-    }
 
     if (type) {
       let kernel_name = window.KernelName[type];
@@ -425,8 +429,6 @@ define([
         cell.code_mirror.setOption('mode', cell.user_highlight);
       }
     }
-    //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
-    return col;
   }
 
 
@@ -451,6 +453,9 @@ define([
       add_lan_selector(window.my_panel.cell);
       changeStyleOnKernel(window.my_panel.cell);
     }
+
+    let css_text = window.KernelList.map(lan_css).filter(Boolean).join('\n');
+    load_css(css_text);
   }
 
   var show_toc = function(evt) {
@@ -800,8 +805,8 @@ define([
             window.LanguageName[data[i][2]] = data[i][2];
           }
           // KernelList, use displayed name
-          if (window.KernelList.findIndex((item) => item[0] === data[i][0]) === -1) {
-            window.KernelList.push([data[i][0], data[i][0]]);
+          if (window.KernelList.findIndex((item) => item === data[i][0]) === -1) {
+            window.KernelList.push(data[i][0]);
           }
           // if options ...
           if (data[i].length > 4) {
@@ -1701,288 +1706,285 @@ define([
     });
   }
 
-  function load_panel() {
 
-    var load_css = function() {
-      var css = document.createElement("style");
-      css.type = "text/css";
-      css.innerHTML = `
+  function load_panel() {
+    load_css(`
 .panel {
-  padding: 0px;
-  overflow-y: auto;
-  font-weight: normal;
-  color: #333333;
-  /* white-space: nowrap; */
-  overflow-x: auto;
-  flex: 1 1 auto;
-  margin-bottom: 10px;
+padding: 0px;
+overflow-y: auto;
+font-weight: normal;
+color: #333333;
+/* white-space: nowrap; */
+overflow-x: auto;
+flex: 1 1 auto;
+margin-bottom: 10px;
 }
 
 .sidebar-wrapper {
-    height: 100%;
-    left: 5px;
-    margin: 5px;
-    /* padding-top: 10px; */
-    position: fixed !important;
-    width: 25%;
-    max-width: 50%;
-    background-color: #F8F5E1;
-    border-style: solid;
-    border-color: #eeeeee;
-    opacity: .99;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
+  height: 100%;
+  left: 5px;
+  margin: 5px;
+  /* padding-top: 10px; */
+  position: fixed !important;
+  width: 25%;
+  max-width: 50%;
+  background-color: #F8F5E1;
+  border-style: solid;
+  border-color: #eeeeee;
+  opacity: .99;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .col-md-9 {
-  overflow:hidden;
-  margin-left: 14%;
-  width: 80%}
+overflow:hidden;
+margin-left: 14%;
+width: 80%}
 
 #panel-wrapper.closed {
-  min-width: 100px;
-  width: auto;
-  transition: width;
+min-width: 100px;
+width: auto;
+transition: width;
 }
 #panel-wrapper:hover{
-  opacity: 1;
+opacity: 1;
 }
 #panel-wrapper .header {
-  font-size: 18px;
-  font-weight: bold;
+font-size: 18px;
+font-weight: bold;
 }
 #panel-wrapper .hide-btn {
-  font-size: 14px;
-  font-family: monospace;
+font-size: 14px;
+font-family: monospace;
 }
 
 #panel-wrapper .reload-btn {
-  font-size: 14px;
-  font-family: monospace;
+font-size: 14px;
+font-family: monospace;
 }
 
 #panel-wrapper .number_sections-btn {
-  font-size: 14px;
-  font-family: monospace;
+font-size: 14px;
+font-family: monospace;
 }
 
 .ui-icon { display: none !important; }
 
 /* dont waste so much screen space... */
 #panel-wrapper .panel-item{
-  padding-left: 20px;
+padding-left: 20px;
 }
 
 #panel-wrapper .panel-item .panel-item{
-  padding-left: 10px;
+padding-left: 10px;
 }
 
 .panel-item-num {
-    font-style: normal;
+  font-style: normal;
 }
 
 .panel-header {
-    position: absolute;
-    margin-left: 5pt;
-    margin-top: 0.5em;
-    text-align: left;
+  position: absolute;
+  margin-left: 5pt;
+  margin-top: 0.5em;
+  text-align: left;
 }
 
 #panel-wrapper .run_this_cell {
-    visibility: hidden;
+  visibility: hidden;
 }
 
 #panel-wrapper .anchor-cell {
-    padding-right: 5pt;
+  padding-right: 5pt;
 }
 
 #panel-wrapper .console-cell .input_area {
-  border: none;
-  /* background: none */;
+border: none;
+/* background: none */;
 }
 
 #panel-wrapper .console-output-cell .input {
-  display: none;
+display: none;
 }
 
 #panel-wrapper .console-output-cell .output_area .prompt {
-  display: none;
+display: none;
 }
 
 #panel-wrapper .panel-item-num {
-  font-style: normal;
-  font-family: Georgia, Times New Roman, Times, serif;
-  color: black;
+font-style: normal;
+font-family: Georgia, Times New Roman, Times, serif;
+color: black;
 }
 
 ul.panel-icons {
-  list-style: none;
-  display: flex;
-  margin-top: -22px;
-  position: absolute;
-  left: 25px;
+list-style: none;
+display: flex;
+margin-top: -22px;
+position: absolute;
+left: 25px;
 }
 
 .panel-icons li {
-  padding-right: 1em;
+padding-right: 1em;
 }
 
 pre.section-header.CodeMirror-line {
-  border-top: 1px dotted #cfcfcf
+border-top: 1px dotted #cfcfcf
 }
 
 .toc {
-  padding: 0px;
-  overflow-y: auto;
-  font-weight: normal;
-  white-space: nowrap;
-  overflow-x: auto;
+padding: 0px;
+overflow-y: auto;
+font-weight: normal;
+white-space: nowrap;
+overflow-x: auto;
 }
 
 .toc ol.toc-item {
-    counter-reset: item;
-    list-style: none;
-    padding: 0.1em;
-  }
+  counter-reset: item;
+  list-style: none;
+  padding: 0.1em;
+}
 
 .toc ol.toc-item li {
-    display: block;
-  }
+  display: block;
+}
 
 .toc ul.toc-item {
-    list-style-type: none;
-    padding: 0;
+  list-style-type: none;
+  padding: 0;
 }
 
 .toc ol.toc-item li:before {
-    font-size: 90%;
-    font-family: Georgia, Times New Roman, Times, serif;
-    counter-increment: item;
-    content: counters(item, ".")" ";
+  font-size: 90%;
+  font-family: Georgia, Times New Roman, Times, serif;
+  counter-increment: item;
+  content: counters(item, ".")" ";
 }
 
 .panel_input_prompt {
-  /*  position: absolute;
-    min-width: 0pt; */
+/*  position: absolute;
+  min-width: 0pt; */
 }
 
 .input_dropdown {
-  float: right;
-  margin-right: 2pt;
-  margin-top: 5pt;
-  z-index: 1000;
+float: right;
+margin-right: 2pt;
+margin-top: 5pt;
+z-index: 1000;
 }
 
 #panel-wrapper .console-cell .cell_kernel_selector {
-  display: none;
+display: none;
 }
 
 #panel-wrapper .anchor-cell .cell_kernel_selector {
-  margin-top: -17pt;
-  margin-right: 0pt;
+margin-top: -17pt;
+margin-right: 0pt;
 }
 
 
 .code_cell .cell_kernel_selector {
-    /* width:70pt; */
-    background: none;
-    z-index: 1000;
-    position: absolute;
-    height: 1.7em;
-    margin-top: 3pt;
-    right: 8pt;
-    font-size: 80%;
+  /* width:70pt; */
+  background: none;
+  z-index: 1000;
+  position: absolute;
+  height: 1.7em;
+  margin-top: 3pt;
+  right: 8pt;
+  font-size: 80%;
 }
 
 .sos_logging {
-  font-family: monospace;
-  margin: -0.4em;
-  padding-left: 0.4em;
+font-family: monospace;
+margin: -0.4em;
+padding-left: 0.4em;
 }
 .sos_hint {
-  color: rgba(0,0,0,.4);
-  font-family: monospace;
+color: rgba(0,0,0,.4);
+font-family: monospace;
 }
 
 .sos_debug {
-  color: blue;
+color: blue;
 }
 
 .sos_trace {
-  color: darkcyan;
+color: darkcyan;
 }
 
 .sos_hilight {
-  color: green;
+color: green;
 }
 
 .sos_info {
-    color: black;
+  color: black;
 }
 
 .sos_warning {
-  color: black;
-  background: #fdd
+color: black;
+background: #fdd
 }
 
 .sos_error {
-  color: black;
-  background: #fdd
+color: black;
+background: #fdd
 }
 
 .text_cell .cell_kernel_selector {
-    display: none;
+  display: none;
 }
 
 .session_info td {
-    text-align: left;
+  text-align: left;
 }
 
 .session_info th {
-    text-align: left;
+  text-align: left;
 }
 
 .session_section {
-    text-align: left;
-    font-weight: bold;
-    font-size: 120%;
+  text-align: left;
+  font-weight: bold;
+  font-size: 120%;
 }
 
 .report_output {
-    border-right-width: 13px;
-    border-right-color: #aaaaaa;
-    border-right-style: solid;
- /*   box-shadow: 13px 0px 0px #aaaaaa; */
+  border-right-width: 13px;
+  border-right-color: #aaaaaa;
+  border-right-style: solid;
+/*   box-shadow: 13px 0px 0px #aaaaaa; */
 }
 
 .one_liner {
-    overflow: hidden;
-    height: 15px;
+  overflow: hidden;
+  height: 15px;
 }
 
 .one_liner:hover {
-    height: auto;
-    width: auto;
+  height: auto;
+  width: auto;
 }
 
 .dataframe_container { max-height: 400px }
 .dataframe_input {
-    border: 1px solid #ddd;
-    margin-bottom: 5px;
+  border: 1px solid #ddd;
+  margin-bottom: 5px;
 }
 .scatterplot_by_rowname div.xAxis div.tickLabel {
-    transform: translateY(15px) translateX(15px) rotate(45deg);
-    -ms-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -moz-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -webkit-transform: translateY(15px) translateX(15px) rotate(45deg);
-    -o-transform: translateY(15px) translateX(15px) rotate(45deg);
-    /*rotation-point:50% 50%;*/
-    /*rotation:270deg;*/
+  transform: translateY(15px) translateX(15px) rotate(45deg);
+  -ms-transform: translateY(15px) translateX(15px) rotate(45deg);
+  -moz-transform: translateY(15px) translateX(15px) rotate(45deg);
+  -webkit-transform: translateY(15px) translateX(15px) rotate(45deg);
+  -o-transform: translateY(15px) translateX(15px) rotate(45deg);
+  /*rotation-point:50% 50%;*/
+  /*rotation:270deg;*/
 }
 
 .sos_dataframe td, .sos_dataframe th {
-    white-space: nowrap;
+  white-space: nowrap;
 }
 
 .toc-item-highlight-select  {background-color: Gold}
@@ -2001,149 +2003,149 @@ time.pending, time.submitted, time.running,
 
 table.workflow_table,
 table.task_table {
-  border: 0px;
+border: 0px;
 }
 
 
 table.workflow_table i,
 table.task_table i  {
-  margin-right: 5px;
+margin-right: 5px;
 }
 
 td.workflow_name
 {
-  width: 10em;
-  text-align: left;
+width: 10em;
+text-align: left;
 }
 
 td.workflow_name pre,
 td.task_name pre {
-  font-size: 1.2em;
+font-size: 1.2em;
 }
 
 td.workflow_id,
 td.task_id
 {
-  width: 15em;
-  text-align: left;
+width: 15em;
+text-align: left;
 }
 
 td.task_tags
 {
-  text-align: left;
-  max-width: 33em;
+text-align: left;
+max-width: 33em;
 }
 
 td.task_id
 {
-  text-align: left;
+text-align: left;
 }
 
 td.task_id span,
 td.task_tags span {
-  display: inline-flex;
+display: inline-flex;
 }
 
 td.task_tags span pre {
-  padding-right: 0.5em;
+padding-right: 0.5em;
 }
 
 td.task_tags i  {
-  margin-right: 0px;
+margin-right: 0px;
 }
 
 .task_id_actions,
 .task_tag_actions {
-  display: none;
+display: none;
 }
 
 .task_id_actions .fa:hover,
 .task_tag_actions .fa:hover {
-  color: blue;
+color: blue;
 }
 
 .task_id:hover .task_id_actions,
 .task_tags:hover .task_tag_actions {
-  display: flex;
-  flex-direction: row;
+display: flex;
+flex-direction: row;
 }
 
 td.workflow_index
 {
-  width: 5em;
-  text-align: left;
+width: 5em;
+text-align: left;
 }
 
 td.workflow_status
 {
-  width: 20em;
-  text-align: left;
+width: 20em;
+text-align: left;
 }
 
 td.task_timer
 {
-  width: 15em;
-  text-align: left;
+width: 15em;
+text-align: left;
 }
 
 td.task_timer pre
 {
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
+text-overflow: ellipsis;
+overflow: hidden;
+white-space: nowrap;
 }
 
 
 td.task_icon {
-    font-size: 0.75em;
+  font-size: 0.75em;
 }
 
 td.task_status,
 {
-  width: 15em;
-  text-align: left;
+width: 15em;
+text-align: left;
 }
 
 table.workflow_table span {
-  /* text-transform: uppercase; */
-  font-family: monospace;
+/* text-transform: uppercase; */
+font-family: monospace;
 }
 
 table.task_table span {
-  /* text-transform: uppercase; */
-  font-family: monospace;
+/* text-transform: uppercase; */
+font-family: monospace;
 }
 
 table.workflow_table.pending pre,
 table.task_table.pending pre,
 table.task_table.submitted pre,
 table.task_table.missing pre {
-  color: #9d9d9d; /* gray */
+color: #9d9d9d; /* gray */
 }
 
 table.workflow_table.running pre,
 table.task_table.running pre {
-  color: #cdb62c; /* yellow */
+color: #cdb62c; /* yellow */
 }
 
 table.workflow_table.completed pre,
 table.task_table.completed pre {
-  color: #39aa56; /* green */
+color: #39aa56; /* green */
 }
 
 table.workflow_table.aborted pre,
 table.task_table.aborted pre {
-  color: #FFA07A; /* salmon */
+color: #FFA07A; /* salmon */
 }
 
 table.workflow_table.failed pre,
 table.task_table.failed pre {
-  color: #db4545; /* red */
+color: #db4545; /* red */
 }
 
 table.task_table {
-  border: 0px;
-  border-style: solid;
+border: 0px;
+border-style: solid;
 }
 .code_cell .cm-header-1,
 .code_cell .cm-header-2,
@@ -2152,60 +2154,56 @@ table.task_table {
 .code_cell .cm-header-5,
 .code_cell .cm-header-6
 {
-    font-size: 100%;
-    font-style: normal;
-    font-weight: normal;
-    font-family: monospace;
+  font-size: 100%;
+  font-style: normal;
+  font-weight: normal;
+  font-family: monospace;
 }
 
 .task_hover {
- color: black !important;
+color: black !important;
 }
 
 /* side panel */
 #panel-wrapper #panel div.output_area {
-  display: -webkit-box;
+display: -webkit-box;
 }
 
 #panel-wrapper #panel div.output_subarea {
-  max_width: 100%;
+max_width: 100%;
 }
 
 #panel-wrapper #panel .output_scroll {
-  height: auto;
+height: auto;
 }
 
 .anchor-cell {
-  bottom: 5px;
-  margin-right: 5px;
-  flex: 0 0 auto;
-  margin-top: 2em !important;
+bottom: 5px;
+margin-right: 5px;
+flex: 0 0 auto;
+margin-top: 2em !important;
 }
 
 .cm-sos-interpolated {
-  background-color: rgb(223, 144, 207, 0.4);
+background-color: rgb(223, 144, 207, 0.4);
 }
 .cm-sos-sigil {
-  background-color: rgb(223, 144, 207, 0.4);
+background-color: rgb(223, 144, 207, 0.4);
 }
 /*
 .cm-sos-script {
-  font-style: normal;
+font-style: normal;
 }
 
 .cm-sos-option {
-  font-style: italic;
+font-style: italic;
 } */
 
 
 .panel-icons li:hover {
-  color: green;
+color: green;
 }
-`;
-      document.body.appendChild(css);
-    };
-
-    load_css();
+`);
 
     if (Jupyter.notebook.kernel) {
       setup_panel();
@@ -2265,8 +2263,8 @@ table.task_table {
       var select = $(".cell_kernel_selector", cell.element).empty();
       for (var i = 0; i < window.KernelList.length; i++) {
         select.append($("<option/>")
-          .attr("value", window.DisplayName[window.KernelList[i][0]])
-          .text(window.DisplayName[window.KernelList[i][0]]));
+          .attr("value", window.DisplayName[window.KernelList[i]])
+          .text(window.DisplayName[window.KernelList[i]]));
       }
       select.val(kernel);
       return;
@@ -2277,8 +2275,8 @@ table.task_table {
       .attr("class", "select-xs cell_kernel_selector");
     for (var i = 0; i < window.KernelList.length; i++) {
       select.append($("<option/>")
-        .attr("value", window.DisplayName[window.KernelList[i][0]])
-        .text(window.DisplayName[window.KernelList[i][0]]));
+        .attr("value", window.DisplayName[window.KernelList[i]])
+        .text(window.DisplayName[window.KernelList[i]]));
     }
     select.val(kernel);
 
@@ -2287,29 +2285,14 @@ table.task_table {
       send_kernel_msg({
         'set-editor-kernel': cell.metadata.kernel
       })
-      // cell in panel does not have prompt area
-      if (cell.is_panel) {
-        if (window.BackgroundColor[this.value])
-          cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = window.BackgroundColor[this.value];
-        else
-          cell.element[0].getElementsByClassName("input")[0].style.backgroundColor = "";
-        return;
-      }
 
-      var ip = cell.element[0].getElementsByClassName("input");
-      var op = cell.element[0].getElementsByClassName("out_prompt_overlay");
-      if (window.BackgroundColor[this.value]) {
-        ip[0].style.backgroundColor = window.BackgroundColor[this.value];
-        op[0].style.backgroundColor = window.BackgroundColor[this.value];
-      } else {
-        // Use "" to remove background-color?
-        ip[0].style.backgroundColor = "";
-        op[0].style.backgroundColor = "";
-      }
       let kernel_name = window.KernelName[this.value];
       if (kernel_name !== 'sos' && !window.JsLoaded[kernel_name]) {
         load_kernel_js(kernel_name);
       }
+      $(cell.element).removeClass( (index, className) => {
+         return (className.match(/(^|\s)sos_lan_\S+/g) || []).join(' ');
+       }).addClass(`sos_lan_${this.value}`)
       // https://github.com/vatlab/sos-notebook/issues/55
       cell.user_highlight = {
         name: 'sos',
