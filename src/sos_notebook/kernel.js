@@ -1049,7 +1049,6 @@ define([
   };
 
   window.task_action = function(param) {
-    console.log(param)
     if (!param.action) {
       return;
     }
