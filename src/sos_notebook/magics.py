@@ -2129,23 +2129,26 @@ class Task_Magic(SoS_Magic):
         else:
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
                 {'name': 'stderr', 'text': 'No matching task to purge' })
-        for line in ret.split('\n'):
-            if not line.strip():
-                continue
-            try:
-                # return creation time, start time, and duration
-                tid, tst = line.split('\t')
+        if args.tasks:
+            for task in args.tasks:
                 self.sos_kernel.send_frontend_msg('task_status',
                     {
                         'update_only': True,
                         'queue': args.queue,
-                        'task_id': tid,
-                        'status': tst
+                        'task_id': task,
+                        'status': 'purged'
                     }
                 )
-            except Exception as e:
-                env.logger.warning(
-                    f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
+        else:
+            for tag in args.tags:
+                self.sos_kernel.send_frontend_msg('task_status',
+                    {
+                        'update_only': True,
+                        'queue': args.queue,
+                        'tag': args.tags,
+                        'status': 'purged'
+                    }
+                )
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)

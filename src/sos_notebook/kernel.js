@@ -621,6 +621,27 @@ define([
   function update_task_status(info) {
     // find the cell
     //console.log(info);
+    // special case, purge by tag, there is no task_id
+    if (!info.task_id && info.tag && info.status == 'purged') {
+      // find all elements by tag
+      while(true) {
+        let elems = document.getElementsByClassName(`task_tag_${info.tag}`);
+        if (!elems) {
+          break;
+        }
+        let cell = get_cell_by_elem(elems[0].closest('.code_cell'));
+        fix_display_id(cell);
+        let data = {
+          'output_type': 'update_display_data',
+          'transient': {'display_id': elems[0].closest('.task_table').id},
+          'metadata': {},
+          'data': {
+              'text/html': ''
+          }
+        }
+        cell.output_area.append_output(data);
+      }
+    }
 
     let elem_id = `${info.queue}_${info.task_id}`;
     // convert between Python and JS float time
@@ -1793,6 +1814,15 @@ padding-left: 10px;
 
 #panel-wrapper .run_this_cell {
   visibility: hidden;
+}
+
+.output_area .run_this_cell {
+  padding-bottom: 0px;
+  padding-top: 0px;
+}
+
+div.output_subarea:empty {
+  padding: 0px;
 }
 
 #panel-wrapper .anchor-cell {
