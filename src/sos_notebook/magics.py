@@ -19,9 +19,8 @@ from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
 from jupyter_client import find_connection_file
 from sos.eval import SoS_eval, interpolate
 from sos.syntax import SOS_SECTION_HEADER
-from sos.utils import env, pretty_size, short_repr, pexpect_run
+from sos.utils import env, pretty_size, short_repr, pexpect_run, load_config_files
 from sos._version import  __version__
-
 
 class SoS_Magic(object):
     name = 'BaseMagic'
@@ -984,9 +983,7 @@ class Preview_Magic(SoS_Magic):
                 self.sos_kernel.warn(
                     'Invalid option --kernel with -r (--host)')
             else:
-                if args.config:
-                    from sos.utils import load_config_files
-                    load_config_files(args.config)
+                load_config_files(args.config)
                 try:
                     rargs = ['sos', 'preview', '--html'] + options
                     rargs = [x for x in rargs if x not in (
@@ -1028,9 +1025,7 @@ class Pull_Magic(SoS_Magic):
 
     def handle_magic_pull(self, args):
         from sos.hosts import Host
-        if args.config:
-            from sos.utils import load_config_files
-            load_config_files(args.config)
+        load_config_files(args.config)
         try:
             host = Host(args.host)
             #
@@ -1096,9 +1091,7 @@ class Push_Magic(SoS_Magic):
 
     def handle_magic_push(self, args):
         from sos.hosts import Host
-        if args.config:
-            from sos.utils import load_config_files
-            load_config_files(args.config)
+        load_config_files(args.config)
         try:
             host = Host(args.host)
             #
@@ -1845,7 +1838,6 @@ class SoSSave_Magic(SoS_Magic):
                 from .converter import notebook_to_html
                 arg = argparse.Namespace()
                 if args.template == 'default-sos-template':
-                    from sos.utils import load_config_files
                     cfg = load_config_files()
                     if 'default-sos-template' in cfg:
                         arg.template = cfg['default-sos-template']
@@ -2162,8 +2154,7 @@ class Task_Magic(SoS_Magic):
             args = parser.parse_args(options.split())
         except SystemExit:
             return
-        from sos.utils import load_cfg_files
-        load_cfg_files(args.config)
+        load_config_files(args.config)
 
         args.func(args)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -2215,8 +2206,7 @@ class Tasks_Magic(SoS_Magic):
             args = parser.parse_args(options.split())
         except SystemExit:
             return
-        from sos.utils import load_cfg_files
-        load_cfg_files(args.config)
+        load_config_files(args.config)
         self.handle_tasks(
             args.tasks, args.queue if args.queue else 'localhost', args.status, args.age)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
