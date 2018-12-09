@@ -507,19 +507,22 @@ define([
       if (output.output_type != 'display_data' || !output.data['text/html']) {
         continue;
       }
-      // the HTML should look like
-      // <table id="task_macpro_90775d4e30583c18" class="task_table running">
-      let id = output.data['text/html'].match(/id="([^"]*)"/)[1];
-      if (!id) {
+      if (!output.data || !output.data['text/html']) {
         continue;
       }
-      let targets = cell.output_area._display_id_targets[id];
+      // the HTML should look like
+      // <table id="task_macpro_90775d4e30583c18" class="task_table running">
+      let id = output.data['text/html'].match(/id="([^"]*)"/);
+      if (!id || !id[1]) {
+        continue;
+      }
+      let targets = cell.output_area._display_id_targets[id[1]];
       if (!targets) {
-          targets = cell.output_area._display_id_targets[id] = [];
+          targets = cell.output_area._display_id_targets[id[1]] = [];
       }
       targets.push({
           index: idx,
-          element: $(document.getElementById(id).parentNode.parentNode)
+          element: $(document.getElementById(id[1]).parentNode.parentNode)
       });
     }
   }
@@ -624,22 +627,25 @@ define([
     // special case, purge by tag, there is no task_id
     if (!info.task_id && info.tag && info.status == 'purged') {
       // find all elements by tag
-      while(true) {
-        let elems = document.getElementsByClassName(`task_tag_${info.tag}`);
-        if (!elems) {
-          break;
-        }
-        let cell = get_cell_by_elem(elems[0].closest('.code_cell'));
-        fix_display_id(cell);
+      let elems = document.getElementsByClassName(`task_tag_${info.tag}`);
+      if (!elems) {
+        return;
+      }
+      let cell_elems = Array.from(elems).map(x => x.closest('.code_cell'));
+      let cells = cell_elems.map(cell_elem => get_cell_by_elem(cell_elem));
+      let display_ids = Array.from(elems).map(x => x.closest('.task_table').id);
+
+      for (let i = 0; i < cells.length; ++i) {
         let data = {
           'output_type': 'update_display_data',
-          'transient': {'display_id': elems[0].closest('.task_table').id},
+          'transient': {'display_id': display_ids[i]},
           'metadata': {},
           'data': {
               'text/html': ''
           }
         }
-        cell.output_area.append_output(data);
+        fix_display_id(cells[i]);
+        cells[i].output_area.append_output(data);
       }
       return;
     }
