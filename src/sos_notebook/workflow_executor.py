@@ -173,9 +173,6 @@ def execute_scratch_cell(code, raw_args, kernel):
         if args.verbosity and args.verbosity > 2:
             sys.stderr.write(get_traceback())
         raise
-    finally:
-        env.signature_push_socket.send_pyobj(['commit'])
-
 
 class Tapped_Executor(mp.Process):
     def __init__(self, code, args, config):
