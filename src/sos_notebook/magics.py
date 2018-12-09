@@ -2007,7 +2007,11 @@ class Task_Magic(SoS_Magic):
 
     def status(self, args):
         from sos.hosts import Host
-        host = Host(args.queue)
+        try:
+            host = Host(args.queue)
+        except Exception as e:
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            return
 
         if args.tasks:
             result = host._task_engine.query_tasks(
@@ -2058,8 +2062,11 @@ class Task_Magic(SoS_Magic):
 
     def execute(self, args):
         from sos.hosts import Host
-        host = Host(args.queue)
-
+        try:
+            host = Host(args.queue)
+        except Exception as e:
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            return
         for task in args.tasks:
             result = host._task_engine.submit_task(task)
             self.sos_kernel.send_frontend_msg('task_status',
@@ -2074,7 +2081,11 @@ class Task_Magic(SoS_Magic):
     def kill(self, args):
         # kill specified task
         from sos.hosts import Host
-        host = Host(args.queue)
+        try:
+            host = Host(args.queue)
+        except Exception as e:
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            return
         if args.tasks:
             # kill specified task
             ret = host._task_engine.kill_tasks(args.tasks)
@@ -2107,7 +2118,11 @@ class Task_Magic(SoS_Magic):
     def purge(self, args):
         # kill specified task
         from sos.hosts import Host
-        host = Host(args.queue)
+        try:
+            host = Host(args.queue)
+        except Exception as e:
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            return
         if args.tasks:
             # kill specified task
             ret = host._task_engine.purge_tasks(args.tasks)
@@ -2147,9 +2162,8 @@ class Task_Magic(SoS_Magic):
             args = parser.parse_args(options.split())
         except SystemExit:
             return
-        if args.config:
-            from sos.utils import load_cfg_files
-            load_cfg_files(args.config)
+        from sos.utils import load_cfg_files
+        load_cfg_files(args.config)
 
         args.func(args)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -2184,7 +2198,7 @@ class Tasks_Magic(SoS_Magic):
         try:
             host = Host(queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queu {}: {}'.format(queue, e))
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(queue, e))
             return
         # get all tasks
         for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=status, age=age):
@@ -2201,9 +2215,8 @@ class Tasks_Magic(SoS_Magic):
             args = parser.parse_args(options.split())
         except SystemExit:
             return
-        if args.config:
-            from sos.utils import load_cfg_files
-            load_cfg_files(args.config)
+        from sos.utils import load_cfg_files
+        load_cfg_files(args.config)
         self.handle_tasks(
             args.tasks, args.queue if args.queue else 'localhost', args.status, args.age)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
