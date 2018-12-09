@@ -641,6 +641,7 @@ define([
         }
         cell.output_area.append_output(data);
       }
+      return;
     }
 
     let elem_id = `${info.queue}_${info.task_id}`;
