@@ -1846,7 +1846,7 @@ display: none;
 }
 
 #panel-wrapper .console-output-cell .output_area .prompt {
-display: none;
+  min-width: 2ex;
 }
 
 #panel-wrapper .panel-item-num {
