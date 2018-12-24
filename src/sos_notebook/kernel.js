@@ -545,6 +545,21 @@ define([
       // convert from python time to JS time.
       info.start_time = info.start_time * 1000;
     }
+    if (info.status == 'purged') {
+      if (!has_status_table) {
+        return;
+      }
+      let data = {
+        'output_type': 'update_display_data',
+        'transient': {'display_id': `workflow_${cell_id}`},
+        'metadata': {},
+        'data': {
+            'text/html': ''
+        }
+      }
+      fix_display_id(cell);
+      cell.output_area.append_output(data);
+    }
     if (has_status_table) {
       // if we already have timer, let us try to "fix" it in the notebook
       let timer = document.getElementById(`status_duration_${cell_id}`);
@@ -576,14 +591,9 @@ define([
     }
 
     // look for status etc and update them.
-    let onmouseover = ''
-    let onmouseleave = ''
-    let onclick = ''
-    if (info.status === 'running') {
-      onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-stop"'`;
-      onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class.running}"'`;
-      onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
-    }
+    let onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-trash"'`;
+    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class[info.status]}"'`;
+    let onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
 
     let data = {
       'output_type': has_status_table ? 'update_display_data': 'display_data',

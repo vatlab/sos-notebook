@@ -285,7 +285,7 @@ def cancel_workflow(cell_id, kernel):
     global g_workflow_queue
     kernel.send_frontend_msg('workflow_status', {
         'cell_id': cell_id,
-        'status': 'aborted'
+        'status': 'purged'
     })
 
     for idx, (cid, proc) in enumerate(g_workflow_queue):
