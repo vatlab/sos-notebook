@@ -1454,6 +1454,7 @@ class Sandbox_Magic(SoS_Magic):
         except SystemExit:
             return
         self.in_sandbox = True
+        has_external_job = False
         try:
             old_dir = os.getcwd()
             if args.dir:
@@ -1469,6 +1470,7 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 old_dict = env.sos_dict
                 self.sos_kernel._reset_dict()
+            has_external_job = '%run' in remaining_code or '%sosrun' in remaining_code
             ret = self.sos_kernel._do_execute(
                 remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error and ret['status'] == 'error':
@@ -1482,7 +1484,7 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 env.sos_dict = old_dict
             os.chdir(old_dir)
-            if not args.dir:
+            if not args.dir and not has_external_job:
                 shutil.rmtree(new_dir)
             self.in_sandbox = False
             # env.exec_dir = old_dir
