@@ -1845,7 +1845,7 @@ border: none;
 display: none;
 }
 
-#panel-wrapper .console-output-cell .output_area .prompt {
+#panel-wrapper .console-output-cell .out_prompt_overlay.prompt {
   min-width: 2ex;
 }
 
