@@ -896,22 +896,25 @@ define([
         window.my_panel.cell.metadata.kernel = data;
         changeStyleOnKernel(window.my_panel.cell);
       } else if (msg_type === "highlight-workflow") {
-        //cell = window.my_panel.cell;
-        //cell.clear_input();
-        //cell.set_text("%preview --workflow");
-        //cell.clear_output();
-        //cell.output_area.append_output({
-        //    "output_type": "display_data",
-        //    "metadata": {},
-        //    "data": {
-        //             "text/html": "<textarea id='panel_preview_workflow'>" + data + "</textarea>"
-        //    }
-        //});
-        // <textarea id="side_panel_code">{}</textarea>'
-        CodeMirror.fromTextArea(document.getElementById(data), {
-          "mode": "sos",
-          "theme": "ipython"
+        let elem = document.getElementById(data[1]);
+        CodeMirror.fromTextArea(elem, {
+          "mode": "sos"
         })
+        // if in a regular notebook, we use static version of the HTML
+        // to replace the codemirror js version.
+        if (data[0]) {
+          let cell = get_cell_by_id(data[0]);
+          let cm_node = elem.parentElement.lastElementChild;
+          cell.output_area.append_output({
+            'output_type': 'update_display_data',
+            'transient': {'display_id': data[1]},
+            'metadata': {},
+            'data': {
+                'text/html': cm_node.outerHTML
+            }
+          });
+          cm_node.remove();
+        }
       } else if (msg_type === "remove-task") {
         var item = document.getElementById("table_" + data[0] + "_" + data[1]);
         if (item) {
@@ -1857,6 +1860,10 @@ display: none;
 
 #panel-wrapper .console-output-cell .out_prompt_overlay.prompt {
   min-width: 2ex;
+}
+
+#panel-wrapper .console-output-cell .prompt {
+  display: none;
 }
 
 #panel-wrapper .panel-item-num {

@@ -962,15 +962,17 @@ class Preview_Magic(SoS_Magic):
             if args.workflow:
                 import random
                 ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
-                self.sos_kernel.send_frontend_msg('display_data',  {
-                                        'data': {
-                                            'text/plßain': self.sos_kernel._meta['workflow'],
-                                            'text/html': HTML(
-                                                f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>').data
-                                        },
-                                        'metadata': {}
-                                    })
-                self.sos_kernel.send_frontend_msg('highlight-workflow', ta_id)
+                self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                    'display_data',  {
+                        'data': {
+                            'text/plain': self.sos_kernel._meta['workflow'],
+                            'text/html': HTML(
+                                f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>').data
+                        },
+                       'metadata': {},
+                       'transient': {'display_id': ta_id }
+                })
+                self.sos_kernel.send_frontend_msg('highlight-workflow', [self.sos_kernel._meta['cell_id'], ta_id])
             if not args.items:
                 return
             if args.host is None:
