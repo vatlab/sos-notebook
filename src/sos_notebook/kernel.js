@@ -2860,10 +2860,10 @@ color: green;
                   // header, move to the end
                   if (stream.match(/^\[.*\]$/, false)) {
                     // if there is :
-                    if (stream.match(/^\[[\s\w,]*:/)) {
+                    if (stream.match(/^\[[\s\w_,-]+:/)) {
                       state.sos_state = 'header_option';
                       return "header line-section-header";
-                    } else if (stream.match(/^\[\s\w,\]$/)) {
+                    } else if (stream.match(/^\[[\s\w,-]+\]$/)) {
                       // reset state
                       state.sos_state = null;
                       state.inner_mode = null;
