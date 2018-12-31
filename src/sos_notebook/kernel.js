@@ -1741,7 +1741,6 @@ define([
         } else {
           $("#notebook-container").css("margin-left", "auto");
           $("#notebook-container").css("margin-right", "auto");
-          $("#notebook-container").css("width", "fit-content");
         }
       }
     });
