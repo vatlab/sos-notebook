@@ -1319,7 +1319,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             else:
                 idx = empties.index(False)
-                if idx != 0:
+                if idx != 0 and lines[idx].startswith('%'):
                     # not start from empty, but might have magic etc
                     return self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions, allow_stdin)
 
