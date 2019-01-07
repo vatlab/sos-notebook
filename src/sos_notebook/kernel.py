@@ -1112,8 +1112,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                         }
                     })
 
-                Preview_Magic(self).handle_magic_preview(output_files, "SoS",
-                                                         title=f'%preview {" ".join(output_files)}')
+                Preview_Magic(self).handle_magic_preview(output_files, "SoS")
 
     def render_result(self, res):
         if not self._meta['render_result']:
@@ -1319,7 +1318,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             else:
                 idx = empties.index(False)
-                if idx != 0 and lines[idx].startswith('%'):
+                if idx != 0 and (lines[idx].startswith('%') or lines[idx].startswith('!')):
                     # not start from empty, but might have magic etc
                     return self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions, allow_stdin)
 
