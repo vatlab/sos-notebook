@@ -1075,7 +1075,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 sys.stderr.flush()
                 sys.stdout.flush()
         #
-        if not silent:
+        if False:
             input_files = [str(x) for x in env.sos_dict.get('step_input', []) if isinstance(x, file_target)]
             output_files = [str(x) for x in env.sos_dict.get('step_output', []) if isinstance(x, file_target)]
 
