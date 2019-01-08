@@ -1132,15 +1132,6 @@ define([
     }
   };
 
-  function set_codemirror_option(evt, param) {
-    var cells = nb.get_cells();
-    var i;
-    for (i = cells.length - 1; i >= 0; --i) {
-      cells[i].code_mirror.setOption("styleActiveLine", cells[i].selected);
-    }
-    return true;
-  }
-
   function changeCellStyle() {
     var cells = nb.get_cells();
     // setting up background color and selection according to notebook metadata
@@ -1768,9 +1759,9 @@ margin-bottom: 10px;
   position: fixed !important;
   width: 25%;
   max-width: 50%;
-  background-color: #F8F5E1;
+  /* background-color: #F8F5E1; */
   border-style: solid;
-  border-color: #eeeeee;
+  /* border-color: #eeeeee; */
   opacity: .99;
   overflow: hidden;
   display: flex;
@@ -2487,7 +2478,6 @@ color: green;
       register_sos_comm();
     });
     // #550
-    events.on("select.Cell", set_codemirror_option);
     events.on("select.Cell", highlight_toc_item);
     events.on("select.Cell", notify_cell_kernel);
 
