@@ -1761,7 +1761,7 @@ margin-bottom: 10px;
   max-width: 50%;
   /* background-color: #F8F5E1; */
   border-style: solid;
-  /* border-color: #eeeeee; */
+  border-color: rgb(171, 171, 171);
   opacity: .99;
   overflow: hidden;
   display: flex;
