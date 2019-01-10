@@ -1013,7 +1013,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.send_response(self.iopub_socket, 'stream',
                                dict(name='stdout', text='Specify one of the kernels to shutdown: SoS{}\n'
                                     .format(''.join(f', {x}' for x in self.kernels))))
-        stop_controller(self.controller)
+        #stop_controller(self.controller)
 
     def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
@@ -1036,6 +1036,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                         if self._debug_mode:
                             env.log_to_file(
                                 f'Capture response: {msg_type}: {sub_msg["content"]}')
+
                         responses.append([msg_type, sub_msg['content']])
                     else:
                         if self._debug_mode:

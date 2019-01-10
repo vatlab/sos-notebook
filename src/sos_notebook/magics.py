@@ -1707,8 +1707,8 @@ class Shutdown_Magic(SoS_Magic):
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
-        self.shutdown_kernel(
-            args.kernel if args.kernel else self.sos_kernel, args.restart)
+        self.sos_kernel.shutdown_kernel(
+            args.kernel if args.kernel else self.sos_kernel.kernel, args.restart)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
