@@ -1686,6 +1686,7 @@ define([
       toggle_panel();
     //
     let cell_kernel = cell.metadata.kernel;
+    window.my_panel.cell.metadata.kernel = cell_kernel;
 
     if (KernelOptions[cell_kernel] && KernelOptions[cell_kernel]["variable_pattern"] && text.match(KernelOptions[cell_kernel]["variable_pattern"])) {
       text = "%preview " + text;
