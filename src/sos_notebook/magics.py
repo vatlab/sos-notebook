@@ -899,7 +899,7 @@ class Preview_Magic(SoS_Magic):
                     # if no preview function defined
                     # evaluate the expression itself
                     responses = self.sos_kernel.get_response(
-                        item, ['stream', 'display_data', 'execution_result', 'error'])
+                        item, ['stream', 'display_data', 'execute_result', 'error'])
                     if not self.sos_kernel._debug_mode:
                         # if the variable or expression is invalid, do not do anything
                         responses = [
@@ -914,8 +914,12 @@ class Preview_Magic(SoS_Magic):
                                                        })
                         for response in responses:
                             # self.sos_kernel.warn(f'{response[0]} {response[1]}' )
-                            self.sos_kernel.send_frontend_msg(
-                                response[0], response[1])
+                            if response[0] == 'execute_result':
+                                self.sos_kernel.send_frontend_msg(
+                                    'display_data', response[1])
+                            else:
+                                self.sos_kernel.send_frontend_msg(
+                                    response[0], response[1])
                     else:
                         raise ValueError(
                             f'Cannot preview expresison {item}')
