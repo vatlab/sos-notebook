@@ -80,7 +80,7 @@ setup(name="sos-notebook",
       package_dir={'': 'src'},
       python_requires='>=3.6',
       install_requires=[
-          'sos>=0.17.4',
+          'sos>=0.18.1',
           'nbformat',
           'nbconvert>=5.1.1',
           'ipython',
