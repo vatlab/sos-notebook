@@ -1055,7 +1055,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             try:
                 if self._workflow_mode:
                     res = run_sos_workflow(
-                        code=code, raw_args=self.options, kernel=self)
+                        code=code, raw_args=self.options, kernel=self,
+                        run_in_queue=self._workflow_mode == 'nowait')
                 else:
                     res = execute_scratch_cell(code=code, raw_args=self.options,
                                                kernel=self)

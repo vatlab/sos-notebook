@@ -1375,9 +1375,10 @@ class Run_Magic(SoS_Magic):
 
     def get_parser(self):
         parser = argparse.ArgumentParser(prog='%run',
-                                         description='''Execute the current cell with specified command line
+            description='''Execute the current cell with specified command line
             arguments. Arguments set by magic %set will be appended at the
-            end of command line''')
+            end of command line. If the magic ends with "&", it will be sent
+            to a queue to be executed sequentially.''')
         parser.error = self._parse_error
         return parser
 
@@ -1403,13 +1404,17 @@ class Run_Magic(SoS_Magic):
             run_code = '[default]\n' + run_code
         # now we need to run the code multiple times with each option
         for options in run_options:
+            if options.strip().endswith('&'):
+                self.sos_kernel._meta['workflow_mode'] = 'nowait'
+                options = options[:-1]
+            else:
+                self.sos_kernel._meta['workflow_mode'] = 'wait'
             old_options = self.sos_kernel.options
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
                 # %run is executed in its own namespace
                 old_dict = env.sos_dict
                 self.sos_kernel._reset_dict()
-                self.sos_kernel._meta['workflow_mode'] = True
                 if self.sos_kernel._debug_mode:
                     self.sos_kernel.warn(f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':
@@ -1723,13 +1728,19 @@ class SoSRun_Magic(SoS_Magic):
                                          description='''Execute the entire notebook with steps consisting of SoS
             cells (cells with SoS kernel) with section header, with specified command
             line arguments. Arguments set by magic %set will be appended at the
-            end of command line''')
+            end of command line. If the magic ends with "&", it will be sent
+            to a queue to be executed sequentially.''')
         parser.error = self._parse_error
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         old_options = self.sos_kernel.options
+        if options.strip().endswith('&'):
+            self.sos_kernel._meta['workflow_mode'] = 'nowait'
+            options = options[:-1]
+        else:
+            self.sos_kernel._meta['workflow_mode'] = 'wait'
         self.sos_kernel.options = options + ' ' + self.sos_kernel.options
         try:
             if self.sos_kernel.kernel != 'SoS':
@@ -1737,7 +1748,7 @@ class SoSRun_Magic(SoS_Magic):
             # %run is executed in its own namespace
             old_dict = env.sos_dict
             self.sos_kernel._reset_dict()
-            self.sos_kernel._meta['workflow_mode'] = True
+
             # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
             if not self.sos_kernel._meta['workflow']:
                 self.sos_kernel.warn(
