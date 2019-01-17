@@ -1304,7 +1304,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.warn('Keyboard Interrupt\n')
                 self.KM.interrupt_kernel()
                 return {'status': 'abort', 'execution_count': self._execution_count}
-
+        else:
             # if the cell starts with comment, and newline, remove it
             lines = code.splitlines()
             empties = [x.startswith('#') or not x.strip() for x in lines]

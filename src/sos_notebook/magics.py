@@ -1529,7 +1529,9 @@ class Save_Magic(SoS_Magic):
 
     def get_parser(self):
         parser = argparse.ArgumentParser(prog='%save',
-            description='''Save the content of the cell (after the magics) to specified file''')
+            description='''Save the content of the cell to specified file. It
+            ignores magic lines after the %save magic unless a blank line is used
+            to separate the magics and the content to be saved.''')
         parser.add_argument('filename',
                             help='''Filename of saved report or script.''')
         parser.add_argument('-r', '--run', action='store_true',
@@ -1559,11 +1561,15 @@ class Save_Magic(SoS_Magic):
                     f'{filename} already exists. Use "-f" if you would like to overwrite this file.')
 
             with open(filename, 'a' if args.append else 'w') as script:
-                starting = True
+                line_no = -1
                 for line in remaining_code.splitlines():
-                    if line.startswith('%') and starting:
+                    if line.startswith('%') and line_no < 0:
                         continue
-                    starting = False
+                    if line_no <= 0 and not line.strip():
+                        # started
+                        line_no = 0
+                        continue
+                    line_no += 1
                     script.write(line + '\n')
 
             if args.setx:
@@ -1571,14 +1577,15 @@ class Save_Magic(SoS_Magic):
                 os.chmod(filename, os.stat(
                     filename).st_mode | stat.S_IEXEC)
 
+            about_run = "" if args.run else ", use option -r to also execute the cell."
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
                                       {'metadata': {},
                                        'data': {
-                                          'text/plain': f'Cell content saved to {filename}\n',
+                                          'text/plain': f'Cell content saved to {filename}{about_run}\n',
                                           'text/html': HTML(
-                                              f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
+                                              f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a>{about_run}</div>').data
                                       }
-                                      })
+                    })
             if args.run:
                 return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             else:
