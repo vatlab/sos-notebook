@@ -1533,6 +1533,8 @@ class Save_Magic(SoS_Magic):
             description='''Save the content of the cell (after the magics) to specified file''')
         parser.add_argument('filename',
                             help='''Filename of saved report or script.''')
+        parser.add_argument('-r', '--run', action='store_true',
+                            help='''Continue to execute the cell once content is saved.''')
         parser.add_argument('-f', '--force', action='store_true',
                             help='''If destination file already exists, overwrite it.''')
         parser.add_argument('-a', '--append', action='store_true',
@@ -1577,7 +1579,10 @@ class Save_Magic(SoS_Magic):
                                               f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
                                       }
                                       })
-            return
+            if args.run:
+                return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            else:
+                return None
         except Exception as e:
             self.sos_kernel.warn(f'Failed to save cell: {e}')
             return {'status': 'error',
