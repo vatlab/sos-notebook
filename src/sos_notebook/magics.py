@@ -1227,39 +1227,66 @@ class Render_Magic(SoS_Magic):
                 self.sos_kernel._meta['render_result'] = False
 
 
-class Rerun_Magic(SoS_Magic):
-    name = 'rerun'
+class Runfile_Magic(SoS_Magic):
+    name = 'runfile'
 
     def __init__(self, kernel):
-        super(Rerun_Magic, self).__init__(kernel)
+        super(Runfile_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%rerun',
-                                         description='''Re-execute the last executed code, most likely with
-            different command line options''')
+        parser = argparse.ArgumentParser(prog='%runfile',
+            description='''Execute an external SoS script, which is identical to
+            run !sos run script but allows the display of task and workflow status
+            in notebook. It also accepts default parameters of %set magic.''')
+        parser.add_argument('script',
+            help='''Script to be executed.''')
         parser.error = self._parse_error
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        options, remaining_code = self.get_magic_and_code(code, True)
+        options, remaining_code = self.get_magic_and_code(code, False)
         old_options = self.sos_kernel.options
-        self.sos_kernel.options = options + ' ' + self.sos_kernel.options
+
+        if options.strip().endswith('&'):
+            self.sos_kernel._meta['workflow_mode'] = 'nowait'
+            options = options[:-1]
+        else:
+            self.sos_kernel._meta['workflow_mode'] = 'wait'
+
+        parser = self.get_parser()
         try:
-            self.sos_kernel._meta['workflow_mode'] = True
-            old_dict = env.sos_dict
-            self.sos_kernel._reset_dict()
-            if not self.sos_kernel.last_executed_code:
-                self.sos_kernel.warn('No saved script')
-                self.sos_kernel.last_executed_code = ''
-            return self.sos_kernel._do_execute(self.sos_kernel.last_executed_code, silent, store_history, user_expressions, allow_stdin)
+            args, run_options = parser.parse_known_args(shlex.split(options))
+        except SystemExit:
+            return
+
+        self.sos_kernel.options = ' '.join(run_options) + ' ' + self.sos_kernel.options
+        try:
+            if os.path.isfile(os.path.expanduser(args.script)):
+                with open(os.path.expanduser(args.script), 'r') as script:
+                    content = script.read()
+            elif os.path.isfile(os.path.expanduser(args.script + '.sos')):
+                with open(os.path.expanduser(args.script + '.sos'), 'r') as script:
+                    content = script.read()
+            elif os.path.isfile(os.path.expanduser(args.script + '.ipynb')):
+                from sos.converter import extract_workflow
+                content = extract_workflow(os.path.expanduser(args.script + '.ipynb'))
+            else:
+                raise RuntimeError(f'{args.script}, {args.script}.sos or {args.script}.ipynb) does not exist.')
+
+            if self.sos_kernel.kernel != 'SoS':
+                self.sos_kernel.switch_kernel('SoS')
+
+            self.sos_kernel._do_execute(content, silent,
+                            store_history, user_expressions, allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')
             raise
         finally:
-            old_dict.quick_update(env.sos_dict._dict)
-            env.sos_dict = old_dict
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = old_options
+        return self.sos_kernel._do_execute(remaining_code, silent, store_history,
+            user_expressions, allow_stdin)
+
 
 
 class Revisions_Magic(SoS_Magic):
@@ -1413,8 +1440,6 @@ class Run_Magic(SoS_Magic):
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
                 # %run is executed in its own namespace
-                old_dict = env.sos_dict
-                self.sos_kernel._reset_dict()
                 if self.sos_kernel._debug_mode:
                     self.sos_kernel.warn(f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':
@@ -1425,8 +1450,6 @@ class Run_Magic(SoS_Magic):
                 self.sos_kernel.warn(f'Failed to execute workflow: {e}')
                 raise
             finally:
-                old_dict.quick_update(env.sos_dict._dict)
-                env.sos_dict = old_dict
                 self.sos_kernel._meta['workflow_mode'] = False
                 self.sos_kernel.options = old_options
         return ret
@@ -1465,7 +1488,6 @@ class Sandbox_Magic(SoS_Magic):
         except SystemExit:
             return
         self.in_sandbox = True
-        has_external_job = False
         try:
             old_dir = os.getcwd()
             if args.dir:
@@ -1481,7 +1503,6 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 old_dict = env.sos_dict
                 self.sos_kernel._reset_dict()
-            has_external_job = '%run' in remaining_code or '%sosrun' in remaining_code
             ret = self.sos_kernel._do_execute(
                 remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error and ret['status'] == 'error':
@@ -1495,7 +1516,7 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 env.sos_dict = old_dict
             os.chdir(old_dir)
-            if not args.dir and not has_external_job:
+            if not args.dir:
                 shutil.rmtree(new_dir)
             self.in_sandbox = False
             # env.exec_dir = old_dir
@@ -1509,7 +1530,7 @@ class Save_Magic(SoS_Magic):
 
     def get_parser(self):
         parser = argparse.ArgumentParser(prog='%save',
-                                         description='''Save the content of the cell (after the magic itself) to specified file''')
+            description='''Save the content of the cell (after the magics) to specified file''')
         parser.add_argument('filename',
                             help='''Filename of saved report or script.''')
         parser.add_argument('-f', '--force', action='store_true',
@@ -1537,8 +1558,12 @@ class Save_Magic(SoS_Magic):
                     f'Cannot overwrite existing output file {filename}')
 
             with open(filename, 'a' if args.append else 'w') as script:
-                script.write(
-                    '\n'.join(remaining_code.splitlines()).rstrip() + '\n')
+                starting = True
+                for line in remaining_code.splitlines():
+                    if line.startswith('%') and starting:
+                        continue
+                    starting = False
+                    script.write(line + '\n')
             if args.setx:
                 import stat
                 os.chmod(filename, os.stat(
@@ -1745,10 +1770,6 @@ class SoSRun_Magic(SoS_Magic):
         try:
             if self.sos_kernel.kernel != 'SoS':
                 self.sos_kernel.switch_kernel('SoS')
-            # %run is executed in its own namespace
-            old_dict = env.sos_dict
-            self.sos_kernel._reset_dict()
-
             # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
             if not self.sos_kernel._meta['workflow']:
                 self.sos_kernel.warn(
@@ -1760,8 +1781,6 @@ class SoSRun_Magic(SoS_Magic):
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')
             raise
         finally:
-            old_dict.quick_update(env.sos_dict._dict)
-            env.sos_dict = old_dict
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = old_options
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -2034,7 +2053,7 @@ class Task_Magic(SoS_Magic):
                          'text/html': HTML(result).data
                          }})
             # now, there is a possibility that the status of the task is different from what
-            # task engine knows (e.g. a task is rerun outside of jupyter). In this case, since we
+            # task engine knows (e.g. a task is runfile outside of jupyter). In this case, since we
             # already get the status, we should update the task engine...
             #
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
@@ -2470,8 +2489,8 @@ class SoS_Magics(object):
         Push_Magic,
         Put_Magic,
         Render_Magic,
-        Rerun_Magic,
         Run_Magic,
+        Runfile_Magic,
         Revisions_Magic,
         Save_Magic,
         Set_Magic,

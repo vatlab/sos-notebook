@@ -453,7 +453,6 @@ class SoS_Kernel(IPythonKernel):
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.magics = SoS_Magics(self)
-        self.last_executed_code = ''
         self._kernel_return_vars = []
         self._failed_languages = {}
         # enable matplotlib by default #77
@@ -1290,8 +1289,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 return magic.apply(code, silent, store_history, user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
-            if code:
-                self.last_executed_code = code
             if self._meta['cell_id']:
                 self.send_frontend_msg(
                     'cell-kernel', [self._meta['cell_id'], self.kernel])
@@ -1307,9 +1304,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 self.warn('Keyboard Interrupt\n')
                 self.KM.interrupt_kernel()
                 return {'status': 'abort', 'execution_count': self._execution_count}
-        else:
-            if code:
-                self.last_executed_code = code
 
             # if the cell starts with comment, and newline, remove it
             lines = code.splitlines()
