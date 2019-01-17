@@ -1410,7 +1410,6 @@ class Run_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-
         # there can be multiple %run magic, but there should not be any other magics
         run_code = code
         run_options = []
@@ -1557,7 +1556,7 @@ class Save_Magic(SoS_Magic):
             filename = os.path.expanduser(args.filename)
             if os.path.isfile(filename) and not args.force:
                 raise ValueError(
-                    f'Cannot overwrite existing output file {filename}')
+                    f'{filename} already exists. Use "-f" if you would like to overwrite this file.')
 
             with open(filename, 'a' if args.append else 'w') as script:
                 starting = True
@@ -1566,6 +1565,7 @@ class Save_Magic(SoS_Magic):
                         continue
                     starting = False
                     script.write(line + '\n')
+
             if args.setx:
                 import stat
                 os.chmod(filename, os.stat(
