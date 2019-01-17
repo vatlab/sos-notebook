@@ -1262,8 +1262,12 @@ class Runfile_Magic(SoS_Magic):
         self.sos_kernel.options = ' '.join(run_options) + ' ' + self.sos_kernel.options
         try:
             if os.path.isfile(os.path.expanduser(args.script)):
-                with open(os.path.expanduser(args.script), 'r') as script:
-                    content = script.read()
+                if args.script.endswith('.ipynb'):
+                    from sos.converter import extract_workflow
+                    content = extract_workflow(os.path.expanduser(args.script))
+                else:
+                    with open(os.path.expanduser(args.script), 'r') as script:
+                        content = script.read()
             elif os.path.isfile(os.path.expanduser(args.script + '.sos')):
                 with open(os.path.expanduser(args.script + '.sos'), 'r') as script:
                     content = script.read()
