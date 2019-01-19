@@ -64,6 +64,14 @@ div.output_subarea:empty {
 	padding: 0px;
 }
 
+/* the cell_kernel_selector will be absolute to the parent
+*  of absolute or relative position, so putting div.input_area
+* as relative will prevent the select from going out of the
+* input cell */
+div.input_area {
+	position: relative;
+}
+
 .code_cell .cell_kernel_selector {
 	/* width:70pt; */
 	background: none;
