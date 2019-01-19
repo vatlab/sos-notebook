@@ -106,8 +106,9 @@ define([
   function lan_css(lan) {
     if (window.BackgroundColor[lan]) {
       return `.code_cell.sos_lan_${lan} .input_prompt,
-        .code_cell.sos_lan_${lan} .output_prompt {
+        .sos_lan_${lan} div.out_prompt_overlay.prompt {
           background: ${window.BackgroundColor[lan]};
+          height: 100%;
         }
       `;
     } else {
