@@ -3,6 +3,7 @@
 <style type="text/css">
 {% include 'assets/jquery.tocify.css' %}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.css">
 <style>
 #notebook-container {
   box-shadow: none;
@@ -34,22 +35,25 @@ li.tocify-item.active {
 {% endmacro %}
 
 {% macro js() %}
-<script
-  src="https://code.jquery.com/jquery-1.7.2.min.js"
-  integrity="sha256-R7aNzoy2gFrVs+pNJ6+SokH04ppcEqJ0yFLkNGoFALQ="
-  crossorigin="anonymous"></script>
-<script
-  src="https://code.jquery.com/ui/1.9.1/jquery-ui.min.js"
-  integrity="sha256-UezNdLBLZaG/YoRcr48I68gr8pb5gyTBM+di5P8p6t8="
-  crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+
 <script>
-{% include 'assets/jquery.tocify.min.js' %}
-</script>
-<script>
-    $(function() {
-        var toc = $("#toc").tocify({
-          selectors: "h2,h3,h4,h5"
-        });
-    });
+  tocbot.init({
+    // Where to render the table of contents.
+    tocSelector: '.tocify',
+    // Where to grab the headings to build the table of contents.
+    contentSelector: '.notebook-container',
+    // Which headings to grab inside of the contentSelector element.
+    headingSelector: 'h2, h3, h4',
+    //
+    listClass: 'tocify-header',
+    extraListClasses: 'nav nav-list',
+    //
+    listItemClass: 'tocify-item',
+    //
+    activeListItemClass: 'active',
+    //
+    orderedList: false,
+  });
 </script>
 {% endmacro %}
