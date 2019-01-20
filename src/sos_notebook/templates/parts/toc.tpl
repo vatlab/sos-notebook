@@ -138,6 +138,9 @@ li.toc-item .is-active-link {
     activeListItemClass: 'active',
     //
     orderedList: false,
+
+    //
+    scrollSmooth: false
   });
 </script>
 {% endmacro %}
