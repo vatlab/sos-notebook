@@ -2,11 +2,30 @@
 
 <style>
 
-.toc {
-  overflow-y: auto;
+/* The Table of Contents container element */
+#toc {
+    width: 20%;
+    max-height: 90%;
+    overflow-y: auto;
+    margin-left: 2%;
+    margin-top: 60px;
+    position: fixed;
+    border: 1px solid #ccc;
+    webkit-border-radius: 6px;
+    moz-border-radius: 6px;
+    border-radius: 6px;
 }
 
-.toc > .toc-list {
+/* The Table of Contents is composed of multiple nested unordered lists.  These styles remove the default styling of an unordered list because it is ugly. */
+#toc ul, #toc li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    line-height: 1.5em;
+}
+
+#toc > .toc-list {
   overflow: hidden;
   position: relative;
   padding-left: 0px;
@@ -48,48 +67,7 @@ a.toc-link {
   position: fixed !important;
   top: 0;
 }
-/*
-.is-active-link {
-  font-weight: 700;
-} */
-/*
-.toc-link::before {
-  background-color: #EEE;
-  content: ' ';
-  display: inline-block;
-  height: inherit;
-  left: 0;
-  margin-top: -1px;
-  position: absolute;
-  width: 2px;
-}
 
-.is-active-link::before {
-  background-color: #54BC4B;
-} */
-
-/* The Table of Contents container element */
-#toc {
-    width: 20%;
-    max-height: 90%;
-    overflow: auto;
-    margin-left: 2%;
-    margin-top: 60px;
-    position: fixed;
-    border: 1px solid #ccc;
-    webkit-border-radius: 6px;
-    moz-border-radius: 6px;
-    border-radius: 6px;
-}
-
-/* The Table of Contents is composed of multiple nested unordered lists.  These styles remove the default styling of an unordered list because it is ugly. */
-#toc ul, #toc li {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    border: none;
-    line-height: 1.5em;
-}
 
 /* Twitter Bootstrap Override Style */
 .nav-list > li > a, .nav-list .nav-header {
@@ -101,7 +79,7 @@ a.toc-link {
     padding: 5px;
 }
 
-#notebook-container {
+.notebook-container {
   box-shadow: none;
 }
 
@@ -110,13 +88,13 @@ li.toc-item .is-active-link {
   color: white;
 }
 
-
 .nav > li > a:hover, .nav > li > a:focus {
     text-decoration: none;
     background-color: #eeeeee;
     color: #337ab7;
 }
 </style>
+
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 {% endmacro %}
 
