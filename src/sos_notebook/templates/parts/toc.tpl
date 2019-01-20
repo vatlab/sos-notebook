@@ -28,24 +28,27 @@
 #toc > .toc-list {
   overflow: hidden;
   position: relative;
-  padding-left: 0px;
-  text-indent: 0px;
 
   li {
     list-style: none;
   }
 }
 
-.toc-list .toc-list {
+#toc > .toc-list  a {
   margin: 0;
-  text-indent: 15px;
+  padding-left: 10px;
+}
+
+#toc > .toc-list .toc-list a {
+  margin: 0;
+  padding-left: 25px;
   font-size: 12px;
 }
 
 
-.toc-list .toc-list .toc-list {
+#toc > .toc-list .toc-list .toc-list a {
   margin: 0;
-  text-indent: 30px;
+  padding-left: 40px;
   font-size: 12px;
 }
 
@@ -142,7 +145,6 @@ li.toc-item .is-active-link {
     activeListItemClass: 'active',
     //
     orderedList: false,
-
     //
     scrollSmooth: false
   });
