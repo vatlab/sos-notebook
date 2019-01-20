@@ -93,6 +93,12 @@ li.toc-item .is-active-link {
     background-color: #eeeeee;
     color: #337ab7;
 }
+
+
+#notebook-container {
+  box-shadow: none;
+}
+
 </style>
 
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
