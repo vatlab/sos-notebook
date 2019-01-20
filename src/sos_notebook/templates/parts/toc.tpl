@@ -116,15 +116,13 @@ li.toc-item .is-active-link {
   var headingMap = {}
 
   Array.prototype.forEach.call(headings, function(heading) {
-    if (!heading.id) {
-      var id = heading.textContent.toLowerCase()
-        .split(' ').join('-').split(':').join('')
-      headingMap[id] = !isNaN(headingMap[id]) ? headingMap[id]++ : 0
-      if (headingMap[id]) {
-        heading.id = id + '-' + headingMap[id]
-      } else {
-        heading.id = id
-      }
+    var id = heading.id ? heading.id : id = heading.textContent.toLowerCase()
+        .split(' ').join('-').split(':').join('');
+    headingMap[id] = !isNaN(headingMap[id]) ? ++headingMap[id] : 0;
+    if (headingMap[id]) {
+      heading.id = id + '-' + headingMap[id]
+    } else {
+      heading.id = id
     }
   })
 
