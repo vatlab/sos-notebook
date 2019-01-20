@@ -1,25 +1,116 @@
 {% macro css() %}
 
-<style type="text/css">
-{% include 'assets/jquery.tocify.css' %}
-</style>
 <style>
+
+.toc {
+  overflow-y: auto;
+}
+
+.toc > .toc-list {
+  overflow: hidden;
+  position: relative;
+  padding-left: 0px;
+  text-indent: 0px;
+
+  li {
+    list-style: none;
+  }
+}
+
+.toc-list .toc-list {
+  margin: 0;
+  text-indent: 15px;
+  font-size: 12px;
+}
+
+
+.toc-list .toc-list .toc-list {
+  margin: 0;
+  text-indent: 30px;
+  font-size: 12px;
+}
+
+a.toc-link {
+  height: 100%;
+}
+
+.is-collapsible {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: all 300ms ease-in-out;
+}
+
+.is-collapsed {
+  max-height: 0;
+}
+
+.is-position-fixed {
+  position: fixed !important;
+  top: 0;
+}
+/*
+.is-active-link {
+  font-weight: 700;
+} */
+/*
+.toc-link::before {
+  background-color: #EEE;
+  content: ' ';
+  display: inline-block;
+  height: inherit;
+  left: 0;
+  margin-top: -1px;
+  position: absolute;
+  width: 2px;
+}
+
+.is-active-link::before {
+  background-color: #54BC4B;
+} */
+
+/* The Table of Contents container element */
+#toc {
+    width: 20%;
+    max-height: 90%;
+    overflow: auto;
+    margin-left: 2%;
+    margin-top: 60px;
+    position: fixed;
+    border: 1px solid #ccc;
+    webkit-border-radius: 6px;
+    moz-border-radius: 6px;
+    border-radius: 6px;
+}
+
+/* The Table of Contents is composed of multiple nested unordered lists.  These styles remove the default styling of an unordered list because it is ugly. */
+#toc ul, #toc li {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: none;
+    line-height: 1.5em;
+}
+
+/* Twitter Bootstrap Override Style */
+.nav-list > li > a, .nav-list .nav-header {
+    margin: 0px;
+}
+
+/* Twitter Bootstrap Override Style */
+.nav-list > li > a {
+    padding: 5px;
+}
+
 #notebook-container {
   box-shadow: none;
 }
-li.tocify-item.active {
+
+li.toc-item .is-active-link {
   background-color: #6197d5;
-}
-.tocify-item.active a {
   color: white;
 }
 
-.tocify {
-  margin-top: 60px;
-}
-.tocify ul, .tocify li {
-    line-height: 1.5em;
-}
+
 .nav > li > a:hover, .nav > li > a:focus {
     text-decoration: none;
     background-color: #eeeeee;
@@ -27,29 +118,48 @@ li.tocify-item.active {
 }
 </style>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.9.1/themes/smoothness/jquery-ui.css">
 {% endmacro %}
 
 {% macro html() %}
 {% endmacro %}
 
 {% macro js() %}
-<script
-  src="https://code.jquery.com/jquery-1.7.2.min.js"
-  integrity="sha256-R7aNzoy2gFrVs+pNJ6+SokH04ppcEqJ0yFLkNGoFALQ="
-  crossorigin="anonymous"></script>
-<script
-  src="https://code.jquery.com/ui/1.9.1/jquery-ui.min.js"
-  integrity="sha256-UezNdLBLZaG/YoRcr48I68gr8pb5gyTBM+di5P8p6t8="
-  crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+
 <script>
-{% include 'assets/jquery.tocify.min.js' %}
-</script>
-<script>
-    $(function() {
-        var toc = $("#toc").tocify({
-          selectors: "h2,h3,h4,h5"
-        });
-    });
+  var content = document.querySelector('.notebook-container')
+  var headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
+  var headingMap = {}
+
+  Array.prototype.forEach.call(headings, function(heading) {
+    if (!heading.id) {
+      var id = heading.textContent.toLowerCase()
+        .split(' ').join('-').split(':').join('')
+      headingMap[id] = !isNaN(headingMap[id]) ? headingMap[id]++ : 0
+      if (headingMap[id]) {
+        heading.id = id + '-' + headingMap[id]
+      } else {
+        heading.id = id
+      }
+    }
+  })
+
+  tocbot.init({
+    // Where to render the table of contents.
+    tocSelector: '#toc',
+    // Where to grab the headings to build the table of contents.
+    contentSelector: '.notebook-container',
+    // Which headings to grab inside of the contentSelector element.
+    headingSelector: 'h2, h3, h4',
+    //
+    listClass: 'toc-list',
+    extraListClasses: 'nav nav-list',
+    //
+    listItemClass: 'toc-item',
+    //
+    activeListItemClass: 'active',
+    //
+    orderedList: false,
+  });
 </script>
 {% endmacro %}
