@@ -12,7 +12,7 @@
 <body>
   <div class="row-fluid">
     <div class="col-xs-12 col-sm-4 col-md-3">
-      <div id="toc" class="tocify">
+      <div id="toc">
       </div><!--/.well -->
     </div><!--/span-->
     <div class="col-xs-12 col-sm-8 col-md-9">
