@@ -21,12 +21,61 @@
     display: none;
 }
 
-.display_control_panel  {
+#display_toggle_dropdown  {
     padding: 10pt;
     right: 25px;
     top: 25px;
     position: absolute;
     z-index: 1000;
+}
+
+.dropbtn {
+  background-color: #6197d5;
+  border-color: #6197d5;
+  border: 1pt solid transparent;
+  color: white;
+  padding: .375rem .75rem;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: .25rem;
+  transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+/* The container <div> - needed to position the dropdown content */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+/* Dropdown Content (Hidden by Default) */
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+/* Links inside the dropdown */
+.dropdown-content a {
+  color: black;
+  padding: .25rem 1.5rem;
+  text-decoration: none;
+  display: block;
+}
+
+/* Change color of dropdown links on hover */
+.dropdown-content a:hover {background-color: #f1f1f1}
+
+/* Show the dropdown menu on hover */
+.dropdown:hover .dropdown-content {
+  display: block;
+}
+
+/* Change the background color of the dropdown button when the dropdown content is shown */
+.dropdown:hover .dropbtn {
+  background-color: #007bff;
 }
 
 </style>
@@ -35,14 +84,14 @@
 
 {% macro html() %}
 
-<div class='display_control_panel'>
+<div id='display_toggle_dropdown'>
   <div class="dropdown">
-    <button id="showHideButton" class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Report Only &nbsp; <span class="caret"></span></button>
-    <ul id="showHideMenu" class="dropdown-menu">
-      <li><a href="#">Report Only</a></li>
-      <li><a href="#">Show Code</a></li>
-      <li><a href="#">Show All</a></li>
-    </ul>
+    <button id="showHideButton" class="dropbtn">Report Only &nbsp; <span class="caret"></span></button>
+    <div id="showHideMenu" class="dropdown-content">
+      <a href="#">Report Only</a>
+      <a href="#">Show Code</a>
+      <a href="#">Show All</a>
+    </div>
   </div>
 </div>
 
@@ -50,24 +99,26 @@
 
 {% macro js() %}
 
-<script
-  src="https://code.jquery.com/jquery-3.3.1.min.js"
-  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-  crossorigin="anonymous"></script>
-
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/js/bootstrap.min.js"></script>
-
 <script>
 
+let elem = document.getElementById('display_toggle_dropdown');
+elem.parentNode.removeChild(elem);
+let container = document.getElementById('notebook-container');
+container.appendChild(elem);
 
-<script
-  src="https://code.jquery.com/jquery-3.3.1.min.js"
-  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-  crossorigin="anonymous"></script>
-$(document).ready(function() {
-  $(".display_control_panel").detach().appendTo("#notebook-container");
-  $('#showHideMenu a').on('click', showHideToggle);
-})
+Array.from(document.querySelectorAll('#showHideMenu a')).forEach(
+  function(element, index, array) {
+      element.addEventListener("click", showHideToggle);
+  });
+
+function setDisplayOfElemenets(names, value = 'none') {
+  names.forEach( function(name) {
+    Array.from(document.querySelectorAll(name)).forEach(
+      function(element, index, array) {
+          element.style.display = value;
+      });
+    });
+}
 
 function showHideToggle() {
   var btn = document.getElementById("showHideButton");
@@ -76,41 +127,36 @@ function showHideToggle() {
   btn.innerHTML = this.innerText + ' &nbsp;  <span class="caret"></span>';
 
   if (this.innerText === "Report Only") {
-    $('div.input').hide();
-    $('.hidden_content').hide();
-    $('div.cell').css('padding', '0pt').css('border-width', '0pt');
-
-    $('.output_prompt').hide();
-    $('.input_prompt').hide();
-    $('.output_area .prompt').hide();
-
-    $('.output_stderr').hide();
-    $('.sos_hint').hide();
+    setDisplayOfElemenets(['div.input', '.hidden_content', '.output_prompt',
+      '.input_prompt', '.output_area prompt', '.output_stderr', '.sos_hint'], 'none');
+    Array.from(document.querySelectorAll('div.cell')).forEach(
+      function(element, index, array) {
+          element.style.padding = '0pt';
+          element.style.borderWidth = '0pt';
+      }
+    );
   } else if (this.innerText === "Show Code") {
-    $('div.input').css('display', 'reset');
-    $('.hidden_content').css('display', 'contents');
-    // this somehow does not work.
-    $('div.cell').css('padding', '5pt').css('border-width', '1pt');
-
-    $('.output_prompt').hide();
-    $('.input_prompt').hide();
-    $('.output_area .prompt').hide();
-
-    $('.output_stderr').hide();
-    $('.sos_hint').hide();
-
+    setDisplayOfElemenets(['.div.input'], 'flex');
+    setDisplayOfElemenets(['.hidden_content'], 'contents');
+    setDisplayOfElemenets(['.output_prompt', '.input_prompt',
+      '.output_area .prompt', '.output_stderr', '.sos_hint'], 'none');
+    Array.from(document.querySelectorAll('div.cell')).forEach(
+      function(element, index, array) {
+          element.style.padding = '5pt';
+          element.style.borderWidth = '1pt';
+      }
+    );
   } else if (this.innerText == "Show All") {
-    $('div.input').css('display', 'reset');
-    $('.hidden_content').css('display', 'contents');
-    // this somehow does not work.
-    $('div.cell').css('padding', '5pt').css('border-width', '1pt');
-
-    $('.output_prompt').show();
-    $('.input_prompt').show();
-    $('.output_area .prompt').show();
-
-    $('.sos_hint').show();
-    $('.output_stderr').show();
+    setDisplayOfElemenets(['.div.input'], 'flex');
+    setDisplayOfElemenets(['.hidden_content'], 'contents');
+    setDisplayOfElemenets(['.output_prompt', '.input_prompt',
+     '.output_area .prompt', '.output_stderr', '.sos_hint'], 'block');
+    Array.from(document.querySelectorAll('div.cell')).forEach(
+      function(element, index, array) {
+         element.style.padding = '5pt';
+         element.style.borderWidth = '1pt';
+     }
+   );
   }
 }
 
