@@ -29,6 +29,8 @@ define([
   window.KernelList = [];
   window.JsLoaded = new Map();
   window.KernelOptions = {};
+  window.CodeMirrorMode = {};
+
   window.events = require("base/js/events");
   window.Jupyter = require("base/js/namespace");
   window.CodeCell = require("notebook/js/codecell").CodeCell;
@@ -87,6 +89,10 @@ define([
     window.LanguageName[data[i][1]] = data[i][2];
     // KernelList, use displayed name
     window.KernelList.push(data[i][0]);
+    // codemirror mode
+    if (data[i].length >= 5 && data[i][4]) {
+      window.CodeMirrorMode[data[i][0]] = data[i][4]
+    }
   }
 
   // if not defined sos version, remove extra kernels saved by
@@ -195,7 +201,8 @@ define([
     nb.metadata["sos"]["kernels"] = Array.from(used_kernels).sort().map(
       function(x) {
         return [window.DisplayName[x], window.KernelName[x],
-          window.LanguageName[x] || "", window.BackgroundColor[x] || ""
+          window.LanguageName[x] || "", window.BackgroundColor[x] || "",
+          window.CodeMirrorMode[x] || ""
         ]
       }
     );
@@ -405,7 +412,7 @@ define([
     if (cell.is_panel) {
       cell.user_highlight = {
         name: 'sos',
-        base_mode: window.LanguageName[type] || window.KernelName[type] || type,
+        base_mode: window.CodeMirrorMode[type] || window.LanguageName[type] || window.KernelName[type] || type,
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
       cell.code_mirror.setOption('mode', cell.user_highlight);
@@ -418,8 +425,8 @@ define([
       if (kernel_name !== 'sos' && !window.JsLoaded[kernel_name]) {
         load_kernel_js(kernel_name);
       }
-      var base_mode = window.LanguageName[type] || kernel_name || type;
-      if (!base_mode || base_mode.toLowerCase() === 'sos') {
+      var base_mode = window.CodeMirrorMode[type] || window.LanguageName[type] || kernel_name || type;
+      if (!base_mode || base_mode === 'sos') {
         cell.user_highlight = 'auto';
         cell.code_mirror.setOption('mode', 'sos');
       } else {
@@ -851,8 +858,12 @@ define([
             window.KernelList.push(data[i][0]);
           }
           // if options ...
-          if (data[i].length > 4) {
+          if (data[i].length >= 4) {
             window.KernelOptions[data[i][0]] = data[i][4];
+          }
+          // if codemirror mode ...
+          if (data[i].length >= 5 && data[i][5]) {
+            window.CodeMirrorMode[data[i][0]] = data[i][5];
           }
 
           // if the kernel is in metadata, check conflict
@@ -2410,7 +2421,7 @@ color: green;
       // https://github.com/vatlab/sos-notebook/issues/55
       cell.user_highlight = {
         name: 'sos',
-        base_mode: window.LanguageName[this.value] || kernel_name || this.value,
+        base_mode: window.CodeMirrorMode[this.value] || window.LanguageName[this.value] || kernel_name || this.value,
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight.base_mode}`)
       cell.code_mirror.setOption('mode', cell.user_highlight);

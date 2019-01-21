@@ -65,12 +65,13 @@ __all__ = ['SoS_Kernel']
 
 class subkernel(object):
     # a class to information on subkernel
-    def __init__(self, name=None, kernel=None, language='', color='', options={}):
+    def __init__(self, name=None, kernel=None, language='', color='', options={}, codemirror_mode=''):
         self.name = name
         self.kernel = kernel
         self.language = language
         self.color = color
         self.options = options
+        self.codemirror_mode = codemirror_mode
 
     def __repr__(self):
         return f'subkernel {self.name} with kernel {self.kernel} for language {self.language} with color {self.color}'
@@ -124,7 +125,8 @@ class Subkernels(object):
                 for kname in knames:
                     if x != kname:
                         lan_map[kname] = (lname, self.get_background_color(self.language_info[x], lname),
-                                          getattr(self.language_info[x], 'options', {}))
+                                          getattr(self.language_info[x], 'options', {}),
+                                          '')
         # kernel_list has the following items
         #
         # 1. displayed name
@@ -137,7 +139,8 @@ class Subkernels(object):
                 self._kernel_list.append(
                     subkernel(name='SoS', kernel='sos', options={
                         'variable_pattern': r'^\s*[_A-Za-z0-9\.]+\s*$',
-                        'assignment_pattern': r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'}))
+                        'assignment_pattern': r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'},
+                        codemirror_mode = 'sos'))
             elif spec in lan_map:
                 # e.g. ir ==> R
                 self._kernel_list.append(
@@ -149,6 +152,40 @@ class Subkernels(object):
 
     def kernel_list(self):
         return self._kernel_list
+
+    default_cm_mode = {
+        'sos': '',
+        'python': {
+          'name': 'python',
+          'version': 3
+        },
+        'python2': {
+          'name': 'python',
+          'version': 2
+        },
+        'python3': {
+          'name': 'python',
+          'version': 3
+        },
+        'r': 'r',
+        'report': 'markdown',
+        'pandoc': 'markdown',
+        'download': 'markdown',
+        'markdown': 'markdown',
+        'ruby': 'ruby',
+        'sas': 'sas',
+        'bash': 'shell',
+        'sh': 'shell',
+        'julia': 'julia',
+        'run': 'shell',
+        'javascript': 'javascript',
+        'typescript': {
+          'name': "javascript",
+          'typescript': True
+        },
+        'octave': 'octave',
+        'matlab': 'octave',
+    }
 
     # now, no kernel is found, name has to be a new name and we need some definition
     # if kernel is defined
@@ -171,13 +208,16 @@ class Subkernels(object):
             # return color for specified, or any color if unknown inquiry is made
             return plugin.background_color.get(lan, next(iter(plugin.background_color.values())))
 
-    def find(self, name, kernel=None, language=None, color=None, notify_frontend=True):
+    def find(self, name, kernel=None, language=None, color=None, codemirror_mode='', notify_frontend=True):
+        codemirror_mode = codemirror_mode if codemirror_mode else self.default_cm_mode.get('codemirror_mode', codemirror_mode)
         # find from subkernel name
         def update_existing(idx):
             x = self._kernel_list[idx]
             if (kernel is not None and kernel != x.kernel) or (language not in (None, '', 'None') and language != x.language):
                 raise ValueError(
                     f'Cannot change kernel or language of predefined subkernel {name} {x}')
+            if codemirror_mode:
+                self._kernel_list[idx].codemirror_mode = codemirror_mode
             if color is not None:
                 if color == 'default':
                     if self._kernel_list[idx].language:
@@ -230,7 +270,8 @@ class Subkernels(object):
                     else:
                         color = kdef.color
                 new_def = self.add_or_replace(subkernel(name, kdef.kernel, kdef.language, kdef.color if color is None else color,
-                                                        getattr(self.language_info[kdef.language], 'options', {}) if kdef.language else {}))
+                                                        getattr(self.language_info[kdef.language], 'options', {}) if kdef.language else {},
+                                                        codemirror_mode=codemirror_mmode))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -260,7 +301,8 @@ class Subkernels(object):
                     if color == 'default':
                         color = self.get_background_color(plugin, kernel)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, kernel, kdef.color if color is None else color,
-                                                            getattr(plugin, 'options', {})))
+                                                            getattr(plugin, 'options', {}),
+                                                            codemirror_mode=codemirror_mmode))
                 else:
                     # if should be defined ...
                     if language not in self.language_info:
@@ -272,7 +314,8 @@ class Subkernels(object):
                         color = self.get_background_color(
                             self.language_info[name], language)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, language, kdef.color if color is None else color,
-                                                            getattr(self.language_info[name], 'options', {})))
+                                                            getattr(self.language_info[name], 'options', {}),
+                                                            codemirror_mode=codemirror_mmode))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -310,7 +353,8 @@ class Subkernels(object):
                 if color == 'default':
                     color = self.get_background_color(plugin, lan_name)
                 new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, self.get_background_color(plugin, lan_name) if color is None else color,
-                                                        getattr(plugin, 'options', {})))
+                                                        getattr(plugin, 'options', {}),
+                                                        codemirror_mode=codemirror_mmode))
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
                 if language not in self.language_info:
@@ -335,7 +379,8 @@ class Subkernels(object):
                     name, avail_kernels[0], language,
                     self.get_background_color(
                         self.language_info[language], language) if color is None or color == 'default' else color,
-                    getattr(self.language_info[language], 'options', {})))
+                    getattr(self.language_info[language], 'options', {}),
+                    codemirror_mode=codemirror_mmode))
 
             self.notify_frontend()
             return new_def
@@ -353,8 +398,9 @@ class Subkernels(object):
         for kinfo in notebook_kernel_list:
             try:
                 # if we can find the kernel, fine...
-                self.find(kinfo[0], kinfo[1], kinfo[2],
-                          kinfo[3], notify_frontend=False)
+                self.find(name=kinfo[0], kernel=kinfo[1], language=kinfo[2],
+                          color=kinfo[3], codemirror_mode='' if len(kinfo) >= 4 else kinfo[4],
+                          notify_frontend=False)
             except Exception as e:
                 # otherwise do not worry about it.
                 env.logger.warning(
@@ -363,7 +409,7 @@ class Subkernels(object):
     def notify_frontend(self):
         self._kernel_list.sort(key=lambda x: x.name)
         self.sos_kernel.send_frontend_msg('kernel-list',
-                                          [[x.name, x.kernel, x.language, x.color, x.options] for x in self._kernel_list])
+            [[x.name, x.kernel, x.language, x.color, x.options, x.codemirror_mode] for x in self._kernel_list])
 
 
 class SoS_Kernel(IPythonKernel):
@@ -971,6 +1017,10 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.KM, self.KC = self.kernels[kinfo.name]
             self._kernel_return_vars = [] if ret_vars is None else ret_vars
             self.kernel = kinfo.name
+            if new_kernel and not kinfo.codemirror_mode:
+                self.KC.kernel_info()
+                kinfo.codemirror_mode = self.KC.get_shell_msg(timeout=10)['content']['language_info'].get('codemirror_mode', '')
+                self.subkernels.notify_frontend()
             if new_kernel and self.kernel in self.supported_languages:
                 init_stmts = self.supported_languages[self.kernel](
                     self, kinfo.kernel).init_statements
