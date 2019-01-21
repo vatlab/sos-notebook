@@ -52,23 +52,34 @@ textarea.sos-source {
     {% include 'sos-mode.js' %}
 </script>
 <script>
-    function highlight_cells(cells, i, interval) {
-        setTimeout(function() {
-            var editor = CodeMirror.fromTextArea(cells[i], {
-                lineNumbers: false,
-                styleActiveLine: true,
-                matchBrackets: true,
-                readOnly: true,
-                mode: 'sos',
-                base_mode: cells[i] ? cells[i].name : '',
-            });
-            $(cells[i]).parent().prepend("<select class='cell-kernel-selector'><option>"
-					       + cells[i].name + "</option></select>");
-            if (i < cells.length)
-                highlight_cells(cells, i + 1, interval);
-        }, interval);
-    }
+  function highlight_cells(cells, i, interval) {
+    setTimeout(function() {
+      if (! cells[i])
+        return;
+      var editor = CodeMirror.fromTextArea(cells[i], {
+          lineNumbers: false,
+          styleActiveLine: true,
+          matchBrackets: true,
+          readOnly: true,
+          mode: 'sos',
+          base_mode: cells[i].name,
+      });
 
-    highlight_cells(document.getElementsByClassName("sos-source"), 0, 10);
+      let select = document.createElement('select');
+      let option = document.createElement('option');
+      option.value = cells[i].name;
+      option.textContent = cells[i].name;
+      select.appendChild(option);
+      select.className = "cell-kernel-selector";
+      select.value = cells[i].name;
+
+      cells[i].parentElement.insertBefore(select, cells[i]);
+
+      if (i < cells.length)
+          highlight_cells(cells, i + 1, interval);
+    }, interval);
+  }
+
+  highlight_cells(document.getElementsByClassName("sos-source"), 0, 10);
 </script>
 {% endmacro %}
