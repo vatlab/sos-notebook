@@ -409,7 +409,7 @@ class Subkernels(object):
     def notify_frontend(self):
         self._kernel_list.sort(key=lambda x: x.name)
         self.sos_kernel.send_frontend_msg('kernel-list',
-            [[x.name, x.kernel, x.language, x.color, x.options, x.codemirror_mode] for x in self._kernel_list])
+            [[x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options] for x in self._kernel_list])
 
 
 class SoS_Kernel(IPythonKernel):

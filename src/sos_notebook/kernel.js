@@ -90,7 +90,7 @@ define([
     // KernelList, use displayed name
     window.KernelList.push(data[i][0]);
     // codemirror mode
-    if (data[i].length >= 5 && data[i][4]) {
+    if (data[i].length > 4 && data[i][4]) {
       window.CodeMirrorMode[data[i][0]] = data[i][4]
     }
   }
@@ -857,13 +857,13 @@ define([
           if (window.KernelList.findIndex((item) => item === data[i][0]) === -1) {
             window.KernelList.push(data[i][0]);
           }
-          // if options ...
-          if (data[i].length >= 4) {
-            window.KernelOptions[data[i][0]] = data[i][4];
-          }
           // if codemirror mode ...
-          if (data[i].length >= 5 && data[i][5]) {
-            window.CodeMirrorMode[data[i][0]] = data[i][5];
+          if (data[i].length > 4 && data[i][4]) {
+            window.CodeMirrorMode[data[i][0]] = data[i][4];
+          }
+                    // if options ...
+          if (data[i].length > 5) {
+            window.KernelOptions[data[i][0]] = data[i][5];
           }
 
           // if the kernel is in metadata, check conflict
