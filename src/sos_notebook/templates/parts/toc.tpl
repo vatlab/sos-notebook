@@ -97,9 +97,14 @@ li.toc-item .is-active-link {
     color: #337ab7;
 }
 
-
 #notebook-container {
   box-shadow: none;
+}
+
+/* https://github.com/tscanlin/tocbot/issues/121 */
+h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 </style>
@@ -146,7 +151,7 @@ li.toc-item .is-active-link {
     //
     orderedList: false,
     //
-    scrollSmooth: false
+    scrollSmooth: true
   });
 </script>
 {% endmacro %}
