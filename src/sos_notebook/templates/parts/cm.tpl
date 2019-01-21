@@ -60,7 +60,7 @@ textarea.sos-source {
                 matchBrackets: true,
                 readOnly: true,
                 mode: 'sos',
-                base_mode: cells[i].name,
+                base_mode: cells[i] ? cells[i].name : '',
             });
             $(cells[i]).parent().prepend("<select class='cell-kernel-selector'><option>"
 					       + cells[i].name + "</option></select>");

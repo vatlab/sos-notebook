@@ -1836,7 +1836,7 @@ class SoSSave_Magic(SoS_Magic):
         parser.add_argument('--template', default='default-sos-template',
                             help='''Template to generate HTML output. The default template is a
             template defined by configuration key default-sos-template, or
-            sos-report if such a key does not exist.''')
+            sos-report-toc if such a key does not exist.''')
         parser.error = self._parse_error
         return parser
 
@@ -1896,7 +1896,7 @@ class SoSSave_Magic(SoS_Magic):
                     if 'default-sos-template' in cfg:
                         arg.template = cfg['default-sos-template']
                     else:
-                        arg.template = 'sos-report'
+                        arg.template = 'sos-report-toc'
                 else:
                     arg.template = args.template
                 arg.view = False
