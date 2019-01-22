@@ -123,6 +123,26 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
   var headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
   var headingMap = {}
 
+  function indexedHeaders(headings) {
+      if (!headings) {
+          return '';
+      }
+      let counts = [0, 0, 0, 0, 0, 0, 0]
+      for (let i = 0; i < headings.length; ++i) {
+        ++counts[parseInt(headings[i].tagName[1])-1]
+      }
+      // now, we remove the first 1 if it is the first tag, and if
+      // it has only one, and if it is not the only header
+      let first = counts.findIndex(x => x > 0);
+      console.log(first)
+      if (counts[first] == 1 && counts.reduce((a, b) => a + b, 0) != counts[first]
+         && parseInt(headings[0].tagName[1]) === first + 1) {
+          counts[first] = 0;
+      }
+      //
+      return counts.map((x, idx) => x > 0 ? 'H' + (idx+1) : '').filter(x => x).join(',');
+  }
+
   Array.prototype.forEach.call(headings, function(heading) {
     var id = heading.id ? heading.id : heading.textContent.toLowerCase()
         .split(' ').join('-').split(':').join('');
@@ -140,7 +160,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
     // Where to grab the headings to build the table of contents.
     contentSelector: '.notebook-container',
     // Which headings to grab inside of the contentSelector element.
-    headingSelector: 'h2, h3, h4',
+    headingSelector: indexedHeaders(headings),
     //
     listClass: 'toc-list',
     extraListClasses: 'nav nav-list',
