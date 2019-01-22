@@ -11,7 +11,7 @@ before_install:
     - sudo apt-get update
     - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-ce
     - sudo apt-get install octave
-    - wget https://repo.continuum.io/miniconda/Miniconda3-4.2.11-Linux-x86_64.sh -O miniconda.sh
+    - wget https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh -O miniconda.sh
     - bash miniconda.sh -b -p $HOME/miniconda
     - export PATH="$HOME/miniconda/bin:$PATH"
     - hash -r
@@ -19,8 +19,6 @@ before_install:
     - conda update -q conda
       #- conda info -a
     # downgrade python if needed
-    - conda create --quiet -n python_test python=$TRAVIS_PYTHON_VERSION anaconda
-    - source activate python_test      
     - pip install docker rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus 
     - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     - conda install -q pandas numpy
