@@ -172,9 +172,13 @@ with open('a.html', 'w') as dot:
 """)
 ''')
             res = get_display_data(iopub, 'text/html')
+
+    @unittest.skipIf(sys.platform == 'win32' or 'TRAVIS' in os.environ, 'Skip test because of no internet connection or in travis test')
+    def testPreviewDot(self):
+        with sos_kernel() as kc:
+            # preview variable
+            iopub = kc.iopub_channel
             # preview dot, needs imagemagick, which is unavailable under windows.
-            if sys.platform == 'win32':
-                return
             execute(kc=kc, code='''
 %preview -n a.dot
 with open('a.dot', 'w') as dot:
@@ -218,7 +222,7 @@ graph graphname {
 #         stdout, _ = get_std_output(iopub)
 #         #self.assertEqual(stderr, '', 'Got error {}'.format(stderr))
 #         self.assertTrue('abc' in stdout, 'Got stdout "{}"'.format(stdout))
-# 
+#
     def testMagicSandbox(self):
         with sos_kernel() as kc:
             # preview variable
