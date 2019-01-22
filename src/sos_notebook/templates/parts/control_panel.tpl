@@ -22,20 +22,19 @@
 }
 
 #display_toggle_dropdown  {
-    padding: 10pt;
-    right: 25px;
-    top: 25px;
-    position: absolute;
+    float: right;
+    position: relative;
     z-index: 1000;
+    margin-bottom: -25px;
 }
 
 .dropbtn {
-  background-color: #6197d5;
-  border-color: #6197d5;
+  background-color: #6c757d;
+  border-color: #6c757d;
   border: 1pt solid transparent;
   color: white;
   padding: .375rem .75rem;
-  font-size: 1rem;
+  font-size: 14px;
   cursor: pointer;
   border-radius: .25rem;
   transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
@@ -52,7 +51,7 @@
   display: none;
   position: absolute;
   background-color: #f9f9f9;
-  min-width: 160px;
+  white-space: nowrap;
   box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
   z-index: 1;
 }
@@ -75,7 +74,7 @@
 
 /* Change the background color of the dropdown button when the dropdown content is shown */
 .dropdown:hover .dropbtn {
-  background-color: #007bff;
+  background-color: #343a40;
 }
 
 </style>
@@ -104,7 +103,7 @@
 let elem = document.getElementById('display_toggle_dropdown');
 elem.parentNode.removeChild(elem);
 let container = document.getElementById('notebook-container');
-container.appendChild(elem);
+container.insertBefore(elem, container.firstChild);
 
 Array.from(document.querySelectorAll('#showHideMenu a')).forEach(
   function(element, index, array) {
