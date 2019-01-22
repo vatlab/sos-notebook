@@ -830,7 +830,6 @@ define([
             }
         }
         */
-
         for (i = 0; i < data.length; i++) {
           // BackgroundColor is color
           window.BackgroundColor[data[i][0]] = data[i][3];
@@ -2687,11 +2686,11 @@ color: green;
         // this is the SoS flavored python mode with more identifiers
         var base_mode = null;
         if ('base_mode' in parserConf && parserConf.base_mode) {
-          let mode = findMode(parserConf.base_mode.toLowerCase());
+          let mode = findMode(parserConf.base_mode);
           if (mode) {
             base_mode = CodeMirror.getMode(conf, mode);
           } else {
-            base_mode = CodeMirror.getMode(conf, parserConf.base_mode.toLowerCase())
+            base_mode = CodeMirror.getMode(conf, parserConf.base_mode)
           }
           // } else {
           //   console.log(`No base mode is found for ${parserConf.base_mode}. Python mode used.`);
