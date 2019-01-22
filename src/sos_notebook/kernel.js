@@ -1962,7 +1962,7 @@ margin: -0.4em;
 padding-left: 0.4em;
 }
 .sos_hint {
-color: rgba(0,0,0,.4);
+color: gray;
 font-family: monospace;
 }
 
