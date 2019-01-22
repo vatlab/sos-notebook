@@ -901,8 +901,7 @@ class SoS_Kernel(IPythonKernel):
         self.KC.execute(code, silent=silent, store_history=store_history)
 
         # first thing is wait for any side effects (output, stdin, etc.)
-        _execution_state = "busy"
-        while _execution_state != 'idle':
+        while True:
             # display intermediate print statements, etc.
             while self.KC.stdin_channel.msg_ready():
                 sub_msg = self.KC.stdin_channel.get_msg()
@@ -927,26 +926,28 @@ class SoS_Kernel(IPythonKernel):
                     env.log_to_file(f'MSG TYPE {msg_type}')
                     env.log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
-                    _execution_state = sub_msg["content"]["execution_state"]
-                else:
-                    if msg_type in ('execute_input', 'execute_result'):
-                        # override execution count with the master count,
-                        # not sure if it is needed
-                        sub_msg['content']['execution_count'] = self._execution_count
-                    #
-                    if msg_type in ['display_data', 'stream', 'execute_result', 'update_display_data']:
-                        if self._meta['capture_result'] is not None:
-                            self._meta['capture_result'].append(
-                                (msg_type, sub_msg['content']))
-                        if silent:
-                            continue
-                    self.send_response(
-                        self.iopub_socket, msg_type, sub_msg['content'])
-        #
-        # now get the real result
-        reply = self.KC.get_shell_msg(timeout=10)
-        reply['content']['execution_count'] = self._execution_count
-        return reply['content']
+                    continue
+                if msg_type in ('execute_input', 'execute_result'):
+                    # override execution count with the master count,
+                    # not sure if it is needed
+                    sub_msg['content']['execution_count'] = self._execution_count
+                #
+                if msg_type in ['display_data', 'stream', 'execute_result', 'update_display_data']:
+                    if self._meta['capture_result'] is not None:
+                        self._meta['capture_result'].append(
+                            (msg_type, sub_msg['content']))
+                    if silent:
+                        continue
+                self.send_response(
+                    self.iopub_socket, msg_type, sub_msg['content'])
+            if self.KC.shell_channel.msg_ready():
+                # now get the real result
+                reply = self.KC.get_shell_msg()
+                reply['content']['execution_count'] = self._execution_count
+                if self._debug_mode:
+                    env.log_to_file(f'GET SHELL MSG {reply}')
+                return reply['content']
+            time.sleep(0.001)
 
     def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
@@ -1066,33 +1067,44 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
 
     def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
+        while self.KC.shell_channel.msg_ready():
+            self.KC.shell_channel.get_msg()
+        while self.KC.iopub_channel.msg_ready():
+            sub_msg = self.KC.iopub_channel.get_msg()
+            if self._debug_mode:
+                self.warn(f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}")
         responses = []
         self.KC.execute(statement, silent=False, store_history=False)
         # first thing is wait for any side effects (output, stdin, etc.)
-        _execution_state = "busy"
-        while _execution_state != 'idle':
+        while True:
             # display intermediate print statements, etc.
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 if self._debug_mode:
-                    env.log_to_file(
-                        f'Received {msg_type} {sub_msg["content"]}')
+                    env.log_to_file(f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
-                    _execution_state = sub_msg["content"]["execution_state"]
-                else:
-                    if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name):
-                        if self._debug_mode:
-                            env.log_to_file(
-                                f'Capture response: {msg_type}: {sub_msg["content"]}')
+                    continue
+                if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name):
+                    if self._debug_mode:
+                        env.log_to_file(
+                            f'Capture response: {msg_type}: {sub_msg["content"]}')
 
-                        responses.append([msg_type, sub_msg['content']])
-                    else:
-                        if self._debug_mode:
-                            env.log_to_file(
-                                f'Non-response: {msg_type}: {sub_msg["content"]}')
-                        self.send_response(
-                            self.iopub_socket, msg_type, sub_msg['content'])
+                    responses.append([msg_type, sub_msg['content']])
+                else:
+                    if self._debug_mode:
+                        env.log_to_file(
+                            f'Non-response: {msg_type}: {sub_msg["content"]}')
+                    self.send_response(
+                        self.iopub_socket, msg_type, sub_msg['content'])
+            if self.KC.shell_channel.msg_ready():
+                # now get the real result
+                reply = self.KC.get_shell_msg()
+                if self._debug_mode:
+                    env.log_to_file(f'GET SHELL MSG {reply}')
+                break
+            time.sleep(0.001)
+
         if not responses and self._debug_mode:
             self.warn(
                 f'Failed to get a response from message type {msg_types} for the execution of {statement}')
