@@ -1,25 +1,11 @@
-
-{% macro html() %}
-
-<div id='sos_hover_tooltip'>
-</div>
-
-{% endmacro %}
-
 {% macro css() %}
 
 <style type="text/css">
 
-#sos_hover_tooltip {
-  position: fixed;
-  display: none;
-  background: lightgray;
-  border: 1pt solid gray;
-  opacity: 50%;
-}
-
 .sos_hover_doc:hover {
   cursor: pointer;
+  background: lightgray;  
+  opacity: 50%;
 }
 </style>
 
@@ -29,47 +15,45 @@
 <script>
 
 let keyword_links = {
+  // cm-keyword cm-strong
   'input:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/input_statement.html',
   'output:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/output_statement.html',
   'depends:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/depebds_statement.html',
-}
 
-let function_links = {
+  // cm-variable cm-sos-option
   'named_output' : 'https://vatlab.github.io/sos-docs/doc/user_guide/named_output.html',
+  'output_from' : 'https://vatlab.github.io/sos-docs/doc/user_guide/output_from.html',
+  'for_each': 'https://vatlab.github.io/sos-docs/doc/user_guide/for_each.html',
+  'trunk_size': 'https://vatlab.github.io/sos-docs/doc/user_guide/trunk_size.html',
+  'expand': 'https://vatlab.github.io/sos-docs/doc/user_guide/scripts_in_sos.html#option-expand',
+
+  // cm-builtin cm-strong
+  'run:': 'https://vatlab.github.io/sos-docs/doc/user_guide/shell_actions.html',
+  'sh:': 'https://vatlab.github.io/sos-docs/doc/user_guide/shell_actions.html',
+  'bash': 'https://vatlab.github.io/sos-docs/doc/user_guide/shell_actions.html',
+  'R:': 'https://vatlab.github.io/sos-docs/doc/user_guide/script_actions.html',
+  'Python:': 'https://vatlab.github.io/sos-docs/doc/user_guide/script_actions.html',
+
+  // cm-meta
+  '%sosrun': 'https://vatlab.github.io/sos-docs/doc/user_guide/sos_in_notebook.html#magic-sosrun',
+  '%run': 'https://vatlab.github.io/sos-docs/doc/user_guide/sos_in_notebook.html#magic-run',
+  '%runfile': 'https://vatlab.github.io/sos-docs/doc/user_guide/sos_in_notebook.html#magic-runfile',
+  '%sossave': 'https://vatlab.github.io/sos-docs/doc/user_guide/magic_sossave.html',
+  '%preview': 'https://vatlab.github.io/sos-docs/doc/user_guide/magic_preview.html',
 }
 
-function sos_doc_hover_over(evt) {
-  let tooltip = document.getElementById('sos_hover_tooltip');
-  let tooltiptext = document.getElementById('sos_hover_tooltip');
-
-  let loc = evt.target.getBoundingClientRect();
-  tooltip.style.top = loc.y + 'px';
-  tooltip.style.left = loc.x + 'px';
-  tooltip.style.width = loc.width + 'px';
-  tooltip.style.height = loc.height + 'px';
-
-  tooltip.style.display = 'block';
-}
-
-function sos_doc_hover_leave(evt) {
-  document.getElementById('sos_hover_tooltip').style.display = 'none';
-}
-
-function sos_doc_hover_visit(evt) {
+function visit_sos_doc(evt) {
   window.open(keyword_links[evt.target.innerText], '_blank')
 }
 
-
-// we wait for 10 seconds before scanning document because we need to
+// FIXME: we wait for 5 seconds before scanning document because we need to
 // wait syntax hilighting to be done. A promise is actually needed.
 setTimeout(function() {
-  // find all keyword in keyword_links
-  let elems = document.getElementsByClassName("cm-keyword cm-strong");
+  let elems = ['cm-keyword cm-strong', 'cm-variable cm-sos-option', 'cm-builtin cm-strong', 'cm-meta'].map(
+    cls => Array.from(document.getElementsByClassName(cls))).reduce((r, a) => r.concat(a), [])
   Array.from(elems).filter(elem => elem.innerText in keyword_links).forEach(x => {
     x.classList.add('sos_hover_doc');
-    x.addEventListener('mouseover', sos_doc_hover_over);
-    x.addEventListener('mouseleave', sos_doc_hover_leave);
-    x.addEventListener('click', sos_doc_hover_visit);
+    x.addEventListener('click', visit_sos_doc);
   })
 }, 5000)
 

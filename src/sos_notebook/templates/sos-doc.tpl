@@ -8,11 +8,6 @@
 {{ doc.css() }}
 {% endblock html_head %}
 
-{% block body %}
-{{ super() }}
-{{ doc.html() }}
-{% endblock body %}
-
 {% block footer_js %}
 {{ super() }}
 {{ doc.js() }}
