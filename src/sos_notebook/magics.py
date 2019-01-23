@@ -659,7 +659,10 @@ class Preview_Magic(SoS_Magic):
         elif isinstance(obj, Sized):
             txt += f' of length {obj.__len__()}'
         if isinstance(obj, ModuleType):
-            return txt, ({'text/plain': pydoc.render_doc(obj, title='SoS Documentation: %s')}, {})
+            return txt, ({'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)}, {})
+        elif callable(obj):
+            env.log_to_file(f'hand {item}')
+            return txt, ({'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)}, {})
         elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
                 from sos.visualize import Visualizer
