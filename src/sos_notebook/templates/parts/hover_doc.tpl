@@ -29,7 +29,9 @@
 <script>
 
 let keyword_links = {
-  'input:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/input_output.html',
+  'input:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/input_statement.html',
+  'output:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/output_statement.html',
+  'depends:' : 'https://vatlab.github.io/sos-docs/doc/user_guide/depebds_statement.html',
 }
 
 let function_links = {
