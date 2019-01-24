@@ -9,6 +9,6 @@
 {% endblock html_head %}
 
 {% block footer_js %}
-{{ super() }}
 {{ doc.js() }}
+{{ super() }}
 {% endblock footer_js %}

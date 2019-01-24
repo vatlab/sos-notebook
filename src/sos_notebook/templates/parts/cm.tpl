@@ -50,7 +50,7 @@ textarea.sos-source {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/mode/julia/julia.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/mode/markdown/markdown.js"></script>
 <script>
-    {% include 'sos-mode.js' %}
+    {% include 'parts/sos-mode.js' %}
 </script>
 <script>
 
@@ -86,8 +86,8 @@ textarea.sos-source {
         result=await highlight_cell(cell)
       }
       setTimeout(function(){
-        if (typeof add_tooltip !== "undefined") { 
-          add_tooltip()
+        if (typeof add_hoverdoc !== "undefined") {
+          add_hoverdoc()
         }
       },10)
   }
