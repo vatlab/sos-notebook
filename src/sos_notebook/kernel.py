@@ -271,7 +271,7 @@ class Subkernels(object):
                         color = kdef.color
                 new_def = self.add_or_replace(subkernel(name, kdef.kernel, kdef.language, kdef.color if color is None else color,
                                                         getattr(self.language_info[kdef.language], 'options', {}) if kdef.language else {},
-                                                        codemirror_mode=codemirror_mmode))
+                                                        codemirror_mode=codemirror_mode))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -302,7 +302,7 @@ class Subkernels(object):
                         color = self.get_background_color(plugin, kernel)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, kernel, kdef.color if color is None else color,
                                                             getattr(plugin, 'options', {}),
-                                                            codemirror_mode=codemirror_mmode))
+                                                            codemirror_mode=codemirror_mode))
                 else:
                     # if should be defined ...
                     if language not in self.language_info:
@@ -315,7 +315,7 @@ class Subkernels(object):
                             self.language_info[name], language)
                     new_def = self.add_or_replace(subkernel(name, kdef.kernel, language, kdef.color if color is None else color,
                                                             getattr(self.language_info[name], 'options', {}),
-                                                            codemirror_mode=codemirror_mmode))
+                                                            codemirror_mode=codemirror_mode))
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
@@ -354,7 +354,7 @@ class Subkernels(object):
                     color = self.get_background_color(plugin, lan_name)
                 new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, self.get_background_color(plugin, lan_name) if color is None else color,
                                                         getattr(plugin, 'options', {}),
-                                                        codemirror_mode=codemirror_mmode))
+                                                        codemirror_mode=codemirror_mode))
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
                 if language not in self.language_info:
@@ -380,7 +380,7 @@ class Subkernels(object):
                     self.get_background_color(
                         self.language_info[language], language) if color is None or color == 'default' else color,
                     getattr(self.language_info[language], 'options', {}),
-                    codemirror_mode=codemirror_mmode))
+                    codemirror_mode=codemirror_mode))
 
             self.notify_frontend()
             return new_def
