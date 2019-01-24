@@ -78,21 +78,18 @@ textarea.sos-source {
 
         cell.parentElement.insertBefore(select, cell);
         resolve("tooltip")
-        }).then(()=>{
-              setTimeout(function(){
-                if (typeof add_tooltip !== "undefined") { 
-                  add_tooltip()
-                }
-              },10)
-            return "done"
         })
   }
 
   async function highlight_cells(cells){
-    for(cell of cells){
-      result=await highlight_cell(cell)
-    }
-
+      for(cell of cells){
+        result=await highlight_cell(cell)
+      }
+      setTimeout(function(){
+        if (typeof add_tooltip !== "undefined") { 
+          add_tooltip()
+        }
+      },10)
   }
 
   highlight_cells(document.getElementsByClassName("sos-source"))
