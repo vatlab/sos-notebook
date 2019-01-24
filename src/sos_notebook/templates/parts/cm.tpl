@@ -33,6 +33,7 @@ textarea.sos-source {
   overflow: hidden;
   vertical-align: text-top;
 }
+
 </style>
 
 {% endmacro %}
@@ -52,34 +53,48 @@ textarea.sos-source {
     {% include 'sos-mode.js' %}
 </script>
 <script>
-  function highlight_cells(cells, i, interval) {
-    setTimeout(function() {
-      if (! cells[i])
-        return;
-      var editor = CodeMirror.fromTextArea(cells[i], {
-          lineNumbers: false,
-          styleActiveLine: true,
-          matchBrackets: true,
-          readOnly: true,
-          mode: 'sos',
-          base_mode: cells[i].name,
-      });
 
-      let select = document.createElement('select');
-      let option = document.createElement('option');
-      option.value = cells[i].name;
-      option.textContent = cells[i].name;
-      select.appendChild(option);
-      select.className = "cell-kernel-selector";
-      select.value = cells[i].name;
 
-      cells[i].parentElement.insertBefore(select, cells[i]);
+  function highlight_cell(cell){
+    return new Promise((resolve,reject)=>{
+        if (! cell)
+          resolve("empty");
+        var editor = CodeMirror.fromTextArea(cell, {
+            lineNumbers: false,
+            styleActiveLine: true,
+            matchBrackets: true,
+            readOnly: true,
+            mode: 'sos',
+            base_mode: cell.name,
+        });
 
-      if (i < cells.length)
-          highlight_cells(cells, i + 1, interval);
-    }, interval);
+        let select = document.createElement('select');
+        let option = document.createElement('option');
+        option.value = cell.name;
+        option.textContent = cell.name;
+        select.appendChild(option);
+        select.className = "cell-kernel-selector";
+        select.value = cell.name;
+
+        cell.parentElement.insertBefore(select, cell);
+        resolve("tooltip")
+        })
   }
 
-  highlight_cells(document.getElementsByClassName("sos-source"), 0, 10);
+  async function highlight_cells(cells){
+      for(cell of cells){
+        result=await highlight_cell(cell)
+      }
+      setTimeout(function(){
+        if (typeof add_tooltip !== "undefined") { 
+          add_tooltip()
+        }
+      },10)
+  }
+
+  highlight_cells(document.getElementsByClassName("sos-source"))
+
+
+
 </script>
 {% endmacro %}

@@ -46,16 +46,15 @@ function visit_sos_doc(evt) {
   window.open(keyword_links[evt.target.innerText], '_blank')
 }
 
-// FIXME: we wait for 5 seconds before scanning document because we need to
-// wait syntax hilighting to be done. A promise is actually needed.
-setTimeout(function() {
+function add_tooltip(){
   let elems = ['cm-keyword cm-strong', 'cm-variable cm-sos-option', 'cm-builtin cm-strong', 'cm-meta'].map(
     cls => Array.from(document.getElementsByClassName(cls))).reduce((r, a) => r.concat(a), [])
   Array.from(elems).filter(elem => elem.innerText in keyword_links).forEach(x => {
     x.classList.add('sos_hover_doc');
     x.addEventListener('click', visit_sos_doc);
   })
-}, 5000)
+
+}
 
 </script>
 {% endmacro %}
