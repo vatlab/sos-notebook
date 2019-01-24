@@ -85,11 +85,9 @@ textarea.sos-source {
       for(cell of cells){
         result=await highlight_cell(cell)
       }
-      setTimeout(function(){
-        if (typeof add_hoverdoc !== "undefined") {
-          add_hoverdoc()
-        }
-      },10)
+      if (typeof add_hoverdoc !== "undefined") {
+        add_hoverdoc()
+      }
   }
 
   highlight_cells(document.getElementsByClassName("sos-source"))
