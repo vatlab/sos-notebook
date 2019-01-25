@@ -88,10 +88,8 @@ setup(name="sos-notebook",
           'notebook>=5.0.0',
           #'jupyter_contrib_nbextensions',
           'tabulate',
-          'wand',
           'markdown',
           'pandas',
-          'matplotlib',
       ],
       entry_points='''
 [sos_converters]
