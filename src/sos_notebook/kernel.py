@@ -503,10 +503,6 @@ class SoS_Kernel(IPythonKernel):
         self._failed_languages = {}
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
-        # sos does not yet support MaxOSX backend to start a new window
-        # so a default inline mode is used.
-        self.shell.enable_matplotlib('inline')
-        #
         self.editor_kernel = 'sos'
         # remove all other ahdnlers
         env.logger.handlers = []
