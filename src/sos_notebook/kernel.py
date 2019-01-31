@@ -1354,7 +1354,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if self._meta['cell_id']:
                 self.send_frontend_msg(
                     'cell-kernel', [self._meta['cell_id'], self.kernel])
-                self._meta['cell_id'] = ""
             if code is None:
                 return
             try:
@@ -1384,8 +1383,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             # run sos
             try:
                 self.run_sos_code(code, silent)
-                if self._meta['cell_id']:
-                    self._meta['cell_id'] = ""
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
                 self.warn(str(e))
