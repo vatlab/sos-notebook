@@ -30,7 +30,7 @@ before_install:
     # ruby
     - sudo apt-get install ruby-full
     # SoS Notebook
-    - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown
+    - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown matplotlib
     - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz
     - pip install pygments ipython wand graphviz
     - pip install git+https://github.com/vatlab/sos.git
