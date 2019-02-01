@@ -525,7 +525,8 @@ def get_notebook_to_md_parser():
 def notebook_to_md(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.markdown import MarkdownExporter
     export_notebook(MarkdownExporter, 'markdown',
-                    notebook_file, output_file, unknown_args)
+                    notebook_file, output_file,
+                    unknown_args if '--template' in unknown_args else ['--template', 'sos-markdown'] + unknown_args)
 
 
 def get_notebook_to_notebook_parser():
