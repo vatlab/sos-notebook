@@ -111,8 +111,9 @@ define([
   // add language specific css
   function lan_css(lan) {
     if (window.BackgroundColor[lan]) {
-      return `.code_cell.sos_lan_${lan} .input_prompt,
-        .sos_lan_${lan} div.out_prompt_overlay.prompt {
+      let css_name = safe_css_name(`sos_lan_${lan}`);
+      return `.code_cell.${css_name} .input_prompt,
+        .${css_name} div.out_prompt_overlay.prompt {
           background: ${window.BackgroundColor[lan]};
           height: 100%;
         }
@@ -407,7 +408,7 @@ define([
     }
     $(cell.element).removeClass( (index, className) => {
        return (className.match(/(^|\s)sos_lan_\S+/g) || []).join(' ');
-     }).addClass(`sos_lan_${type}`)
+     }).addClass(safe_css_name(`sos_lan_${type}`))
     // cell in panel does not have prompt area
     if (cell.is_panel) {
       cell.user_highlight = {
@@ -2351,6 +2352,15 @@ color: green;
     }
   };
 
+  function safe_css_name(name) {
+    return name.replace(/[^a-z0-9_]/g, function(s) {
+      var c = s.charCodeAt(0);
+      if (c == 32) return '-';
+      if (c >= 65 && c <= 90) return '_' + s.toLowerCase();
+      return '__' + ('000' + c.toString(16)).slice(-4);
+    });
+  }
+
   function patch_CodeCell_get_callbacks() {
     var previous_get_callbacks = CodeCell.prototype.get_callbacks;
     CodeCell.prototype.get_callbacks = function() {
@@ -2416,7 +2426,7 @@ color: green;
       }
       $(cell.element).removeClass( (index, className) => {
          return (className.match(/(^|\s)sos_lan_\S+/g) || []).join(' ');
-       }).addClass(`sos_lan_${this.value}`)
+       }).addClass(safe_css_name(`sos_lan_${this.value}`))
       // https://github.com/vatlab/sos-notebook/issues/55
       cell.user_highlight = {
         name: 'sos',

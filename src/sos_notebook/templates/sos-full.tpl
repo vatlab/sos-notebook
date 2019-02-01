@@ -12,7 +12,7 @@
 <style>
    {% for item in nb['metadata'].get('sos', {}).get('kernels', []) %}
    {%- if item[2] -%}
-   .lan_{{item[0]}} .input_prompt {
+   .sos_lan_{{item[0].replace('+', 'plus').replace('(', '').replace(')', '').replace('[', '').replace(']', '').replace(' ', '').replace('#', 'sharp')}} .input_prompt {
       background-color: {{item[3]}} !important;
     }
    {%- endif -%}
@@ -25,7 +25,7 @@
 
 {% block codecell %}
 {% if cell['metadata'].get('kernel',none) is not none %}
-<div class="lan_{{cell['metadata'].get('kernel', none)}}">
+<div class="sos_lan_{{cell['metadata'].get('kernel', none).replace('+', 'plus').replace('(', '').replace(')', '').replace('[', '').replace(']', '').replace(' ', '').replace('#', 'sharp')}}">
    {{ super() }}
 </div>
 {% else %}
