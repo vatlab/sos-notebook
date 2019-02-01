@@ -531,8 +531,12 @@ def notebook_to_md(notebook_file, output_file, sargs=None, unknown_args=None):
 def get_notebook_to_notebook_parser():
     parser = argparse.ArgumentParser('sos convert FILE.ipynb FILE.ipynb (or --to ipynb)',
                                      description='''Export a Jupyter notebook with a non-SoS kernel to a
-        SoS notebook with SoS kernel. A SoS notebook will simply be copied to
-        the destination file.''')
+        SoS notebook with SoS kernel, or from a SoS notebook to a regular notebook with specified kernel.''')
+    parser.add_argument('-k', '--kernel', default='sos',
+                        help='''Kernel for the destination notebook. The default kernel is
+        SoS which converts a non-SoS notebook to SoS Notebook. If another kernel is specified,
+        this command will remove cell-specific kernel information and convert a SoS Notebook
+        to regular notebook with specified kernel.''')
     parser.add_argument('--python3-to-sos', action='store_true',
                         help='''Convert python3 cells to SoS.''')
     parser.add_argument('--inplace', action='store_true',
@@ -540,32 +544,28 @@ def get_notebook_to_notebook_parser():
     return parser
 
 
-def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=None):
-    notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
+def nonSoS_to_SoS_notebook(notebook, args):
+    '''Converting a nonSoS notebook to SoS notebook by adding kernel metadata'''
     # get the kernel of the notebook
     # this is like 'R', there is another 'display_name'
     lan_name = notebook['metadata']['kernelspec']['language']
     # this is like 'ir'
     kernel_name = notebook['metadata']['kernelspec']['name']
+
+    # if it is already a SoS notebook, do nothing.
     if kernel_name == 'sos':
-        # already a SoS notebook?
-        if sargs.inplace:
+        if args.inplace:
             return
-        if output_file:
-            import shutil
-            shutil.copy(notebook_file, output_file)
-        else:
-            with open(notebook_file) as nb:
-                sys.stdout.write(nb.read())
-        return
+        env.logger.warning(f'Notebook is already using the sos kernel. No conversion is needed.')
+        return notebook
+
     # convert to?
-    elif kernel_name == 'python3' and sargs.python3_to_sos:
+    if kernel_name == 'python3' and args.python3_to_sos:
         to_lan = 'SoS'
         to_kernel = 'sos'
     else:
         to_lan = lan_name
         to_kernel = kernel_name
-    # write all cells
     #
     cells = []
     for cell in notebook.cells:
@@ -573,30 +573,78 @@ def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=No
             cell.metadata['kernel'] = to_lan
         cells.append(cell)
     #
-    # create header
-    nb = new_notebook(cells=cells,
-                      metadata={
-                          'kernelspec': {
-                              "display_name": "SoS",
-                              "language": "sos",
-                              "name": "sos"
-                          },
-                          "language_info": {
-                              "file_extension": ".sos",
-                              "mimetype": "text/x-sos",
-                              "name": "sos",
-                              "pygments_lexer": "python",
-                              'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-                          },
-                          'sos': {
-                              'kernels': [
-                                  ['SoS', 'sos', '', '']] +
-                              ([[to_lan, to_kernel, '', '']]
-                               if to_lan != 'SoS' else []),
-                              'default_kernel': to_lan
-                          }
-                      }
-                      )
+    # new header
+    metadata = {
+        'kernelspec': {
+            "display_name": "SoS",
+            "language": "sos",
+            "name": "sos"
+        },
+        "language_info": {
+            "file_extension": ".sos",
+            "mimetype": "text/x-sos",
+            "name": "sos",
+            "pygments_lexer": "python",
+            'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+        },
+        'sos': {
+            'kernels': [
+                ['SoS', 'sos', '', '', '']] +
+            ([[to_lan, to_kernel, '', '', '']]
+            if to_lan != 'SoS' else [])
+        }
+    }
+    return new_notebook(cells=cells, metadata=metadata)
+
+def SoS_to_nonSoS_notebook(notebook, args):
+    kernel_name = notebook['metadata']['kernelspec']['name']
+
+    if kernel_name != 'sos':
+        raise ValueError(f'Cannot convert a notebook with kernel {kernel_name} to a notebook with kernel {args.kernel}')
+
+    all_subkernels = [x[1] for x in notebook['metadata']['sos']['kernels'] if x[1] != 'sos']
+    kinfo = [x for x in notebook['metadata']['sos']['kernels'] if x[1] == args.kernel]
+    if not kinfo:
+        if args.kernel == 'python3':
+            # converting SoS cells to python3, should be more or less ok
+            kinfo = [['Python3', 'python3', 'Python3', '', {"name": "ipython", "version": 3}]]
+        else:
+            raise ValueError(f'Specified kernel {args.kernel} is not one of the subkernels ({", ".join(all_subkernels)}) used in the SoS notebook. ')
+    if len(all_subkernels) > 1:
+        env.logger.warning(f'More than one subkernels ({", ".join(all_subkernels)}) are used in the SoS notebook. They will all be considered as {args.kernel} cells.')
+
+    # from SoS to args.kernel, we will need to first strip the cell-level kernel info
+    cells = []
+    for cell in notebook.cells:
+        if cell.cell_type == 'code':
+            cell.metadata.pop('kernel')
+        cells.append(cell)
+
+    # NOTE: we do not have enough information to restore language_info
+    # which contains things such as codemirros mode and mimetype. However,
+    # Jupyter should be able to open the notebook and retrieve such information
+    # from the kernel, and langauge_info will be written if the notebook is
+    # saved again.
+    metadata = {
+        "kernelspec": {
+            "display_name": kinfo[0][0],
+            "language": kinfo[0][2],
+            "name": kinfo[0][1]
+        }
+    }
+    return new_notebook(cells=cells, metadata=metadata)
+
+def notebook_to_notebook(notebook_file, output_file, sargs=None, unknown_args=None):
+    notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
+    # if we are converting to a SoS Notebook.
+    if sargs.kernel in ('sos', 'SoS'):
+        nb = nonSoS_to_SoS_notebook(notebook, sargs)
+    else:
+        nb = SoS_to_nonSoS_notebook(notebook, sargs)
+
+    if nb is None:
+        # nothing to do (e.g. sos -> sos)
+        return
 
     if sargs.inplace:
         with open(notebook_file, 'w') as new_nb:
