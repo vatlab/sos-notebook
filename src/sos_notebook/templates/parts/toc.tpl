@@ -146,7 +146,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 
     Array.prototype.forEach.call(headings, function(heading) {
       var id = heading.id ? heading.id : heading.textContent.toLowerCase()
-          .split(' ').join('-').split(':').join('');
+            .split(' ').join('-').replace(/[\!\@\#\$\%\^\&\*\(\)\:]/ig, '');
       headingMap[id] = !isNaN(headingMap[id]) ? ++headingMap[id] : 0;
       if (headingMap[id]) {
         heading.id = id + '-' + headingMap[id]
