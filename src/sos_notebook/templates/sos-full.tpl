@@ -5,7 +5,7 @@
 
 {% block html_head %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{{ super() }}
+{{ super().replace('<link rel="stylesheet" href="custom.css">', '') }}
 {{ sos_style.css() }}
 {{ preview.css() }}
 
