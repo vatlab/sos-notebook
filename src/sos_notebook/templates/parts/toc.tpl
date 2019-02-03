@@ -4,9 +4,11 @@
 
 /* The Table of Contents container element */
 .toc-wrapper {
+    flex-flow: column;
+    display: flex;
+
     width: 20%;
-    max-height: 90%;
-    overflow-y: auto;
+    max-height: calc(100% - 120px);
     margin-left: 2%;
     margin-top: 60px;
     position: fixed;
@@ -16,7 +18,16 @@
     border-radius: 6px;
 }
 
+.toc-header {
+  flex: 0 1 auto;
+}
+
 /* The Table of Contents is composed of multiple nested unordered lists.  These styles remove the default styling of an unordered list because it is ugly. */
+#toc {
+      overflow-y: auto;
+      flex: 1 1 auto;
+}
+
 #toc ul, #toc li {
     list-style: none;
     margin: 0;
@@ -120,6 +131,26 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 
 <script>
 
+  function fixIDsForToc(headings = null) {
+    let headingMap = {}
+
+    if (!headings) {
+      let content = document.querySelector('.notebook-container')
+      headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
+    }
+    Array.prototype.forEach.call(headings, function(heading) {
+      var id = heading.id ? heading.id : heading.textContent.toLowerCase();
+      id = id.split(' ').join('-').replace(/["'\!\@\#\$\%\^\&\*\(\)\:]/ig, '');
+      headingMap[id] = !isNaN(headingMap[id]) ? ++headingMap[id] : 0;
+      if (headingMap[id]) {
+        heading.id = id + '-' + headingMap[id]
+      } else {
+        heading.id = id
+      }
+    })
+  }
+
+
   function indexedHeaders(headings) {
       if (!headings) {
           return '';
@@ -139,21 +170,12 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
       return counts.map((x, idx) => x > 0 ? 'H' + (idx+1) : '').filter(x => x).join(',');
   }
 
+
   function updateTOC ( ) {
     var content = document.querySelector('.notebook-container')
     var headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
-    var headingMap = {}
 
-    Array.prototype.forEach.call(headings, function(heading) {
-      var id = heading.id ? heading.id : heading.textContent.toLowerCase()
-            .split(' ').join('-').replace(/[\!\@\#\$\%\^\&\*\(\)\:]/ig, '');
-      headingMap[id] = !isNaN(headingMap[id]) ? ++headingMap[id] : 0;
-      if (headingMap[id]) {
-        heading.id = id + '-' + headingMap[id]
-      } else {
-        heading.id = id
-      }
-    })
+    fixIDsForToc(headings);
 
     tocbot.init({
       // Where to render the table of contents.
