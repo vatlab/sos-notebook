@@ -1,5 +1,6 @@
 import os
 import time
+from sys import platform
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -68,7 +69,9 @@ class Notebook:
         """Gets all cells once they are visible.
         
         """
-        return self.browser.find_elements_by_class_name("cell")
+        return self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div")
+
+        # return self.browser.find_elements_by_class_name("cell")
 
     @property
     def current_index(self):
@@ -166,9 +169,15 @@ class Notebook:
 
         # Select & delete anything already in the cell
         self.current_cell.send_keys(Keys.ENTER)
-        ctrl(self.browser, 'a')
-        self.current_cell.send_keys(Keys.DELETE)
+        
 
+        if platform=="darwin":
+           command(self.browser, 'a')
+        else:
+           ctrl(self.browser, 'a')
+        
+        self.current_cell.send_keys(Keys.DELETE)
+        
         for line_no, line in enumerate(content.splitlines()):
             if line_no != 0:
                 self.current_cell.send_keys(Keys.ENTER, "\n")
@@ -276,6 +285,9 @@ def shift(browser, k):
 def ctrl(browser, k):
     """Send key combination Ctrl+(k)"""
     trigger_keystrokes(browser, "control-%s"%k)
+
+def command(browser,k):
+    trigger_keystrokes(browser,"command-%s"%k)
 
 def trigger_keystrokes(browser, *keys):
     """ Send the keys in sequence to the browser.
