@@ -49,7 +49,7 @@ def test_delete_cells(notebook):
     # Try to delete cell a (should succeed)
     notebook.delete_cell(0)
 
-    # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
+
     assert len(notebook.cells) == 1 # it contains an empty cell
 
     # Make sure copied cells are deletable

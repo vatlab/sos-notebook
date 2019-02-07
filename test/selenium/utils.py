@@ -69,6 +69,7 @@ class Notebook:
         """Gets all cells once they are visible.
         
         """
+      # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div")
 
         # return self.browser.find_elements_by_class_name("cell")
