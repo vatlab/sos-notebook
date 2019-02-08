@@ -7,6 +7,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
+from selenium.webdriver.support.ui import Select
 
 from contextlib import contextmanager
 
@@ -26,6 +27,63 @@ def wait_for_selector(browser, selector, timeout=10, visible=False, single=False
         else:
             conditional = EC.presence_of_all_elements_located
     return wait.until(conditional((By.CSS_SELECTOR, selector)))
+
+
+def wait_for_tag(driver, tag, timeout=10, visible=False, single=False, wait_for_n=1):
+    if wait_for_n > 1:
+        return _wait_for_multiple(
+            driver, By.TAG_NAME, tag, timeout, wait_for_n, visible)
+    return _wait_for(driver, By.TAG_NAME, tag, timeout, visible, single)
+
+
+def _wait_for(driver, locator_type, locator, timeout=10, visible=False, single=False):
+    """Waits `timeout` seconds for the specified condition to be met. Condition is
+    met if any matching element is found. Returns located element(s) when found.
+    Args:
+        driver: Selenium web driver instance
+        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
+        locator: name of tag, class, etc. to wait for
+        timeout: how long to wait for presence/visibility of element
+        visible: if True, require that element is not only present, but visible
+        single: if True, return a single element, otherwise return a list of matching
+        elements
+    """
+    wait = WebDriverWait(driver, timeout)
+    if single:
+        if visible:
+            conditional = EC.visibility_of_element_located
+        else:
+            conditional = EC.presence_of_element_located
+    else:
+        if visible:
+            conditional = EC.visibility_of_all_elements_located
+        else:
+            conditional = EC.presence_of_all_elements_located
+    return wait.until(conditional((locator_type, locator)))
+
+
+def _wait_for_multiple(driver, locator_type, locator, timeout, wait_for_n, visible=False):
+    """Waits until `wait_for_n` matching elements to be present (or visible).
+    Returns located elements when found.
+    Args:
+        driver: Selenium web driver instance
+        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
+        locator: name of tag, class, etc. to wait for
+        timeout: how long to wait for presence/visibility of element
+        wait_for_n: wait until this number of matching elements are present/visible
+        visible: if True, require that elements are not only present, but visible
+    """
+    wait = WebDriverWait(driver, timeout)
+
+    def multiple_found(driver):
+        elements = driver.find_elements(locator_type, locator)
+        if visible:
+            elements = [e for e in elements if e.is_displayed()]
+        if len(elements) < wait_for_n:
+            return False
+        return elements
+
+    return wait.until(multiple_found)
 
 
 class CellTypeError(ValueError):
@@ -104,6 +162,12 @@ class Notebook:
         self.to_command_mode()
         self.current_cell = cell
 
+    def select_cell_range(self, initial_index=0, final_index=0):
+        self.focus_cell(initial_index)
+        self.to_command_mode()
+        for i in range(final_index - initial_index):
+            shift(self.browser, 'j')
+
     def find_and_replace(self, index=0, find_txt='', replace_txt=''):
         self.focus_cell(index)
         self.to_command_mode()
@@ -148,6 +212,15 @@ class Notebook:
 
     def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
         return self.cells[index].find_element_by_css_selector(selector).text
+
+    def get_cell_output(self,index=0):
+        outputs=wait_for_selector(self.cells[index], "div .output_area")
+        outputText=""
+        for output in outputs:
+            outputText+=output.text+"\n"
+        return outputText
+
+
 
     def set_cell_metadata(self, index, key, value):
         JS = 'Jupyter.notebook.get_cell({}).metadata.{} = {}'.format(index, key, value)
@@ -205,6 +278,10 @@ class Notebook:
         if cell_type != 'code':
             self.convert_cell_type(index=new_index, cell_type=cell_type)
 
+    def add_and_execute_cell(self, index=-1, cell_type="code", content=""):
+        self.add_cell(index=index, cell_type=cell_type, content=content)
+        self.execute_cell(index)
+
     def delete_cell(self, index):
         self.focus_cell(index)
         self.to_command_mode()
@@ -231,6 +308,29 @@ class Notebook:
 
     def trigger_keydown(self, keys):
         trigger_keystrokes(self.body, keys)
+
+
+    def get_kernel_list(self):
+        kernelMenu=self.browser.find_element_by_id("menu-change-kernel-submenu")        
+        kernelEntries=kernelMenu.find_elements_by_tag_name("a")
+        kernels=[]
+        for kernelEntry in kernelEntries:
+            kernels.append(kernelEntry.get_attribute('innerHTML'))
+        return kernels
+
+    def shift_kernel(self,index=0,kernel_name="SoS", by_click=True):
+        self.focus_cell(index)
+        kernel_selector = 'option[value={}]'.format(kernel_name)
+        kernelList=self.current_cell.find_element_by_tag_name("select")
+        kernel=wait_for_selector(kernelList, kernel_selector, single=True)
+        if by_click:
+            kernel.click()
+        else:
+            self.edit_cell(index=0, content="%use {}".format(kernel_name),render=True)
+
+
+
+        
 
     @classmethod
     def new_notebook(cls, browser, kernel_name='kernel-python3'):
