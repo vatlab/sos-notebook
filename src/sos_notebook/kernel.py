@@ -4,6 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import contextlib
+import fnmatch
 import logging
 import os
 import subprocess
@@ -146,6 +147,11 @@ class Subkernels(object):
                 self._kernel_list.append(
                     subkernel(name=lan_map[spec][0], kernel=spec, language=lan_map[spec][0],
                               color=lan_map[spec][1], options=lan_map[spec][2]))
+            elif any(fnmatch.fnmatch(spec, x) for x in lan_map.keys()):
+                matched = [y for x,y in lan_map.items() if fnmatch.fnmatch(spec, x)][0]
+                self._kernel_list.append(
+                    subkernel(name=matched[0], kernel=spec, language=matched[0],
+                              color=matched[1], options=matched[2]))
             else:
                 # undefined language also use default theme color
                 self._kernel_list.append(subkernel(name=spec, kernel=spec, language=km.get_kernel_spec(spec).language))
