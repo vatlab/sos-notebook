@@ -339,14 +339,10 @@ class Subkernels(object):
                 except Exception as e:
                     raise RuntimeError(
                         f'Failed to load language {language}: {e}')
-                if name in plugin.supported_kernels:
-                    # if name is defined in the module, only search kernels for this language
-                    avail_kernels = [x for x in plugin.supported_kernels[name] if
-                                     x in [y.kernel for y in self._kernel_list]]
-                else:
-                    # otherwise we search all supported kernels
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
+
+                avail_kernels = [y.kernel for y in self._kernel_list if
+                    y.kernel in sum(plugin.supported_kernels.values(), []) or
+                    any(fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), []))]
 
                 if not avail_kernels:
                     raise ValueError(
@@ -355,7 +351,7 @@ class Subkernels(object):
                 # use the first available kernel
                 # find the language that has the kernel
                 lan_name = list({x: y for x, y in plugin.supported_kernels.items(
-                ) if avail_kernels[0] in y}.keys())[0]
+                    ) if avail_kernels[0] in y or any(fnmatch.fnmatch(avail_kernels[0], z) for z in y)}.keys())[0]
                 if color == 'default':
                     color = self.get_background_color(plugin, lan_name)
                 new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, self.get_background_color(plugin, lan_name) if color is None else color,
@@ -369,11 +365,13 @@ class Subkernels(object):
                 #
                 plugin = self.language_info[language]
                 if language in plugin.supported_kernels:
-                    avail_kernels = [x for x in plugin.supported_kernels[language] if
-                                     x in [y.kernel for y in self._kernel_list]]
+                    avail_kernels = [y.kernel for y in self._kernel_list if
+                        y.kernel in plugin.supported_kernels[language] or
+                        any(fnmatch.fnmatch(y.kernel, x) for x in plugin.supported_kernels[language]) ]
                 else:
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
+                    avail_kernels = [y.kernel for y in self._kernel_list if
+                        y.kernel in sum(plugin.supported_kernels.values(), []) or
+                        any(fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), [])) ]
                 if not avail_kernels:
                     raise ValueError(
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
