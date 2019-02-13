@@ -901,6 +901,14 @@ define([
           // set meta information
           changeStyleOnKernel(cell);
           save_kernel_info();
+
+          let cellIndex=nb.find_cell_index(cell);
+          let nextCell=nb.get_cell(cellIndex+1)
+          if (nextCell !== null && cellIndex+2===nb.get_cells().length && nextCell.get_text()===""){
+            nextCell.metadata.kernel=cell.metadata.kernel
+            changeStyleOnKernel(nextCell);
+          }
+
         } else if (cell.metadata.tags && cell.metadata.tags.indexOf("report_output") >= 0) {
           // #639
           // if kernel is different, changeStyleOnKernel would set report_output.
