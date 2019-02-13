@@ -904,7 +904,7 @@ define([
 
           let cellIndex=nb.find_cell_index(cell);
           let nextCell=nb.get_cell(cellIndex+1)
-          if (nextCell !== null && nextCell.get_text()===""){
+          if (nextCell !== null && cellIndex+2===nb.get_cells().length && nextCell.get_text()===""){
             nextCell.metadata.kernel=cell.metadata.kernel
             changeStyleOnKernel(nextCell);
           }
