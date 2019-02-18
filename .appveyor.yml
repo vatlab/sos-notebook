@@ -38,7 +38,7 @@ install:
     # add docker
     #- pip install docker
     # packages required by SoS
-    - pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm 
+    - pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm matplotlib
     - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose 
     # https://github.com/jupyter/jupyter/issues/150
     - pip install entrypoints markdown

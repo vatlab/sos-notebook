@@ -90,9 +90,11 @@ textarea.sos-source {
       }
   }
 
-  highlight_cells(document.getElementsByClassName("sos-source"))
+  function applySoSMode( ) {
+    highlight_cells(document.getElementsByClassName("sos-source"))
+  }
 
-
+  applySoSMode()
 
 </script>
 {% endmacro %}

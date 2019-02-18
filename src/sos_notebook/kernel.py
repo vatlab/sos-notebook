@@ -4,6 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import contextlib
+import fnmatch
 import logging
 import os
 import subprocess
@@ -146,6 +147,11 @@ class Subkernels(object):
                 self._kernel_list.append(
                     subkernel(name=lan_map[spec][0], kernel=spec, language=lan_map[spec][0],
                               color=lan_map[spec][1], options=lan_map[spec][2]))
+            elif any(fnmatch.fnmatch(spec, x) for x in lan_map.keys()):
+                matched = [y for x,y in lan_map.items() if fnmatch.fnmatch(spec, x)][0]
+                self._kernel_list.append(
+                    subkernel(name=matched[0], kernel=spec, language=matched[0],
+                              color=matched[1], options=matched[2]))
             else:
                 # undefined language also use default theme color
                 self._kernel_list.append(subkernel(name=spec, kernel=spec, language=km.get_kernel_spec(spec).language))
@@ -333,14 +339,10 @@ class Subkernels(object):
                 except Exception as e:
                     raise RuntimeError(
                         f'Failed to load language {language}: {e}')
-                if name in plugin.supported_kernels:
-                    # if name is defined in the module, only search kernels for this language
-                    avail_kernels = [x for x in plugin.supported_kernels[name] if
-                                     x in [y.kernel for y in self._kernel_list]]
-                else:
-                    # otherwise we search all supported kernels
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
+
+                avail_kernels = [y.kernel for y in self._kernel_list if
+                    y.kernel in sum(plugin.supported_kernels.values(), []) or
+                    any(fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), []))]
 
                 if not avail_kernels:
                     raise ValueError(
@@ -349,7 +351,7 @@ class Subkernels(object):
                 # use the first available kernel
                 # find the language that has the kernel
                 lan_name = list({x: y for x, y in plugin.supported_kernels.items(
-                ) if avail_kernels[0] in y}.keys())[0]
+                    ) if avail_kernels[0] in y or any(fnmatch.fnmatch(avail_kernels[0], z) for z in y)}.keys())[0]
                 if color == 'default':
                     color = self.get_background_color(plugin, lan_name)
                 new_def = self.add_or_replace(subkernel(name, avail_kernels[0], lan_name, self.get_background_color(plugin, lan_name) if color is None else color,
@@ -363,11 +365,13 @@ class Subkernels(object):
                 #
                 plugin = self.language_info[language]
                 if language in plugin.supported_kernels:
-                    avail_kernels = [x for x in plugin.supported_kernels[language] if
-                                     x in [y.kernel for y in self._kernel_list]]
+                    avail_kernels = [y.kernel for y in self._kernel_list if
+                        y.kernel in plugin.supported_kernels[language] or
+                        any(fnmatch.fnmatch(y.kernel, x) for x in plugin.supported_kernels[language]) ]
                 else:
-                    avail_kernels = [x for x in sum(plugin.supported_kernels.values(), []) if
-                                     x in [y.kernel for y in self._kernel_list]]
+                    avail_kernels = [y.kernel for y in self._kernel_list if
+                        y.kernel in sum(plugin.supported_kernels.values(), []) or
+                        any(fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), [])) ]
                 if not avail_kernels:
                     raise ValueError(
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'.format(
@@ -503,10 +507,6 @@ class SoS_Kernel(IPythonKernel):
         self._failed_languages = {}
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
-        # sos does not yet support MaxOSX backend to start a new window
-        # so a default inline mode is used.
-        self.shell.enable_matplotlib('inline')
-        #
         self.editor_kernel = 'sos'
         # remove all other ahdnlers
         env.logger.handlers = []
@@ -1354,7 +1354,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if self._meta['cell_id']:
                 self.send_frontend_msg(
                     'cell-kernel', [self._meta['cell_id'], self.kernel])
-                self._meta['cell_id'] = ""
             if code is None:
                 return
             try:
@@ -1384,8 +1383,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             # run sos
             try:
                 self.run_sos_code(code, silent)
-                if self._meta['cell_id']:
-                    self._meta['cell_id'] = ""
                 return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
                 self.warn(str(e))

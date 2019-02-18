@@ -95,6 +95,18 @@ report('this is action report')
         subprocess.call('sos convert test.ipynb --to md > test_wf1.md', shell=True)
         self.assertTrue(os.path.isfile('test_wf1.md'))
 
+    def testConvertNotebook(self):
+        ret = subprocess.call('sos convert test.ipynb test_nonSoS.ipynb --kernel python3', shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_nonSoS.ipynb'))
+        #
+        ret= subprocess.call('sos convert test_nonSoS.ipynb test_SoS.ipynb', shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_SoS.ipynb'))
+        # cannot convert to invalid kernel
+        ret = subprocess.call('sos convert test.ipynb test_invalid.ipynb --kernel nonexisting', shell=True)
+        self.assertNotEqual(ret, 0)
+
     def testComments(self):
         '''Test if comments before section headers are correctly extracted'''
         subprocess.call('sos convert sample_workflow.ipynb sample_workflow.sos', shell=True)

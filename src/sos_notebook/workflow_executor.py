@@ -71,8 +71,8 @@ def start_controller(kernel):
 def stop_controller(controller):
     if not controller:
         return
-    env.controller_req_socket.send_pyobj(['done'])
-    env.controller_req_socket.recv()
+    env.master_request_socket.send_pyobj(['done'])
+    env.master_request_socket.recv()
     disconnect_controllers()
     controller.join()
 
