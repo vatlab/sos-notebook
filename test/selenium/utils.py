@@ -10,6 +10,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import Select
 
 from contextlib import contextmanager
+import re
 
 pjoin = os.path.join
 
@@ -206,6 +207,9 @@ class Notebook:
         element = wait.until(EC.staleness_of(cell))
 
 
+
+
+
     def get_cells_contents(self):
         JS = 'return Jupyter.notebook.get_cells().map(function(c) {return c.get_text();})'
         return self.browser.execute_script(JS)
@@ -218,7 +222,9 @@ class Notebook:
         outputText=""
         for output in outputs:
             outputText+=output.text+"\n"
-        return outputText
+        if "Out" in outputText:
+            outputText=outputText.split(":")[1]
+        return outputText.strip()
 
 
 
@@ -274,7 +280,7 @@ class Notebook:
         self.current_cell.send_keys("b")
         new_index = index + 1 if index >= 0 else index
         if content:
-            self.edit_cell(index=index, content=content)
+            self.edit_cell(index=new_index, content=content)
         if cell_type != 'code':
             self.convert_cell_type(index=new_index, cell_type=cell_type)
 
@@ -328,9 +334,27 @@ class Notebook:
         else:
             self.edit_cell(index=0, content="%use {}".format(kernel_name),render=True)
 
+    def get_input_backgroundColor(self,index=0):
+        self.focus_cell(index)
+        rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
+
+        r,g,b,a = map(int, re.search(
+             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
+        return [r,g,b]
+
+    def get_output_backgroundColor(self,index=0):
+
+        rgba=self.current_cell.find_element_by_class_name("out_prompt_overlay").value_of_css_property("background-color")
+        r,g,b,a = map(int, re.search(
+             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
+        return [r,g,b]
+
+    def add_and_execute_cell_in_kernel(self, index=-1, cell_type="code", content="",kernel="SoS"):
+        self.add_cell(index=index, cell_type=cell_type, content=content)
+        self.shift_kernel(index=index+1,kernel_name=kernel,by_click=True)
+        self.execute_cell(cell_or_index=index+1)
 
 
-        
 
     @classmethod
     def new_notebook(cls, browser, kernel_name='kernel-python3'):
