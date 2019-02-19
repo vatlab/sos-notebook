@@ -29,6 +29,7 @@ before_install:
     - pip install git+https://github.com/vatlab/sos.git
     - pip install git+https://github.com/vatlab/sos-bash.git
     - pip install git+https://github.com/vatlab/sos-python.git
+    - pip install git+https://github.com/vatlab/sos-r.git
     - pip install selenium
     - google-chrome-stable --headless --disable-gpu --remote-debugging-port=9222 http://localhost &
     - wget https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriver_linux64.zip -P ~/
