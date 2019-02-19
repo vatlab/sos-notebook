@@ -55,7 +55,7 @@ script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     - whereis google-chrome-stable
     - whereis chromedriver
-    - pytest -v .selenium/test_kernels.py 
+    - pytest -v ./selenium/test_kernels.py 
 after_success:
     - coverage combine
     - coveralls
