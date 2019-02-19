@@ -48,14 +48,14 @@ services:
     - docker
 install:
     - pip install . -U
+    - pip install sos-r
     - python -m sos_notebook.install
 before_script:
     - cd test
     # - sh build_test_docker.sh
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
-    - whereis google-chrome-stable
-    - whereis chromedriver
+    - jupyter kernelspec list
     - pytest -v ./selenium/test_kernels.py 
 after_success:
     - coverage combine
