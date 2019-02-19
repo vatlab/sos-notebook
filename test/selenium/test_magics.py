@@ -45,21 +45,33 @@ def test_magics(notebook):
     assert "R variable" in notebook.get_cell_output(index=11)
 
     #test %put
-    command="a = c(1)\n.b = c(1, 2, 3)\nc = matrix(c(1,2,3,4), ncol=2)\nR_var <- 'R variable'"
+    command="a = c(1)\nb = c(1, 2, 3)\nc = matrix(c(1,2,3,4), ncol=2)\nR_var <- 'R variable'"
     notebook.add_and_execute_cell_in_kernel(index=11,content=command,kernel="R")
-    command="%put a .b c"
+    command="%put a b c"
     notebook.add_and_execute_cell_in_kernel(index=12,content=command,kernel="R")
-    command="%preview -n a _b c"
+    command="%preview -n a b c"
     notebook.add_and_execute_cell_in_kernel(index=13,content=command,kernel="SoS")
     outputLines=notebook.get_cell_output(index=14).split("\n")
     assert "> a: int" == outputLines[0]
-    assert "> _b: list of length 3" == outputLines[2]
+    assert "> b: list of length 3" == outputLines[2]
     assert "> c: ndarray of shape (2, 2)" == outputLines[4]
     command="%put --to Python3 R_var"
     notebook.add_and_execute_cell_in_kernel(index=14,content=command,kernel="R")
     command="R_var"
     notebook.add_and_execute_cell_in_kernel(index=15,content=command,kernel="Python3")
     assert "'R variable'"==notebook.get_cell_output(index=16)
+
+    #test %with
+    command="%with R -i a -o ran \n ran<-rnorm(a)"
+    notebook.add_and_execute_cell_in_kernel(index=16,content=command,kernel="SoS")
+    command="ran"
+    notebook.add_and_execute_cell_in_kernel(index=17,content=command,kernel="SoS")
+  
+    #test %clear
+    
+
+
+
 
 
 

@@ -97,6 +97,10 @@ def make_sauce_driver():
 
 @pytest.fixture(scope='session')
 def selenium_driver():
+
+    if "JUPYTER_TEST_BROWSER" not in os.environ:
+        os.environ["JUPYTER_TEST_BROWSER"] ='chrome'
+
     if os.environ.get('SAUCE_USERNAME'):
         driver = make_sauce_driver()
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'chrome':

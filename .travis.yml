@@ -27,6 +27,7 @@ before_install:
     - pip install git+https://github.com/vatlab/sos.git
     - pip install git+https://github.com/vatlab/sos-bash.git
     - pip install git+https://github.com/vatlab/sos-python.git
+    - pip install selenium
 
 sudo: required
 services:
