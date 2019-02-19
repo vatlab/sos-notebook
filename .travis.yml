@@ -21,7 +21,8 @@ before_install:
     - pip install docker rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus 
     - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     - conda install -q pandas numpy
-
+    - conda install -c r r-essentials r-feather
+    - conda install -c conda-forge feather-format
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown matplotlib
     - sudo apt-get install libmagickwand-dev libmagickcore5-extra graphviz
@@ -48,7 +49,6 @@ services:
     - docker
 install:
     - pip install . -U
-    - pip install sos-r
     - python -m sos_notebook.install
 before_script:
     - cd test
