@@ -21,7 +21,8 @@ before_install:
     - pip install docker rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus 
     - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     - conda install -q pandas numpy
-    - conda install -c r r-essentials r-feather
+    # - conda install -c r r-essentials r-feather
+    - conda install -c r r-markdown r-rmarkdown r-base64enc r-feather
     - conda install -c conda-forge feather-format
     # SoS Notebook
     - pip install jedi notebook nbconvert nbformat pyyaml psutil tqdm scipy markdown matplotlib

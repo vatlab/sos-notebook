@@ -223,7 +223,7 @@ class Notebook:
         for output in outputs:
             outputText+=output.text+"\n"
         if "Out" in outputText:
-            outputText=outputText.split(":")[1:]
+            outputText="".join(outputText.split(":")[1:])
         return outputText.strip()
 
 
