@@ -2,7 +2,7 @@ import time
 def test_magics(notebook):
 
 	#test %pwd
-    notebook.shift_kernel(index=0,kernel_name="python3",by_click=True)
+    notebook.shift_kernel(index=0,kernel_name="Python3",by_click=True)
     command="%pwd"
     notebook.edit_cell(index=0,content=command,render=True)
     assert len(notebook.get_cell_output(index=0))>0
@@ -34,14 +34,14 @@ def test_magics(notebook):
     #test %get
     command="a = [1, 2, 3] \nb = [1, 2, '3']"
     notebook.add_and_execute_cell_in_kernel(index=7,content=command,kernel="SoS")
-    command="%get a \n a"
-    notebook.add_and_execute_cell_in_kernel(index=8,content=command,kernel="python3")
+    command="%get a \na"
+    notebook.add_and_execute_cell_in_kernel(index=8,content=command,kernel="Python3")
     assert "[1, 2, 3]"==notebook.get_cell_output(index=9)
     command="%get b \nstr(b)\nR_var <- 'R variable'"
     notebook.add_and_execute_cell_in_kernel(index=9,content=command,kernel="R")
     assert "List of 3" in notebook.get_cell_output(index=10)
     command="%get --from R R_var \n R_var"
-    notebook.add_and_execute_cell_in_kernel(index=10,content=command,kernel="python3")
+    notebook.add_and_execute_cell_in_kernel(index=10,content=command,kernel="Python3")
     assert "R variable" in notebook.get_cell_output(index=11)
 
     #test %put
@@ -58,7 +58,7 @@ def test_magics(notebook):
     command="%put --to Python3 R_var"
     notebook.add_and_execute_cell_in_kernel(index=14,content=command,kernel="R")
     command="R_var"
-    notebook.add_and_execute_cell_in_kernel(index=15,content=command,kernel="python3")
+    notebook.add_and_execute_cell_in_kernel(index=15,content=command,kernel="Python3")
     assert "'R variable'"==notebook.get_cell_output(index=16)
 
     #test %with
