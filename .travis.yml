@@ -52,11 +52,10 @@ install:
     - python -m sos_notebook.install
 before_script:
     - cd test
-    # - sh build_test_docker.sh
+    - sh build_test_docker.sh
 script:
-    # - pytest -x -v --cov sos_notebook --cov-report=term-missing
-    - jupyter kernelspec list
-    - pytest -v ./selenium/test_magics.py 
+    - pytest -x -v --cov sos_notebook --cov-report=term-missing
+
 after_success:
     - coverage combine
     - coveralls
