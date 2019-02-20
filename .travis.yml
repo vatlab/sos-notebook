@@ -56,7 +56,7 @@ before_script:
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     - jupyter kernelspec list
-    - pytest -v ./selenium/test_kernels.py 
+    - pytest -v ./selenium/test_magics.py 
 after_success:
     - coverage combine
     - coveralls
