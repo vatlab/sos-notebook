@@ -44,6 +44,9 @@ class Interactive_Step_Executor(Step_Executor):
         if all_submitted and 'shared' not in env.sos_dict['_runtime']:
             # if no shared and all taks have been submited return
             sys.exit(0)
+        # turn this function to a generator to satisfy the interface, but do not
+        # actually wait for any socket.
+        yield None
         # wait till the executor responde
         if all(x == 'completed' for x in self.host.check_status(tasks)):
             if len(tasks) > 4:
@@ -64,7 +67,13 @@ class Interactive_Step_Executor(Step_Executor):
             time.sleep(0.1)
 
     def run(self):
-        return Base_Step_Executor.run(self)
+        try:
+            runner = Base_Step_Executor.run(self)
+            yreq = next(runner)
+            while True:
+                yreq = runner.send(None)
+        except StopIteration as e:
+            return e.value
 
     def log(self, stage=None, msg=None):
         if stage == 'start':
