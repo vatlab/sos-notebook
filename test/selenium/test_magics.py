@@ -66,8 +66,20 @@ def test_magics(notebook):
     notebook.add_and_execute_cell_in_kernel(index=16,content=command,kernel="SoS")
     command="ran"
     notebook.add_and_execute_cell_in_kernel(index=17,content=command,kernel="SoS")
-  
+    assert len(notebook.get_cell_output(index=18))>0
+
+    #test %dict
+    command="%dict --keys"
+    notebook.add_and_execute_cell_in_kernel(index=18,content=command,kernel="SoS")
+    keylist=notebook.get_cell_output(index=19)
+    assert 'R_out' in keylist and 'ran' in keylist and 'master_id' in keylist
+    
     #test %clear
+    command="%clear --all"
+    notebook.add_and_execute_cell_in_kernel(index=19,content=command,kernel="SoS")
+   
+
+
     
 
 
