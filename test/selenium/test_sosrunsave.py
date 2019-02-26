@@ -11,7 +11,7 @@ def test_sosrun(notebook):
 
     command="%sosrun workflow --gvar 40"
     notebook.add_and_execute_cell_in_kernel(index=2,content=command,kernel="SoS")
-    output=notebook.get_cell_output(index=3)
+    output=notebook.wait_for_output(index=3)
     lines=output.splitlines()
     assert lines[0]=="This is step workflow_10, with 40"
     assert lines[1]=="This is step workflow_20, with 40"
@@ -27,7 +27,7 @@ echo process {val}'''
 input: for_each={'val': range(2)}
 sos_run('worker',val=val)'''
     notebook.add_and_execute_cell_in_kernel(index=4,content=command,kernel="SoS")
-    output=notebook.get_cell_output(index=5)
+    output=notebook.wait_for_output(index=5)
     lines=output.splitlines()
     assert lines[0]=="process 0"
 
@@ -36,7 +36,7 @@ sos_run('worker',val=val)'''
 
     command="%runfile check_sossave worker"
     notebook.add_and_execute_cell_in_kernel(index=6,content=command,kernel="SoS")
-    output=notebook.get_cell_output(index=7)
+    output=notebook.wait_for_output(index=7)
     assert output=="process 5"
 
 

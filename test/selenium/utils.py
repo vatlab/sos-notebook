@@ -87,6 +87,8 @@ def _wait_for_multiple(driver, locator_type, locator, timeout, wait_for_n, visib
     return wait.until(multiple_found)
 
 
+
+
 class CellTypeError(ValueError):
     
     def __init__(self, message=""):
@@ -226,6 +228,10 @@ class Notebook:
             outputText="".join(outputText.split(":")[1:])
         return outputText.strip()
 
+    def wait_for_output(self,index=0):
+        time.sleep(10)
+        return self.get_cell_output(index)
+
 
 
     def set_cell_metadata(self, index, key, value):
@@ -354,6 +360,9 @@ class Notebook:
         self.shift_kernel(index=index+1,kernel_name=kernel,by_click=True)
         self.execute_cell(cell_or_index=index+1)
 
+    def get_sidePanel(self):
+        panel=self.browser.get_element_by_id("panel")
+        print(panel.size())
 
 
     @classmethod
