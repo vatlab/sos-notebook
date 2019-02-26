@@ -55,7 +55,9 @@ before_script:
     # - sh build_test_docker.sh
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
+    - pytest -v ./selenium/test_sosrunsave.py
     - pytest -v ./selenium/test_runsave.py
+
 
 after_success:
     - coverage combine
