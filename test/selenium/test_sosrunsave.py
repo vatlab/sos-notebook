@@ -27,7 +27,7 @@ echo process {val}'''
 input: for_each={'val': range(2)}
 sos_run('worker',val=val)'''
     notebook.add_and_execute_cell_in_kernel(index=4,content=command,kernel="SoS")
-    output=notebook.wait_for_output(index=5)
+    output=notebook.get_cell_output(index=5)
     lines=output.splitlines()
     assert lines[0]=="process 0"
 
