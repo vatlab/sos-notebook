@@ -109,7 +109,7 @@ def execute_scratch_cell(code, raw_args, kernel):
             1: logging.WARNING,
             2: logging.INFO,
             3: logging.DEBUG,
-            4: logging.TRACE,
+            4: logging.DEBUG,
             None: logging.INFO
         }
         env.logger.addHandler(NotebookLoggingHandler(
