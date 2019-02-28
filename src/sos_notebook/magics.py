@@ -1027,7 +1027,7 @@ class Pull_Magic(SoS_Magic):
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
@@ -1093,7 +1093,7 @@ class Push_Magic(SoS_Magic):
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3) 
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
@@ -1963,7 +1963,7 @@ class Task_Magic(SoS_Magic):
                             help='''Check the status of all tasks on local or specified remote task queue,
             including tasks created by workflows executed from other directories.''')
         status.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3) 
                 information to standard output (default to 2).''')
         status.add_argument('-t', '--tags', nargs='*', help='''Only list tasks with
             one of the specified tags.''')
@@ -1996,7 +1996,7 @@ class Task_Magic(SoS_Magic):
         execute.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global sos config.yml files.''')
         execute.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         execute.set_defaults(func=self.execute)
 
@@ -2017,7 +2017,7 @@ class Task_Magic(SoS_Magic):
         kill.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global sos config.yml files.''')
         kill.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         kill.set_defaults(func=self.kill)
 
@@ -2048,7 +2048,7 @@ class Task_Magic(SoS_Magic):
         purge.add_argument('-c', '--config', help='''A configuration file with host
             definitions, in case the definitions are not defined in global sos config.yml files.''')
         purge.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), debug (3) and trace (4)
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         purge.set_defaults(func=self.purge)
         parser.error = self._parse_error
