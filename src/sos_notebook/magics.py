@@ -1093,7 +1093,7 @@ class Push_Magic(SoS_Magic):
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3) 
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
@@ -1963,7 +1963,7 @@ class Task_Magic(SoS_Magic):
                             help='''Check the status of all tasks on local or specified remote task queue,
             including tasks created by workflows executed from other directories.''')
         status.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3) 
+                            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         status.add_argument('-t', '--tags', nargs='*', help='''Only list tasks with
             one of the specified tags.''')
@@ -2117,7 +2117,7 @@ class Task_Magic(SoS_Magic):
             self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
             return
         for task in args.tasks:
-            result = host._task_engine.submit_task(task)
+            host._task_engine.submit_task(task)
             self.sos_kernel.send_frontend_msg('task_status',
                 {
                     'update_only': True,
@@ -2417,7 +2417,7 @@ class Use_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self.sos_kernel._execution_count,
                     }
-        if args.restart and args.name in elf.kernel.kernels:
+        if args.restart and args.name in self.kernel.kernels:
             self.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:

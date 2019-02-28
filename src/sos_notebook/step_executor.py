@@ -71,7 +71,7 @@ class Interactive_Step_Executor(Step_Executor):
             runner = Base_Step_Executor.run(self)
             yreq = next(runner)
             while True:
-                yreq = runner.send(None)
+                yreq = runner.send(yreq)
         except StopIteration as e:
             return e.value
 

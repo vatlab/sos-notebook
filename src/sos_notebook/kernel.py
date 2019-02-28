@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 import time
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from textwrap import dedent
 
 import pandas as pd
@@ -21,9 +21,9 @@ from IPython.core.display import HTML
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
-from sos.eval import SoS_eval, SoS_exec, interpolate
+from sos.eval import SoS_eval, SoS_exec
 from sos.syntax import SOS_SECTION_HEADER
-from sos.utils import format_duration, WorkflowDict, env, short_repr, load_config_files
+from sos.utils import WorkflowDict, env, short_repr, load_config_files
 from sos.targets import file_target
 from sos.executor_utils import prepare_env
 
@@ -31,7 +31,7 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .workflow_executor import (run_sos_workflow, execute_scratch_cell, NotebookLoggingHandler,
-                                start_controller, stop_controller)
+                                start_controller)
 from .magics import SoS_Magics, Preview_Magic
 
 
@@ -557,7 +557,7 @@ class SoS_Kernel(IPythonKernel):
                     host_status = defaultdict(list)
                     for name in v:
                         try:
-                            tqu, tid = rsplit('_', 1)
+                            tqu, tid = name.rsplit('_', 1)
                         except Exception:
                             # incorrect ID...
                             continue
