@@ -25,6 +25,7 @@ from sos.eval import SoS_eval, SoS_exec, interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import format_duration, WorkflowDict, env, short_repr, load_config_files
 from sos.targets import file_target
+from sos.executor_utils import prepare_env
 
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
@@ -508,6 +509,8 @@ class SoS_Kernel(IPythonKernel):
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
         self.editor_kernel = 'sos'
+        # initialize env
+        prepare_env('')
         # remove all other ahdnlers
         env.logger.handlers = []
         env.logger.addHandler(

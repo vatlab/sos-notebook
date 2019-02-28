@@ -145,7 +145,6 @@ def execute_scratch_cell(code, raw_args, kernel):
 
     env.sos_dict.set('workflow_id', config['workflow_id'])
     env.config.update(config)
-    prepare_env('')
 
     try:
         if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
