@@ -607,10 +607,14 @@ class SoS_Kernel(IPythonKernel):
                 if msg_type in ('display_data', 'stream'):
                     self.send_response(self.iopub_socket, msg_type,
                                        {} if msg is None else msg)
+            elif self._meta['use_iopub']:
+                self.send_response(self.iopub_socket,
+                    'transient_display_data',
+                    make_transient_msg(msg_type, msg)
+                )
             else:
                 self.frontend_comm.send(
-                    make_transient_msg(
-                        msg_type, msg),
+                    make_transient_msg(msg_type, msg),
                     {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
@@ -1237,6 +1241,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 'notebook_name': '',
                 'notebook_path': '',
                 'use_panel': False,
+                'use_iopub': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
                 'toc': '',
@@ -1253,7 +1258,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             'capture_result': None,
             'cell_id': meta['cell_id'] if 'cell_id' in meta else "",
             'notebook_path': meta['path'] if 'path' in meta else 'Untitled.ipynb',
-            'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
+            'use_panel': 'use_panel' in meta and meta['use_panel'] is True,
+            'use_iopub': 'use_iopub' in meta and meta['use_iopub'] is True,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'toc': meta.get('toc', ''),
