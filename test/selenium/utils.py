@@ -134,13 +134,13 @@ class Notebook:
         
         """
       # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
-        return self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div")
+        return list(self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div"))
 
         # return self.browser.find_elements_by_class_name("cell")
     
     @property
     def panel_cells(self):
-        return self.browser.find_elements_by_xpath("//*[@id='panel']/div")
+        return list(self.browser.find_elements_by_xpath("//*[@id='panel']/div"))
     
 
 
@@ -233,6 +233,7 @@ class Notebook:
         if inPanel:
             outputs=wait_for_selector(self.panel_cells[index], "div .output_area")
         else:
+
             outputs=wait_for_selector(self.cells[index], "div .output_area")
         outputText=""
         for output in outputs:

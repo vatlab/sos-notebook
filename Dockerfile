@@ -36,16 +36,17 @@ RUN     python -m bash_kernel.install --user
 RUN     pip install  markdown wand graphviz imageio pillow nbformat coverage codacy-coverage pytest pytest-cov python-coveralls
 
 RUN     conda install -y feather-format -c conda-forge
+RUN 	conda install -c r r-feather
 
 ## trigger rerun for sos updates
 ARG	    DUMMY=unknown
 RUN     DUMMY=${DUMMY} pip install sos  sos-r sos-python sos-bash --upgrade
 
 
-RUN pip install selenium
+RUN pip install selenium nose
 
 USER    root
-RUN apt-get -y update && apt-get install -y  libssl1.0.0 libssl-dev
+RUN apt-get -y update && apt-get install -y  libssl1.0.0 libssl-dev libappindicator3-1  libxtst6
 
 RUN curl https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /chrome.deb
 RUN dpkg -i /chrome.deb || apt-get install -yf
@@ -58,7 +59,6 @@ ENV DISPLAY=:99
 
 
 RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
-
 COPY . sos_notebook
 RUN cd ./sos_notebook/ && pip install . -U
 RUN python -m sos_notebook.install

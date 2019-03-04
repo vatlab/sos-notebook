@@ -105,13 +105,13 @@ def selenium_driver():
     if os.environ.get('SAUCE_USERNAME'):
         driver = make_sauce_driver()
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'chrome':
-        driver = Chrome()
-        # chrome_options = webdriver.ChromeOptions()
-        # chrome_options.add_argument('--no-sandbox')
-        # chrome_options.add_argument('--window-size=1420,1080')
-        # chrome_options.add_argument('--headless')
-        # chrome_options.add_argument('--disable-gpu')
-        # driver = Chrome(options=chrome_options)
+        # driver = Chrome()
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--window-size=1420,1080')
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--disable-gpu')
+        driver = Chrome(options=chrome_options)
 
     else:
         driver = Firefox()
