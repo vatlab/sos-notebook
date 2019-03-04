@@ -1,0 +1,69 @@
+FROM jupyter/minimal-notebook:latest
+
+MAINTAINER junmahouston@gmail.com
+
+USER root
+
+RUN apt-get -y update && apt-get install -y build-essential git \
+    fonts-dejavu \
+    tzdata \
+    unixodbc \
+    unixodbc-dev \
+    r-cran-rodbc \
+    gfortran \
+    gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# R packages
+RUN conda install --quiet --yes \
+    'r-base=3.5.1' \
+    'unixodbc=2.3.*' \
+    'r-irkernel=0.8*' \
+    'r-plyr=1.8*' \
+    'r-devtools=1.13*' \
+    'r-tidyverse=1.2*' \
+    'r-rmarkdown=1.11*' 
+
+RUN pip install rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus \
+    entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
+
+RUN pip install bash_kernel markdown-kernel
+RUN python -m bash_kernel.install --user
+RUN python -m markdown_kernel.install
+
+
+RUN pip install markdown wand graphviz imageio pillow nbformat jedi notebook nbconvert scipy matplotlib ipython
+
+RUN conda install -y feather-format -c conda-forge
+RUN conda install -c r r-feather
+
+RUN apt-get -y update && apt-get install -y libmagickwand-dev imagemagick  graphviz libssl1.0.0 libssl-dev
+USER    jovyan
+RUN pip install git+https://github.com/vatlab/sos.git
+RUN pip install git+https://github.com/vatlab/sos-bash.git
+RUN pip install git+https://github.com/vatlab/sos-python.git
+RUN pip install git+https://github.com/vatlab/sos-r.git
+RUN pip install selenium
+USER    root
+
+RUN curl https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /chrome.deb
+RUN dpkg -i /chrome.deb || apt-get install -yf
+RUN rm /chrome.deb
+
+RUN wget -q "https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriver_linux64.zip" -O /tmp/chromedriver.zip \
+    && unzip /tmp/chromedriver.zip -d /usr/bin/ \
+    && rm /tmp/chromedriver.zip
+ENV DISPLAY=:99
+
+
+RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
+
+COPY . sos_notebook
+RUN cd ./sos_notebook/ && pip install . -U
+RUN python -m sos_notebook.install
+RUN chmod 777 /home/jovyan/.local/share/jupyter/
+USER    jovyan
+
+
+
+

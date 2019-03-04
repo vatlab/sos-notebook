@@ -9,7 +9,7 @@ def test_shift_kernel(notebook):
 	notebook.shift_kernel(index=0,kernel_name="R",by_click=True)
 	#check background color for R kernel
 	assert all([a==b] for a,b in zip(backgroundColor["R"],notebook.get_input_backgroundColor(0)))
-
+	
 	command="%preview -n rn[1:3] \n rn <- rnorm(50)"
 	notebook.edit_cell(index=0,content=command,render=True)
 

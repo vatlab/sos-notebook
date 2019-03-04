@@ -12,6 +12,7 @@ from selenium.webdriver.support.ui import Select
 from contextlib import contextmanager
 import re
 
+
 pjoin = os.path.join
 
 
@@ -100,6 +101,8 @@ class Notebook:
     def __init__(self, browser):
         self.browser = browser
         self.disable_autosave_and_onbeforeunload()
+        wait_for_selector(browser, "#panel", timeout=10, visible=False, single=True)
+        self.panelInput=self.browser.find_element_by_xpath("//*[@id='panel-wrapper']/div[5]")
         
     def __len__(self):
         return len(self.cells)
@@ -134,6 +137,12 @@ class Notebook:
         return self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div")
 
         # return self.browser.find_elements_by_class_name("cell")
+    
+    @property
+    def panel_cells(self):
+        return self.browser.find_elements_by_xpath("//*[@id='panel']/div")
+    
+
 
     @property
     def current_index(self):
@@ -219,14 +228,21 @@ class Notebook:
     def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
         return self.cells[index].find_element_by_css_selector(selector).text
 
-    def get_cell_output(self,index=0):
-        outputs=wait_for_selector(self.cells[index], "div .output_area")
+    def get_cell_output(self,index=0, inPanel=False):
+        outputs=""
+        if inPanel:
+            outputs=wait_for_selector(self.panel_cells[index], "div .output_area")
+        else:
+            outputs=wait_for_selector(self.cells[index], "div .output_area")
         outputText=""
         for output in outputs:
             outputText+=output.text+"\n"
         if "Out" in outputText:
             outputText="".join(outputText.split(":")[1:])
         return outputText.strip()
+
+
+
 
     def wait_for_output(self,index=0):
         time.sleep(10)
@@ -271,7 +287,7 @@ class Notebook:
         if render:
             self.execute_cell(self.current_index)
 
-    def execute_cell(self, cell_or_index=None):
+    def execute_cell(self, cell_or_index=None, inPanel=False):
         if isinstance(cell_or_index, int):
             index = cell_or_index
         elif isinstance(cell_or_index, WebElement): 
@@ -279,7 +295,11 @@ class Notebook:
         else:
             raise TypeError("execute_cell only accepts a WebElement or an int")
         self.focus_cell(index)
-        self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+        if inPanel:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
+        else:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+
 
     def add_cell(self, index=-1, cell_type="code", content=""):
         self.focus_cell(index)
@@ -340,9 +360,12 @@ class Notebook:
         else:
             self.edit_cell(index=0, content="%use {}".format(kernel_name),render=True)
 
-    def get_input_backgroundColor(self,index=0):
-        self.focus_cell(index)
-        rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
+    def get_input_backgroundColor(self,index=0,inPanel=False):
+        if inPanel:
+            rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
+        else:
+            self.focus_cell(index)
+            rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
 
         r,g,b,a = map(int, re.search(
              r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
@@ -361,8 +384,32 @@ class Notebook:
         self.execute_cell(cell_or_index=index+1)
 
     def get_sidePanel(self):
-        panel=self.browser.get_element_by_id("panel")
-        print(panel.size())
+        if self.browser.find_element_by_id("panel").is_displayed():
+            return True
+        else:
+            return False
+
+    def toggle_sidePanel(self):
+        panelButton=self.browser.find_element_by_id("panel_button")
+        panelButton.click()
+
+    def edit_panel_input(self,content):
+        print("panel",self.panelInput.get_attribute("innerHTML"))
+        self.panelInput.click()
+        self.panelInput.send_keys(Keys.ENTER, content)
+        time.sleep(10)
+
+    def shift_kernel_inPanel(self,kernel_name="SoS", by_click=True):
+     
+        kernel_selector = 'option[value={}]'.format(kernel_name)
+        kernelList=self.panelInput.find_element_by_tag_name("select")
+        kernel=wait_for_selector(kernelList, kernel_selector, single=True)
+        if by_click:
+            kernel.click()
+
+
+
+
 
 
     @classmethod

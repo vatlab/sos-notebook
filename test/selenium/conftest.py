@@ -9,6 +9,7 @@ import time
 from urllib.parse import urljoin
 
 from selenium.webdriver import Firefox, Remote, Chrome
+from selenium import webdriver
 from .utils import Notebook
 
 pjoin = os.path.join
@@ -38,7 +39,7 @@ def notebook_server():
         nbdir = info['nbdir'] = pjoin(td, 'notebooks')
         os.makedirs(pjoin(nbdir, u'sub ∂ir1', u'sub ∂ir 1a'))
         os.makedirs(pjoin(nbdir, u'sub ∂ir2', u'sub ∂ir 1b'))
-
+        print(nbdir)
         info['extra_env'] = {
             'JUPYTER_CONFIG_DIR': pjoin(td, 'jupyter_config'),
             'JUPYTER_RUNTIME_DIR': pjoin(td, 'jupyter_runtime'),
@@ -105,6 +106,13 @@ def selenium_driver():
         driver = make_sauce_driver()
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'chrome':
         driver = Chrome()
+        # chrome_options = webdriver.ChromeOptions()
+        # chrome_options.add_argument('--no-sandbox')
+        # chrome_options.add_argument('--window-size=1420,1080')
+        # chrome_options.add_argument('--headless')
+        # chrome_options.add_argument('--disable-gpu')
+        # driver = Chrome(options=chrome_options)
+
     else:
         driver = Firefox()
 
