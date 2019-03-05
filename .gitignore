@@ -23,3 +23,7 @@ test/*.html
 test/*.md
 test/*.txt
 
+.bash_history
+.cache/
+.local/
+

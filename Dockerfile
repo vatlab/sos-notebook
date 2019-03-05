@@ -1,15 +1,9 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-# SoS official docker image for latest version of SoS. Use command
-#
-#     docker build -t mdabioinfo/sos-notebook:latest docker-notebook
-#
-# to build it.
-#
+# tag created in March 2019
 
-# tag created in Fev 2019
-FROM jupyter/r-notebook:latest
+FROM jupyter/r-notebook:83ed2c63671f
 
 MAINTAINER Bo Peng <bpeng@mdanderson.org>
 
@@ -42,8 +36,5 @@ RUN wget -q "https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriv
 ENV DISPLAY=:99
 
 RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
-COPY . sos_notebook
-RUN cd ./sos_notebook/ && pip install . -U
-RUN python -m sos_notebook.install
 RUN chmod 777 /home/jovyan/.local/share/jupyter/
 USER    jovyan

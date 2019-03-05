@@ -51,7 +51,7 @@ install:
     # - pip install . -U
     # - python -m sos_notebook.install
     - docker pull junmahouston/sos_notebook_test:rbase
-    - docker run -dit --name  notebook_test junmahouston/sos_notebook_test:rbase   /bin/bash
+    - docker run -dit -v $PWD:/home/jovyan/ --name notebook_test  junmahouston/sos_notebook_test:rbase sh install_sos_notebook.sh
 before_script:
     # - cd test
     # - sh build_test_docker.sh

@@ -516,7 +516,7 @@ class SoS_Kernel(IPythonKernel):
                 1: logging.WARNING,
                 2: logging.INFO,
                 3: logging.DEBUG,
-                4: logging.TRACE,
+                # 4: logging.TRACE,
                 None: logging.INFO
             }[env.verbosity], kernel=self))
         env.logger.print = lambda cell_id, msg, *args: \
