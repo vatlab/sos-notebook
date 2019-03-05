@@ -60,6 +60,7 @@ script:
     # - pytest -v ./selenium/test_runsave.py
     - docker exec -it notebook_test pytest -s /home/jovyan/sos_notebook/test/selenium/test_kernels.py
     - docker exec -it notebook_test pytest -s /home/jovyan/sos_notebook/test/selenium/test_runsave.py
+    - docker exec -it notebook_test pytest -s /home/jovyan/sos_notebook/test/selenium/test_sosrunsave.py
 
 after_success:
     # - coverage combine
