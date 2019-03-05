@@ -9,32 +9,21 @@
 #
 
 # tag created in Fev 2019
-FROM jupyter/datascience-notebook:83ed2c63671f
+FROM jupyter/r-notebook:latest
 
 MAINTAINER Bo Peng <bpeng@mdanderson.org>
 
 USER    root
 
 #       Tools
-RUN     apt-get update
-RUN     apt-get install -y graphviz
-RUN     apt-get install -y texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
-
-
-RUN     apt-get install -y libgmp3-dev
-RUN     apt-get install -y software-properties-common
-
-
+RUN     apt-get update && apt-get install -y graphviz texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended libssl1.0.0 libssl-dev libappindicator3-1  libxtst6 libgmp3-dev software-properties-common
 
 USER    jovyan
 
-#       Bash
-RUN     pip install bash_kernel
+RUN     pip install bash_kernel selenium nose
 RUN     python -m bash_kernel.install --user
 
-# SOS
 RUN     pip install  markdown wand graphviz imageio pillow nbformat coverage codacy-coverage pytest pytest-cov python-coveralls
-
 RUN     conda install -y feather-format -c conda-forge
 RUN 	conda install -c r r-feather
 
@@ -42,12 +31,7 @@ RUN 	conda install -c r r-feather
 ARG	    DUMMY=unknown
 RUN     DUMMY=${DUMMY} pip install sos  sos-r sos-python sos-bash --upgrade
 
-
-RUN pip install selenium nose
-
 USER    root
-RUN apt-get -y update && apt-get install -y  libssl1.0.0 libssl-dev libappindicator3-1  libxtst6
-
 RUN curl https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /chrome.deb
 RUN dpkg -i /chrome.deb || apt-get install -yf
 RUN rm /chrome.deb
@@ -56,7 +40,6 @@ RUN wget -q "https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriv
     && unzip /tmp/chromedriver.zip -d /usr/bin/ \
     && rm /tmp/chromedriver.zip
 ENV DISPLAY=:99
-
 
 RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
 COPY . sos_notebook
