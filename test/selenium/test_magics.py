@@ -36,13 +36,13 @@ def test_magics(notebook):
     notebook.add_and_execute_cell_in_kernel(index=7,content=command,kernel="SoS")
     command="%get a \na"
     notebook.add_and_execute_cell_in_kernel(index=8,content=command,kernel="Python3")
-    # assert "[1, 2, 3]"==notebook.get_cell_output(index=9)
+    assert "[1, 2, 3]"==notebook.get_cell_output(index=9)
     command="%get b \nstr(b)\nR_var <- 'R variable'"
     notebook.add_and_execute_cell_in_kernel(index=9,content=command,kernel="R")
-    # assert "List of 3" in notebook.get_cell_output(index=10)
+    assert "List of 3" in notebook.get_cell_output(index=10)
     command="%get --from R R_var \n R_var"
     notebook.add_and_execute_cell_in_kernel(index=10,content=command,kernel="Python3")
-    # assert "R variable" in notebook.get_cell_output(index=11)
+    assert "R variable" in notebook.get_cell_output(index=11)
 
     #test %put
     command="a = c(1)\nb = c(1, 2, 3)\nc = matrix(c(1,2,3,4), ncol=2)\nR_var <- 'R variable'"
