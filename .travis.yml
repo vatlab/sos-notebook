@@ -59,9 +59,7 @@ script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
     - docker exec -it notebook_test pytest  /home/jovyan/test/selenium/
-    # - docker exec -it notebook_test pytest  /home/jovyan/test/selenium/test_runsave.py
-    # - docker exec -it notebook_test pytest  /home/jovyan/test/selenium/test_sosrunsave.py
-    # - docker exec -it notebook_test pytest  /home/jovyan/test/selenium/test_kernels.py
+
 
 after_success:
     # - coverage combine
