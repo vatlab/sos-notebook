@@ -22,7 +22,7 @@ def test_shift_kernel(notebook):
 	notebook.shift_kernel(index=1,kernel_name="SoS")
 	assert all([a==b] for a,b in zip(backgroundColor["SoS"],notebook.get_input_backgroundColor(1)))
 	notebook.execute_cell(1)
-	#assert "50" in notebook.get_cell_output(index=1)
+	assert "50" in notebook.get_cell_output(index=1)
 	#check background color for SoS kernel
 	assert all([a==b] for a,b in zip(backgroundColor["SoS"],notebook.get_output_backgroundColor(1)))
 
