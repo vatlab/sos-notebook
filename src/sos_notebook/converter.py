@@ -8,6 +8,7 @@ import re
 import sys
 import time
 from io import StringIO
+from queue import Empty
 
 import nbformat
 from nbconvert.exporters import Exporter
@@ -470,7 +471,6 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
         try:
             nb = nbformat.read(notebook_file, nbformat.NO_CONVERT)
             ep.preprocess(nb, {'metadata': {'path': '.'}})
-            import tempfile
             tmp_file = os.path.join(env.temp_dir, os.path.basename(notebook_file))
             with open(tmp_file, 'w') as tmp_nb:
                 nbformat.write(nb, tmp_nb, 4)

@@ -2573,7 +2573,7 @@ color: green;
         .concat(sosMagicWords);
 
       var sosDirectives = sosKeywords.map(x => x + ":");
-      var sosActions = sosActionWords.map(x => x + ":");
+      var sosActions = sosActionWords.map(x => new RegExp("^\\s*" + x + ":"));
       var sosMagics = sosMagicWords.map(x => '%' + x);
 
       // hint word for SoS mode

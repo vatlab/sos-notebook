@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 import time
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 from textwrap import dedent
 
 import pandas as pd
@@ -21,16 +21,17 @@ from IPython.core.display import HTML
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
-from sos.eval import SoS_eval, SoS_exec, interpolate
+from sos.eval import SoS_eval, SoS_exec
 from sos.syntax import SOS_SECTION_HEADER
-from sos.utils import format_duration, WorkflowDict, env, short_repr, load_config_files
+from sos.utils import WorkflowDict, env, short_repr, load_config_files
 from sos.targets import file_target
+from sos.executor_utils import prepare_env
 
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .workflow_executor import (run_sos_workflow, execute_scratch_cell, NotebookLoggingHandler,
-                                start_controller, stop_controller)
+                                start_controller)
 from .magics import SoS_Magics, Preview_Magic
 
 
@@ -508,6 +509,8 @@ class SoS_Kernel(IPythonKernel):
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
         self.editor_kernel = 'sos'
+        # initialize env
+        prepare_env('')
         # remove all other ahdnlers
         env.logger.handlers = []
         env.logger.addHandler(
@@ -516,7 +519,7 @@ class SoS_Kernel(IPythonKernel):
                 1: logging.WARNING,
                 2: logging.INFO,
                 3: logging.DEBUG,
-                4: logging.TRACE,
+                4: logging.DEBUG,
                 None: logging.INFO
             }[env.verbosity], kernel=self))
         env.logger.print = lambda cell_id, msg, *args: \
@@ -554,7 +557,7 @@ class SoS_Kernel(IPythonKernel):
                     host_status = defaultdict(list)
                     for name in v:
                         try:
-                            tqu, tid = rsplit('_', 1)
+                            tqu, tid = name.rsplit('_', 1)
                         except Exception:
                             # incorrect ID...
                             continue
@@ -604,10 +607,14 @@ class SoS_Kernel(IPythonKernel):
                 if msg_type in ('display_data', 'stream'):
                     self.send_response(self.iopub_socket, msg_type,
                                        {} if msg is None else msg)
+            elif self._meta['use_iopub']:
+                self.send_response(self.iopub_socket,
+                    'transient_display_data',
+                    make_transient_msg(msg_type, msg)
+                )
             else:
                 self.frontend_comm.send(
-                    make_transient_msg(
-                        msg_type, msg),
+                    make_transient_msg(msg_type, msg),
                     {'msg_type': 'transient_display_data'})
         elif self.frontend_comm:
             self.frontend_comm.send({} if msg is None else msg, {
@@ -901,7 +908,11 @@ class SoS_Kernel(IPythonKernel):
         self.KC.execute(code, silent=silent, store_history=store_history)
 
         # first thing is wait for any side effects (output, stdin, etc.)
-        while True:
+        iopub_started = False
+        iopub_ended = False
+        shell_ended = False
+        res = None
+        while not (iopub_started and iopub_ended and shell_ended):
             # display intermediate print statements, etc.
             while self.KC.stdin_channel.msg_ready():
                 sub_msg = self.KC.stdin_channel.get_msg()
@@ -926,6 +937,10 @@ class SoS_Kernel(IPythonKernel):
                     env.log_to_file(f'MSG TYPE {msg_type}')
                     env.log_to_file(f'CONTENT  {sub_msg["content"]}')
                 if msg_type == 'status':
+                    if sub_msg["content"]["execution_state"] == 'busy':
+                        iopub_started = True
+                    elif iopub_started and sub_msg["content"]["execution_state"] == 'idle':
+                        iopub_ended = True
                     continue
                 if msg_type in ('execute_input', 'execute_result'):
                     # override execution count with the master count,
@@ -946,8 +961,10 @@ class SoS_Kernel(IPythonKernel):
                 reply['content']['execution_count'] = self._execution_count
                 if self._debug_mode:
                     env.log_to_file(f'GET SHELL MSG {reply}')
-                return reply['content']
+                res = reply['content']
+                shell_ended = True
             time.sleep(0.001)
+        return res
 
     def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
@@ -1071,12 +1088,15 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             self.KC.shell_channel.get_msg()
         while self.KC.iopub_channel.msg_ready():
             sub_msg = self.KC.iopub_channel.get_msg()
-            if self._debug_mode:
+            if self._debug_mode and sub_msg['header']['msg_type'] != 'status':
                 self.warn(f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}")
         responses = []
         self.KC.execute(statement, silent=False, store_history=False)
         # first thing is wait for any side effects (output, stdin, etc.)
-        while True:
+        iopub_started = False
+        iopub_ended = False
+        shell_ended = False
+        while not (iopub_started and iopub_ended and shell_ended):
             # display intermediate print statements, etc.
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
@@ -1084,12 +1104,15 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 if self._debug_mode:
                     env.log_to_file(f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
+                    if sub_msg["content"]["execution_state"] == 'busy':
+                        iopub_started = True
+                    elif iopub_started and sub_msg["content"]["execution_state"] == 'idle':
+                        iopub_ended = True
                     continue
                 if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name):
                     if self._debug_mode:
                         env.log_to_file(
                             f'Capture response: {msg_type}: {sub_msg["content"]}')
-
                     responses.append([msg_type, sub_msg['content']])
                 else:
                     if self._debug_mode:
@@ -1102,7 +1125,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 reply = self.KC.get_shell_msg()
                 if self._debug_mode:
                     env.log_to_file(f'GET SHELL MSG {reply}')
-                break
+                shell_ended = True
             time.sleep(0.001)
 
         if not responses and self._debug_mode:
@@ -1218,6 +1241,7 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                 'notebook_name': '',
                 'notebook_path': '',
                 'use_panel': False,
+                'use_iopub': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
                 'toc': '',
@@ -1234,7 +1258,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             'capture_result': None,
             'cell_id': meta['cell_id'] if 'cell_id' in meta else "",
             'notebook_path': meta['path'] if 'path' in meta else 'Untitled.ipynb',
-            'use_panel': True if 'use_panel' in meta and meta['use_panel'] is True else False,
+            'use_panel': 'use_panel' in meta and meta['use_panel'] is True,
+            'use_iopub': 'use_iopub' in meta and meta['use_iopub'] is True,
             'default_kernel': meta['default_kernel'] if 'default_kernel' in meta else 'SoS',
             'cell_kernel': meta['cell_kernel'] if 'cell_kernel' in meta else (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'toc': meta.get('toc', ''),

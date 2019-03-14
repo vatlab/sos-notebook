@@ -2,34 +2,24 @@
 #
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
-import datetime
 import logging
 import multiprocessing as mp
 import os
 import re
 import shlex
 import sys
-import time
-from collections import defaultdict
 from threading import Event
-from typing import DefaultDict, Union
 
 import psutil
 import zmq
-from IPython.core.display import HTML
 from sos.__main__ import get_run_parser
-from sos.controller import (Controller, connect_controllers,
-                            disconnect_controllers)
-from sos.eval import SoS_exec
-from sos.executor_utils import prepare_env
+from sos.controller import Controller, connect_controllers, disconnect_controllers
 from sos.parser import SoS_Script
 from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import (RemovedTarget, UnavailableLock, UnknownTarget,
-                         sos_targets, textMD5)
+from sos.targets import RemovedTarget, UnknownTarget, sos_targets, textMD5
 
 from sos.utils import _parse_error, env, get_traceback, pexpect_run
-from sos.workflow_executor import Base_Executor
 
 from .step_executor import Interactive_Step_Executor
 
@@ -109,7 +99,7 @@ def execute_scratch_cell(code, raw_args, kernel):
             1: logging.WARNING,
             2: logging.INFO,
             3: logging.DEBUG,
-            4: logging.TRACE,
+            4: logging.DEBUG,
             None: logging.INFO
         }
         env.logger.addHandler(NotebookLoggingHandler(
@@ -145,7 +135,6 @@ def execute_scratch_cell(code, raw_args, kernel):
 
     env.sos_dict.set('workflow_id', config['workflow_id'])
     env.config.update(config)
-    prepare_env('')
 
     try:
         if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
