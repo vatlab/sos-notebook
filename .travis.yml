@@ -60,7 +60,13 @@ before_script:
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
-    - docker exec notebook_test pytest  /home/jovyan/test/selenium/
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_buffering.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_d*.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_kernels.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_m*.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_prompt_numbers.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_runsave.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_s*.py
 
 
 after_success:
