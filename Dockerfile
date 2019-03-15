@@ -3,7 +3,7 @@
 
 # tag created in March 2019
 
-FROM jupyter/r-notebook:latest
+FROM jupyter/r-notebook:83ed2c63671f
 
 MAINTAINER Bo Peng <bpeng@mdanderson.org>
 

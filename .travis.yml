@@ -51,14 +51,16 @@ install:
     # - pip install . -U
     # - python -m sos_notebook.install
     - docker pull junmahouston/sos_notebook_test:rbase
-    - docker run -dit -v $PWD:/home/jovyan/ --name notebook_test  junmahouston/sos_notebook_test:rbase sh install_sos_notebook.sh
+    - docker run -dit --shm-size=6g  --name notebook_test  junmahouston/sos_notebook_test:rbase /bin/bash
+    - docker cp . notebook_test:/home/jovyan
+    - docker exec -u root notebook_test sh install_sos_notebook.sh
 before_script:
     # - cd test
     # - sh build_test_docker.sh
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
-    - docker exec -it notebook_test pytest  /home/jovyan/test/selenium/
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/
 
 
 after_success:
