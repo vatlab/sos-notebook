@@ -51,7 +51,7 @@ install:
     # - pip install . -U
     # - python -m sos_notebook.install
     - docker pull junmahouston/sos_notebook_test:rbase
-    - docker run -dit --shm-size=8g  --name notebook_test  junmahouston/sos_notebook_test:rbase /bin/bash
+    - docker run -dit --shm-size=2g  --name notebook_test  junmahouston/sos_notebook_test:rbase /bin/bash
     - docker cp . notebook_test:/home/jovyan
     - docker exec -u root notebook_test sh install_sos_notebook.sh
 before_script:
@@ -61,12 +61,20 @@ script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
     - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_buffering.py
-    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_d*.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_dashboard_nav.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_deletecell.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_display_image.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_dualmode_insertcell.py
     - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_kernels.py
-    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_m*.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_magics.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_markdown.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_merge_cells.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_multiselect.py
     - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_prompt_numbers.py
     - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_runsave.py
-    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_s*.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_save_as_notebook.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_sidePanel.py
+    - docker exec notebook_test pytest  /home/jovyan/test/selenium/test_sosrunsave.py
 
 
 after_success:

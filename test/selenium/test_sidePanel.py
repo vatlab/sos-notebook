@@ -11,7 +11,7 @@ def test_sidepanel(notebook):
 	notebook.edit_cell(index=0,content=command,render=False)
 	notebook.execute_cell(cell_or_index=0,inPanel=True)
 	time.sleep(2)
-	# assert "1"==notebook.get_cell_output(index=1,inPanel=True)
+	assert "1"==notebook.get_cell_output(index=1,inPanel=True)
 
 	notebook.shift_kernel_inPanel(kernel_name="Python3", by_click=True)
 	content="print(2)"
