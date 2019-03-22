@@ -626,10 +626,6 @@ class SoS_Kernel(IPythonKernel):
                 'Frontend communicator is broken. Please restart jupyter server')
 
     def _reset_dict(self):
-        env.sos_dict = WorkflowDict()
-        SoS_exec('import os, sys, glob', None)
-        SoS_exec('from sos.runtime import *', None)
-        SoS_exec("run_mode = 'interactive'", None)
         self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG',
                                                                'step_name', '__builtins__', 'input', 'output',
                                                                'depends'}
@@ -1364,9 +1360,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     allow_stdin=True):
         # handles windows/unix newline
         code = '\n'.join(code.splitlines()) + '\n'
-
-        if self.original_keys is None:
-            self._reset_dict()
         if code == 'import os\n_pid = os.getpid()':
             # this is a special probing command from vim-ipython. Let us handle it specially
             # so that vim-python can get the pid.
