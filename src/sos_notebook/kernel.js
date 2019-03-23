@@ -1573,8 +1573,14 @@ define([
     wrap_execute();
 
     if (this.cell.element[0].contains(document.activeElement)) {
-      create_panel_cell(this.cell.get_text(),
-        this.cell.metadata.kernel).execute();
+      let text = this.cell.get_text();
+      if (text.trim() === 'clear') {
+        $("#panel").children().remove();
+        this.cell.clear_input();
+        return;
+      }
+
+      create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
     } else if (this.notebook.element[0].contains(document.activeElement)) {
@@ -1588,8 +1594,14 @@ define([
     wrap_execute();
 
     if (this.cell.element[0].contains(document.activeElement)) {
-      create_panel_cell(this.cell.get_text(),
-        this.cell.metadata.kernel).execute();
+      let text = this.cell.get_text();
+      if (text.trim() === 'clear') {
+        $("#panel").children().remove();
+        this.cell.clear_input();
+        return;
+      }
+
+      create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
     } else if (this.notebook.element[0].contains(document.activeElement)) {
