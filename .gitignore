@@ -14,7 +14,6 @@ process_homepage.sh
 *.pyc
 
 geckodriver.log
-test/Dockerfile
 test/authorized_keys
 test/*.sos
 test/*.ipynb
@@ -22,9 +21,9 @@ test/*.py
 test/*.html
 test/*.md
 test/*.txt
-
+test/ssh
 .bash_history
 .cache/
 .local/
-ssh/
+
 
