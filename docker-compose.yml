@@ -1,0 +1,28 @@
+version: '3'
+
+services:
+    sos-notebook:
+        build:
+            context: .
+        image: notebook_test:latest
+        restart: "no"
+        volumes:
+          - $PWD:/home/jovyan/
+        # command:
+        #   - sh install_sos_notebook.sh
+        networks:
+          - sosnet
+    sos:
+        build:
+            context: ./test
+        image: eg_sshd:latest
+        hostname: sos
+
+        restart: always
+        networks:
+          - sosnet
+
+
+networks:
+  sosnet:
+    external: true

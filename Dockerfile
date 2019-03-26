@@ -9,8 +9,9 @@ MAINTAINER Bo Peng <bpeng@mdanderson.org>
 
 USER    root
 
+
 #       Tools
-RUN     apt-get update && apt-get install -y graphviz texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended libssl1.0.0 libssl-dev libappindicator3-1  libxtst6 libgmp3-dev software-properties-common
+RUN     apt-get update && apt-get install -y graphviz texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended libssl1.0.0 libssl-dev libappindicator3-1  libxtst6 libgmp3-dev software-properties-common rsync ssh
 
 USER    jovyan
 
@@ -37,4 +38,9 @@ ENV DISPLAY=:99
 
 RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
 RUN chmod 777 /home/jovyan/.local/share/jupyter/
+
+COPY ./test/ssh /root/.ssh 
+RUN chmod 700 /root/.ssh
+RUN chmod 600 /root/.ssh/*
+
 USER    jovyan

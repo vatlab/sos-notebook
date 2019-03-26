@@ -26,4 +26,5 @@ test/*.txt
 .bash_history
 .cache/
 .local/
+ssh/
 
