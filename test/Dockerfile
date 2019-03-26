@@ -12,7 +12,8 @@ ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 
 RUN [ -d /root/.ssh ] || mkdir -p /root/.ssh
-ADD authorized_keys /root/.ssh/authorized_keys
+# ADD authorized_keys /root/.ssh/authorized_keys
+COPY ./ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 # install sos on the remote host
 RUN  pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm
