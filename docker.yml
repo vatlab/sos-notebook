@@ -11,7 +11,7 @@ hosts:
         paths:
             home: /home/jovyan/test
     docker:
-        address: "{remote_user}@sos-notebook_sos_1"
+        address: "{remote_user}@sosnotebook_sos_1"
         port: 22
         paths:
             home: "/{remote_user}"

@@ -60,7 +60,7 @@ install:
     - docker-compose up -d
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
     - docker exec -u root sosnotebook_sos-notebook_1 sh install_sos_notebook.sh
-    - docker exec -u root sosnotebook_sos-notebook_1 bash -c "ssh -o 'StrictHostKeyChecking no' -p 22 root@sosnotebook_sos_1 exit"
+    # - docker exec -u root sosnotebook_sos-notebook_1 bash -c "ssh -o 'StrictHostKeyChecking no' -p 22 root@sosnotebook_sos_1 exit"
 before_script:
     # - cd test
     # - sh build_test_docker.sh
