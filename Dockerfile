@@ -39,6 +39,7 @@ ENV DISPLAY=:99
 RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
 RUN chmod 777 /home/jovyan/.local/share/jupyter/
 
+
 COPY ./test/.ssh /root/.ssh 
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/*

@@ -4,20 +4,16 @@ services:
     sos-notebook:
         build:
             context: .
-        image: notebook_test:latest
+        image: junmahouston/notebook_test:latest
         restart: "no"
-        volumes:
-          - $PWD:/home/jovyan/
         shm_size:
             8gb
-        # command:
-        #   - sh install_sos_notebook.sh
         networks:
           - sosnet
     sos:
         build:
             context: ./test
-        image: eg_sshd:latest
+        image: junmahouston/eg_sshd:latest
         hostname: sos
 
         restart: always
