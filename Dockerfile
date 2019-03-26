@@ -44,4 +44,8 @@ COPY ./test/.ssh /root/.ssh
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/*
 
+COPY ./test/.ssh /home/jovyan/.ssh 
+RUN chmod 700 /home/jovyan/.ssh 
+RUN chmod 600 /home/jovyan/.ssh/*
+
 USER    jovyan

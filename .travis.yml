@@ -57,18 +57,18 @@ install:
     - docker network create sosnet
     - docker pull junmahouston/notebook_test:latest
     - docker pull junmahouston/eg_sshd:latest
-    - docker-compose up
+    - docker-compose up -d
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
     - docker exec -u root sosnotebook_sos-notebook_1 sh install_sos_notebook.sh
-    - docker exec -u root ssh -o 'StrictHostKeyChecking no' -p 22 root@sosnotebook_sos_1 exit
+    - docker exec -u root sosnotebook_sos-notebook_1 bash -c "ssh -o 'StrictHostKeyChecking no' -p 22 root@sosnotebook_sos_1 exit"
 before_script:
     # - cd test
     # - sh build_test_docker.sh
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
-    - docker exec -u root  sos-notebook_sos-notebook_1  python ./test/test_sos_kernel.py
-    - docker exec sos-notebook_sos-notebook_1  pytest ./test/selenium/test_magics.py
+    - docker exec -u root  sosnotebook_sos-notebook_1  python ./test/test_sos_kernel.py
+    - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_magics.py
 after_success:
     # - coverage combine
     # - coveralls
