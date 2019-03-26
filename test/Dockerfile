@@ -12,8 +12,7 @@ ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 
 RUN [ -d /root/.ssh ] || mkdir -p /root/.ssh
-# ADD authorized_keys /root/.ssh/authorized_keys
-COPY ./ssh/id_rsa.pub /root/.ssh/authorized_keys
+
 
 # install sos on the remote host
 RUN  pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm
@@ -24,7 +23,7 @@ RUN  SHA=$SHA git clone http://github.com/vatlab/sos sos
 RUN  cd sos && pip install . -U
 
 RUN  echo "export TS_SLOTS=10" >> /root/.bash_profile
-COPY ./ssh/id_rsa.pub /root/.ssh/authorized_keys
+COPY ./.ssh/id_rsa.pub /root/.ssh/authorized_keys
 
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]

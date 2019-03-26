@@ -8,6 +8,8 @@ services:
         restart: "no"
         volumes:
           - $PWD:/home/jovyan/
+        shm_size:
+            8gb
         # command:
         #   - sh install_sos_notebook.sh
         networks:
