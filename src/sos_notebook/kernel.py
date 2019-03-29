@@ -492,7 +492,6 @@ class SoS_Kernel(IPythonKernel):
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
-        self.original_keys = None
         self._meta = {'use_panel': True}
         self._supported_languages = None
         self._completer = None
@@ -625,11 +624,6 @@ class SoS_Kernel(IPythonKernel):
             self.warn(
                 'Frontend communicator is broken. Please restart jupyter server')
 
-    def _reset_dict(self):
-        self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG',
-                                                               'step_name', '__builtins__', 'input', 'output',
-                                                               'depends'}
-
     @contextlib.contextmanager
     def redirect_sos_io(self):
         save_stdout = sys.stdout
@@ -643,8 +637,8 @@ class SoS_Kernel(IPythonKernel):
     def get_vars_from(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
             # autmatically get all variables with names start with 'sos'
-            default_items = [x for x in env.sos_dict.keys() if x.startswith(
-                'sos') and x not in self.original_keys]
+            default_items = [x for x in env.sos_dict.keys() if x.startswith('sos') and x not in
+                ('sos_handle_parameter_', 'sos_run', 'sos_step', 'sos_targets', 'sos_variable')]
             items = default_items if not items else items + default_items
             for item in items:
                 if item not in env.sos_dict:
