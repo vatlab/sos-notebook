@@ -45,11 +45,11 @@ install:
     - pip install jupyter wand numpy pandas
     # install github version of sos
     - pip install git+https://github.com/vatlab/sos.git
-    - pip install git+https://github.com/vatlab/sos-bash.git
-    - pip install git+https://github.com/vatlab/sos-python.git
     - pip install pytest
     - pip install . -U
     - python -m sos_notebook.install
+    - pip install git+https://github.com/vatlab/sos-bash.git
+    - pip install git+https://github.com/vatlab/sos-python.git
 
 test_script:
     - cd test
