@@ -510,6 +510,10 @@ class SoS_Kernel(IPythonKernel):
         self.editor_kernel = 'sos'
         # initialize env
         prepare_env('')
+        self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG',
+                                                               'step_name', '__builtins__', 'input', 'output',
+                                                               'depends'}
+
         # remove all other ahdnlers
         env.logger.handlers = []
         env.logger.addHandler(
@@ -637,8 +641,7 @@ class SoS_Kernel(IPythonKernel):
     def get_vars_from(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
             # autmatically get all variables with names start with 'sos'
-            default_items = [x for x in env.sos_dict.keys() if x.startswith('sos') and x not in
-                ('sos_handle_parameter_', 'sos_run', 'sos_step', 'sos_targets', 'sos_variable')]
+            default_items = [x for x in env.sos_dict.keys() if x.startswith('sos') and x not in self.original_keys]
             items = default_items if not items else items + default_items
             for item in items:
                 if item not in env.sos_dict:

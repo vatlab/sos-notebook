@@ -79,7 +79,7 @@ sos_num = 123
             iopub = kc.iopub_channel
             execute(kc=kc, code="%cd ..")
             wait_for_idle(kc)
-            execute(kc=kc, code="print(os.getcwd())")
+            execute(kc=kc, code="import os\nprint(os.getcwd())")
             stdout, stderr = get_std_output(iopub)
             self.assertFalse(stdout.strip().endswith('jupyter'))
             self.assertEqual(stderr, '')
