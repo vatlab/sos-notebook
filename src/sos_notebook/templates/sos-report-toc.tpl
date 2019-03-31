@@ -11,8 +11,12 @@
 <body>
   <div class="row-fluid">
     <div class="col-xs-12 col-sm-4 col-md-3">
-      <div id="toc" class="tocify">
-      </div><!--/.well -->
+      <div class="toc-wrapper">
+        <div class="toc-header">
+        </div>
+        <div id="toc" class="toc">
+        </div><!--/.well -->
+      </div>
     </div><!--/span-->
     <div class="col-xs-12 col-sm-8 col-md-9">
       {{ super() | replace('<body>', '') | replace('</body>', '') | replace('class="container"', 'class="notebook-container"')}}
