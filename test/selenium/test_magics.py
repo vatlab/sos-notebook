@@ -78,8 +78,8 @@ def test_magics(notebook):
     command="%dict --keys"
     notebook.add_and_execute_cell_in_kernel(index=18,content=command,kernel="SoS")
     keylist=notebook.get_cell_output(index=19)
-    print(keylist)
-    assert 'R_out' in keylist and 'ran' in keylist and 'master_id' in keylist
+    time.sleep(20)
+    assert 'R_out' in keylist and 'ran' in keylist
     
     #test %clear
     command="%clear --all"
