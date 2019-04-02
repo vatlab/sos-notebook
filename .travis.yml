@@ -50,13 +50,13 @@ services:
 install:
     # - pip install . -U
     # - python -m sos_notebook.install
-    ## - docker pull junmahouston/sos_notebook_test:rbase
-    ## - docker run -dit --shm-size=8g  --name notebook_test  junmahouston/sos_notebook_test:rbase /bin/bash
+    ## - docker pull mdabioinfo/sos_notebook_test:rbase
+    ## - docker run -dit --shm-size=8g  --name notebook_test  mdabioinfo/sos_notebook_test:rbase /bin/bash
     ## - docker cp . notebook_test:/home/jovyan
     ## - docker exec -u root notebook_test sh install_sos_notebook.sh
     - docker network create sosnet
-    - docker pull junmahouston/notebook_test:latest
-    - docker pull junmahouston/eg_sshd:latest
+    - docker pull mdabioinfo/sos_notebook_test:latest
+    - docker pull mdabioinfo/eg_sshd:latest
     - docker-compose up -d
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
     - docker exec -u root sosnotebook_sos-notebook_1 sh install_sos_notebook.sh

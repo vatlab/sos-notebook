@@ -4,7 +4,7 @@ services:
     sos-notebook:
         build:
             context: .
-        image: junmahouston/notebook_test:latest
+        image: mdabioinfo/sos_notebook_test:latest
         restart: "no"
         shm_size:
             8gb
@@ -13,7 +13,7 @@ services:
     sos:
         build:
             context: ./test
-        image: junmahouston/eg_sshd:latest
+        image: mdabioinfo/eg_sshd:latest
         hostname: sos
 
         restart: always
