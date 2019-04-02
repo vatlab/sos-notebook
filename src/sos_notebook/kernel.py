@@ -220,9 +220,20 @@ class Subkernels(object):
         # find from subkernel name
         def update_existing(idx):
             x = self._kernel_list[idx]
-            if (kernel is not None and kernel != x.kernel) or (language not in (None, '', 'None') and language != x.language):
-                raise ValueError(
-                    f'Cannot change kernel or language of predefined subkernel {name} {x}')
+
+            #  [Bash, some_sh, ....]
+            # but the provided kernel does not match...
+            if (kernel is not None and kernel != x.kernel):
+                env.logger.warning(f"Notebook uses kernel {x.kernel} for language {x.language}, but local system uses kernel {kernel} instead.")
+                self._kernel_list[idx].kernel = kernel
+                if notify_frontend:
+                    self.notify_frontend()
+            #  similarly, identified by kernel but language names are different
+            if language not in (None, '', 'None') and language != x.language:
+                env.logger.warning(f"Notebook uses language {x.language} for kernel {x.kernel}, but local system uses language {language} instead.")
+                self._kernel_list[idx].language = language
+                if notify_frontend:
+                    self.notify_frontend()
             if codemirror_mode:
                 self._kernel_list[idx].codemirror_mode = codemirror_mode
             if color is not None:
@@ -492,7 +503,21 @@ class SoS_Kernel(IPythonKernel):
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
-        self._meta = {'use_panel': True}
+        self._meta = {
+            'workflow': '',
+            'workflow_mode': False,
+            'render_result': False,
+            'capture_result': None,
+            'cell_id': 0,
+            'notebook_name': '',
+            'notebook_path': '',
+            'use_panel': True,
+            'use_iopub': False,
+            'default_kernel': 'SoS',
+            'cell_kernel': 'SoS',
+            'toc': '',
+            'batch_mode': False
+        }
         self._supported_languages = None
         self._completer = None
         self._inspector = None
