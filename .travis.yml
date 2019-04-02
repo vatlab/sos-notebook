@@ -67,7 +67,9 @@ before_script:
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
-    - docker exec -u root  sosnotebook_sos-notebook_1  python ./test/test_*
+    - docker exec -u root  sosnotebook_sos-notebook_1  pytest ./test -x -v --cov sos_notebook --cov-report=term-missing
+    - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
+    - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
     - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_*
 after_success:
     # - coverage combine
