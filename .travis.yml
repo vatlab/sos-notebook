@@ -67,8 +67,8 @@ before_script:
 script:
     # - pytest -x -v --cov sos_notebook --cov-report=term-missing
     # - pytest -v ./selenium/test_runsave.py
-    - docker exec -u root  sosnotebook_sos-notebook_1  python ./test/test_sos_kernel.py
-    - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_magics.py
+    - docker exec -u root  sosnotebook_sos-notebook_1  python ./test/test_*
+    - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_*
 after_success:
     # - coverage combine
     # - coveralls
