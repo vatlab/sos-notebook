@@ -70,7 +70,7 @@ def install_sos_kernel_spec(args):
 
         KS = KernelSpecManager()
         KS.log.setLevel(logging.ERROR)
-        KS.install_kernel_spec(td, 'sos', user=user, replace=True, prefix=prefix)
+        KS.install_kernel_spec(td, 'sos', user=user, prefix=prefix)
         print('sos jupyter kernel spec is installed')
 
 

@@ -492,7 +492,6 @@ class SoS_Kernel(IPythonKernel):
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
-        self.original_keys = None
         self._meta = {'use_panel': True}
         self._supported_languages = None
         self._completer = None
@@ -511,6 +510,10 @@ class SoS_Kernel(IPythonKernel):
         self.editor_kernel = 'sos'
         # initialize env
         prepare_env('')
+        self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG',
+                                                               'step_name', '__builtins__', 'input', 'output',
+                                                               'depends'}
+
         # remove all other ahdnlers
         env.logger.handlers = []
         env.logger.addHandler(
@@ -625,15 +628,6 @@ class SoS_Kernel(IPythonKernel):
             self.warn(
                 'Frontend communicator is broken. Please restart jupyter server')
 
-    def _reset_dict(self):
-        env.sos_dict = WorkflowDict()
-        SoS_exec('import os, sys, glob', None)
-        SoS_exec('from sos.runtime import *', None)
-        SoS_exec("run_mode = 'interactive'", None)
-        self.original_keys = set(env.sos_dict._dict.keys()) | {'SOS_VERSION', 'CONFIG',
-                                                               'step_name', '__builtins__', 'input', 'output',
-                                                               'depends'}
-
     @contextlib.contextmanager
     def redirect_sos_io(self):
         save_stdout = sys.stdout
@@ -647,8 +641,7 @@ class SoS_Kernel(IPythonKernel):
     def get_vars_from(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
             # autmatically get all variables with names start with 'sos'
-            default_items = [x for x in env.sos_dict.keys() if x.startswith(
-                'sos') and x not in self.original_keys]
+            default_items = [x for x in env.sos_dict.keys() if x.startswith('sos') and x not in self.original_keys]
             items = default_items if not items else items + default_items
             for item in items:
                 if item not in env.sos_dict:
@@ -1364,9 +1357,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     allow_stdin=True):
         # handles windows/unix newline
         code = '\n'.join(code.splitlines()) + '\n'
-
-        if self.original_keys is None:
-            self._reset_dict()
         if code == 'import os\n_pid = os.getpid()':
             # this is a special probing command from vim-ipython. Let us handle it specially
             # so that vim-python can get the pid.

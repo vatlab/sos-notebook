@@ -48,6 +48,8 @@ install:
     - pip install pytest
     - pip install . -U
     - python -m sos_notebook.install
+    - pip install git+https://github.com/vatlab/sos-bash.git
+    - pip install git+https://github.com/vatlab/sos-python.git
 
 test_script:
     - cd test

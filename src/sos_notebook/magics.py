@@ -434,7 +434,8 @@ class Dict_Magic(SoS_Magic):
                 return
 
         if args.reset:
-            self.sos_kernel._reset_dict()
+            from sos.executor_utils import prepare_env
+            prepare_env('')
             return
 
         if args.__del__:
