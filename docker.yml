@@ -1,0 +1,47 @@
+localhost: localhost
+remote_user: root
+limited:
+    max_cores: 1
+    max_mem: 1G
+
+hosts:
+    localhost:
+        description: localhost
+        address: localhost
+        paths:
+            home: /home/jovyan/test
+    docker:
+        address: "{remote_user}@sosnotebook_sos_1"
+        port: 22
+        paths:
+            home: "/{remote_user}"
+    local_limited:
+        based_on:
+           - hosts.localhost
+           - limited
+        max_walltime: 10
+    docker_limited:
+        based_on:
+           - hosts.docker
+           - limited
+        max_walltime: 10
+    local_rq:
+        based_on: hosts.localhost
+        description: rq server with worker
+        queue_type: rq
+        redis_host: localhost
+        redis_port: 6379
+        queue: high
+    ts:
+        description: task spooler on the docker machine
+        based_on: hosts.docker
+        queue_type: pbs
+        status_check_interval: 5
+        job_template: |
+            #!/bin/bash
+            cd {cur_dir}
+            sos execute {task} -v {verbosity} -s {sig_mode} {'--dryrun' if run_mode == 'dryrun' else ''}
+        max_running_jobs: 100
+        submit_cmd: tsp -L {task} sh {job_file}
+        status_cmd: tsp -s {job_id}
+        kill_cmd: tsp -r {job_id}

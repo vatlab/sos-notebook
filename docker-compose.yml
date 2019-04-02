@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+    sos-notebook:
+        build:
+            context: .
+        image: junmahouston/notebook_test:latest
+        restart: "no"
+        shm_size:
+            8gb
+        networks:
+          - sosnet
+    sos:
+        build:
+            context: ./test
+        image: junmahouston/eg_sshd:latest
+        hostname: sos
+
+        restart: always
+        networks:
+          - sosnet
+
+
+networks:
+  sosnet:
+    external: true

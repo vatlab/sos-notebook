@@ -90,6 +90,9 @@ setup(name="sos-notebook",
           'tabulate',
           'markdown',
           'pandas',
+          'selenium',
+          'requests',
+          'pytest'
       ],
       entry_points='''
 [sos_converters]
