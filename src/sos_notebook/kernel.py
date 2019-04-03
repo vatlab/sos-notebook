@@ -499,6 +499,9 @@ class SoS_Kernel(IPythonKernel):
         # 'sos.R.sos_R' is the language module.
         # '#FFEEAABB' is the background color
         #
+        if 'KERNEL' in env.config['SOS_DEBUG']:
+            env.log_to_file('KERNEL', f'Starting SoS Kernel')
+
         self.kernels = {}
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
@@ -1033,6 +1036,8 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             if kinfo.name not in self.kernels:
                 # start a new kernel
                 try:
+                    if 'KERNEL' in env.config['SOS_DEBUG']:
+                        env.log_to_file('KERNEL', f'Starting subkernel {kinfo.name}')
                     self.kernels[kinfo.name] = manager.start_new_kernel(
                         startup_timeout=60, kernel_name=kinfo.kernel, cwd=os.getcwd())
                     new_kernel = True

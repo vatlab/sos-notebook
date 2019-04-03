@@ -1472,6 +1472,9 @@ define([
     this.notebook = nb;
     this.kernel = nb.kernel;
     this.km = nb.keyboard_manager;
+    // for history navigation
+    this.cell_input = ''
+    this.history_index = 0
 
     create_panel_div();
     console.log("panel created");
@@ -1540,7 +1543,7 @@ define([
     var up_arrow = this.km.actions.register({
       help: "move cursor to previous line or cell",
       handler: $.proxy(this.move_cursor_up, this),
-    }, "move-cursor-up");      
+    }, "move-cursor-up");
     var down_arrow = this.km.actions.register({
         help: "move cursor to next line or cell",
         handler: $.proxy(this.move_cursor_down, this),
@@ -1594,6 +1597,7 @@ define([
       create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
+      this.history_index = 0;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_cell_and_select_below();
     }
@@ -1615,6 +1619,7 @@ define([
       create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
+      this.history_index = 0;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_selected_cells();
     }
@@ -1711,46 +1716,50 @@ define([
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
         // in panel
-        console.log('up in panel')
-    } else if (this.notebook.element[0].contains(document.activeElement)) {
-      // https://github.com/jupyter/notebook/blob/b8b66332e2023e83d2ee04f83d8814f567e01a4e/notebook/static/notebook/js/actions.js    }
-      var index = this.notebook.get_selected_index();
-      var cell = this.notebook.get_cell(index);
-      var cm = this.notebook.get_selected_cell().code_mirror;
-      var cur = cm.getCursor();
-      if (cell && cell.at_top() && index !== 0 && cur.ch === 0) {
-          if(event){
-              event.preventDefault();
+        var cm = this.cell.code_mirror;
+        var cur = cm.getCursor();
+        let cells = $('#panel').children()
+        // 0 ok
+        // history_index = 1, length = 1, no
+        if (this.cell.at_top() && cells.length > 0 && this.history_index < cells.length && cur.ch === 0) {
+          if (this.history_index === 0) {
+            // save the current cell as index 0 so that we can get back
+            this.cell_input = this.cell.get_text();
           }
-          this.notebook.command_mode();
-          this.notebook.select_prev(true);
-          this.notebook.edit_mode();
-          cm = this.notebook.get_selected_cell().code_mirror;
-          cm.setCursor(cm.lastLine(), 0);
-      }
+          this.history_index += 1;
+          // if index = 1, we are getting the last cell.
+          // if index = cells.length, we are getting the first cell
+          let text = cells[cells.length - this.history_index].getElementsByClassName('input_area')[0].innerText;
+          // set text
+          this.cell.set_text(text.replace(/\u200B$/g, ''));
+        }
+        return false;
+    } else if (this.notebook.element[0].contains(document.activeElement)) {
+      evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-up');
       return false;
     }
-  }  
+  }
 
   panel.prototype.move_cursor_down = function (evt) {
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
-      // in panel
-      console.log('down in panel')
-    } else if (this.notebook.element[0].contains(document.activeElement)) {
-      this.notebook.execute_selected_cells();
-      var index = this.notebook.get_selected_index();
-      var cell = this.notebook.get_cell(index);
-      if (cell.at_bottom() && index !== (this.notebook.ncells()-1)) {
-          if(event){
-              event.preventDefault();
-          }
-          this.notebook.command_mode();
-          this.notebook.select_next(true);
-          this.notebook.edit_mode();
-          var cm = this.notebook.get_selected_cell().code_mirror;
-          cm.setCursor(0, 0);
+
+      if (this.cell.at_bottom() && this.history_index > 0) {
+        this.history_index -= 1;
+        let text = '';
+        if (this.history_index === 0) {
+          text = this.cell_input;
+        } else {
+          // move down from history list
+          let cells = $('#panel').children();
+          text = cells[cells.length - this.history_index].getElementsByClassName('input_area')[0].innerText;
+        }
+        // set text
+        this.cell.set_text(text.replace(/\u200B$/g, ''));
       }
+      return false;
+    } else if (this.notebook.element[0].contains(document.activeElement)) {
+      evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-down');
       return false;
     }
   }

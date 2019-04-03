@@ -184,11 +184,11 @@ class Tapped_Executor(mp.Process):
             (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
 
         try:
-            filename = os.path.join(env.exec_dir, '.sos', 'interactive.sos')
+            filename = os.path.join(env.exec_dir, '.sos', f'interactive_{os.getpid()}.sos')
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
-            cmd = f'sos run .sos/interactive.sos {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
+            cmd = f'sos run .sos/interactive_{os.getpid()}.sos {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
             ret_code = pexpect_run(
                 cmd, shell=True, stdout_socket=stdout_socket)
             # status will not trigger frontend update if it was not
