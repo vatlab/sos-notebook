@@ -295,7 +295,7 @@ print(sosa)
             self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
             self.assertEqual(stdout, '24\n', f"Get stdout {stdout} for magic revisions")
 
-    @unittest.skipIf(not shutil.which('git') or 'TRAVIS' in os.environ, 'git is not installed or in travis.')
+    @unittest.skipIf('TRAVIS' in os.environ, 'git is not installed or in travis.')
     def testMagicRevisions(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
