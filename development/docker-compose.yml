@@ -12,7 +12,7 @@ services:
           - sosnet
     sos:
         build:
-            context: ./test
+            context: ./sos
         image: mdabioinfo/eg_sshd:latest
         hostname: sos
 

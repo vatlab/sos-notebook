@@ -12,7 +12,9 @@ process.sh
 process_homepage.sh
 *.pem
 *.pyc
-
+.ipython/
+.jupyter/
+.viminfo
 geckodriver.log
 test/authorized_keys
 test/*.sos
