@@ -1472,6 +1472,9 @@ define([
     this.notebook = nb;
     this.kernel = nb.kernel;
     this.km = nb.keyboard_manager;
+    // for history navigation
+    this.cell_input = ''
+    this.history_index = 0
 
     create_panel_div();
     console.log("panel created");
@@ -1594,6 +1597,7 @@ define([
       create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
+      this.history_index = 0;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_cell_and_select_below();
     }
@@ -1615,6 +1619,7 @@ define([
       create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
+      this.history_index = 0;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       this.notebook.execute_selected_cells();
     }
@@ -1711,7 +1716,24 @@ define([
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
         // in panel
-        console.log('up in panel')
+        var cm = this.cell.code_mirror;
+        var cur = cm.getCursor();
+        let cells = $('#panel').children()
+        // 0 ok
+        // history_index = 1, length = 1, no
+        if (this.cell.at_top() && cells.length > 0 && this.history_index < cells.length && cur.ch === 0) {
+          if (this.history_index === 0) {
+            // save the current cell as index 0 so that we can get back
+            this.cell_input = this.cell.get_text();
+          }
+          this.history_index += 1;
+          // if index = 1, we are getting the last cell.
+          // if index = cells.length, we are getting the first cell
+          let text = cells[cells.length - this.history_index].getElementsByClassName('input_area')[0].innerText;
+          // set text
+          this.cell.set_text(text.replace(/\u200B$/g, ''));
+        }
+        return false;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-up');
       return false;
@@ -1721,8 +1743,21 @@ define([
   panel.prototype.move_cursor_down = function (evt) {
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
-      // in panel
-      console.log('down in panel')
+
+      if (this.cell.at_bottom() && this.history_index > 0) {
+        this.history_index -= 1;
+        let text = '';
+        if (this.history_index === 0) {
+          text = this.cell_input;
+        } else {
+          // move down from history list
+          let cells = $('#panel').children();
+          text = cells[cells.length - this.history_index].getElementsByClassName('input_area')[0].innerText;
+        }
+        // set text
+        this.cell.set_text(text.replace(/\u200B$/g, ''));
+      }
+      return false;
     } else if (this.notebook.element[0].contains(document.activeElement)) {
       evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-down');
       return false;
