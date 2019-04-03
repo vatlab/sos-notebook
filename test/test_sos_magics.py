@@ -6,6 +6,7 @@
 import os
 import sys
 import unittest
+import shutil
 
 from ipykernel.tests.utils import execute, wait_for_idle
 from sos_notebook.test_utils import (get_display_data, get_std_output,
@@ -294,6 +295,7 @@ print(sosa)
             self.assertEqual(stderr, '', f"Get error {stderr} for magic revisions")
             self.assertEqual(stdout, '24\n', f"Get stdout {stdout} for magic revisions")
 
+    @unittest.skipIf(not shutil.which('git'), 'git is not installed.')
     def testMagicRevisions(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
