@@ -48,12 +48,6 @@ sudo: required
 services:
     - docker
 install:
-    # - pip install . -U
-    # - python -m sos_notebook.install
-    ## - docker pull mdabioinfo/sos_notebook_test:rbase
-    ## - docker run -dit --shm-size=8g  --name notebook_test  mdabioinfo/sos_notebook_test:rbase /bin/bash
-    ## - docker cp . notebook_test:/home/jovyan
-    ## - docker exec -u root notebook_test sh install_sos_notebook.sh
     - docker network create sosnet
     - docker pull mdabioinfo/sos_notebook_test:latest
     - docker pull mdabioinfo/eg_sshd:latest
@@ -63,25 +57,22 @@ install:
     - cd ..
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
     - docker exec -u root sosnotebook_sos-notebook_1 sh ./src/sos_notebook/install_sos_notebook.sh
-    # - docker exec -u root sosnotebook_sos-notebook_1 bash -c "ssh -o 'StrictHostKeyChecking no' -p 22 root@sosnotebook_sos_1 exit"
 before_script:
     # - cd test
     # - sh build_test_docker.sh
 script:
-    # - pytest -x -v --cov sos_notebook --cov-report=term-missing
-    # - pytest -v ./selenium/test_runsave.py
     - docker exec -u root  sosnotebook_sos-notebook_1  pytest ./test -x -v --cov sos_notebook --cov-report=term-missing
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
     - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_*
 after_success:
-    # - coverage combine
-    # - coveralls
+    - coverage combine
+    - coveralls
 
 notifications:
     email:
         recipients:
-            # - ben.bob@gmail.com
+            - ben.bob@gmail.com
             - junma80@gmail.com
         on_success: never
         on_failure: always
