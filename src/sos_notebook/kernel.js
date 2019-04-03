@@ -1540,7 +1540,7 @@ define([
     var up_arrow = this.km.actions.register({
       help: "move cursor to previous line or cell",
       handler: $.proxy(this.move_cursor_up, this),
-    }, "move-cursor-up");      
+    }, "move-cursor-up");
     var down_arrow = this.km.actions.register({
         help: "move cursor to next line or cell",
         handler: $.proxy(this.move_cursor_down, this),
@@ -1713,24 +1713,10 @@ define([
         // in panel
         console.log('up in panel')
     } else if (this.notebook.element[0].contains(document.activeElement)) {
-      // https://github.com/jupyter/notebook/blob/b8b66332e2023e83d2ee04f83d8814f567e01a4e/notebook/static/notebook/js/actions.js    }
-      var index = this.notebook.get_selected_index();
-      var cell = this.notebook.get_cell(index);
-      var cm = this.notebook.get_selected_cell().code_mirror;
-      var cur = cm.getCursor();
-      if (cell && cell.at_top() && index !== 0 && cur.ch === 0) {
-          if(event){
-              event.preventDefault();
-          }
-          this.notebook.command_mode();
-          this.notebook.select_prev(true);
-          this.notebook.edit_mode();
-          cm = this.notebook.get_selected_cell().code_mirror;
-          cm.setCursor(cm.lastLine(), 0);
-      }
+      evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-up');
       return false;
     }
-  }  
+  }
 
   panel.prototype.move_cursor_down = function (evt) {
     //var cell = nb.get_selected_cell();
@@ -1738,19 +1724,7 @@ define([
       // in panel
       console.log('down in panel')
     } else if (this.notebook.element[0].contains(document.activeElement)) {
-      this.notebook.execute_selected_cells();
-      var index = this.notebook.get_selected_index();
-      var cell = this.notebook.get_cell(index);
-      if (cell.at_bottom() && index !== (this.notebook.ncells()-1)) {
-          if(event){
-              event.preventDefault();
-          }
-          this.notebook.command_mode();
-          this.notebook.select_next(true);
-          this.notebook.edit_mode();
-          var cm = this.notebook.get_selected_cell().code_mirror;
-          cm.setCursor(0, 0);
-      }
+      evt.notebook.keyboard_manager.actions.call('jupyter-notebook:move-cursor-down');
       return false;
     }
   }
