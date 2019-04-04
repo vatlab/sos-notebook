@@ -94,8 +94,7 @@ setup(name="sos-notebook",
           #'selenium',
           #'requests',
           #'pytest',
-          'psutil',
-          'rlcompleter'
+          'psutil'
       ],
       entry_points='''
 [sos_converters]
