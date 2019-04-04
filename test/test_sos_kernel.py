@@ -66,6 +66,7 @@ sos_num = 123
             for key in ('run', 'expand_pattern'):
                 self.assertTrue(key in res)
 
+    @unittest.skipIf(sys.platform == 'win32', '! magic does not support built-in command #203')
     def testShell(self):
         with sos_kernel() as kc:
             iopub = kc.iopub_channel
