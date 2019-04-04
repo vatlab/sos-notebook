@@ -35,7 +35,7 @@ install:
 
 test_script:
     - cd test
-    - python basic_test.py
+    - python test_basic.py
 
 notifications:
     - provider: Email
