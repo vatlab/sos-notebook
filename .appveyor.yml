@@ -42,7 +42,7 @@ install:
 
 test_script:
     - cd test
-    - pytest -x -v
+    - python basic_test.py
 
 notifications:
     - provider: Email
