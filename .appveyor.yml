@@ -36,6 +36,8 @@ install:
 test_script:
     - cd test
     - python test_basic.py
+    - pip list
+    - conda list
 
 notifications:
     - provider: Email
