@@ -39,7 +39,7 @@ install:
     #- pip install docker
     # packages required by SoS
     - pip install spyder jedi notebook nbconvert nbformat pyyaml psutil tqdm matplotlib
-    - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose 
+    - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose selenium
     # https://github.com/jupyter/jupyter/issues/150
     - pip install entrypoints markdown
     - pip install jupyter wand numpy pandas
@@ -53,7 +53,7 @@ install:
 
 test_script:
     - cd test
-    - pytest -x -v 
+    - pytest -x -v --ignore selenium
 
 #on_finish:
 #  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
