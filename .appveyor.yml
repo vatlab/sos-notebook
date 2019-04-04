@@ -29,7 +29,7 @@ environment:
 
 install:
     - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
-    - pip install pytest sos
+    - pip install nose sos
     - pip install . -U
     - python -m sos_notebook.install
 
