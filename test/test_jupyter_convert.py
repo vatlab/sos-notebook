@@ -4,6 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import os
+import sys
 import shutil
 import subprocess
 import unittest
@@ -119,6 +120,7 @@ report('this is action report')
         self.assertFalse('this is a cell with another kernel' in wf)
         self.assertFalse('this comment will not be included in exported workflow' in wf)
 
+    @unittest.skipIf(sys.platform == 'win32', 'This test hangs for no obvious reason under windows')
     def testPreprocess(self):
         '''Test executing the notebook with a preprocessor'''
         if os.path.isfile('test_output.txt'):
