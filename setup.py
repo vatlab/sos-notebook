@@ -88,11 +88,14 @@ setup(name="sos-notebook",
           'notebook>=5.0.0',
           #'jupyter_contrib_nbextensions',
           'tabulate',
-          'markdown',
+          #'markdown',
           'pandas',
-          'selenium',
-          'requests',
-          'pytest'
+          'numpy',
+          #'selenium',
+          #'requests',
+          #'pytest',
+          'psutil',
+          'rlcompleter'
       ],
       entry_points='''
 [sos_converters]
