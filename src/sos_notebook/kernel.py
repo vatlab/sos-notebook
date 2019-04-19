@@ -1141,8 +1141,11 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                     if self._debug_mode:
                         env.log_to_file(
                             f'Non-response: {msg_type}: {sub_msg["content"]}')
-                    self.send_response(
-                        self.iopub_socket, msg_type, sub_msg['content'])
+                    #
+                    # we ignore the messages we are not interested.
+                    #
+                    #self.send_response(
+                    #    self.iopub_socket, msg_type, sub_msg['content'])
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
