@@ -5,7 +5,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import time
-
+from textwrap import dedent
 
 # def test_magic_cd(notebook):
 #     '''Test cd affecting subkernel'''
@@ -22,31 +22,32 @@ def test_magic_in_subkernel(notebook):
 
 def test_magic_capture(notebook):
     # test %capture
-    idx = notebook.append_and_execute_cell_in_kernel("""\
-%capture --to R_out
-cat('this is to stdout')
-""", kernel="R")
+    idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
+        %capture --to R_out
+        cat('this is to stdout')
+        """), kernel="R")
     assert 'this is to stdout' == notebook.get_cell_output(index=idx)
 
     idx = notebook.append_and_execute_cell_in_kernel(content="%capture --to R_out \n ", kernel="R")
     idx = notebook.append_and_execute_cell_in_kernel(content="R_out", kernel="SoS")
     assert "''" == notebook.get_cell_output(index=idx)
     #
-    idx = notebook.append_and_execute_cell_in_kernel(content="""\
-%capture text --to R_out
-paste('this is the return value')
-""", kernel="R")
+    idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        %capture text --to R_out
+        paste('this is the return value')
+        """), kernel="R")
     idx = notebook.append_and_execute_cell_in_kernel(content="R_out", kernel="SoS")
     assert "this is the return value" in notebook.get_cell_output(index=idx)
 
 def test_magic_expand(notebook):
     # test %expand
     idx = notebook.append_and_execute_cell_in_kernel(content="par=100", kernel="SoS")
-    idx = notebook.append_and_execute_cell_in_kernel(content="""%expand ${ }
-if (${par} > 50) {
-    cat('A parameter ${par} greater than 50 is specified.');
-}
-""", kernel="R")
+    idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        %expand ${ }
+        if (${par} > 50) {
+            cat('A parameter ${par} greater than 50 is specified.');
+        }
+        """), kernel="R")
     assert "A parameter 100 greater than 50 is specified."==notebook.get_cell_output(index=idx)
 
 def test_magic_get(notebook):
