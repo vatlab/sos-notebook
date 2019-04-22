@@ -66,18 +66,22 @@ def test_magic_get(notebook):
 
 def test_magic_put(notebook):
     # test %put
-    command="a = c(1)\nb = c(1, 2, 3)\nc = matrix(c(1,2,3,4), ncol=2)\nR_var <- 'R variable'"
-    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
-    # command="%put a b c"
-    # idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
-    # command="%preview -n a b c"
-    # idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
-    # outputLines=notebook.get_cell_output(index=14).split("\n")
-    # assert "> a: int" == outputLines[0]
-    # assert "> b: list of length 3" == outputLines[2]
-    # assert "> c: ndarray of shape (2, 2)" == outputLines[4]
-    command="%put a"
-    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
+    notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        %put a b c R_var
+        a <- c(1)
+        b <- c(1, 2, 3)
+        c <- matrix(c(1,2,3,4), ncol=2)
+        R_var <- 'R variable'
+        '''), kernel="R")
+    idx = notebook.append_and_execute_cell_in_kernel(content='a', kernel="SoS")
+    assert "1" in notebook.get_cell_output(index=idx)
+    idx = notebook.append_and_execute_cell_in_kernel(content='b', kernel="SoS")
+    assert "[1, 2, 3]" in notebook.get_cell_output(index=idx)
+    idx = notebook.append_and_execute_cell_in_kernel(content='c', kernel="SoS")
+    assert "array" in notebook.get_cell_output(index=idx)
+    idx = notebook.append_and_execute_cell_in_kernel(content='R_var', kernel="SoS")
+    assert "R variable" in notebook.get_cell_output(index=idx)
+    #
 
 def test_magic_preview(notebook):
     command="%preview -n a \na = [1, 2, 3] "
