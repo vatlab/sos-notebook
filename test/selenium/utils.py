@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
+
 import os
 import time
 from sys import platform
@@ -91,30 +96,30 @@ def _wait_for_multiple(driver, locator_type, locator, timeout, wait_for_n, visib
 
 
 class CellTypeError(ValueError):
-    
+
     def __init__(self, message=""):
         self.message = message
 
 
 class Notebook:
-    
+
     def __init__(self, browser):
         self.browser = browser
         self.disable_autosave_and_onbeforeunload()
         wait_for_selector(browser, "#panel", timeout=10, visible=False, single=True)
         self.panelInput=self.browser.find_element_by_xpath("//*[@id='panel-wrapper']/div[5]")
-        
+
     def __len__(self):
         return len(self.cells)
-        
+
     def __getitem__(self, key):
         return self.cells[key]
-    
+
     def __setitem__(self, key, item):
         if isinstance(key, int):
             self.edit_cell(index=key, content=item, render=False)
         # TODO: re-add slicing support, handle general python slicing behaviour
-        # includes: overwriting the entire self.cells object if you do 
+        # includes: overwriting the entire self.cells object if you do
         # self[:] = []
         # elif isinstance(key, slice):
         #     indices = (self.index(cell) for cell in self[key])
@@ -131,29 +136,29 @@ class Notebook:
     @property
     def cells(self):
         """Gets all cells once they are visible.
-        
+
         """
       # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div"))
 
         # return self.browser.find_elements_by_class_name("cell")
-    
+
     @property
     def panel_cells(self):
         return list(self.browser.find_elements_by_xpath("//*[@id='panel']/div"))
-    
+
 
 
     @property
     def current_index(self):
         return self.index(self.current_cell)
-    
+
     def index(self, cell):
         return self.cells.index(cell)
 
     def disable_autosave_and_onbeforeunload(self):
         """Disable request to save before closing window and autosave.
-        
+
         This is most easily done by using js directly.
         """
         self.browser.execute_script("window.onbeforeunload = null;")
@@ -161,7 +166,7 @@ class Notebook:
 
     def to_command_mode(self):
         """Changes us into command mode on currently focused cell
-        
+
         """
         self.body.send_keys(Keys.ESCAPE)
         self.browser.execute_script("return Jupyter.notebook.handle_command_mode("
@@ -203,7 +208,7 @@ class Notebook:
         else:
             raise CellTypeError(("{} is not a valid cell type,"
                                  "use 'code', 'markdown', or 'raw'").format(cell_type))
-                                 
+
         # self.wait_for_stale_cell(cell)
         self.focus_cell(index)
         return self.current_cell
@@ -211,7 +216,7 @@ class Notebook:
     def wait_for_stale_cell(self, cell):
         """ This is needed to switch a cell's mode and refocus it, or to render it.
 
-        Warning: there is currently no way to do this when changing between 
+        Warning: there is currently no way to do this when changing between
         markdown and raw cells.
         """
         wait = WebDriverWait(self.browser, 10)
@@ -258,7 +263,7 @@ class Notebook:
     def get_cell_type(self, index=0):
         JS = 'return Jupyter.notebook.get_cell({}).cell_type'.format(index)
         return self.browser.execute_script(JS)
-        
+
     def set_cell_input_prompt(self, index, prmpt_val):
         JS = 'Jupyter.notebook.get_cell({}).set_input_prompt({})'.format(index, prmpt_val)
         self.browser.execute_script(JS)
@@ -272,15 +277,15 @@ class Notebook:
 
         # Select & delete anything already in the cell
         self.current_cell.send_keys(Keys.ENTER)
-        
+
 
         if platform=="darwin":
            command(self.browser, 'a')
         else:
            ctrl(self.browser, 'a')
-        
+
         self.current_cell.send_keys(Keys.DELETE)
-        
+
         for line_no, line in enumerate(content.splitlines()):
             if line_no != 0:
                 self.current_cell.send_keys(Keys.ENTER, "\n")
@@ -291,7 +296,7 @@ class Notebook:
     def execute_cell(self, cell_or_index=None, inPanel=False):
         if isinstance(cell_or_index, int):
             index = cell_or_index
-        elif isinstance(cell_or_index, WebElement): 
+        elif isinstance(cell_or_index, WebElement):
             index = self.index(cell_or_index)
         else:
             raise TypeError("execute_cell only accepts a WebElement or an int")
@@ -323,7 +328,7 @@ class Notebook:
     def add_markdown_cell(self, index=-1, content="", render=True):
         self.add_cell(index, cell_type="markdown")
         self.edit_cell(index=index, content=content, render=render)
-    
+
     def append(self, *values, cell_type="code"):
         for i, value in enumerate(values):
             if isinstance(value, str):
@@ -331,10 +336,10 @@ class Notebook:
                               content=value)
             else:
                 raise TypeError("Don't know how to add cell from %r" % value)
-    
+
     def extend(self, values):
         self.append(*values)
-    
+
     def run_all(self):
         for cell in self:
             self.execute_cell(cell)
@@ -344,7 +349,7 @@ class Notebook:
 
 
     def get_kernel_list(self):
-        kernelMenu=self.browser.find_element_by_id("menu-change-kernel-submenu")        
+        kernelMenu=self.browser.find_element_by_id("menu-change-kernel-submenu")
         kernelEntries=kernelMenu.find_elements_by_tag_name("a")
         kernels=[]
         for kernelEntry in kernelEntries:
@@ -384,6 +389,13 @@ class Notebook:
         self.shift_kernel(index=index+1,kernel_name=kernel,by_click=True)
         self.execute_cell(cell_or_index=index+1)
 
+    def append_and_execute_cell_in_kernel(self, content="",kernel="SoS"):
+        index = len(self.cells) - 1
+        self.add_cell(index=index, cell_type="code", content=content)
+        self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
+        self.execute_cell(cell_or_index=index+1)
+        return index + 1
+
     def get_sidePanel(self):
         if self.browser.find_element_by_id("panel").is_displayed():
             return True
@@ -401,7 +413,7 @@ class Notebook:
         time.sleep(10)
 
     def shift_kernel_inPanel(self,kernel_name="SoS", by_click=True):
-     
+
         kernel_selector = 'option[value={}]'.format(kernel_name)
         kernelList=self.panelInput.find_element_by_tag_name("select")
         kernel=wait_for_selector(kernelList, kernel_selector, single=True)
@@ -419,7 +431,7 @@ class Notebook:
             select_kernel(browser, kernel_name=kernel_name)
         return cls(browser)
 
-    
+
 def select_kernel(browser, kernel_name='kernel-python3'):
     """Clicks the "new" button and selects a kernel from the options.
     """
@@ -432,21 +444,21 @@ def select_kernel(browser, kernel_name='kernel-python3'):
 
 @contextmanager
 def new_window(browser, selector=None):
-    """Contextmanager for switching to & waiting for a window created. 
-    
-    This context manager gives you the ability to create a new window inside 
+    """Contextmanager for switching to & waiting for a window created.
+
+    This context manager gives you the ability to create a new window inside
     the created context and it will switch you to that new window.
-    
-    If you know a CSS selector that can be expected to appear on the window, 
+
+    If you know a CSS selector that can be expected to appear on the window,
     then this utility can wait on that selector appearing on the page before
     releasing the context.
-    
+
     Usage example:
-    
+
         from notebook.tests.selenium.utils import new_window, Notebook
-        
+
         ⋮ # something that creates a browser object
-        
+
         with new_window(browser, selector=".cell"):
             select_kernel(browser, kernel_name=kernel_name)
         nb = Notebook(browser)
@@ -454,7 +466,7 @@ def new_window(browser, selector=None):
     """
     initial_window_handles = browser.window_handles
     yield
-    new_window_handle = next(window for window in browser.window_handles 
+    new_window_handle = next(window for window in browser.window_handles
                              if window not in initial_window_handles)
     browser.switch_to_window(new_window_handle)
     if selector is not None:

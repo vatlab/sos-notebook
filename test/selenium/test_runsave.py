@@ -1,3 +1,8 @@
+#!/usr/bin/env python3
+#
+# Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
+# Distributed under the terms of the 3-clause BSD License.
+
 import time
 def test_run(notebook):
 	#test passing parameters and %run
@@ -44,7 +49,7 @@ echo {var}
     output=notebook.get_cell_output(index=1)
     lines=output.splitlines()
     assert lines[0]=="1"
-    
+
     command='''%save check_run -f
 %run --var 1
 parameter: var=0
@@ -55,11 +60,10 @@ echo {var}
     command="%runfile check_run --var=2"
     notebook.add_and_execute_cell_in_kernel(index=2,content=command,kernel="SoS")
 
-   
+
     output=notebook.get_cell_output(index=3)
     assert output=="2"
 
 
-   
 
-    
+
