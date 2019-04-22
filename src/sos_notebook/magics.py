@@ -1174,8 +1174,10 @@ class Put_Magic(SoS_Magic):
                     'traceback': [],
                     'execution_count': self.sos_kernel._execution_count,
                     }
-        self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        try:
+            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        finally:
+            self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True)
 
 
 class Render_Magic(SoS_Magic):
