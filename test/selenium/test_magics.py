@@ -6,7 +6,6 @@
 
 import time
 from textwrap import dedent
-from sos.utils import env
 
 # def test_magic_cd(notebook):
 #     '''Test cd affecting subkernel'''
@@ -16,13 +15,12 @@ from sos.utils import env
 #     idx = notebook.append_and_execute_cell_in_kernel(content='%pwd', kernel="Python3")
 #     assert 'test_cd' in notebook.get_cell_output(index=1)
 
-def test_magic_in_subkernel(notebook):
+def test_magics(notebook):
     '''test %pwd in the python3 kernel (which is not a sos magic)'''
     idx = notebook.append_and_execute_cell_in_kernel(content="%pwd", kernel="Python3")
     assert len(notebook.get_cell_output(index=idx)) > 0
 
-def test_magic_capture(notebook):
-    # test %capture
+    # test_magic_capture(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
         %capture --to R_out
         cat('this is to stdout')
@@ -40,8 +38,7 @@ def test_magic_capture(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content="R_out", kernel="SoS")
     assert "this is the return value" in notebook.get_cell_output(index=idx)
 
-def test_magic_expand(notebook):
-    # test %expand
+    # test_magic_expand(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content="par=100", kernel="SoS")
     idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
         %expand ${ }
@@ -49,10 +46,9 @@ def test_magic_expand(notebook):
             cat('A parameter ${par} greater than 50 is specified.');
         }
         """), kernel="R")
-    assert "A parameter 100 greater than 50 is specified."==notebook.get_cell_output(index=idx)
+    assert "A parameter 100 greater than 50 is specified." == notebook.get_cell_output(index=idx)
 
-def test_magic_get(notebook):
-    # test %get
+    # test_magic_get(notebook):
     command="a = [1, 2, 3] \nb = [1, 2, '3']"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
     command="%get a \na"
@@ -65,16 +61,14 @@ def test_magic_get(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
     assert "R variable" in notebook.get_cell_output(index=idx)
 
-def test_sos_vars(notebook):
-    # test automatic tranfer of sos variables
+    # test_sos_vars(notebook):
     command = "sosa = '24'"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
     command = "sosa"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
     assert "24" in notebook.get_cell_output(index=idx)
 
-def test_magic_put(notebook):
-    # test %put from subkernel to SoS Kernel
+    # test_magic_put(notebook):
     notebook.append_and_execute_cell_in_kernel(content=dedent('''\
         %put a b c R_var
         a <- c(1)
@@ -102,7 +96,7 @@ def test_magic_put(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content='cat(b1)', kernel="R")
     assert "this is python" in notebook.get_cell_output(index=idx)
 
-def test_magic_preview(notebook):
+    # test_magic_preview(notebook):
     command="%preview -n a \na = [1, 2, 3] "
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
     outputLines=notebook.get_cell_output(index=idx).split("\n")
@@ -113,7 +107,7 @@ def test_magic_preview(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
     assert "'R variable'"==notebook.get_cell_output(index=idx)
 
-def test_magic_with(notebook):
+    # test_magic_with(notebook):
     # test %with
     command="a = 3"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
@@ -132,10 +126,7 @@ def test_magic_with(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
     assert '9' in notebook.get_cell_output(index=idx)
 
-
-
-def test_magic_dict(notebook):
-    # test %dict
+    # test_magic_dict(notebook):
     command="R_out = 1\nran=5"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
     command="%dict --keys"
@@ -143,8 +134,7 @@ def test_magic_dict(notebook):
     keylist=notebook.get_cell_output(index=idx)
     assert 'R_out' in keylist and 'ran' in keylist
 
-def test_magic_clear(notebook):
-    # test %clear
+    # test_magic_clear(notebook):
     command="%clear --all"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
 

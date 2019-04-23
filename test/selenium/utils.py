@@ -16,7 +16,6 @@ from selenium.webdriver.support.ui import Select
 
 from contextlib import contextmanager
 import re
-from sos.utils import env
 
 pjoin = os.path.join
 
