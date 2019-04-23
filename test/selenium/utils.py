@@ -17,6 +17,7 @@ from selenium.webdriver.support.ui import Select
 from contextlib import contextmanager
 import re
 from sos.utils import env
+import pytest
 
 pjoin = os.path.join
 
@@ -99,7 +100,6 @@ class CellTypeError(ValueError):
 
     def __init__(self, message=""):
         self.message = message
-
 
 class Notebook:
 
@@ -385,7 +385,7 @@ class Notebook:
 
     def append_and_execute_cell_in_kernel(self, content="",kernel="SoS"):
         # there will be at least a new cell from the new notebook.
-        index = len(self.cells) - 1
+        index = len(self.cells) - 1   
         self.add_cell(index=index, cell_type="code", content=content)
         self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
         self.execute_cell(cell_or_index=index+1)

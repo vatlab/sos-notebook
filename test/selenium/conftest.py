@@ -110,7 +110,7 @@ def selenium_driver():
     if os.environ.get('SAUCE_USERNAME'):
         driver = make_sauce_driver()
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'chrome':
-        # driver = Chrome()
+        #driver = Chrome()
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--window-size=1420,1080')
@@ -133,6 +133,6 @@ def authenticated_browser(selenium_driver, notebook_server):
     selenium_driver.get("{url}?token={token}".format(**notebook_server))
     return selenium_driver
 
-@pytest.fixture
+@pytest.fixture(scope="class")
 def notebook(authenticated_browser):
     return Notebook.new_notebook(authenticated_browser, kernel_name='kernel-sos')
