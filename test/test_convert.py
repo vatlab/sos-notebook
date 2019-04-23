@@ -60,44 +60,44 @@ report('this is action report')
 
 
     def testConvertHTML(self):
-        subprocess.call('sos convert test.ipynb test_wf.html', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf.html'))
         # test the use of jupyter templates
-        subprocess.call('sos convert test.ipynb test_wf1.html --template basic', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf1.html --template basic', shell=True)
         self.assertTrue(os.path.isfile('test_wf1.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf2.html --template sos-report', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf2.html --template sos-report', shell=True)
         self.assertTrue(os.path.isfile('test_wf2.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf3.html --template sos-full', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf3.html --template sos-full', shell=True)
         self.assertTrue(os.path.isfile('test_wf3.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf4.html --template sos-cm', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf4.html --template sos-cm', shell=True)
         self.assertTrue(os.path.isfile('test_wf4.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf5.html --template sos-full-toc', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf5.html --template sos-full-toc', shell=True)
         self.assertTrue(os.path.isfile('test_wf5.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf6.html --template sos-report-toc', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf6.html --template sos-report-toc', shell=True)
         self.assertTrue(os.path.isfile('test_wf6.html'))
         #
-        subprocess.call('sos convert test.ipynb test_wf7.html --template sos-cm-toc', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf7.html --template sos-cm-toc', shell=True)
         self.assertTrue(os.path.isfile('test_wf7.html'))
 
     @unittest.skipIf(not shutil.which('xelatex'), 'No XeLatex under windows to compile pdf')
     def testConvertPDF(self):
-        subprocess.call('sos convert test.ipynb test_wf.pdf', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf.pdf', shell=True)
         self.assertTrue(os.path.isfile('test_wf.pdf'))
 
     def testConvertMD(self):
-        subprocess.call('sos convert test.ipynb test_wf.md', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb test_wf.md', shell=True)
         self.assertTrue(os.path.isfile('test_wf.md'))
         # output to stdout
-        subprocess.call('sos convert test.ipynb --to md > test_wf1.md', shell=True)
+        subprocess.call('sos convert sample_notebook.ipynb --to md > test_wf1.md', shell=True)
         self.assertTrue(os.path.isfile('test_wf1.md'))
 
     def testConvertNotebook(self):
-        ret = subprocess.call('sos convert test.ipynb test_nonSoS.ipynb --kernel python3', shell=True)
+        ret = subprocess.call('sos convert sample_notebook.ipynb test_nonSoS.ipynb --kernel python3', shell=True)
         self.assertEqual(ret, 0)
         self.assertTrue(os.path.isfile('test_nonSoS.ipynb'))
         #
@@ -105,7 +105,7 @@ report('this is action report')
         self.assertEqual(ret, 0)
         self.assertTrue(os.path.isfile('test_SoS.ipynb'))
         # cannot convert to invalid kernel
-        ret = subprocess.call('sos convert test.ipynb test_invalid.ipynb --kernel nonexisting', shell=True)
+        ret = subprocess.call('sos convert sample_notebook.ipynb test_invalid.ipynb --kernel nonexisting', shell=True)
         self.assertNotEqual(ret, 0)
 
     def testComments(self):
@@ -125,8 +125,8 @@ report('this is action report')
         '''Test executing the notebook with a preprocessor'''
         if os.path.isfile('test_output.txt'):
             os.remove('test_output.txt')
-        nb = nbformat.read('test.ipynb', nbformat.NO_CONVERT)
-        e = SoS_ExecutePreprocessor('test.ipynb')
+        nb = nbformat.read('sample_notebook.ipynb', nbformat.NO_CONVERT)
+        e = SoS_ExecutePreprocessor('sample_notebook.ipynb')
         toc = e._scan_table_of_content(nb)
         self.assertTrue('## Notebook for testing purpose' in toc)
         self.assertTrue('## Section 1' in toc)
@@ -138,7 +138,7 @@ report('this is action report')
             os.remove('test_output.txt')
         if os.path.isfile('test_wf8.html'):
             os.remove('test_wf8.html')
-        subprocess.call('sos convert --execute test.ipynb test_wf8.html', shell=True)
+        subprocess.call('sos convert --execute sample_notebook.ipynb test_wf8.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf8.html'))
         self.assertTrue(os.path.isfile('test_output.txt'))
         #
