@@ -14,16 +14,6 @@ from sos_notebook.test_utils import (get_display_data, get_std_output,
 
 
 class TestSoSMagics(unittest.TestCase):
-    def testHelp(self):
-        '''Test help messages'''
-        with sos_kernel() as kc:
-            # create a data frame
-            execute(kc=kc, code='\n'.join('%{} -h'.format(magic) for magic in (
-                'cd', 'debug', 'dict', 'get', 'matplotlib', 'paste', 'preview',
-                'put', 'render', 'rerun', 'run', 'save', 'sandbox', 'set',
-                'sessioninfo', 'sosrun', 'sossave', 'shutdown', 'taskinfo', 'tasks',
-                'toc', 'use', 'with', 'pull', 'push')))
-            wait_for_idle(kc)
 
     def testMagicConnectInfo(self):
         '''Test connect info'''

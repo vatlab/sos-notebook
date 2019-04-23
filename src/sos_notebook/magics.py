@@ -270,6 +270,13 @@ class Cd_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Cd_Magic, self).__init__(kernel)
 
+    def get_parser(self):
+        parser = argparse.ArgumentParser(prog='%cd',
+                                         description='''change directory of SoS and all subkernels.''')
+        parser.add_argument('dir', help='''destination directory''')
+        parser.error = self._parse_error
+        return parser
+
     def handle_magic_cd(self, option):
         if not option:
             return
@@ -308,7 +315,12 @@ class Cd_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        self.handle_magic_cd(options)
+        parser = self.get_parser()
+        try:
+            args = parser.parse_args(options.split())
+        except SystemExit:
+            return
+        self.handle_magic_cd(args.dir)
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
@@ -1787,6 +1799,11 @@ class SoSRun_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
+        parser = self.get_parser()
+        try:
+            args = parser.parse_args(shlex.split(options))
+        except SystemExit:
+            return
         old_options = self.sos_kernel.options
         if options.strip().endswith('&'):
             self.sos_kernel._meta['workflow_mode'] = 'nowait'

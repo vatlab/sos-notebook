@@ -109,17 +109,19 @@ def selenium_driver():
 
     if os.environ.get('SAUCE_USERNAME'):
         driver = make_sauce_driver()
+    elif os.environ.get('JUPYTER_TEST_BROWSER') == 'live':
+        driver = Chrome()
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'chrome':
-        # driver = Chrome()
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--window-size=1420,1080')
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
         driver = Chrome(options=chrome_options)
-
-    else:
+    elif os.environ.get('JUPYTER_TEST_BROWSER') == 'firefox':
         driver = Firefox()
+    else:
+        raise ValueError('Invalid setting for JUPYTER_TEST_BROWSER. Valid options include live, chrome, and firefox')
 
     yield driver
 
