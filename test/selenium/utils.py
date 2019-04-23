@@ -19,6 +19,7 @@ import re
 from sos.utils import env
 
 
+
 pjoin = os.path.join
 
 
@@ -280,10 +281,15 @@ class Notebook:
 
         self.current_cell.send_keys(Keys.DELETE)
 
-        for line_no, line in enumerate(content.splitlines()):
-            if line_no != 0:
-                self.current_cell.send_keys(Keys.ENTER, "\n")
-            self.current_cell.send_keys(Keys.ENTER, line)
+        # lines=""
+        # for line_no, line in enumerate(content.splitlines()):
+        #     if line_no != 0:
+        #         lines+="\n"+line
+        #     else:
+        #         lines=line
+        self.browser.execute_script("IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
+
+            # self.current_cell.send_keys(Keys.ENTER, line)
         if render:
             self.execute_cell(self.current_index)
 
