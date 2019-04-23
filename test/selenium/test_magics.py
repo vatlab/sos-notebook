@@ -9,14 +9,6 @@ from textwrap import dedent
 from sos.utils import env
 import pytest
 
-# def test_magic_cd(notebook):
-#     '''Test cd affecting subkernel'''
-#     command="!mkdir test_cd\n%cd test_cd"
-#     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
-#     # switch to subkernel and test
-#     idx = notebook.append_and_execute_cell_in_kernel(content='%pwd', kernel="Python3")
-#     assert 'test_cd' in notebook.get_cell_output(index=1)
-
 
 @pytest.mark.usefixtures("notebook")
 class BasicTest:

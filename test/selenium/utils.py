@@ -17,7 +17,7 @@ from selenium.webdriver.support.ui import Select
 from contextlib import contextmanager
 import re
 from sos.utils import env
-import pytest
+
 
 pjoin = os.path.join
 
