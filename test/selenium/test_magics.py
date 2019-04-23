@@ -6,6 +6,7 @@
 
 import time
 from textwrap import dedent
+from sos.utils import env
 
 # def test_magic_cd(notebook):
 #     '''Test cd affecting subkernel'''
@@ -64,8 +65,16 @@ def test_magic_get(notebook):
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
     assert "R variable" in notebook.get_cell_output(index=idx)
 
+def test_sos_vars(notebook):
+    # test automatic tranfer of sos variables
+    command = "sosa = '24'"
+    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
+    command = "sosa"
+    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
+    assert "24" in notebook.get_cell_output(index=idx)
+
 def test_magic_put(notebook):
-    # test %put
+    # test %put from subkernel to SoS Kernel
     notebook.append_and_execute_cell_in_kernel(content=dedent('''\
         %put a b c R_var
         a <- c(1)
@@ -81,7 +90,17 @@ def test_magic_put(notebook):
     assert "array" in notebook.get_cell_output(index=idx)
     idx = notebook.append_and_execute_cell_in_kernel(content='R_var', kernel="SoS")
     assert "R variable" in notebook.get_cell_output(index=idx)
+    # test %put from SoS to other kernel
     #
+    notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        %put a1 b1 --to R
+        a1 = 123
+        b1 = 'this is python'
+        '''), kernel="SoS")
+    idx = notebook.append_and_execute_cell_in_kernel(content='cat(a1)', kernel="R")
+    assert "123" in notebook.get_cell_output(index=idx)
+    idx = notebook.append_and_execute_cell_in_kernel(content='cat(b1)', kernel="R")
+    assert "this is python" in notebook.get_cell_output(index=idx)
 
 def test_magic_preview(notebook):
     command="%preview -n a \na = [1, 2, 3] "

@@ -135,4 +135,4 @@ def authenticated_browser(selenium_driver, notebook_server):
 
 @pytest.fixture
 def notebook(authenticated_browser):
-    return Notebook.new_notebook(authenticated_browser,kernel_name='kernel-sos')
+    return Notebook.new_notebook(authenticated_browser, kernel_name='kernel-sos')

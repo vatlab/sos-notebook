@@ -16,7 +16,7 @@ from selenium.webdriver.support.ui import Select
 
 from contextlib import contextmanager
 import re
-
+from sos.utils import env
 
 pjoin = os.path.join
 
@@ -138,7 +138,7 @@ class Notebook:
         """Gets all cells once they are visible.
 
         """
-      # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
+        # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div"))
 
         # return self.browser.find_elements_by_class_name("cell")
@@ -223,9 +223,6 @@ class Notebook:
         element = wait.until(EC.staleness_of(cell))
 
 
-
-
-
     def get_cells_contents(self):
         JS = 'return Jupyter.notebook.get_cells().map(function(c) {return c.get_text();})'
         return self.browser.execute_script(JS)
@@ -233,21 +230,18 @@ class Notebook:
     def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
         return self.cells[index].find_element_by_css_selector(selector).text
 
-    def get_cell_output(self,index=0, inPanel=False):
+    def get_cell_output(self, index=0, inPanel=False):
         outputs=""
         if inPanel:
-            outputs=wait_for_selector(self.panel_cells[index], "div .output_area")
+            outputs = wait_for_selector(self.panel_cells[index], "div .output_area")
         else:
-
-            outputs=wait_for_selector(self.cells[index], "div .output_area")
-        outputText=""
+            outputs = wait_for_selector(self.cells[index], "div .output_area")
+        outputText = ""
         for output in outputs:
-            outputText+=output.text+"\n"
+            outputText += output.text + "\n"
         if "Out" in outputText:
-            outputText="".join(outputText.split(":")[1:])
+            outputText = "".join(outputText.split(":")[1:])
         return outputText.strip()
-
-
 
 
     def wait_for_output(self,index=0):
@@ -390,6 +384,7 @@ class Notebook:
         self.execute_cell(cell_or_index=index+1)
 
     def append_and_execute_cell_in_kernel(self, content="",kernel="SoS"):
+        # there will be at least a new cell from the new notebook.
         index = len(self.cells) - 1
         self.add_cell(index=index, cell_type="code", content=content)
         self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
@@ -426,13 +421,13 @@ class Notebook:
 
 
     @classmethod
-    def new_notebook(cls, browser, kernel_name='kernel-python3'):
+    def new_notebook(cls, browser, kernel_name='kernel-sos'):
         with new_window(browser, selector=".cell"):
             select_kernel(browser, kernel_name=kernel_name)
         return cls(browser)
 
 
-def select_kernel(browser, kernel_name='kernel-python3'):
+def select_kernel(browser, kernel_name='kernel-sos'):
     """Clicks the "new" button and selects a kernel from the options.
     """
     wait = WebDriverWait(browser, 10)
