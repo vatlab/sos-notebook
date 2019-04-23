@@ -650,7 +650,7 @@ class Preview_Magic(SoS_Magic):
         if item in env.sos_dict:
             obj = env.sos_dict[item]
         else:
-            obj = SoS_eval(item)
+            return None, f"Unknown variable {item}"
         # get the basic information of object
         txt = type(obj).__name__
         # we could potentially check the shape of data frame and matrix
@@ -872,6 +872,8 @@ class Preview_Magic(SoS_Magic):
                             pass
                     if use_sos:
                         obj_desc, preview = self.preview_var(item, style)
+                        if preview.startswith('Unknown variable') and handled[idx]:
+                            continue
                         self.sos_kernel.send_frontend_msg('display_data',
                                                       {'metadata': {},
                                                        'data': {'text/plain': '>>> ' + item + ':\n',
@@ -889,6 +891,8 @@ class Preview_Magic(SoS_Magic):
                         if hasattr(lan_obj, 'preview') and callable(lan_obj.preview):
                             try:
                                 obj_desc, preview = lan_obj.preview(item)
+                                if preview.startswith('Unknown variable') and handled[idx]:
+                                    continue
                                 self.sos_kernel.send_frontend_msg('display_data',
                                           {'metadata': {},
                                            'data': {'text/plain': '>>> ' + item + ':\n',
@@ -2425,7 +2429,7 @@ class Use_Magic(SoS_Magic):
             self.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
-            self.sos_kernel.switch_kernel(args.name, None, None, args.kernel,
+            self.sos_kernel.switch_kernel(args.name, None, args.kernel,
                                       args.language, args.color)
             return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
@@ -2478,7 +2482,7 @@ class With_Magic(SoS_Magic):
 
         original_kernel = self.sos_kernel.kernel
         try:
-            self.sos_kernel.switch_kernel(args.name, args.in_vars, args.out_vars)
+            self.sos_kernel.switch_kernel(args.name, args.in_vars)
         except Exception as e:
             self.sos_kernel.warn(
                 f'Failed to switch to subkernel {args.name}): {e}')
@@ -2491,7 +2495,7 @@ class With_Magic(SoS_Magic):
         try:
             return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
-            self.sos_kernel.switch_kernel(original_kernel)
+            self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
 
 
 class SoS_Magics(object):

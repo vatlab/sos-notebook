@@ -17,6 +17,7 @@ import pytest
 #     idx = notebook.append_and_execute_cell_in_kernel(content='%pwd', kernel="Python3")
 #     assert 'test_cd' in notebook.get_cell_output(index=1)
 
+
 @pytest.mark.usefixtures("notebook")
 class BasicTest:
     pass
@@ -144,27 +145,6 @@ class Test_Magics(BasicTest):
         # test %clear
         command="%clear --all"
         idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
