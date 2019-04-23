@@ -18,7 +18,7 @@ class Test_Magics(BasicTest):
 
     def test_magic_in_subkernel(self,notebook):
         '''test %pwd in the python3 kernel (which is not a sos magic)'''
-        idx = notebook.append_and_execute_cell_in_kernel(content="%pwd", kernel="python3")
+        idx = notebook.append_and_execute_cell_in_kernel(content="%pwd", kernel="Python3")
         assert len(notebook.get_cell_output(index=idx)) > 0
 
 
@@ -48,7 +48,6 @@ class Test_Magics(BasicTest):
             %expand ${ }
             if (${par} > 50) {
                 cat('A parameter ${par} greater than 50 is specified.');
-            }
             """), kernel="R")
         assert "A parameter 100 greater than 50 is specified."==notebook.get_cell_output(index=idx)
 
@@ -104,10 +103,10 @@ class Test_Magics(BasicTest):
         assert "this is python" in notebook.get_cell_output(index=idx)
 
     def test_magic_preview(self,notebook):
-        command="%preview -n a \na = [1, 2, 3] "
-        idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
-        outputLines=notebook.get_cell_output(index=idx).split("\n")
-        assert "> a: list of length 3" == outputLines[0]
+        # command="%preview -n a \na = [1, 2, 3] "
+        # idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
+        # outputLines=notebook.get_cell_output(index=idx).split("\n")
+        # assert "> a: list of length 3" == outputLines[0]
         command="%put --to Python3 R_var\nR_var = 'R variable'"
         idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
         command="R_var"
