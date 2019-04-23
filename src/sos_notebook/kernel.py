@@ -531,7 +531,6 @@ class SoS_Kernel(IPythonKernel):
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.magics = SoS_Magics(self)
-        self._kernel_return_vars = []
         self._failed_languages = {}
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
@@ -987,7 +986,7 @@ class SoS_Kernel(IPythonKernel):
             time.sleep(0.001)
         return res
 
-    def switch_kernel(self, kernel, in_vars=None, ret_vars=None, kernel_name=None, language=None, color=None):
+    def switch_kernel(self, kernel, in_vars=None, kernel_name=None, language=None, color=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
@@ -999,35 +998,17 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
-            # the same kernel, do nothing?
-            # but the senario can be
-            #
-            # kernel in SoS
-            # cell R
-            # %use R -i n
-            #
-            # SoS get:
-            #
-            # %softwidth --default-kernel R --cell-kernel R
-            # %use R -i n
-            #
-            # Now, SoS -> R without variable passing
-            # R -> R should honor -i n
-
-            # or, when we randomly jump cells, we should more aggreessively return
-            # automatically shared variables to sos (done by the following) (#375)
-            if kinfo.name != 'SoS':
-                self.switch_kernel('SoS')
-                self.switch_kernel(kinfo.name, in_vars, ret_vars)
+            return
         elif kinfo.name == 'SoS':
-            self.put_vars_to(self._kernel_return_vars)
-            self._kernel_return_vars = []
+            # non-SoS to SoS
+            self.put_vars_to(in_vars)
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
-            # not to 'sos' (kernel != 'sos'), see if they are the same kernel under
-            self.switch_kernel('SoS', in_vars, ret_vars)
-            self.switch_kernel(kinfo.name, in_vars, ret_vars)
+            # Non-SoS to Non-SoS
+            self.switch_kernel('SoS', in_vars)
+            self.switch_kernel(kinfo.name, in_vars)
         else:
+            # SoS to non-SoS
             if self._debug_mode:
                 self.warn(f'Switch from {self.kernel} to {kinfo.name}')
             # case when self.kernel == 'sos', kernel != 'sos'
@@ -1056,7 +1037,6 @@ Available subkernels:\n{}'''.format(', '.join(self.kernels.keys()),
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
                     return
             self.KM, self.KC = self.kernels[kinfo.name]
-            self._kernel_return_vars = [] if ret_vars is None else ret_vars
             self.kernel = kinfo.name
             if new_kernel and not kinfo.codemirror_mode:
                 self.KC.kernel_info()
