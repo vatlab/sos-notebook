@@ -1747,6 +1747,11 @@ class Set_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
+        parser = self.get_parser()
+        try:
+            args = parser.parse_args(shlex.split(options))
+        except SystemExit:
+            return
         self.handle_magic_set(options)
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
         return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -1801,7 +1806,11 @@ class SoSRun_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
-            args = parser.parse_args(shlex.split(options))
+            # only show message with %sosrun -h, not with any other parameter because
+            # the pipeline can have help message
+            cmd = shlex.split(options)
+            if len(cmd) == 1 and '-h' in cmd:
+                args = parser.parse_args(cmd)
         except SystemExit:
             return
         old_options = self.sos_kernel.options

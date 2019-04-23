@@ -23,16 +23,13 @@ class Test_Magics(BasicTest):
             content="%pwd", kernel="Python3")
         assert len(notebook.get_cell_output(index=idx)) > 0
 
-    def test_help_magics(self, notebook):
+    def test_help_messages(self, notebook):
         '''test help functions of magics'''
-        # FIXME:
-        # %set -h
-        # %cd -h
         for magic in ('cd',
                 'debug', 'dict', 'get', 'matplotlib', 'preview',
                 'put', 'render', 'run', 'runfile', 'save', 'sandbox',
-                'sessioninfo', 'sosrun', 'sossave', 'shutdown', 'task',
-                'toc', 'use', 'with'):
+                'sessioninfo', 'set', 'sosrun', 'sossave', 'shutdown',
+                 'task', 'toc', 'use', 'with'):
             idx = notebook.append_and_execute_cell_in_kernel(
                 content=f"%{magic} -h", kernel="SoS")
             # output does not have error
