@@ -122,6 +122,17 @@ def test_magic_with(notebook):
     command="ran"
     idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
     assert len(notebook.get_cell_output(index=idx)) > 0
+    #
+    # testing the execution of %with from non-sos kernel
+    command="b <- 3"
+    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
+    command="%with SoS -i b -o res\nres = b*b"
+    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
+    command="res"
+    idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="R")
+    assert '9' in notebook.get_cell_output(index=idx)
+
+
 
 def test_magic_dict(notebook):
     # test %dict
