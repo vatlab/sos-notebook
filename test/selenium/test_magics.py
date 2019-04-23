@@ -44,11 +44,13 @@ class Test_Magics(BasicTest):
     def test_magic_expand(self,notebook):
         # test %expand
         idx = notebook.append_and_execute_cell_in_kernel(content="par=100", kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            %expand ${ }
-            if (${par} > 50) {
-                cat('A parameter ${par} greater than 50 is specified.');
-            """), kernel="R")
+        idx= notebook.append_and_execute_cell_in_kernel(content="%expand ${ } \n if (${par} > 50) { \n cat('A parameter ${par} greater than 50 is specified.');\n}",kernel="R")
+
+        # idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        #     %expand ${ }
+        #     if (${par} > 50) {
+        #         cat('A parameter ${par} greater than 50 is specified.');
+        #     """), kernel="R")
         assert "A parameter 100 greater than 50 is specified."==notebook.get_cell_output(index=idx)
 
     def test_magic_get(self,notebook):
@@ -67,7 +69,7 @@ class Test_Magics(BasicTest):
 
     def test_sos_vars(self,notebook):
         # test automatic tranfer of sos variables
-        command = "sosa = '24'"
+        command = str("sosa = f'{3*8}'''")
         idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="Python3")
         command = "sosa"
         idx = notebook.append_and_execute_cell_in_kernel(content=command, kernel="SoS")
