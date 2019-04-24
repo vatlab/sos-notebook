@@ -14,25 +14,25 @@ import time
 
 
 class TestFrontEnd(NotebookTest):
-    def test_sidepanel(self, notebook):
+    def test_console_panel(self, notebook):
         time.sleep(2)
-        assert True == notebook.get_sidePanel()
-        notebook.toggle_sidePanel()
+        assert notebook.is_console_panel_open()
+        notebook.toggle_console_panel()
         time.sleep(2)
-        assert False == notebook.get_sidePanel()
-        notebook.toggle_sidePanel()
+        assert not notebook.is_console_panel_open()
+        notebook.toggle_console_panel()
         time.sleep(2)
-        assert True == notebook.get_sidePanel()
+        assert notebook.is_console_panel_open()
 
         command = "print(1)"
         notebook.edit_cell(index=0, content=command, render=False)
-        notebook.execute_cell(cell_or_index=0, inPanel=True)
-        assert "1" == notebook.get_cell_output(index=1, inPanel=True)
+        notebook.execute_cell(cell_or_index=0, in_console=True)
+        assert "1" == notebook.get_cell_output(index=1, in_console=True)
 
         # FIXME
-        # notebook.shift_console_kernel(kernel_name="python3", by_click=True)
+        # notebook.select_console_kernel(kernel_name="python3", by_click=True)
         # content = "print(2)"
-        # notebook.edit_panel_input(content=content)
+        # notebook.edit_console_input(content=content)
 
     def test_switch_kernel(self, notebook):
         kernels = notebook.get_kernel_list()
@@ -42,8 +42,8 @@ class TestFrontEnd(NotebookTest):
                            "R": [220, 220, 218],
                            "python3": [255, 217, 26]}
 
-        # test shift to R kernel by click
-        notebook.shift_kernel(index=0, kernel_name="R", by_click=True)
+        # test change to R kernel by click
+        notebook.select_kernel(index=0, kernel_name="R", by_click=True)
         # check background color for R kernel
         assert all([a == b] for a, b in zip(backgroundColor["R"],
                                             notebook.get_input_backgroundColor(0)))
@@ -73,7 +73,7 @@ class TestFrontEnd(NotebookTest):
             '''), kernel='SoS')
         assert all([a == b] for a, b in zip(backgroundColor["python3"],
                                             notebook.get_input_backgroundColor(idx)))
-        notebook.append("")
+        notebook.append_cell("")
         assert all([a == b] for a, b in zip(backgroundColor["python3"],
                                             notebook.get_input_backgroundColor(idx)))
 

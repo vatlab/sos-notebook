@@ -247,7 +247,7 @@ class Notebook:
 
     def __init__(self, browser):
         self.browser = browser
-        self.disable_autosave_and_onbeforeunload()
+        self._disable_autosave_and_onbeforeunload()
         wait_for_selector(browser, "#panel", timeout=10,
                           visible=False, single=True)
         self.panelInput = self.browser.find_element_by_xpath(
@@ -298,85 +298,61 @@ class Notebook:
     def index(self, cell):
         return self.cells.index(cell)
 
-    def disable_autosave_and_onbeforeunload(self):
-        """Disable request to save before closing window and autosave.
-
-        This is most easily done by using js directly.
+    def edit_cell(self, cell=None, index=0, content="", render=False):
+        """Set the contents of a cell to *content*, by cell object or by index
         """
-        self.browser.execute_script("window.onbeforeunload = null;")
-        self.browser.execute_script(
-            "Jupyter.notebook.set_autosave_interval(0)")
+        if cell is not None:
+            index = self.index(cell)
+        self._focus_cell(index)
 
-    def to_command_mode(self):
-        """Changes us into command mode on currently focused cell
+        # Select & delete anything already in the cell
+        self.current_cell.send_keys(Keys.ENTER)
 
-        """
-        self.body.send_keys(Keys.ESCAPE)
-        self.browser.execute_script("return Jupyter.notebook.handle_command_mode("
-                                    "Jupyter.notebook.get_cell("
-                                    "Jupyter.notebook.get_edit_index()))")
-
-    def focus_cell(self, index=0):
-        cell = self.cells[index]
-        cell.click()
-        self.to_command_mode()
-        self.current_cell = cell
-
-    def select_cell_range(self, initial_index=0, final_index=0):
-        self.focus_cell(initial_index)
-        self.to_command_mode()
-        for i in range(final_index - initial_index):
-            shift(self.browser, 'j')
-
-    def find_and_replace(self, index=0, find_txt='', replace_txt=''):
-        self.focus_cell(index)
-        self.to_command_mode()
-        self.body.send_keys('f')
-        wait_for_selector(self.browser, "#find-and-replace", single=True)
-        self.browser.find_element_by_id("findreplace_allcells_btn").click()
-        self.browser.find_element_by_id(
-            "findreplace_find_inp").send_keys(find_txt)
-        self.browser.find_element_by_id(
-            "findreplace_replace_inp").send_keys(replace_txt)
-        self.browser.find_element_by_id("findreplace_replaceall_btn").click()
-
-    def convert_cell_type(self, index=0, cell_type="code"):
-        # TODO add check to see if it is already present
-        self.focus_cell(index)
-        cell = self.cells[index]
-        if cell_type == "markdown":
-            self.current_cell.send_keys("m")
-        elif cell_type == "raw":
-            self.current_cell.send_keys("r")
-        elif cell_type == "code":
-            self.current_cell.send_keys("y")
+        if platform == "darwin":
+            command(self.browser, 'a')
         else:
-            raise CellTypeError(("{} is not a valid cell type,"
-                                 "use 'code', 'markdown', or 'raw'").format(cell_type))
+            ctrl(self.browser, 'a')
 
-        # self.wait_for_stale_cell(cell)
-        self.focus_cell(index)
-        return self.current_cell
+        self.current_cell.send_keys(Keys.DELETE)
+        self.browser.execute_script(
+            "IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
 
-    def wait_for_stale_cell(self, cell):
-        """ This is needed to switch a cell's mode and refocus it, or to render it.
+        if render:
+            self.execute_cell(self.current_index)
 
-        Warning: there is currently no way to do this when changing between
-        markdown and raw cells.
-        """
-        wait = WebDriverWait(self.browser, 10)
-        element = wait.until(EC.staleness_of(cell))
+    def append_cell(self, *values, cell_type="code"):
+        for i, value in enumerate(values):
+            if isinstance(value, str):
+                self.add_cell(cell_type=cell_type,
+                              content=value)
+            else:
+                raise TypeError("Don't know how to add cell from %r" % value)
 
-    def get_cells_contents(self):
-        JS = 'return Jupyter.notebook.get_cells().map(function(c) {return c.get_text();})'
-        return self.browser.execute_script(JS)
+    def execute_cell(self, cell_or_index=None, in_console=False):
+        if isinstance(cell_or_index, int):
+            index = cell_or_index
+        elif isinstance(cell_or_index, WebElement):
+            index = self.index(cell_or_index)
+        else:
+            raise TypeError("execute_cell only accepts a WebElement or an int")
+        self._focus_cell(index)
+        if in_console:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
+        else:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
 
-    def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
-        return self.cells[index].find_element_by_css_selector(selector).text
+    def add_cell(self, index=-1, cell_type="code", content=""):
+        self._focus_cell(index)
+        self.current_cell.send_keys("b")
+        new_index = index + 1 if index >= 0 else index
+        if content:
+            self.edit_cell(index=new_index, content=content)
+        if cell_type != 'code':
+            self._convert_cell_type(index=new_index, cell_type=cell_type)
 
-    def get_cell_output(self, index=0, inPanel=False, expect_error=False):
+    def get_cell_output(self, index=0, in_console=False, expect_error=False):
         outputs = ""
-        if inPanel:
+        if in_console:
             outputs = wait_for_selector(
                 self.panel_cells[index], "div .output_area")
         else:
@@ -390,7 +366,8 @@ class Notebook:
                     if expect_error:
                         has_error = True
                     else:
-                        raise ValueError(f'Cell produces error message: {errors.text}. Use expect_error=True to suppress this error if needed.')
+                        raise ValueError(
+                            f'Cell produces error message: {errors.text}. Use expect_error=True to suppress this error if needed.')
             except NoSuchElementException:
                 # if no error, ok
                 pass
@@ -399,7 +376,8 @@ class Notebook:
             outputText = "".join(outputText.split(":")[1:])
 
         if expect_error and not has_error:
-            raise ValueError('Expect an error message from cell output, none found.')
+            raise ValueError(
+                'Expect an error message from cell output, none found.')
         return outputText.strip()
 
     def get_elems_in_cell_output(self, index=0, selector='img'):
@@ -416,116 +394,6 @@ class Notebook:
                 pass
         return outputText.strip()
 
-    def wait_for_done(self, index=0):
-        while True:
-            prompt = self.cells[index].find_element_by_css_selector(
-                '.input_prompt').text
-            if '*' not in prompt:
-                return
-            else:
-                time.sleep(0.1)
-
-    def wait_for_output(self, index=0):
-        time.sleep(10)
-        return self.get_cell_output(index)
-
-    def set_cell_metadata(self, index, key, value):
-        JS = 'Jupyter.notebook.get_cell({}).metadata.{} = {}'.format(
-            index, key, value)
-        return self.browser.execute_script(JS)
-
-    def get_cell_type(self, index=0):
-        JS = 'return Jupyter.notebook.get_cell({}).cell_type'.format(index)
-        return self.browser.execute_script(JS)
-
-    def set_cell_input_prompt(self, index, prmpt_val):
-        JS = 'Jupyter.notebook.get_cell({}).set_input_prompt({})'.format(
-            index, prmpt_val)
-        self.browser.execute_script(JS)
-
-    def edit_cell(self, cell=None, index=0, content="", render=False):
-        """Set the contents of a cell to *content*, by cell object or by index
-        """
-        if cell is not None:
-            index = self.index(cell)
-        self.focus_cell(index)
-
-        # Select & delete anything already in the cell
-        self.current_cell.send_keys(Keys.ENTER)
-
-        if platform == "darwin":
-            command(self.browser, 'a')
-        else:
-            ctrl(self.browser, 'a')
-
-        self.current_cell.send_keys(Keys.DELETE)
-
-        # lines=""
-        # for line_no, line in enumerate(content.splitlines()):
-        #     if line_no != 0:
-        #         lines+="\n"+line
-        #     else:
-        #         lines=line
-        self.browser.execute_script(
-            "IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
-
-        # self.current_cell.send_keys(Keys.ENTER, line)
-        if render:
-            self.execute_cell(self.current_index)
-
-    def execute_cell(self, cell_or_index=None, inPanel=False):
-        if isinstance(cell_or_index, int):
-            index = cell_or_index
-        elif isinstance(cell_or_index, WebElement):
-            index = self.index(cell_or_index)
-        else:
-            raise TypeError("execute_cell only accepts a WebElement or an int")
-        self.focus_cell(index)
-        if inPanel:
-            self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
-        else:
-            self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
-
-    def add_cell(self, index=-1, cell_type="code", content=""):
-        self.focus_cell(index)
-        self.current_cell.send_keys("b")
-        new_index = index + 1 if index >= 0 else index
-        if content:
-            self.edit_cell(index=new_index, content=content)
-        if cell_type != 'code':
-            self.convert_cell_type(index=new_index, cell_type=cell_type)
-
-    def add_and_execute_cell(self, index=-1, cell_type="code", content=""):
-        self.add_cell(index=index, cell_type=cell_type, content=content)
-        self.execute_cell(index)
-
-    def delete_cell(self, index):
-        self.focus_cell(index)
-        self.to_command_mode()
-        self.current_cell.send_keys('dd')
-
-    def add_markdown_cell(self, index=-1, content="", render=True):
-        self.add_cell(index, cell_type="markdown")
-        self.edit_cell(index=index, content=content, render=render)
-
-    def append(self, *values, cell_type="code"):
-        for i, value in enumerate(values):
-            if isinstance(value, str):
-                self.add_cell(cell_type=cell_type,
-                              content=value)
-            else:
-                raise TypeError("Don't know how to add cell from %r" % value)
-
-    def extend(self, values):
-        self.append(*values)
-
-    def run_all(self):
-        for cell in self:
-            self.execute_cell(cell)
-
-    def trigger_keydown(self, keys):
-        trigger_keystrokes(self.body, keys)
-
     def get_kernel_list(self):
         kernelMenu = self.browser.find_element_by_id(
             "menu-change-kernel-submenu")
@@ -535,8 +403,8 @@ class Notebook:
             kernels.append(kernelEntry.get_attribute('innerHTML'))
         return kernels
 
-    def shift_kernel(self, index=0, kernel_name="SoS", by_click=True):
-        self.focus_cell(index)
+    def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
+        self._focus_cell(index)
         kernel_selector = 'option[value={}]'.format(kernel_name)
         kernelList = self.current_cell.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
@@ -546,12 +414,12 @@ class Notebook:
             self.edit_cell(index=0, content="%use {}".format(
                 kernel_name), render=True)
 
-    def get_input_backgroundColor(self, index=0, inPanel=False):
-        if inPanel:
+    def get_input_backgroundColor(self, index=0, in_console=False):
+        if in_console:
             rgba = self.current_cell.find_element_by_class_name(
                 "input_prompt").value_of_css_property("background-color")
         else:
-            self.focus_cell(index)
+            self._focus_cell(index)
             rgba = self.current_cell.find_element_by_class_name(
                 "input_prompt").value_of_css_property("background-color")
 
@@ -567,35 +435,33 @@ class Notebook:
             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
         return [r, g, b]
 
-    def add_and_execute_cell_in_kernel(self, index=-1, cell_type="code", content="", kernel="SoS"):
-        self.add_cell(index=index, cell_type=cell_type, content=content)
-        self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
-        self.execute_cell(cell_or_index=index+1)
-
     def append_and_execute_cell_in_kernel(self, content="", kernel="SoS"):
         # there will be at least a new cell from the new notebook.
         index = len(self.cells) - 1
         self.add_cell(index=index, cell_type="code", content=content)
-        self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
+        self.select_kernel(index=index+1, kernel_name=kernel, by_click=True)
         self.execute_cell(cell_or_index=index+1)
         # wait for everything to complete
-        self.wait_for_done(index + 1)
+        self._wait_for_done(index + 1)
         return index + 1
 
-    def get_sidePanel(self):
+    #
+    # For console panel
+    #
+    def is_console_panel_open(self):
         return bool(self.browser.find_element_by_id("panel").is_displayed())
 
-    def toggle_sidePanel(self):
+    def toggle_console_panel(self):
         panelButton = self.browser.find_element_by_id("panel_button")
         panelButton.click()
 
-    def edit_panel_input(self, content):
-        print("panel", self.panelInput.get_attribute("innerHTML"))
+    def edit_console_input(self, content):
+        # print("panel", self.panelInput.get_attribute("innerHTML"))
         self.panelInput.click()
         self.panelInput.send_keys(Keys.ENTER, content)
         time.sleep(10)
 
-    def shift_console_kernel(self, kernel_name="SoS", by_click=True):
+    def select_console_kernel(self, kernel_name="SoS", by_click=True):
         kernel_selector = 'option[value={}]'.format(kernel_name)
         kernelList = self.panelInput.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
@@ -607,6 +473,141 @@ class Notebook:
         with new_window(browser, selector=".cell"):
             select_kernel(browser, kernel_name=kernel_name)
         return cls(browser)
+
+    #
+    # PRIVATE FUNCTIONS
+    #
+
+    def _disable_autosave_and_onbeforeunload(self):
+        """Disable request to save before closing window and autosave.
+
+        This is most easily done by using js directly.
+        """
+        self.browser.execute_script("window.onbeforeunload = null;")
+        self.browser.execute_script(
+            "Jupyter.notebook.set_autosave_interval(0)")
+
+    def _to_command_mode(self):
+        """Changes us into command mode on currently focused cell
+
+        """
+        self.body.send_keys(Keys.ESCAPE)
+        self.browser.execute_script("return Jupyter.notebook.handle_command_mode("
+                                    "Jupyter.notebook.get_cell("
+                                    "Jupyter.notebook.get_edit_index()))")
+
+    def _focus_cell(self, index=0):
+        cell = self.cells[index]
+        cell.click()
+        self._to_command_mode()
+        self.current_cell = cell
+
+    def _convert_cell_type(self, index=0, cell_type="code"):
+        # TODO add check to see if it is already present
+        self._focus_cell(index)
+        cell = self.cells[index]
+        if cell_type == "markdown":
+            self.current_cell.send_keys("m")
+        elif cell_type == "raw":
+            self.current_cell.send_keys("r")
+        elif cell_type == "code":
+            self.current_cell.send_keys("y")
+        else:
+            raise CellTypeError(("{} is not a valid cell type,"
+                                 "use 'code', 'markdown', or 'raw'").format(cell_type))
+
+        # self.wait_for_stale_cell(cell)
+        self._focus_cell(index)
+        return self.current_cell
+
+    def _wait_for_done(self, index=0):
+        while True:
+            prompt = self.cells[index].find_element_by_css_selector(
+                '.input_prompt').text
+            if '*' not in prompt:
+                return
+            else:
+                time.sleep(0.1)
+
+    # def wait_for_output(self, index=0):
+    #     time.sleep(10)
+    #     return self.get_cell_output(index)
+
+    # def set_cell_metadata(self, index, key, value):
+    #     JS = 'Jupyter.notebook.get_cell({}).metadata.{} = {}'.format(
+    #         index, key, value)
+    #     return self.browser.execute_script(JS)
+
+    # def get_cell_type(self, index=0):
+    #     JS = 'return Jupyter.notebook.get_cell({}).cell_type'.format(index)
+    #     return self.browser.execute_script(JS)
+
+    # def set_cell_input_prompt(self, index, prmpt_val):
+    #     JS = 'Jupyter.notebook.get_cell({}).set_input_prompt({})'.format(
+    #         index, prmpt_val)
+    #     self.browser.execute_script(JS)
+
+    # def delete_cell(self, index):
+    #     self._focus_cell(index)
+    #     self._to_command_mode()
+    #     self.current_cell.send_keys('dd')
+
+    # def add_markdown_cell(self, index=-1, content="", render=True):
+    #     self.add_cell(index, cell_type="markdown")
+    #     self.edit_cell(index=index, content=content, render=render)
+
+    # def extend(self, values):
+    #     self.append_cell(*values)
+
+    # def run_all(self):
+    #     for cell in self:
+    #         self.execute_cell(cell)
+
+    # def trigger_keydown(self, keys):
+    #     trigger_keystrokes(self.body, keys)
+
+    # def add_and_execute_cell(self, index=-1, cell_type="code", content=""):
+    #     self.add_cell(index=index, cell_type=cell_type, content=content)
+    #     self.execute_cell(index)
+
+    # def add_and_execute_cell_in_kernel(self, index=-1, cell_type="code", content="", kernel="SoS"):
+    #     self.add_cell(index=index, cell_type=cell_type, content=content)
+    #     self.select_kernel(index=index+1, kernel_name=kernel, by_click=True)
+    #     self.execute_cell(cell_or_index=index+1)
+
+    # def select_cell_range(self, initial_index=0, final_index=0):
+    #     self._focus_cell(initial_index)
+    #     self._to_command_mode()
+    #     for i in range(final_index - initial_index):
+    #         shift(self.browser, 'j')
+
+    # def find_and_replace(self, index=0, find_txt='', replace_txt=''):
+    #     self._focus_cell(index)
+    #     self._to_command_mode()
+    #     self.body.send_keys('f')
+    #     wait_for_selector(self.browser, "#find-and-replace", single=True)
+    #     self.browser.find_element_by_id("findreplace_allcells_btn").click()
+    #     self.browser.find_element_by_id(
+    #         "findreplace_find_inp").send_keys(find_txt)
+    #     self.browser.find_element_by_id(
+    #         "findreplace_replace_inp").send_keys(replace_txt)
+    #     self.browser.find_element_by_id("findreplace_replaceall_btn").click()
+
+    # def wait_for_stale_cell(self, cell):
+    #     """ This is needed to switch a cell's mode and refocus it, or to render it.
+
+    #     Warning: there is currently no way to do this when changing between
+    #     markdown and raw cells.
+    #     """
+    #     wait = WebDriverWait(self.browser, 10)
+    #     element = wait.until(EC.staleness_of(cell))
+
+    # def get_cells_contents(self):
+    #     JS = 'return Jupyter.notebook.get_cells().map(function(c) {return c.get_text();})'
+    #     return self.browser.execute_script(JS)
+
+    # def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
+    #     return self.cells[index].find_element_by_css_selector(selector).text
 
 
 def select_kernel(browser, kernel_name='kernel-sos'):
@@ -687,6 +688,7 @@ def trigger_keystrokes(browser, *keys):
             ac.perform()
         else:              # single key stroke. Check if modifier eg. "up"
             browser.send_keys(getattr(Keys, keys[0].upper(), keys[0]))
+
 
 @pytest.mark.usefixtures("notebook")
 class NotebookTest:
