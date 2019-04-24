@@ -53,7 +53,8 @@ class TestSoSCompleter(unittest.TestCase):
             wait_for_idle(kc)
             for magic in ('get', 'run', 'set', 'sosrun', 'toc'):
                 ins_magic = inspect(kc, '%' + magic, 2)['data']['text/plain']
-                self.assertTrue('usage: %' + magic in ins_magic, 'Returned: {}'.format(ins_magic))
+                self.assertTrue('usage: %' + magic in ins_magic,
+                                'Returned: {}'.format(ins_magic))
             wait_for_idle(kc)
             execute(kc=kc, code='%use SoS')
             wait_for_idle(kc)

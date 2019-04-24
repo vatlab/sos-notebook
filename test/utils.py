@@ -245,19 +245,28 @@ class Notebook:
             outputText = "".join(outputText.split(":")[1:])
         return outputText.strip()
 
-    def get_elem_in_cell_output(self, index=0, selector='img'):
+    def get_elems_in_cell_output(self, index=0, selector='img'):
         '''get the output of particular tag'''
         from sos.utils import env
         outputs = wait_for_selector(self.cells[index], "div .output_area")
-        env.log_to_file(outputs)
         outputText = ""
         for output in outputs:
-            env.log_to_file(f'output is {output}')
-            elem = output.find_element_by_css_selector(selector)
-            env.log_to_file(f'{elem.tag_name} {elem.text} {elem.get_attribute("src")}')
-            outputText += elem.get_attribute("src") + '\n'
-
+            try:
+                # some div might not have img
+                elem = output.find_element_by_css_selector(selector)
+                outputText += elem.get_attribute("src") + '\n'
+            except:
+                pass
         return outputText.strip()
+
+    def wait_for_done(self, index=0):
+        while True:
+            prompt = self.cells[index].find_element_by_css_selector(
+                '.input_prompt').text
+            if '*' not in prompt:
+                return
+            else:
+                time.sleep(0.1)
 
     def wait_for_output(self, index=0):
         time.sleep(10)
@@ -412,6 +421,8 @@ class Notebook:
         self.add_cell(index=index, cell_type="code", content=content)
         self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
         self.execute_cell(cell_or_index=index+1)
+        # wait for everything to complete
+        self.wait_for_done(index + 1)
         return index + 1
 
     def get_sidePanel(self):

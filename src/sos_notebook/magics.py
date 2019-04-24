@@ -884,7 +884,7 @@ class Preview_Magic(SoS_Magic):
                             pass
                     if use_sos:
                         obj_desc, preview = self.preview_var(item, style)
-                        if preview.startswith('Unknown variable') and handled[idx]:
+                        if isinstance(preview, str) and preview.startswith('Unknown variable') and handled[idx]:
                             continue
                         self.sos_kernel.send_frontend_msg('display_data',
                                                       {'metadata': {},
