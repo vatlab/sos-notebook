@@ -116,10 +116,11 @@ class TestMagics(NotebookTest):
         assert 'Connection file' in notebook.get_cell_output(index=idx)
 
     def test_magic_debug(self, notebook):
-        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %debug on
             %debug off
             """), kernel="SoS")
+        assert 'debug' in notebook.get_cell_output(index=idx, expect_error=True)
 
     def test_magic_dict(self, notebook):
         # test %dict

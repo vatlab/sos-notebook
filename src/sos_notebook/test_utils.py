@@ -386,10 +386,11 @@ class Notebook:
         for output in outputs:
             try:
                 errors = output.find_element_by_css_selector('.output_stderr')
-                if expect_error:
-                    has_error = True
-                else:
-                    raise ValueError(f'Cell produces error message: {errors.text}')
+                if errors:
+                    if expect_error:
+                        has_error = True
+                    else:
+                        raise ValueError(f'Cell produces error message: {errors.text}. Use expect_error=True to suppress this error if needed.')
             except NoSuchElementException:
                 # if no error, ok
                 pass
