@@ -119,8 +119,8 @@ class TestMagics(NotebookTest):
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %debug on
             %debug off
-            """), kernel="SoS")
-        assert 'debug' in notebook.get_cell_output(index=idx, expect_error=True)
+            """), kernel="SoS", expect_error=True)
+        assert 'debug' in notebook.get_cell_output(index=idx)
 
     def test_magic_dict(self, notebook):
         # test %dict
@@ -478,8 +478,8 @@ with open('a.html', 'w') as dot:
         # not accept workflow name
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %set haha
-            """), kernel="SoS")
-        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(index=idx, expect_error=True)
+            """), kernel="SoS", expect_error=True)
+        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(index=idx)
 
     @pytest.mark.skipIf(sys.platform == 'win32', reason='! magic does not support built-in command #203')
     def test_magic_shell(self, notebook):

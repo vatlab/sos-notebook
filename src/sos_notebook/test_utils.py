@@ -298,6 +298,38 @@ class Notebook:
     def index(self, cell):
         return self.cells.index(cell)
 
+    #
+    # operation
+    #
+
+    def append_cell(self, *values, cell_type="code"):
+        for i, value in enumerate(values):
+            if isinstance(value, str):
+                self.add_cell(cell_type=cell_type,
+                              content=value)
+            else:
+                raise TypeError("Don't know how to add cell from %r" % value)
+
+    def add_cell(self, index=-1, cell_type="code", content=""):
+        self._focus_cell(index)
+        self.current_cell.send_keys("b")
+        new_index = index + 1 if index >= 0 else index
+        if content:
+            self.edit_cell(index=new_index, content=content)
+        if cell_type != 'code':
+            self._convert_cell_type(index=new_index, cell_type=cell_type)
+
+    def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
+        self._focus_cell(index)
+        kernel_selector = 'option[value={}]'.format(kernel_name)
+        kernelList = self.current_cell.find_element_by_tag_name("select")
+        kernel = wait_for_selector(kernelList, kernel_selector, single=True)
+        if by_click:
+            kernel.click()
+        else:
+            self.edit_cell(index=0, content="%use {}".format(
+                kernel_name), render=True)
+
     def edit_cell(self, cell=None, index=0, content="", render=False):
         """Set the contents of a cell to *content*, by cell object or by index
         """
@@ -320,80 +352,9 @@ class Notebook:
         if render:
             self.execute_cell(self.current_index)
 
-    def append_cell(self, *values, cell_type="code"):
-        for i, value in enumerate(values):
-            if isinstance(value, str):
-                self.add_cell(cell_type=cell_type,
-                              content=value)
-            else:
-                raise TypeError("Don't know how to add cell from %r" % value)
-
-    def execute_cell(self, cell_or_index=None, in_console=False):
-        if isinstance(cell_or_index, int):
-            index = cell_or_index
-        elif isinstance(cell_or_index, WebElement):
-            index = self.index(cell_or_index)
-        else:
-            raise TypeError("execute_cell only accepts a WebElement or an int")
-        self._focus_cell(index)
-        if in_console:
-            self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
-        else:
-            self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
-
-    def add_cell(self, index=-1, cell_type="code", content=""):
-        self._focus_cell(index)
-        self.current_cell.send_keys("b")
-        new_index = index + 1 if index >= 0 else index
-        if content:
-            self.edit_cell(index=new_index, content=content)
-        if cell_type != 'code':
-            self._convert_cell_type(index=new_index, cell_type=cell_type)
-
-    def get_cell_output(self, index=0, in_console=False, expect_error=False):
-        outputs = ""
-        if in_console:
-            outputs = wait_for_selector(
-                self.panel_cells[index], "div .output_area")
-        else:
-            outputs = wait_for_selector(self.cells[index], "div .output_area")
-        outputText = ""
-        has_error = False
-        for output in outputs:
-            try:
-                errors = output.find_element_by_css_selector('.output_stderr')
-                if errors:
-                    if expect_error:
-                        has_error = True
-                    else:
-                        raise ValueError(
-                            f'Cell produces error message: {errors.text}. Use expect_error=True to suppress this error if needed.')
-            except NoSuchElementException:
-                # if no error, ok
-                pass
-            outputText += output.text + "\n"
-        if "Out" in outputText:
-            outputText = "".join(outputText.split(":")[1:])
-
-        if expect_error and not has_error:
-            raise ValueError(
-                'Expect an error message from cell output, none found.')
-        return outputText.strip()
-
-    def get_elems_in_cell_output(self, index=0, selector='img'):
-        '''get the output of particular tag'''
-        from sos.utils import env
-        outputs = wait_for_selector(self.cells[index], "div .output_area")
-        outputText = ""
-        for output in outputs:
-            try:
-                # some div might not have img
-                elem = output.find_element_by_css_selector(selector)
-                outputText += elem.get_attribute("src") + '\n'
-            except:
-                pass
-        return outputText.strip()
-
+    #
+    # Get info
+    #
     def get_kernel_list(self):
         kernelMenu = self.browser.find_element_by_id(
             "menu-change-kernel-submenu")
@@ -402,17 +363,6 @@ class Notebook:
         for kernelEntry in kernelEntries:
             kernels.append(kernelEntry.get_attribute('innerHTML'))
         return kernels
-
-    def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
-        self._focus_cell(index)
-        kernel_selector = 'option[value={}]'.format(kernel_name)
-        kernelList = self.current_cell.find_element_by_tag_name("select")
-        kernel = wait_for_selector(kernelList, kernel_selector, single=True)
-        if by_click:
-            kernel.click()
-        else:
-            self.edit_cell(index=0, content="%use {}".format(
-                kernel_name), render=True)
 
     def get_input_backgroundColor(self, index=0, in_console=False):
         if in_console:
@@ -435,15 +385,65 @@ class Notebook:
             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
         return [r, g, b]
 
-    def append_and_execute_cell_in_kernel(self, content="", kernel="SoS"):
+    #
+    # Execution of cells
+    #
+
+    def execute_cell(self, cell_or_index=None, in_console=False, expect_error=False):
+        if isinstance(cell_or_index, int):
+            index = cell_or_index
+        elif isinstance(cell_or_index, WebElement):
+            index = self.index(cell_or_index)
+        else:
+            raise TypeError("execute_cell only accepts a WebElement or an int")
+        self._focus_cell(index)
+        if in_console:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
+        else:
+            self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+        self._wait_for_done(index, expect_error)
+
+    def append_and_execute_cell_in_kernel(self, content="", kernel="SoS", expect_error=False):
         # there will be at least a new cell from the new notebook.
         index = len(self.cells) - 1
         self.add_cell(index=index, cell_type="code", content=content)
         self.select_kernel(index=index+1, kernel_name=kernel, by_click=True)
-        self.execute_cell(cell_or_index=index+1)
-        # wait for everything to complete
-        self._wait_for_done(index + 1)
+        self.execute_cell(cell_or_index=index+1, expect_error=expect_error)
         return index + 1
+
+    #
+    # check output
+    #
+
+    def get_cell_output(self, index=0, in_console=False):
+        outputs = ""
+        if in_console:
+            outputs = wait_for_selector(
+                self.panel_cells[index], "div .output_area")
+        else:
+            outputs = wait_for_selector(self.cells[index], "div .output_area")
+        outputText = ""
+        has_error = False
+        for output in outputs:
+            outputText += output.text + "\n"
+        if "Out" in outputText:
+            outputText = "".join(outputText.split(":")[1:])
+
+        return outputText.strip()
+
+    def get_elems_in_cell_output(self, index=0, selector='img'):
+        '''get the output of particular tag'''
+        from sos.utils import env
+        outputs = wait_for_selector(self.cells[index], "div .output_area")
+        outputText = ""
+        for output in outputs:
+            try:
+                # some div might not have img
+                elem = output.find_element_by_css_selector(selector)
+                outputText += elem.get_attribute("src") + '\n'
+            except:
+                pass
+        return outputText.strip()
 
     #
     # For console panel
@@ -520,7 +520,7 @@ class Notebook:
         self._focus_cell(index)
         return self.current_cell
 
-    def _wait_for_done(self, index=0):
+    def _wait_for_done(self, index=0, expect_error=False):
         while True:
             prompt = self.cells[index].find_element_by_css_selector(
                 '.input_prompt').text
@@ -528,6 +528,30 @@ class Notebook:
                 return
             else:
                 time.sleep(0.1)
+        # check if there is output
+        try:
+            # no output? OK.
+            outputs = self.cells[index].find_elements_by_css_selector("div .output_area")
+        except NoSuchElementException:
+            return
+        #
+        has_error = False
+        for output in outputs:
+            try:
+                errors = output.find_element_by_css_selector('.output_stderr')
+                if errors:
+                    if expect_error:
+                        has_error = True
+                    else:
+                        raise ValueError(
+                            f'Cell produces error message: {errors.text}. Use expect_error=True to suppress this error if needed.')
+            except NoSuchElementException:
+                # if no error, ok
+                pass
+        #
+        if expect_error and not has_error:
+            raise ValueError(
+                'Expect an error message from cell output, none found.')        
 
     # def wait_for_output(self, index=0):
     #     time.sleep(10)
