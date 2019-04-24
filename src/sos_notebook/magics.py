@@ -1752,7 +1752,8 @@ class Set_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
-            args = parser.parse_args(shlex.split(options))
+            if options.strip() == '-h':
+                args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
         self.handle_magic_set(options)
@@ -1811,8 +1812,7 @@ class SoSRun_Magic(SoS_Magic):
         try:
             # only show message with %sosrun -h, not with any other parameter because
             # the pipeline can have help message
-            cmd = shlex.split(options)
-            if len(cmd) == 1 and '-h' in cmd:
+            if options.strip() == '-h':
                 args = parser.parse_args(cmd)
         except SystemExit:
             return

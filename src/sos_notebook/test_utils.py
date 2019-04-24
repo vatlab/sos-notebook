@@ -28,6 +28,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 
 pjoin = os.path.join
 
@@ -373,7 +374,7 @@ class Notebook:
     def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
         return self.cells[index].find_element_by_css_selector(selector).text
 
-    def get_cell_output(self, index=0, inPanel=False):
+    def get_cell_output(self, index=0, inPanel=False, expect_error=False):
         outputs = ""
         if inPanel:
             outputs = wait_for_selector(
@@ -381,10 +382,23 @@ class Notebook:
         else:
             outputs = wait_for_selector(self.cells[index], "div .output_area")
         outputText = ""
+        has_error = False
         for output in outputs:
+            try:
+                errors = output.find_element_by_css_selector('.output_stderr')
+                if expect_error:
+                    has_error = True
+                else:
+                    raise ValueError(f'Cell produces error message: {errors.text}')
+            except NoSuchElementException:
+                # if no error, ok
+                pass
             outputText += output.text + "\n"
         if "Out" in outputText:
             outputText = "".join(outputText.split(":")[1:])
+
+        if expect_error and not has_error:
+            raise ValueError('Expect an error message from cell output, none found.')
         return outputText.strip()
 
     def get_elems_in_cell_output(self, index=0, selector='img'):

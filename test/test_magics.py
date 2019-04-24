@@ -473,6 +473,12 @@ with open('a.html', 'w') as dot:
             %set -v1
             """), kernel="SoS")
         assert "set" in notebook.get_cell_output(index=idx)
+        #
+        # not accept workflow name
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+            %set haha
+            """), kernel="SoS")
+        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(index=idx, expect_error=True)
 
     @pytest.mark.skipIf(sys.platform == 'win32', reason='! magic does not support built-in command #203')
     def test_magic_shell(self, notebook):
