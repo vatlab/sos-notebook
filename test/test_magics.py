@@ -503,6 +503,45 @@ with open('a.html', 'w') as dot:
     #     with open(tmp_file) as tt:
     #         assert 'kkk' in tt.read()
 
+    def test_magic_use(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %use R0 -l sos_r.kernel:sos_R -c #CCCCCC
+            '''), kernel='SoS')
+        assert all([a == b] for a, b in zip([80, 80, 80],
+                                            notebook.get_input_backgroundColor(idx)))            
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC
+            '''), kernel='SoS')
+        assert all([a == b] for a, b in zip([80, 80, 80],
+                                            notebook.get_input_backgroundColor(idx)))               
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %use R2 -k ir
+            '''), kernel='SoS')
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a <- 1024
+            '''), kernel='R2')
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a
+            '''), kernel='R2')
+        assert '1024' == notebook.get_cell_output(index=idx)
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %use R3 -k ir -l R
+            '''), kernel='SoS')
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a <- 233
+            '''), kernel='R3')
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a
+            '''), kernel='R3')   
+        assert '233' == notebook.get_cell_output(index=idx)            
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %use R2 -c red
+            '''), kernel='R3')   
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a
+            '''), kernel='R2')   
+        assert '1024' == notebook.get_cell_output(index=idx)
+
     def test_sos_vars(self, notebook):
         # test automatic tranfer of sos variables
         command = str("sosa = f'{3*8}'")
