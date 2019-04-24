@@ -17,7 +17,7 @@ class BasicTest:
     pass
 
 
-class Test_Magics(BasicTest):
+class TestMagics(BasicTest):
 
     def test_magic_in_subkernel(self, notebook):
         '''test %pwd in the python3 kernel (which is not a sos magic)'''

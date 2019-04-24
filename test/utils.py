@@ -16,8 +16,6 @@ from selenium.webdriver.support.ui import Select
 
 from contextlib import contextmanager
 import re
-from sos.utils import env
-
 
 pjoin = os.path.join
 
@@ -108,7 +106,7 @@ class Notebook:
         wait_for_selector(browser, "#panel", timeout=10,
                           visible=False, single=True)
         self.panelInput = self.browser.find_element_by_xpath(
-            "//*[@id='panel-wrapper']/div[5]")
+            "//*[@id='panel-wrapper']/*[contains(@class,'anchor-cell')]")
 
     def __len__(self):
         return len(self.cells)
@@ -426,10 +424,7 @@ class Notebook:
         return index + 1
 
     def get_sidePanel(self):
-        if self.browser.find_element_by_id("panel").is_displayed():
-            return True
-        else:
-            return False
+        return bool(self.browser.find_element_by_id("panel").is_displayed())
 
     def toggle_sidePanel(self):
         panelButton = self.browser.find_element_by_id("panel_button")
@@ -441,7 +436,7 @@ class Notebook:
         self.panelInput.send_keys(Keys.ENTER, content)
         time.sleep(10)
 
-    def shift_kernel_inPanel(self, kernel_name="SoS", by_click=True):
+    def shift_console_kernel(self, kernel_name="SoS", by_click=True):
         kernel_selector = 'option[value={}]'.format(kernel_name)
         kernelList = self.panelInput.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
