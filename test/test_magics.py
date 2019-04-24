@@ -12,6 +12,7 @@ from textwrap import dedent
 
 from sos_notebook.test_utils import NotebookTest
 
+
 class TestMagics(NotebookTest):
 
     def test_magic_in_subkernel(self, notebook):
@@ -191,19 +192,19 @@ class TestMagics(NotebookTest):
             b <- 122
             c <- 555
             a
-            '''), kernel="R")    
-        assert "1025" == notebook.get_cell_output(index=idx)                    
+            '''), kernel="R")
+        assert "1025" == notebook.get_cell_output(index=idx)
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %get _b_a
             .b_a
-            '''), kernel="R", expect_error=True)    
-        assert "22" in notebook.get_cell_output(index=idx)                    
+            '''), kernel="R", expect_error=True)
+        assert "22" in notebook.get_cell_output(index=idx)
         # get from another kernel
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %get c --from R
             c
-            '''), kernel="R")    
-        assert "555" in notebook.get_cell_output(index=idx)  
+            '''), kernel="R")
+        assert "555" in notebook.get_cell_output(index=idx)
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
@@ -300,12 +301,95 @@ class TestMagics(NotebookTest):
         assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
             index=idx, selector='img')
 
+    def test_magic_preview_in_R(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview mtcars
+            %use R
+            '''), kernel="R")
+        assert 'mtcars' in notebook.get_cell_output(index=idx)
+
+    def test_magic_preview_png(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview -n a.png
+            R:
+                png('a.png')
+                plot(0)
+                dev.off()
+            '''), kernel="SoS")
+        assert 'a.png' in notebook.get_cell_output(index=idx)
+        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
+            index=idx, selector='img')
+
+    def test_magic_preview_jpg(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview -n a.jp*
+            R:
+                jpeg('a.jpg')
+                plot(0)
+                dev.off()
+            '''), kernel="SoS")
+        assert 'a.jpg' in notebook.get_cell_output(index=idx)
+        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
+            index=idx, selector='img')
+
+    def test_magic_preview_pdf(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview -n a.pdf
+            R:
+                pdf('a.pdf')
+                plot(0)
+                dev.off()
+            '''), kernel="SoS")
+        assert 'a.pdf' in notebook.get_cell_output(index=idx)
+        assert 'a.pdf' in notebook.get_elems_in_cell_output(
+            index=idx, selector='embed')
+        # preview as png
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview -n a.pdf -s png
+            R:
+                pdf('a.pdf')
+                plot(0)
+                dev.off()
+            '''), kernel="SoS")
+        assert 'a.pdf' in notebook.get_cell_output(index=idx)
+        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
+            index=idx, selector='img')
+
     def test_magic_preview_var(self, notebook):
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %preview -n a
             a=1
             '''), kernel="SoS")
         assert '> a: int' in notebook.get_cell_output(index=idx)
+
+    def test_magic_preview_var_limit(self, notebook):
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %preview mtcars -n -l 10
+            %get mtcars --from R
+            '''), kernel="SoS")
+        output = notebook.get_cell_output(index=idx)
+        assert 'mtcars' in output and 'Duster' in output and 'Maserati' not in output
+
+    # def test_magic_preview_var_scatterplot(self, notebook):
+    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #         %preview mtcars -n -s scatterplot mpg disp --by cyl
+    #         %get mtcars --from R
+    #         '''), kernel="SoS")
+    #     output = notebook.get_cell_output(index=idx)
+
+    # def test_magic_preview_var_scatterplot_tooltip(self, notebook):
+    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #         %preview mtcars -n -s scatterplot _index disp hp mpg --tooltip wt qsec
+    #         %get mtcars --from R
+    #         '''), kernel="SoS")
+    #     output = notebook.get_cell_output(index=idx)
+
+    # def test_magic_preview_var_scatterplot_log(self, notebook):
+    #     idx=notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #         %preview mtcars -n -s scatterplot disp hp --log xy --xlim 60 80 --ylim 40 300
+    #         %get mtcars --from R
+    #         '''), kernel="SoS")
+    #     output=notebook.get_cell_output(index=idx)
 
     def test_magic_preview_csv(self, notebook):
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
@@ -464,7 +548,7 @@ with open('a.html', 'w') as dot:
         idx = notebook.append_and_execute_cell_in_kernel(
             content='cat(b1)', kernel="R")
         assert "this is python" in notebook.get_cell_output(index=idx)
-        # 
+        #
         # test put variable with invalid names
         notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %put .a.b
@@ -481,14 +565,14 @@ with open('a.html', 'w') as dot:
             '''), kernel="SoS")
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             my_var
-            '''), kernel="R")            
+            '''), kernel="R")
         assert "'124'" == notebook.get_cell_output(index=idx)
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             my_var = 'something else'
-            '''), kernel="R") 
+            '''), kernel="R")
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             my_var
-            '''), kernel="SoS")            
+            '''), kernel="SoS")
         assert "'124'" == notebook.get_cell_output(index=idx)
 
     def test_magic_sandbox(self, notebook):
@@ -534,7 +618,8 @@ with open('a.html', 'w') as dot:
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %set haha
             """), kernel="SoS", expect_error=True)
-        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(index=idx)
+        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(
+            index=idx)
 
     @pytest.mark.skipIf(sys.platform == 'win32', reason='! magic does not support built-in command #203')
     def test_magic_shell(self, notebook):
@@ -563,12 +648,12 @@ with open('a.html', 'w') as dot:
             %use R0 -l sos_r.kernel:sos_R -c #CCCCCC
             '''), kernel='SoS')
         assert all([a == b] for a, b in zip([80, 80, 80],
-                                            notebook.get_input_backgroundColor(idx)))            
+                                            notebook.get_input_backgroundColor(idx)))
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC
             '''), kernel='SoS')
         assert all([a == b] for a, b in zip([80, 80, 80],
-                                            notebook.get_input_backgroundColor(idx)))               
+                                            notebook.get_input_backgroundColor(idx)))
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %use R2 -k ir
             '''), kernel='SoS')
@@ -587,14 +672,14 @@ with open('a.html', 'w') as dot:
             '''), kernel='R3')
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             a
-            '''), kernel='R3')   
-        assert '233' == notebook.get_cell_output(index=idx)            
+            '''), kernel='R3')
+        assert '233' == notebook.get_cell_output(index=idx)
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %use R2 -c red
-            '''), kernel='R3')   
+            '''), kernel='R3')
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             a
-            '''), kernel='R2')   
+            '''), kernel='R2')
         assert '1024' == notebook.get_cell_output(index=idx)
 
     def test_sos_vars(self, notebook):
