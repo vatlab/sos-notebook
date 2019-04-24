@@ -212,8 +212,10 @@ class TestMagics(BasicTest):
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %run --floatvar 1 --test_mode --INT_LIST 1 2 3 --infile a.txt
             VAR = 'This var is defined without global.'
+
             [global]
             GLOBAL_VAR='This var is defined with global.'
+
             [step_1]
             CELL_VAR='This var is defined in Cell.'
             parameter: floatvar=float
@@ -223,6 +225,7 @@ class TestMagics(BasicTest):
             print(CELL_VAR)
             print(floatvar)
             print(stringvar)
+
             [step_2]
             parameter: test_mode=bool
             parameter: INT_LIST=[]
@@ -483,18 +486,20 @@ with open('a.html', 'w') as dot:
             """), kernel="SoS")
         assert "haha" in notebook.get_cell_output(index=idx)
 
-    def test_magic_sossave(self, notebook):
-        tmp_file = os.path.join(os.path.expanduser('~'), 'test_sossave.html')
-        if os.path.isfile(tmp_file):
-            os.remove(tmp_file)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            %sossave ~/test_sossave.html --force
-            [10]
-            print('kkk')
-            """), kernel="SoS")
-        with open(tmp_file) as tt:
-            assert 'kkk' in tt.read()
-        os.remove(tmp_file)
+    # def test_magic_sossave(self, notebook):
+    #     # we cannot test this because this magic assumes a local .ipynb file
+    #     # with names passed form metadata.
+    #     tmp_file = os.path.join(os.path.expanduser('~'), 'test_sossave.html')
+    #     if os.path.isfile(tmp_file):
+    #         os.remove(tmp_file)
+    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+    #         %sossave ~/test_sossave.html --force
+    #         [10]
+    #         print('kkk')
+    #         """), kernel="SoS")
+    #     assert 'Workflow saved to' in notebook.get_cell_output(idx)
+    #     with open(tmp_file) as tt:
+    #         assert 'kkk' in tt.read()
 
     def test_sos_vars(self, notebook):
         # test automatic tranfer of sos variables

@@ -5,6 +5,7 @@ import os
 import pydoc
 import re
 import shlex
+import builtins
 import subprocess
 import sys
 from collections import Sized, OrderedDict
@@ -661,6 +662,8 @@ class Preview_Magic(SoS_Magic):
     def preview_var(self, item, style=None):
         if item in env.sos_dict:
             obj = env.sos_dict[item]
+        elif item in dir(builtins):
+            obj = getattr(builtins, item)
         else:
             return None, f"Unknown variable {item}"
         # get the basic information of object

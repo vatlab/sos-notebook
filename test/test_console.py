@@ -20,6 +20,8 @@ def test_sidepanel(notebook):
     notebook.edit_cell(index=0, content=command, render=False)
     notebook.execute_cell(cell_or_index=0, inPanel=True)
     # assert "1"==notebook.get_cell_output(index=1,inPanel=True)
-    notebook.shift_console_kernel(kernel_name="python3", by_click=True)
-    content = "print(2)"
-    notebook.edit_panel_input(content=content)
+
+    # FIXME
+    # notebook.shift_console_kernel(kernel_name="python3", by_click=True)
+    # content = "print(2)"
+    # notebook.edit_panel_input(content=content)
