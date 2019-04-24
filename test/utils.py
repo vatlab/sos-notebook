@@ -19,7 +19,6 @@ import re
 from sos.utils import env
 
 
-
 pjoin = os.path.join
 
 
@@ -95,20 +94,21 @@ def _wait_for_multiple(driver, locator_type, locator, timeout, wait_for_n, visib
     return wait.until(multiple_found)
 
 
-
-
 class CellTypeError(ValueError):
 
     def __init__(self, message=""):
         self.message = message
+
 
 class Notebook:
 
     def __init__(self, browser):
         self.browser = browser
         self.disable_autosave_and_onbeforeunload()
-        wait_for_selector(browser, "#panel", timeout=10, visible=False, single=True)
-        self.panelInput=self.browser.find_element_by_xpath("//*[@id='panel-wrapper']/div[5]")
+        wait_for_selector(browser, "#panel", timeout=10,
+                          visible=False, single=True)
+        self.panelInput = self.browser.find_element_by_xpath(
+            "//*[@id='panel-wrapper']/div[5]")
 
     def __len__(self):
         return len(self.cells)
@@ -148,8 +148,6 @@ class Notebook:
     def panel_cells(self):
         return list(self.browser.find_elements_by_xpath("//*[@id='panel']/div"))
 
-
-
     @property
     def current_index(self):
         return self.index(self.current_cell)
@@ -163,7 +161,8 @@ class Notebook:
         This is most easily done by using js directly.
         """
         self.browser.execute_script("window.onbeforeunload = null;")
-        self.browser.execute_script("Jupyter.notebook.set_autosave_interval(0)")
+        self.browser.execute_script(
+            "Jupyter.notebook.set_autosave_interval(0)")
 
     def to_command_mode(self):
         """Changes us into command mode on currently focused cell
@@ -171,8 +170,8 @@ class Notebook:
         """
         self.body.send_keys(Keys.ESCAPE)
         self.browser.execute_script("return Jupyter.notebook.handle_command_mode("
-                                       "Jupyter.notebook.get_cell("
-                                           "Jupyter.notebook.get_edit_index()))")
+                                    "Jupyter.notebook.get_cell("
+                                    "Jupyter.notebook.get_edit_index()))")
 
     def focus_cell(self, index=0):
         cell = self.cells[index]
@@ -192,8 +191,10 @@ class Notebook:
         self.body.send_keys('f')
         wait_for_selector(self.browser, "#find-and-replace", single=True)
         self.browser.find_element_by_id("findreplace_allcells_btn").click()
-        self.browser.find_element_by_id("findreplace_find_inp").send_keys(find_txt)
-        self.browser.find_element_by_id("findreplace_replace_inp").send_keys(replace_txt)
+        self.browser.find_element_by_id(
+            "findreplace_find_inp").send_keys(find_txt)
+        self.browser.find_element_by_id(
+            "findreplace_replace_inp").send_keys(replace_txt)
         self.browser.find_element_by_id("findreplace_replaceall_btn").click()
 
     def convert_cell_type(self, index=0, cell_type="code"):
@@ -223,7 +224,6 @@ class Notebook:
         wait = WebDriverWait(self.browser, 10)
         element = wait.until(EC.staleness_of(cell))
 
-
     def get_cells_contents(self):
         JS = 'return Jupyter.notebook.get_cells().map(function(c) {return c.get_text();})'
         return self.browser.execute_script(JS)
@@ -232,9 +232,10 @@ class Notebook:
         return self.cells[index].find_element_by_css_selector(selector).text
 
     def get_cell_output(self, index=0, inPanel=False):
-        outputs=""
+        outputs = ""
         if inPanel:
-            outputs = wait_for_selector(self.panel_cells[index], "div .output_area")
+            outputs = wait_for_selector(
+                self.panel_cells[index], "div .output_area")
         else:
             outputs = wait_for_selector(self.cells[index], "div .output_area")
         outputText = ""
@@ -244,15 +245,27 @@ class Notebook:
             outputText = "".join(outputText.split(":")[1:])
         return outputText.strip()
 
+    def get_elem_in_cell_output(self, index=0, selector='img'):
+        '''get the output of particular tag'''
+        from sos.utils import env
+        outputs = wait_for_selector(self.cells[index], "div .output_area")
+        env.log_to_file(outputs)
+        outputText = ""
+        for output in outputs:
+            env.log_to_file(f'output is {output}')
+            elem = output.find_element_by_css_selector(selector)
+            env.log_to_file(f'{elem.tag_name} {elem.text} {elem.get_attribute("src")}')
+            outputText += elem.get_attribute("src") + '\n'
 
-    def wait_for_output(self,index=0):
+        return outputText.strip()
+
+    def wait_for_output(self, index=0):
         time.sleep(10)
         return self.get_cell_output(index)
 
-
-
     def set_cell_metadata(self, index, key, value):
-        JS = 'Jupyter.notebook.get_cell({}).metadata.{} = {}'.format(index, key, value)
+        JS = 'Jupyter.notebook.get_cell({}).metadata.{} = {}'.format(
+            index, key, value)
         return self.browser.execute_script(JS)
 
     def get_cell_type(self, index=0):
@@ -260,7 +273,8 @@ class Notebook:
         return self.browser.execute_script(JS)
 
     def set_cell_input_prompt(self, index, prmpt_val):
-        JS = 'Jupyter.notebook.get_cell({}).set_input_prompt({})'.format(index, prmpt_val)
+        JS = 'Jupyter.notebook.get_cell({}).set_input_prompt({})'.format(
+            index, prmpt_val)
         self.browser.execute_script(JS)
 
     def edit_cell(self, cell=None, index=0, content="", render=False):
@@ -273,11 +287,10 @@ class Notebook:
         # Select & delete anything already in the cell
         self.current_cell.send_keys(Keys.ENTER)
 
-
-        if platform=="darwin":
-           command(self.browser, 'a')
+        if platform == "darwin":
+            command(self.browser, 'a')
         else:
-           ctrl(self.browser, 'a')
+            ctrl(self.browser, 'a')
 
         self.current_cell.send_keys(Keys.DELETE)
 
@@ -287,9 +300,10 @@ class Notebook:
         #         lines+="\n"+line
         #     else:
         #         lines=line
-        self.browser.execute_script("IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
+        self.browser.execute_script(
+            "IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
 
-            # self.current_cell.send_keys(Keys.ENTER, line)
+        # self.current_cell.send_keys(Keys.ENTER, line)
         if render:
             self.execute_cell(self.current_index)
 
@@ -305,7 +319,6 @@ class Notebook:
             self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
         else:
             self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
-
 
     def add_cell(self, index=-1, cell_type="code", content=""):
         self.focus_cell(index)
@@ -347,51 +360,55 @@ class Notebook:
     def trigger_keydown(self, keys):
         trigger_keystrokes(self.body, keys)
 
-
     def get_kernel_list(self):
-        kernelMenu=self.browser.find_element_by_id("menu-change-kernel-submenu")
-        kernelEntries=kernelMenu.find_elements_by_tag_name("a")
-        kernels=[]
+        kernelMenu = self.browser.find_element_by_id(
+            "menu-change-kernel-submenu")
+        kernelEntries = kernelMenu.find_elements_by_tag_name("a")
+        kernels = []
         for kernelEntry in kernelEntries:
             kernels.append(kernelEntry.get_attribute('innerHTML'))
         return kernels
 
-    def shift_kernel(self,index=0,kernel_name="SoS", by_click=True):
+    def shift_kernel(self, index=0, kernel_name="SoS", by_click=True):
         self.focus_cell(index)
         kernel_selector = 'option[value={}]'.format(kernel_name)
-        kernelList=self.current_cell.find_element_by_tag_name("select")
-        kernel=wait_for_selector(kernelList, kernel_selector, single=True)
+        kernelList = self.current_cell.find_element_by_tag_name("select")
+        kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
             kernel.click()
         else:
-            self.edit_cell(index=0, content="%use {}".format(kernel_name),render=True)
+            self.edit_cell(index=0, content="%use {}".format(
+                kernel_name), render=True)
 
-    def get_input_backgroundColor(self,index=0,inPanel=False):
+    def get_input_backgroundColor(self, index=0, inPanel=False):
         if inPanel:
-            rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
+            rgba = self.current_cell.find_element_by_class_name(
+                "input_prompt").value_of_css_property("background-color")
         else:
             self.focus_cell(index)
-            rgba=self.current_cell.find_element_by_class_name("input_prompt").value_of_css_property("background-color")
+            rgba = self.current_cell.find_element_by_class_name(
+                "input_prompt").value_of_css_property("background-color")
 
-        r,g,b,a = map(int, re.search(
-             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
-        return [r,g,b]
+        r, g, b, a = map(int, re.search(
+            r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
+        return [r, g, b]
 
-    def get_output_backgroundColor(self,index=0):
+    def get_output_backgroundColor(self, index=0):
 
-        rgba=self.current_cell.find_element_by_class_name("out_prompt_overlay").value_of_css_property("background-color")
-        r,g,b,a = map(int, re.search(
-             r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
-        return [r,g,b]
+        rgba = self.current_cell.find_element_by_class_name(
+            "out_prompt_overlay").value_of_css_property("background-color")
+        r, g, b, a = map(int, re.search(
+            r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
+        return [r, g, b]
 
-    def add_and_execute_cell_in_kernel(self, index=-1, cell_type="code", content="",kernel="SoS"):
+    def add_and_execute_cell_in_kernel(self, index=-1, cell_type="code", content="", kernel="SoS"):
         self.add_cell(index=index, cell_type=cell_type, content=content)
-        self.shift_kernel(index=index+1,kernel_name=kernel,by_click=True)
+        self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
         self.execute_cell(cell_or_index=index+1)
 
-    def append_and_execute_cell_in_kernel(self, content="",kernel="SoS"):
+    def append_and_execute_cell_in_kernel(self, content="", kernel="SoS"):
         # there will be at least a new cell from the new notebook.
-        index = len(self.cells) - 1   
+        index = len(self.cells) - 1
         self.add_cell(index=index, cell_type="code", content=content)
         self.shift_kernel(index=index+1, kernel_name=kernel, by_click=True)
         self.execute_cell(cell_or_index=index+1)
@@ -404,27 +421,21 @@ class Notebook:
             return False
 
     def toggle_sidePanel(self):
-        panelButton=self.browser.find_element_by_id("panel_button")
+        panelButton = self.browser.find_element_by_id("panel_button")
         panelButton.click()
 
-    def edit_panel_input(self,content):
-        print("panel",self.panelInput.get_attribute("innerHTML"))
+    def edit_panel_input(self, content):
+        print("panel", self.panelInput.get_attribute("innerHTML"))
         self.panelInput.click()
         self.panelInput.send_keys(Keys.ENTER, content)
         time.sleep(10)
 
-    def shift_kernel_inPanel(self,kernel_name="SoS", by_click=True):
-
+    def shift_kernel_inPanel(self, kernel_name="SoS", by_click=True):
         kernel_selector = 'option[value={}]'.format(kernel_name)
-        kernelList=self.panelInput.find_element_by_tag_name("select")
-        kernel=wait_for_selector(kernelList, kernel_selector, single=True)
+        kernelList = self.panelInput.find_element_by_tag_name("select")
+        kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
             kernel.click()
-
-
-
-
-
 
     @classmethod
     def new_notebook(cls, browser, kernel_name='kernel-sos'):
@@ -437,11 +448,13 @@ def select_kernel(browser, kernel_name='kernel-sos'):
     """Clicks the "new" button and selects a kernel from the options.
     """
     wait = WebDriverWait(browser, 10)
-    new_button = wait.until(EC.element_to_be_clickable((By.ID, "new-dropdown-button")))
+    new_button = wait.until(EC.element_to_be_clickable(
+        (By.ID, "new-dropdown-button")))
     new_button.click()
     kernel_selector = '#{} a'.format(kernel_name)
     kernel = wait_for_selector(browser, kernel_selector, single=True)
     kernel.click()
+
 
 @contextmanager
 def new_window(browser, selector=None):
@@ -473,16 +486,20 @@ def new_window(browser, selector=None):
     if selector is not None:
         wait_for_selector(browser, selector)
 
+
 def shift(browser, k):
     """Send key combination Shift+(k)"""
-    trigger_keystrokes(browser, "shift-%s"%k)
+    trigger_keystrokes(browser, "shift-%s" % k)
+
 
 def ctrl(browser, k):
     """Send key combination Ctrl+(k)"""
-    trigger_keystrokes(browser, "control-%s"%k)
+    trigger_keystrokes(browser, "control-%s" % k)
 
-def command(browser,k):
-    trigger_keystrokes(browser,"command-%s"%k)
+
+def command(browser, k):
+    trigger_keystrokes(browser, "command-%s" % k)
+
 
 def trigger_keystrokes(browser, *keys):
     """ Send the keys in sequence to the browser.
@@ -497,9 +514,11 @@ def trigger_keystrokes(browser, *keys):
         if len(keys) > 1:  # key has modifiers eg. control, alt, shift
             modifiers_keys = [getattr(Keys, x.upper()) for x in keys[:-1]]
             ac = ActionChains(browser)
-            for i in modifiers_keys: ac = ac.key_down(i)
+            for i in modifiers_keys:
+                ac = ac.key_down(i)
             ac.send_keys(keys[-1])
-            for i in modifiers_keys[::-1]: ac = ac.key_up(i)
+            for i in modifiers_keys[::-1]:
+                ac = ac.key_up(i)
             ac.perform()
         else:              # single key stroke. Check if modifier eg. "up"
             browser.send_keys(getattr(Keys, keys[0].upper(), keys[0]))

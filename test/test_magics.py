@@ -71,6 +71,19 @@ class Test_Magics(BasicTest):
         assert "A parameter 100 greater than 50 is specified." == notebook.get_cell_output(
             index=idx)
 
+    def test_magic_matplotlib(self, notebook):
+        # test %capture
+        idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
+            %matplotlib inline
+
+            import matplotlib.pyplot as plt
+            import numpy as np
+            x = np.linspace(0, 10)
+            plt.plot(x, np.sin(x), '--', linewidth=2)
+            plt.show()
+            """), kernel="SoS")
+        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(index=idx, selector='img')
+
     def test_magic_get(self, notebook):
         # test %get
         command = "a = [1, 2, 3] \nb = [1, 2, '3']"
