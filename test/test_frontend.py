@@ -12,6 +12,7 @@ from sos_notebook.test_utils import flush_channels, sos_kernel, NotebookTest
 
 import time
 
+
 class TestFrontEnd(NotebookTest):
     def test_sidepanel(self, notebook):
         time.sleep(2)
@@ -23,24 +24,23 @@ class TestFrontEnd(NotebookTest):
         time.sleep(2)
         assert True == notebook.get_sidePanel()
 
-        #command = "print(1)"
-        #notebook.edit_cell(index=0, content=command, render=False)
-        #notebook.execute_cell(cell_or_index=0, inPanel=True)
-        # assert "1"==notebook.get_cell_output(index=1,inPanel=True)
+        command = "print(1)"
+        notebook.edit_cell(index=0, content=command, render=False)
+        notebook.execute_cell(cell_or_index=0, inPanel=True)
+        assert "1" == notebook.get_cell_output(index=1, inPanel=True)
 
         # FIXME
         # notebook.shift_console_kernel(kernel_name="python3", by_click=True)
         # content = "print(2)"
         # notebook.edit_panel_input(content=content)
 
-
     def test_switch_kernel(self, notebook):
         kernels = notebook.get_kernel_list()
         assert "SoS" in kernels
         assert "R" in kernels
         backgroundColor = {"SoS": [0, 0, 0],
-                        "R": [220, 220, 218],
-                        "python3": [255, 217, 26]}
+                           "R": [220, 220, 218],
+                           "python3": [255, 217, 26]}
 
         # test shift to R kernel by click
         notebook.shift_kernel(index=0, kernel_name="R", by_click=True)
@@ -50,10 +50,11 @@ class TestFrontEnd(NotebookTest):
 
         # the cell keeps its color after evaluation
         notebook.edit_cell(index=0, content=dedent("""\
-            %preview -n rn[1:3]
-            rn <- rnorm(50)
+            %preview -n rn
+            rn <- rnorm(5)
             """), render=True)
-        assert "rn[1:3]" in notebook.get_cell_output(index=0)
+        output = notebook.get_cell_output(index=0)
+        assert "rn" in output and 'num' in output
         assert all([a == b] for a, b in zip(backgroundColor["R"],
                                             notebook.get_output_backgroundColor(0)))
 
@@ -64,7 +65,7 @@ class TestFrontEnd(NotebookTest):
             '''), kernel='SoS')
         assert all([a == b] for a, b in zip(backgroundColor["SoS"],
                                             notebook.get_input_backgroundColor(idx)))
-        assert "50" in notebook.get_cell_output(index=idx)
+        assert "5" in notebook.get_cell_output(index=idx)
 
         # switch to python3 kernel
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
