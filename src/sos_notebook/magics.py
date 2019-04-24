@@ -1531,7 +1531,7 @@ class Sandbox_Magic(SoS_Magic):
                 os.chdir(new_dir)
             if not args.keep_dict:
                 old_dict = env.sos_dict
-                self.sos_kernel._reset_dict()
+                env.sos_dict._dict.clear()
             ret = self.sos_kernel._do_execute(
                 remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error and ret['status'] == 'error':

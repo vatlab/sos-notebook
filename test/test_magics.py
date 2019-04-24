@@ -303,7 +303,7 @@ class TestMagics(NotebookTest):
 
     def test_magic_preview_in_R(self, notebook):
         idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %preview mtcars
+            %preview -n mtcars
             %use R
             '''), kernel="R")
         assert 'mtcars' in notebook.get_cell_output(index=idx)
