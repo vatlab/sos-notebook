@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 from selenium.webdriver import Firefox, Remote, Chrome
 from selenium import webdriver
-from .utils import Notebook
+from sos_notebook.test_utils import Notebook
 
 pjoin = os.path.join
 

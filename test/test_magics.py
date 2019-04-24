@@ -4,20 +4,15 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-import time
-from textwrap import dedent
-from sos.utils import env
 import pytest
 import os
 import sys
 
+from textwrap import dedent
 
-@pytest.mark.usefixtures("notebook")
-class BasicTest:
-    pass
+from sos_notebook.test_utils import NotebookTest
 
-
-class TestMagics(BasicTest):
+class TestMagics(NotebookTest):
 
     def test_magic_in_subkernel(self, notebook):
         '''test %pwd in the python3 kernel (which is not a sos magic)'''
@@ -108,7 +103,7 @@ class TestMagics(BasicTest):
 
     def test_magic_clear(self, notebook):
         # test %clear
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
             %clear --all
             '''), kernel="SoS")
         # check output
@@ -121,7 +116,7 @@ class TestMagics(BasicTest):
         assert 'Connection file' in notebook.get_cell_output(index=idx)
 
     def test_magic_debug(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %debug on
             %debug off
             """), kernel="SoS")
@@ -441,7 +436,7 @@ with open('a.html', 'w') as dot:
         assert "this is python" in notebook.get_cell_output(index=idx)
 
     def test_magic_sandbox(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %sandbox
             with open('test_blah.txt', 'w') as tb:
                 tb.write('a')
@@ -452,7 +447,7 @@ with open('a.html', 'w') as dot:
         tmp_file = os.path.join(os.path.expanduser('~'), 'test_save.txt')
         if os.path.isfile(tmp_file):
             os.remove(tmp_file)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
             %save ~/test_save.txt
             a=1
             """), kernel="SoS")

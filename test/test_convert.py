@@ -4,19 +4,15 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import os
-import sys
 import shutil
 import subprocess
 import unittest
-import nbformat
 
-from sos.utils import env
-from sos_notebook.converter import notebook_to_script, script_to_notebook, SoS_ExecutePreprocessor
+from sos_notebook.converter import notebook_to_script, script_to_notebook
 
 
 class TestConvert(unittest.TestCase):
     def setUp(self):
-        env.reset()
         self.olddir = os.getcwd()
         file_dir = os.path.split(__file__)[0]
         if file_dir:
