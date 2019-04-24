@@ -160,21 +160,50 @@ class TestMagics(NotebookTest):
 
     def test_magic_get(self, notebook):
         # test %get
-        command = "a = [1, 2, 3] \nb = [1, 2, '3']"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="SoS")
-        command = "%get a \na"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="Python3")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a = [1, 2, 3]
+            b = [1, 2, '3']
+            '''), kernel="SoS")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get a
+            a
+            '''), kernel="Python3")
         assert "[1, 2, 3]" == notebook.get_cell_output(index=idx)
-        command = "%get b \nstr(b)\nR_var <- 'R variable'"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="R")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get b
+            str(b)
+            R_var <- 'R variable'
+            '''), kernel="R")
         assert "List of 3" in notebook.get_cell_output(index=idx)
-        command = "%get --from R R_var \n R_var"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="Python3")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get --from R R_var
+            R_var
+            '''), kernel="Python3")
         assert "R variable" in notebook.get_cell_output(index=idx)
+        #
+        # get with different variable names
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            a = 1025
+            _b_a = 22
+            '''), kernel="SoS")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get a
+            b <- 122
+            c <- 555
+            a
+            '''), kernel="R")    
+        assert "1025" == notebook.get_cell_output(index=idx)                    
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get _b_a
+            .b_a
+            '''), kernel="R", expect_error=True)    
+        assert "22" in notebook.get_cell_output(index=idx)                    
+        # get from another kernel
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %get c --from R
+            c
+            '''), kernel="R")    
+        assert "555" in notebook.get_cell_output(index=idx)  
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
@@ -435,6 +464,32 @@ with open('a.html', 'w') as dot:
         idx = notebook.append_and_execute_cell_in_kernel(
             content='cat(b1)', kernel="R")
         assert "this is python" in notebook.get_cell_output(index=idx)
+        # 
+        # test put variable with invalid names
+        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %put .a.b
+            .a.b <- 22'''), kernel="R", expect_error=True)
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            _a_b
+            '''), kernel="SoS")
+        assert "22" == notebook.get_cell_output(index=idx)
+        #
+        # test independence of variables
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            %put my_var --to R
+            my_var = '124'
+            '''), kernel="SoS")
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            my_var
+            '''), kernel="R")            
+        assert "'124'" == notebook.get_cell_output(index=idx)
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            my_var = 'something else'
+            '''), kernel="R") 
+        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            my_var
+            '''), kernel="SoS")            
+        assert "'124'" == notebook.get_cell_output(index=idx)
 
     def test_magic_sandbox(self, notebook):
         notebook.append_and_execute_cell_in_kernel(content=dedent("""\
