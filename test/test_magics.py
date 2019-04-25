@@ -6,6 +6,7 @@
 import pytest
 import os
 import sys
+import tempfile
 
 from sos_notebook.test_utils import NotebookTest
 
@@ -712,19 +713,19 @@ class TestMagics(NotebookTest):
     def test_magic_shell(self, notebook):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
-    # def test_magic_sossave(self, notebook):
-    #     # we cannot test this because this magic assumes a local .ipynb file
-    #     # with names passed form metadata.
-    #     tmp_file = os.path.join(os.path.expanduser('~'), 'test_sossave.html')
-    #     if os.path.isfile(tmp_file):
-    #         os.remove(tmp_file)
-    #     assert 'Workflow saved to' in notebook.check_output("""\
-    #         %sossave ~/test_sossave.html --force
-    #         [10]
-    #         print('kkk')
-    #         """, kernel="SoS")
-    #     with open(tmp_file) as tt:
-    #         assert 'kkk' in tt.read()
+    def test_magic_sossave(self, notebook):
+        #
+        notebook.save()
+        tmp_file = os.path.join(tempfile.gettempdir(), 'test_sossave.html')
+        if os.path.isfile(tmp_file):
+            os.remove(tmp_file)
+        assert 'Workflow saved to' in notebook.check_output(f"""\
+            %sossave {tmp_file} --force
+            [10]
+            print('kkk')
+            """, kernel="SoS")
+        with open(tmp_file) as tt:
+            assert 'kkk' in tt.read()
 
     def test_magic_use(self, notebook):
         idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
