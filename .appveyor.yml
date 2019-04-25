@@ -32,9 +32,9 @@ install:
     - conda update -q conda
     # Useful for debugging any issues with conda
     - conda info -a
-    - conda install -c conda-forge feather-format
-      # 
-    # 
+    - conda install -c conda-forge feather-format r-base r-irkernel
+      #
+    #
     # add docker
     #- pip install docker
     # packages required by SoS
@@ -48,8 +48,7 @@ install:
     - pip install pytest
     - pip install . -U
     - python -m sos_notebook.install
-    - pip install git+https://github.com/vatlab/sos-bash.git
-    - pip install git+https://github.com/vatlab/sos-python.git
+    - pip install sos-python sos-r
 
 test_script:
     - cd test
