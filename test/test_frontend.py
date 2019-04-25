@@ -9,10 +9,11 @@ import unittest
 
 from ipykernel.tests.utils import execute, wait_for_idle
 from sos_notebook.test_utils import flush_channels, sos_kernel, NotebookTest
+from selenium.webdriver.common.keys import Keys
 
 
 class TestFrontEnd(NotebookTest):
-    def test_console_panel(self, notebook):
+    def test_toggle_console(self, notebook):
         time.sleep(2)
         assert notebook.is_console_panel_open()
         notebook.toggle_console_panel()
@@ -23,31 +24,50 @@ class TestFrontEnd(NotebookTest):
         assert notebook.is_console_panel_open()
 
     def test_run_in_console(self, notebook):
-        notebook.edit_cell(index=0, content="print(1)", render=False)
-        notebook.execute_cell(cell_or_index=0, in_console=True)
-        assert "1" == notebook.get_cell_output(1, in_console=True)
+        idx = notebook.call("print(1)", kernel="SoS")
+        notebook.execute_cell(idx, in_console=True)
+        # the latest history cell
+        assert "1" == notebook.get_cell_output(-1, in_console=True)
 
-        # FIXME:
-        # test setting different kernel in console and execute
-        #
-        # notebook.select_console_kernel(kernel_name="python3", by_click=True)
-        # content = "print(2)"
-        # notebook.edit_console_input(content)
+        # if the cell is non-SoS, the console should also change kernel
+        idx = notebook.call("cat(123)", kernel="R")
+        notebook.execute_cell(idx, in_console=True)
+        # the latest history cell
+        assert "123" == notebook.get_cell_output(-1, in_console=True)
+
+        idx = notebook.call("print(12345)", kernel="SoS")
+        notebook.execute_cell(idx, in_console=True)
+        # the latest history cell
+        assert "12345" == notebook.get_cell_output(-1, in_console=True)
 
     def test_run_directly_in_console(self, notebook):
-        # FIXME:
-        # test enter command in console panel and execute
-        pass
+        notebook.edit_prompt_cell('print("haha")', kernel='SoS', execute=True)
+        assert "haha" == notebook.get_cell_output(-1, in_console=True)
+
+        notebook.edit_prompt_cell('cat("haha2")', kernel="R", execute=True)
+        assert "haha2" == notebook.get_cell_output(-1, in_console=True)
 
     def test_history_in_console(self, notebook):
-        # FIXME:
-        # test use up and down arrow to navigate the history
-        pass
+        notebook.edit_prompt_cell("a = 1", execute=True)
+        assert "" == notebook.get_prompt_content()
+        notebook.edit_prompt_cell("b <- 2", kernel="R", execute=True)
+        assert "" == notebook.get_prompt_content()
+        notebook.prompt_cell.send_keys(Keys.UP)
+        assert "b <- 2" == notebook.get_prompt_content()
+        notebook.prompt_cell.send_keys(Keys.UP)
+        assert "a = 1" == notebook.get_prompt_content()
+        # FIXME: down keys does not work, perhaps because the cell is not focused and
+        # the first step would be jumping to the end of the line
+        notebook.prompt_cell.send_keys(Keys.DOWN)
+        notebook.prompt_cell.send_keys(Keys.DOWN)
+        #  assert 'b <- 2' == notebook.get_prompt_content()
 
     def test_clear_history(self, notebook):
-        # FIXME:
-        # test clear history using command "clear" in console window
-        pass
+        notebook.edit_prompt_cell("a = 1", execute=True)
+        notebook.edit_prompt_cell("b <- 2", kernel="R", execute=True)
+        # use "clear" to clear all panel cells
+        notebook.edit_prompt_cell("clear", kernel="SoS", execute=True)
+        assert not notebook.panel_cells
 
     def test_switch_kernel(self, notebook):
         kernels = notebook.get_kernel_list()

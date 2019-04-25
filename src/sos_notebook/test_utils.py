@@ -251,8 +251,7 @@ class Notebook:
         self._disable_autosave_and_onbeforeunload()
         wait_for_selector(browser, "#panel", timeout=10,
                           visible=False, single=True)
-        self.panelInput = self.browser.find_element_by_xpath(
-            "//*[@id='panel-wrapper']/*[contains(@class,'anchor-cell')]")
+        self.prompt_cell = list(self.browser.find_elements_by_xpath("//*[@id='panel-wrapper']/div"))[-1]
 
     def __len__(self):
         return len(self.cells)
@@ -281,12 +280,9 @@ class Notebook:
     @property
     def cells(self):
         """Gets all cells once they are visible.
-
         """
         # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(self.browser.find_elements_by_xpath("//*[@id='notebook-container']/div"))
-
-        # return self.browser.find_elements_by_class_name("cell")
 
     @property
     def panel_cells(self):
@@ -336,19 +332,19 @@ class Notebook:
         """
         if cell is not None:
             index = self.index(cell)
-        self._focus_cell(index)
 
-        # Select & delete anything already in the cell
-        self.current_cell.send_keys(Keys.ENTER)
+        # # Select & delete anything already in the cell
+        # self.current_cell.send_keys(Keys.ENTER)
 
-        if platform == "darwin":
-            command(self.browser, 'a')
-        else:
-            ctrl(self.browser, 'a')
+        # if platform == "darwin":
+        #     command(self.browser, 'a')
+        # else:
+        #     ctrl(self.browser, 'a')
 
-        self.current_cell.send_keys(Keys.DELETE)
+        # self.current_cell.send_keys(Keys.DELETE)
         self.browser.execute_script(
             "IPython.notebook.get_cell("+str(index)+").set_text("+repr(dedent(content))+")")
+        self._focus_cell(index)
 
         if render:
             self.execute_cell(self.current_index)
@@ -402,7 +398,7 @@ class Notebook:
             self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
         else:
             self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
-        self._wait_for_done(index, expect_error)
+            self._wait_for_done(index, expect_error)
 
     def call(self, content="", kernel="SoS", expect_error=False):
         '''
@@ -437,22 +433,22 @@ class Notebook:
                 self.panel_cells[index], "div .output_area")
         else:
             outputs = wait_for_selector(self.cells[index], "div .output_area")
-        outputText = ""
+        output_text = ""
         has_error = False
         for output in outputs:
             if selector:
                 try:
                     # some div might not have img
                     elem = output.find_element_by_css_selector(selector)
-                    outputText += elem.get_attribute(attribute) + '\n'
+                    output_text += elem.get_attribute(attribute) + '\n'
                 except NoSuchElementException:
                     pass
             #
-            outputText += output.text + "\n"
-        if "Out" in outputText:
-            outputText = "".join(outputText.split(":")[1:])
+            output_text += output.text + "\n"
+        if "Out" in output_text:
+            output_text = "".join(output_text.split(":")[1:])
 
-        return outputText.strip()
+        return output_text.strip()
 
     #
     # For console panel
@@ -464,18 +460,27 @@ class Notebook:
         panelButton = self.browser.find_element_by_id("panel_button")
         panelButton.click()
 
-    def edit_console_input(self, content):
-        # print("panel", self.panelInput.get_attribute("innerHTML"))
-        self.panelInput.click()
-        self.panelInput.send_keys(Keys.ENTER, content)
-        time.sleep(10)
+    def edit_prompt_cell(self, content, kernel='SoS', execute=False):
+        # print("panel", self.prompt_cell.get_attribute("innerHTML"))
+        self.browser.execute_script(
+            "window.my_panel.cell.set_text("+repr(dedent(content))+")")
 
-    def select_console_kernel(self, kernel_name="SoS", by_click=True):
+        # the div is not clickable so I use send_key to get around it
+        self.prompt_cell.send_keys('\n')
+        self.select_console_kernel(kernel)
+        #   self.prompt_cell.find_element_by_css_selector('.CodeMirror').click()
+        if execute:
+            self.prompt_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+
+    def get_prompt_content(self):
+         JS = 'return window.my_panel.cell.get_text();'
+         return self.browser.execute_script(JS)
+
+    def select_console_kernel(self, kernel_name="SoS"):
         kernel_selector = 'option[value={}]'.format(kernel_name)
-        kernelList = self.panelInput.find_element_by_tag_name("select")
+        kernelList = self.prompt_cell.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
-        if by_click:
-            kernel.click()
+        kernel.click()
 
     @classmethod
     def new_notebook(cls, browser, kernel_name='kernel-sos'):
