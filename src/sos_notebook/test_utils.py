@@ -452,9 +452,9 @@ class Notebook:
         outputs = ""
         if in_console:
             outputs = wait_for_selector(
-                self.panel_cells[index], "div .output_area")
+                self.panel_cells[index], "div .output_subarea")
         else:
-            outputs = wait_for_selector(self.cells[index], "div .output_area")
+            outputs = wait_for_selector(self.cells[index], "div .output_subarea")
         output_text = ""
         has_error = False
         for output in outputs:
