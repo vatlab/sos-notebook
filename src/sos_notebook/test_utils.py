@@ -467,8 +467,8 @@ class Notebook:
                     pass
             #
             output_text += output.text + "\n"
-        if "Out" in output_text:
-            output_text = "".join(output_text.split(":")[1:])
+        # if "Out" in output_text:
+        #     output_text = "".join(output_text.split(":")[1:])
 
         return output_text.strip()
 
