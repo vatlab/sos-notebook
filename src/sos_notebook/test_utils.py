@@ -12,6 +12,7 @@ import os
 import re
 import time
 from sys import platform
+from textwrap import dedent
 
 from ipykernel.tests import utils as test_utils
 #
@@ -347,7 +348,7 @@ class Notebook:
 
         self.current_cell.send_keys(Keys.DELETE)
         self.browser.execute_script(
-            "IPython.notebook.get_cell("+str(index)+").set_text("+repr(content)+")")
+            "IPython.notebook.get_cell("+str(index)+").set_text("+repr(dedent(content))+")")
 
         if render:
             self.execute_cell(self.current_index)
@@ -403,19 +404,33 @@ class Notebook:
             self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
         self._wait_for_done(index, expect_error)
 
-    def append_and_execute_cell_in_kernel(self, content="", kernel="SoS", expect_error=False):
+    def call(self, content="", kernel="SoS", expect_error=False):
+        '''
+        Append a codecell to the end of the notebook, with specified `content` and
+        `kernel`, execute it, waits for the completion of execution, and raise an
+        exception if there is any error (stderr message), unless `expect_error` is
+        set to `True`. This function returns the index of the cell, which can be
+        used to retrieve output. Note that the `content` will be automatically
+        dedented.
+        '''
         # there will be at least a new cell from the new notebook.
-        index = len(self.cells) - 1
-        self.add_cell(index=index, cell_type="code", content=content)
-        self.select_kernel(index=index+1, kernel_name=kernel, by_click=True)
-        self.execute_cell(cell_or_index=index+1, expect_error=expect_error)
-        return index + 1
+        index = len(self.cells)
+        self.add_cell(index=index - 1, cell_type="code", content=dedent(content))
+        self.select_kernel(index=index, kernel_name=kernel, by_click=True)
+        self.execute_cell(cell_or_index=index, expect_error=expect_error)
+        return index
 
+    def check_output(self, content='', kernel="SoS", expect_error=False, selector=None, attribute='src'):
+        '''
+        This function calls call and gets its output with get_cell_output.
+        '''
+        return self.get_cell_output(self.call(
+            content, kernel, expect_error), selector=selector, attribute=attribute)
     #
     # check output
     #
 
-    def get_cell_output(self, index=0, in_console=False):
+    def get_cell_output(self, index=0, in_console=False, selector=None, attribute='src'):
         outputs = ""
         if in_console:
             outputs = wait_for_selector(
@@ -425,24 +440,18 @@ class Notebook:
         outputText = ""
         has_error = False
         for output in outputs:
+            if selector:
+                try:
+                    # some div might not have img
+                    elem = output.find_element_by_css_selector(selector)
+                    outputText += elem.get_attribute(attribute) + '\n'
+                except NoSuchElementException:
+                    pass
+            #
             outputText += output.text + "\n"
         if "Out" in outputText:
             outputText = "".join(outputText.split(":")[1:])
 
-        return outputText.strip()
-
-    def get_elems_in_cell_output(self, index=0, selector='img'):
-        '''get the output of particular tag'''
-        from sos.utils import env
-        outputs = wait_for_selector(self.cells[index], "div .output_area")
-        outputText = ""
-        for output in outputs:
-            try:
-                # some div might not have img
-                elem = output.find_element_by_css_selector(selector)
-                outputText += elem.get_attribute("src") + '\n'
-            except:
-                pass
         return outputText.strip()
 
     #
@@ -551,7 +560,7 @@ class Notebook:
         #
         if expect_error and not has_error:
             raise ValueError(
-                'Expect an error message from cell output, none found.')        
+                'Expect an error message from cell output, none found.')
 
     # def wait_for_output(self, index=0):
     #     time.sleep(10)

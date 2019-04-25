@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 #
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
@@ -8,207 +7,250 @@ import pytest
 import os
 import sys
 
-from textwrap import dedent
-
 from sos_notebook.test_utils import NotebookTest
 
 
 class TestMagics(NotebookTest):
-
     def test_magic_in_subkernel(self, notebook):
-        '''test %pwd in the python3 kernel (which is not a sos magic)'''
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content="%pwd", kernel="Python3")
-        assert len(notebook.get_cell_output(index=idx)) > 0
+        """test %pwd in the python3 kernel (which is not a sos magic)"""
+        assert len(notebook.check_output("%pwd", kernel="Python3")) > 0
 
     def test_help_messages(self, notebook):
-        '''test help functions of magics'''
-        for magic in ('cd',
-                      'debug', 'dict', 'get', 'matplotlib', 'preview',
-                      'put', 'render', 'run', 'runfile', 'save', 'sandbox',
-                      'sessioninfo', 'set', 'sosrun', 'sossave', 'shutdown',
-                      'task', 'toc', 'use', 'with'):
-            idx = notebook.append_and_execute_cell_in_kernel(
-                content=f"%{magic} -h", kernel="SoS")
+        """test help functions of magics"""
+        for magic in (
+            "cd",
+            "debug",
+            "dict",
+            "get",
+            "matplotlib",
+            "preview",
+            "put",
+            "render",
+            "run",
+            "runfile",
+            "save",
+            "sandbox",
+            "sessioninfo",
+            "set",
+            "sosrun",
+            "sossave",
+            "shutdown",
+            "task",
+            "toc",
+            "use",
+            "with",
+        ):
+            output = notebook.check_output(f"%{magic} -h", kernel="SoS")
             # output does not have error
-            assert magic in notebook.get_cell_output(index=idx)
+            assert magic in output
 
     def test_magic_capture(self, notebook):
         # test %capture
-        idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
-            %capture --to R_out
-            cat('this is to stdout')
-            """), kernel="R")
-        assert 'this is to stdout' == notebook.get_cell_output(index=idx)
+        assert (
+            notebook.check_output(
+                """\
+                %capture --to R_out
+                cat('this is to stdout')
+                """,
+                kernel="R",
+            )
+            == "this is to stdout"
+        )
 
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content="%capture --to R_out \n ", kernel="R")
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content="R_out", kernel="SoS")
-        assert "''" == notebook.get_cell_output(index=idx)
+        notebook.call("%capture --to R_out \n ", kernel="R")
+        assert notebook.check_output("R_out", kernel="SoS") == "''"
         #
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %capture text --to R_out
             paste('this is the return value')
-            """), kernel="R")
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content="R_out", kernel="SoS")
-        assert "this is the return value" in notebook.get_cell_output(
-            index=idx)
+            """,
+            kernel="R",
+        )
+        output = notebook.check_output("R_out", kernel="SoS")
+        assert "this is the return value" in output
         # capture as csv
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %capture --as csv --to res
             print('a,b\\nc,d')
-            """), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            res
-            """), kernel="SoS")
-        assert "a" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
+        assert "a" in notebook.check_output("res", kernel="SoS")
         # capture as tsv
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %capture --as tsv --to res
             print('a\\tb\\nc\\td')
-            """), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            res
-            """), kernel="SoS")
-        assert "a" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
+        assert "a" in notebook.check_output("res", kernel="SoS")
         # capture as json
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %capture --as json --to res
             print('[1,2,3]')
-            """), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+            """,
+            kernel="SoS",
+        )
+        assert "[1, 2, 3]" in notebook.check_output(
+            """\
             res
-            """), kernel="SoS")
-        assert "[1, 2, 3]" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
 
     def test_magic_cd(self, notebook):
         # magic cd that changes directory of all subfolders
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output1 = notebook.check_output(
+            """\
             import os
             print(os.getcwd())
-            '''), kernel="Python3")
-        output1 = notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %cd ..
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="Python3",
+        )
+        notebook.call("%cd ..", kernel="SoS")
+        output2 = notebook.check_output(
+            """\
             import os
             print(os.getcwd())
-            '''), kernel="Python3")
-        output2 = notebook.get_cell_output(index=idx)
-        #
-        assert len(output1) > len(output2)
-        assert output1.startswith(output2)
+            """,
+            kernel="Python3",
+        )
+        assert len(output1) > len(output2) and output1.startswith(output2)
 
     def test_magic_clear(self, notebook):
         # test %clear
-        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %clear --all
-            '''), kernel="SoS")
-        # check output
+        notebook.call("%clear --all", kernel="SoS")
 
     def test_magic_connectinfo(self, notebook):
         # test %capture
-        idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
-            %connectinfo
-            """), kernel="SoS")
-        assert 'Connection file' in notebook.get_cell_output(index=idx)
+        assert "Connection file" in notebook.check_output("%connectinfo", kernel="SoS")
 
     def test_magic_debug(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        assert "debug" in notebook.check_output(
+            """\
             %debug on
             %debug off
-            """), kernel="SoS", expect_error=True)
-        assert 'debug' in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+            expect_error=True,
+        )
 
     def test_magic_dict(self, notebook):
         # test %dict
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             R_out = 1
             ran = 5
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="SoS",
+        )
+        output = notebook.check_output(
+            """\
             %dict --keys
-            '''), kernel="SoS")
-        keylist = notebook.get_cell_output(index=idx)
-        assert 'R_out' in keylist and 'ran' in keylist
+            """,
+            kernel="SoS",
+        )
+        assert "R_out" in output and "ran" in output
         #
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %dict ran
-            '''), kernel="SoS")
-        assert 'r' in notebook.get_cell_output(index=idx)
+        assert "r" in notebook.check_output("%dict ran", kernel="SoS")
         #
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        assert "R_out" not in notebook.check_output(
+            """\
             %dict --reset
             %dict --keys
-            '''), kernel="SoS")
-        assert 'R_out' not in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
 
     def test_magic_expand(self, notebook):
         # test %expand
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content="par=100", kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call("par=100", kernel="SoS")
+        assert "A parameter 100 greater than 50 is specified." == notebook.check_output(
+            """\
             %expand ${ }
             if (${par} > 50) {
                 cat('A parameter ${par} greater than 50 is specified.');
             }
-            """), kernel="R")
-        assert "A parameter 100 greater than 50 is specified." == notebook.get_cell_output(
-            index=idx)
+            """,
+            kernel="R",
+        )
 
     def test_magic_get(self, notebook):
         # test %get
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             a = [1, 2, 3]
             b = [1, 2, '3']
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="SoS",
+        )
+        assert "[1, 2, 3]" == notebook.check_output(
+            """\
             %get a
             a
-            '''), kernel="Python3")
-        assert "[1, 2, 3]" == notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="Python3",
+        )
+        assert "List of 3" in notebook.check_output(
+            """\
             %get b
             str(b)
             R_var <- 'R variable'
-            '''), kernel="R")
-        assert "List of 3" in notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="R",
+        )
+        assert "R variable" in notebook.check_output(
+            """\
             %get --from R R_var
             R_var
-            '''), kernel="Python3")
-        assert "R variable" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="Python3",
+        )
         #
         # get with different variable names
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             a = 1025
             _b_a = 22
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="SoS",
+        )
+        assert "1025" == notebook.check_output(
+            """\
             %get a
             b <- 122
             c <- 555
             a
-            '''), kernel="R")
-        assert "1025" == notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+            """,
+            kernel="R",
+        )
+        #
+        assert "22" in notebook.check_output(
+            """\
             %get _b_a
             .b_a
-            '''), kernel="R", expect_error=True)
-        assert "22" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="R",
+            expect_error=True,
+        )
+        #
         # get from another kernel
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        assert "555" in notebook.check_output(
+            """\
             %get c --from R
             c
-            '''), kernel="R")
-        assert "555" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="R",
+        )
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
-        idx = notebook.append_and_execute_cell_in_kernel(dedent("""\
+        assert "data:image/png;base64" in notebook.check_output(
+            """\
             %matplotlib inline
 
             import matplotlib.pyplot as plt
@@ -216,13 +258,16 @@ class TestMagics(NotebookTest):
             x = np.linspace(0, 10)
             plt.plot(x, np.sin(x), '--', linewidth=2)
             plt.show()
-            """), kernel="SoS")
-        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
-            index=idx, selector='img')
+            """,
+            kernel="SoS",
+            selector="img",
+            attribute="src",
+        )
 
     def test_magic_render(self, notebook):
         # test %put from subkernel to SoS Kernel
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        assert "header" in notebook.check_output(
+            '''\
             %render
             """
             # header
@@ -230,12 +275,14 @@ class TestMagics(NotebookTest):
             * item1
             * item2
             """
-            '''), kernel="SoS")
-        assert "header" in notebook.get_cell_output(index=idx)
+            ''',
+            kernel="SoS",
+        )
 
     def test_magic_run(self, notebook):
         # test passing parameters and %run
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %run --floatvar 1 --test_mode --INT_LIST 1 2 3 --infile a.txt
             VAR = 'This var is defined without global.'
 
@@ -262,137 +309,165 @@ class TestMagics(NotebookTest):
             print(infile.name)
             sh: expand=True
             echo {b}
-            '''), kernel='SoS')
-        output = notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
         lines = output.splitlines()
-        results = ["This var is defined without global.", "This var is defined with global.", "This var is defined in Cell.", "1.0", "stringvar",
-                   "True", "['1', '2', '3']", "a.txt", "1"]
+        results = [
+            "This var is defined without global.",
+            "This var is defined with global.",
+            "This var is defined in Cell.",
+            "1.0",
+            "stringvar",
+            "True",
+            "['1', '2', '3']",
+            "a.txt",
+            "1",
+        ]
         for index, line in enumerate(lines):
             assert lines[index] == results[index]
 
     def test_magic_runfile(self, notebook):
         #
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             %save check_run -f
             %run --var 1
             parameter: var=0
             sh: expand=True
             echo {var}
-            '''), kernel='SoS')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %runfile check_run --var=2
-        '''), kernel='SoS')
-        output = notebook.get_cell_output(index=idx)
-        assert output == "2"
+            """,
+            kernel="SoS",
+        )
+        assert "2" == notebook.check_output("%runfile check_run --var=2", kernel="SoS")
 
-    @pytest.mark.skipif(sys.platform == 'win32' or 'TRAVIS' in os.environ, reason="Skip test because of no internet connection or in travis test")
+    @pytest.mark.skipif(
+        sys.platform == "win32" or "TRAVIS" in os.environ,
+        reason="Skip test because of no internet connection or in travis test",
+    )
     def test_magic_preview_dot(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            '''
             %preview -n a.dot
             with open('a.dot', 'w') as dot:
-                dot.write("""\
+                dot.write("""\\
             graph graphname {
                 a -- b -- c;
                 b -- d;
             }
             """)
-            '''), kernel="SoS")
-        assert 'a.dot' in notebook.get_cell_output(index=idx)
-        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
-            index=idx, selector='img')
+            ''',
+            kernel="SoS",
+            selector="img",
+        )
+        assert "a.dot" in output and "data:image/png;base64" in output
 
     def test_magic_preview_in_R(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        assert "mtcars" in notebook.check_output(
+            """\
             %preview -n mtcars
             %use R
-            '''), kernel="R")
-        assert 'mtcars' in notebook.get_cell_output(index=idx)
+            """,
+            kernel="R",
+        )
 
     def test_magic_preview_png(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %preview -n a.png
             R:
                 png('a.png')
                 plot(0)
                 dev.off()
-            '''), kernel="SoS")
-        assert 'a.png' in notebook.get_cell_output(index=idx)
-        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
-            index=idx, selector='img')
+            """,
+            kernel="SoS",
+            selector="img",
+        )
+        assert "a.png" in output and "data:image/png;base64" in output
 
     def test_magic_preview_jpg(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %preview -n a.jp*
             R:
                 jpeg('a.jpg')
                 plot(0)
                 dev.off()
-            '''), kernel="SoS")
-        assert 'a.jpg' in notebook.get_cell_output(index=idx)
-        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
-            index=idx, selector='img')
+            """,
+            kernel="SoS",
+            selector="img",
+        )
+        assert "a.jpg" in output and "data:image/jpeg;base64" in output
 
     def test_magic_preview_pdf(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %preview -n a.pdf
             R:
                 pdf('a.pdf')
                 plot(0)
                 dev.off()
-            '''), kernel="SoS")
-        assert 'a.pdf' in notebook.get_cell_output(index=idx)
-        assert 'a.pdf' in notebook.get_elems_in_cell_output(
-            index=idx, selector='embed')
+            """,
+            kernel="SoS",
+            selector="embed",
+            attribute="type",
+        )
+        assert "a.pdf" in output and "application/x-google-chrome-pdf" in output
+
         # preview as png
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %preview -n a.pdf -s png
             R:
                 pdf('a.pdf')
                 plot(0)
                 dev.off()
-            '''), kernel="SoS")
-        assert 'a.pdf' in notebook.get_cell_output(index=idx)
-        assert 'data:image/png;base64' in notebook.get_elems_in_cell_output(
-            index=idx, selector='img')
+            """,
+            kernel="SoS",
+            selector="img"
+        )
+        assert "a.pdf" in output and "data:image/png;base64" in output
 
     def test_magic_preview_var(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        assert "> a: int" in notebook.check_output(
+            """\
             %preview -n a
             a=1
-            '''), kernel="SoS")
-        assert '> a: int' in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
 
     def test_magic_preview_var_limit(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             %preview mtcars -n -l 10
             %get mtcars --from R
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert 'mtcars' in output and 'Duster' in output and 'Maserati' not in output
+            """,
+            kernel="SoS",
+        )
+        assert "mtcars" in output and "Duster" in output and "Maserati" not in output
 
     # def test_magic_preview_var_scatterplot(self, notebook):
-    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #     output = notebook.check_output('''\
     #         %preview mtcars -n -s scatterplot mpg disp --by cyl
     #         %get mtcars --from R
-    #         '''), kernel="SoS")
-    #     output = notebook.get_cell_output(index=idx)
+    #         ''', kernel="SoS")
 
     # def test_magic_preview_var_scatterplot_tooltip(self, notebook):
-    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #     output = notebook.check_output('''\
     #         %preview mtcars -n -s scatterplot _index disp hp mpg --tooltip wt qsec
     #         %get mtcars --from R
-    #         '''), kernel="SoS")
-    #     output = notebook.get_cell_output(index=idx)
+    #         ''', kernel="SoS")
 
     # def test_magic_preview_var_scatterplot_log(self, notebook):
-    #     idx=notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+    #     output = notebook.check_output('''\
     #         %preview mtcars -n -s scatterplot disp hp --log xy --xlim 60 80 --ylim 40 300
     #         %get mtcars --from R
-    #         '''), kernel="SoS")
-    #     output=notebook.get_cell_output(index=idx)
+    #         ''', kernel="SoS")
 
     def test_magic_preview_csv(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            '''\
             %preview -n a.csv
             with open('a.csv', 'w') as csv:
                 csv.write("""\
@@ -400,68 +475,70 @@ class TestMagics(NotebookTest):
                 1,2,3
                 4,5,6
                 """)
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.csv' in output
-        assert ' a   b   c ' in output
+            ''',
+            kernel="SoS",
+        )
+        assert "> a.csv" in output and " a   b   c " in output
 
     def test_magic_preview_txt(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            '''\
             %preview -n a.txt
             with open('a.txt', 'w') as txt:
                 txt.write("""\
             hello
             world
             """)
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.txt' in output
-        assert '2 lines' in output
+            ''',
+            kernel="SoS",
+        )
+        assert "> a.txt" in output and "2 lines" in output
 
     def test_magic_preview_zip(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             !echo "blah" > a.csv
             %preview -n a.zip
             import zipfile
 
             with zipfile.ZipFile('a.zip', 'w') as zfile:
                 zfile.write('a.csv')
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.zip' in output
-        assert '1 file' in output
-        assert 'a.csv' in output
+            """,
+            kernel="SoS",
+        )
+        assert "> a.zip" in output and "1 file" in output and "a.csv" in output
 
     def test_magic_preview_tar(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             !echo "blah" > a.csv
             %preview -n a.tar
             import tarfile
 
             with tarfile.open('a.tar', 'w') as tar:
                 tar.add('a.csv')
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.tar' in output
-        assert '1 file' in output
-        assert 'a.csv' in output
+            """,
+            kernel="SoS",
+        )
+        assert "> a.tar" in output and "1 file" in output and "a.csv" in output
 
     def test_magic_preview_tar_gz(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            """\
             !echo "blah" > a.csv
             %preview -n a.tar.gz
             import tarfile
 
             with tarfile.open('a.tar.gz', 'w:gz') as tar:
                 tar.add('a.csv')
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.tar.gz' in output
-        assert '1 file' in output
-        assert 'a.csv' in output
+            """,
+            kernel="SoS",
+        )
+        assert "> a.tar.gz" in output and "1 file" in output and "a.csv" in output
 
     def test_magic_preview_gz(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            '''\
             %preview -n a.gz
             import gzip
 
@@ -470,14 +547,14 @@ class TestMagics(NotebookTest):
             Hello
             world
             """)
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.gz' in output
-        assert 'Hello' in output
-        assert 'world' in output
+            ''',
+            kernel="SoS",
+        )
+        assert "> a.gz" in output and "Hello" in output and "world" in output
 
     def test_magic_preview_md(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        output = notebook.check_output(
+            '''\
             %preview -n a.md
             with open('a.md', 'w') as md:
                 md.write("""\
@@ -486,147 +563,154 @@ class TestMagics(NotebookTest):
             * item1
             * item2
             """)
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.md' in output
-        assert 'title' in output
-        assert 'item2' in output
+            ''',
+            kernel="SoS",
+        )
+        assert "> a.md" in output and "title" in output and "item2" in output
 
     def test_magic_preview_html(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-%preview -n a.html
-with open('a.html', 'w') as dot:
-    dot.write("""\
-<!DOCTYPE html>
-<html>
-<body>
+        output = notebook.check_output(
+            '''\
+            %preview -n a.html
+            with open('a.html', 'w') as dot:
+                dot.write("""\
+            <!DOCTYPE html>
+            <html>
+            <body>
 
-<h1>My First Heading</h1>
+            <h1>My First Heading</h1>
 
-<p>My first paragraph.</p>
+            <p>My first paragraph.</p>
 
-</body>
-</html>
-""")
-            '''), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert '> a.html' in output
-        assert 'My First Heading' in output
-        assert 'My first paragraph' in output
+            </body>
+            </html>
+            """)
+            ''',
+            kernel="SoS",
+        )
+        assert (
+            "> a.html" in output
+            and "My First Heading" in output
+            and "My first paragraph" in output
+        )
 
     def test_magic_put(self, notebook):
         # test %put from subkernel to SoS Kernel
-        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             %put a b c R_var
             a <- c(1)
             b <- c(1, 2, 3)
             c <- matrix(c(1,2,3,4), ncol=2)
             R_var <- 'R variable'
-            '''), kernel="R")
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='a', kernel="SoS")
-        assert "1" in notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='b', kernel="SoS")
-        assert "[1, 2, 3]" in notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='c', kernel="SoS")
-        assert "array" in notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='R_var', kernel="SoS")
-        assert "R variable" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="R",
+        )
+
+        assert "1" in notebook.check_output(content="a", kernel="SoS")
+
+        assert "[1, 2, 3]" in notebook.check_output(content="b", kernel="SoS")
+
+        assert "array" in notebook.check_output(content="c", kernel="SoS")
+
+        assert "R variable" in notebook.check_output(content="R_var", kernel="SoS")
+
         # test %put from SoS to other kernel
         #
-        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             %put a1 b1 --to R
             a1 = 123
             b1 = 'this is python'
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='cat(a1)', kernel="R")
-        assert "123" in notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content='cat(b1)', kernel="R")
-        assert "this is python" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
+        assert "123" in notebook.check_output(content="cat(a1)", kernel="R")
+
+        assert "this is python" in notebook.check_output(content="cat(b1)", kernel="R")
         #
         # test put variable with invalid names
-        notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             %put .a.b
-            .a.b <- 22'''), kernel="R", expect_error=True)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            _a_b
-            '''), kernel="SoS")
-        assert "22" == notebook.get_cell_output(index=idx)
+            .a.b <- 22""",
+            kernel="R",
+            expect_error=True,
+        )
+        assert "22" == notebook.check_output("_a_b", kernel="SoS")
+
         #
         # test independence of variables
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
+        notebook.call(
+            """\
             %put my_var --to R
             my_var = '124'
-            '''), kernel="SoS")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            my_var
-            '''), kernel="R")
-        assert "'124'" == notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            my_var = 'something else'
-            '''), kernel="R")
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            my_var
-            '''), kernel="SoS")
-        assert "'124'" == notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
+        assert "'124'" == notebook.check_output("my_var", kernel="R")
+
+        notebook.call("my_var = 'something else'", kernel="R")
+        assert "'124'" == notebook.check_output("my_var", kernel="SoS")
 
     def test_magic_sandbox(self, notebook):
-        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %sandbox
             with open('test_blah.txt', 'w') as tb:
                 tb.write('a')
-            """), kernel="SoS")
-        assert not os.path.isfile('test_blah.txt')
+            """,
+            kernel="SoS",
+        )
+        assert not os.path.isfile("test_blah.txt")
 
     def test_magic_save(self, notebook):
-        tmp_file = os.path.join(os.path.expanduser('~'), 'test_save.txt')
+        tmp_file = os.path.join(os.path.expanduser("~"), "test_save.txt")
         if os.path.isfile(tmp_file):
             os.remove(tmp_file)
-        notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        notebook.call(
+            """\
             %save ~/test_save.txt
             a=1
-            """), kernel="SoS")
+            """,
+            kernel="SoS",
+        )
         with open(tmp_file) as tt:
-            assert tt.read() == 'a=1\n'
+            assert tt.read() == "a=1\n"
         os.remove(tmp_file)
 
     def test_magic_sessioninfo(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        output = notebook.check_output(
+            """\
             %use Python3
             %use SoS
             %sessioninfo
-            """), kernel="SoS")
-        output = notebook.get_cell_output(index=idx)
-        assert 'SoS Version' in output
-        assert 'Python3' in output
+            """,
+            kernel="SoS",
+        )
+        assert "SoS Version" in output and "Python3" in output
 
     def test_magic_set(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+        assert "set" in notebook.check_output(
+            """\
             %set
             %set -v2
             %set
             %set -v1
-            """), kernel="SoS")
-        assert "set" in notebook.get_cell_output(index=idx)
+            """,
+            kernel="SoS",
+        )
         #
         # not accept workflow name
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            %set haha
-            """), kernel="SoS", expect_error=True)
-        assert "Magic %set cannot set positional argument" in notebook.get_cell_output(
-            index=idx)
+        assert "Magic %set cannot set positional argument" in notebook.check_output(
+            "%set haha", kernel="SoS", expect_error=True
+        )
 
-    @pytest.mark.skipIf(sys.platform == 'win32', reason='! magic does not support built-in command #203')
+    @pytest.mark.skipIf(
+        sys.platform == "win32", reason="! magic does not support built-in command #203"
+    )
     def test_magic_shell(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
-            !echo haha
-            """), kernel="SoS")
-        assert "haha" in notebook.get_cell_output(index=idx)
+        assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
     # def test_magic_sossave(self, notebook):
     #     # we cannot test this because this magic assumes a local .ipynb file
@@ -634,73 +718,54 @@ with open('a.html', 'w') as dot:
     #     tmp_file = os.path.join(os.path.expanduser('~'), 'test_sossave.html')
     #     if os.path.isfile(tmp_file):
     #         os.remove(tmp_file)
-    #     idx = notebook.append_and_execute_cell_in_kernel(content=dedent("""\
+    #     assert 'Workflow saved to' in notebook.check_output("""\
     #         %sossave ~/test_sossave.html --force
     #         [10]
     #         print('kkk')
-    #         """), kernel="SoS")
-    #     assert 'Workflow saved to' in notebook.get_cell_output(idx)
+    #         """, kernel="SoS")
     #     with open(tmp_file) as tt:
     #         assert 'kkk' in tt.read()
 
     def test_magic_use(self, notebook):
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %use R0 -l sos_r.kernel:sos_R -c #CCCCCC
-            '''), kernel='SoS')
-        assert all([a == b] for a, b in zip([80, 80, 80],
-                                            notebook.get_input_backgroundColor(idx)))
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC
-            '''), kernel='SoS')
-        assert all([a == b] for a, b in zip([80, 80, 80],
-                                            notebook.get_input_backgroundColor(idx)))
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %use R2 -k ir
-            '''), kernel='SoS')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            a <- 1024
-            '''), kernel='R2')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            a
-            '''), kernel='R2')
-        assert '1024' == notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %use R3 -k ir -l R
-            '''), kernel='SoS')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            a <- 233
-            '''), kernel='R3')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            a
-            '''), kernel='R3')
-        assert '233' == notebook.get_cell_output(index=idx)
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            %use R2 -c red
-            '''), kernel='R3')
-        idx = notebook.append_and_execute_cell_in_kernel(content=dedent('''\
-            a
-            '''), kernel='R2')
-        assert '1024' == notebook.get_cell_output(index=idx)
+        idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
+        assert all(
+            [a == b]
+            for a, b in zip([80, 80, 80], notebook.get_input_backgroundColor(idx))
+        )
+
+        idx = notebook.call(
+            "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS"
+        )
+        assert all(
+            [a == b]
+            for a, b in zip([80, 80, 80], notebook.get_input_backgroundColor(idx))
+        )
+
+        notebook.call("%use R2 -k ir", kernel="SoS")
+        notebook.call("a <- 1024", kernel="R2")
+        assert "1024" == notebook.check_output("a", kernel="R2")
+
+        notebook.call("%use R3 -k ir -l R", kernel="SoS")
+        notebook.call("a <- 233", kernel="R3")
+        assert "233" == notebook.check_output("a", kernel="R3")
+
+        notebook.call("%use R2 -c red", kernel="R3")
+        assert "1024" == notebook.check_output("a", kernel="R2")
 
     def test_sos_vars(self, notebook):
         # test automatic tranfer of sos variables
-        command = str("sosa = f'{3*8}'")
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="Python3")
-        command = "sosa"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="SoS")
-        assert "24" in notebook.get_cell_output(index=idx)
+        notebook.call("sosa = f'{3*8}'", kernel="Python3")
+        assert "24" in notebook.check_output("sosa", kernel="SoS")
 
     def test_magic_with(self, notebook):
         # test %with
-        command = "a = 3"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="SoS")
-        command = "%with R -i a -o ran \nran<-rnorm(a)"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="SoS")
-        command = "ran"
-        idx = notebook.append_and_execute_cell_in_kernel(
-            content=command, kernel="SoS")
-        assert len(notebook.get_cell_output(index=idx)) > 0
+        notebook.call("a = 3", kernel="SoS")
+        notebook.call(
+            """\
+            %with R -i a -o ran
+            ran<-rnorm(a)
+            """,
+            kernel="SoS",
+        )
+        assert len(notebook.check_output("ran", kernel="SoS")) > 0
+
