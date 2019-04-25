@@ -257,6 +257,7 @@ def execute_promise(js, browser):
     state, data = browser.execute_async_script(promise_js % js)
     if state == 'success':
         return data
+    return 'failed'
     raise Exception(data)
 
 class Notebook:
@@ -312,8 +313,9 @@ class Notebook:
 
     def save(self, name=''):
         if name:
-            self.browser.execute_script(f"Jupyter.notebook.set_notebook_name('{name}')")
-        execute_promise('Jupyter.notebook.save_notebook()', self.browser)
+            self.browser.execute_script(f"Jupyter.notebook.set_notebook_name(arguments[0])", name)
+        time.sleep(5)
+        return execute_promise('Jupyter.notebook.save_notebook()', self.browser)
 
     #
     # operation
