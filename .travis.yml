@@ -18,7 +18,7 @@ before_install:
     # - conda config --set always_yes yes --set changeps1 no
     # - conda update -q conda
     #   #- conda info -a
-    # - pip install docker rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus 
+    # - pip install docker rq pyyaml psutil tqdm nose fasteners pygments networkx pydot pydotplus
     # - pip install entrypoints jupyter coverage codacy-coverage pytest pytest-cov python-coveralls
     # - conda install -q pandas numpy
     # - conda install -c r r-essentials r-feather
@@ -52,7 +52,7 @@ install:
     - docker pull mdabioinfo/sos_notebook_test:latest
     - docker pull mdabioinfo/eg_sshd:latest
     - cd development
-    - export COMPOSE_PROJECT_NAME=sosnotebook 
+    - export COMPOSE_PROJECT_NAME=sosnotebook
     - docker-compose up -d
     - cd ..
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
@@ -61,10 +61,10 @@ before_script:
     # - cd test
     # - sh build_test_docker.sh
 script:
-    - docker exec -u root  sosnotebook_sos-notebook_1  pytest ./test --ignore=./test/selenium   -x -v --cov sos_notebook --cov-report=term-missing
+    #- docker exec -u root  sosnotebook_sos-notebook_1  pytest ./test -x -v --cov sos_notebook --cov-report=term-missing
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
-    - docker exec sosnotebook_sos-notebook_1  pytest ./test/selenium/test_*
+    - docker exec sosnotebook_sos-notebook_1  pytest ./test/test_*
 after_success:
     - coverage combine
     - coveralls
