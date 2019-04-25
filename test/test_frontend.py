@@ -22,14 +22,32 @@ class TestFrontEnd(NotebookTest):
         time.sleep(2)
         assert notebook.is_console_panel_open()
 
+    def test_run_in_console(self, notebook):
         notebook.edit_cell(index=0, content="print(1)", render=False)
         notebook.execute_cell(cell_or_index=0, in_console=True)
         assert "1" == notebook.get_cell_output(1, in_console=True)
 
-        # FIXME
+        # FIXME:
+        # test setting different kernel in console and execute
+        #
         # notebook.select_console_kernel(kernel_name="python3", by_click=True)
         # content = "print(2)"
         # notebook.edit_console_input(content)
+
+    def test_run_directly_in_console(self, notebook):
+        # FIXME:
+        # test enter command in console panel and execute
+        pass
+
+    def test_history_in_console(self, notebook):
+        # FIXME:
+        # test use up and down arrow to navigate the history
+        pass
+
+    def test_clear_history(self, notebook):
+        # FIXME:
+        # test clear history using command "clear" in console window
+        pass
 
     def test_switch_kernel(self, notebook):
         kernels = notebook.get_kernel_list()
