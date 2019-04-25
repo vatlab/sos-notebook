@@ -36,16 +36,16 @@ RUN wget -q "https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriv
     && rm /tmp/chromedriver.zip
 ENV DISPLAY=:99
 
-RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver 
+RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver
 RUN chmod 777 /home/jovyan/.local/share/jupyter/
 
 
-COPY ./test/.ssh /root/.ssh 
+COPY ./development/.ssh /root/.ssh
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/*
 
-COPY ./test/.ssh /home/jovyan/.ssh 
-RUN chmod 700 /home/jovyan/.ssh 
+COPY ./development/.ssh /home/jovyan/.ssh
+RUN chmod 700 /home/jovyan/.ssh
 RUN chmod 600 /home/jovyan/.ssh/*
 
 USER    jovyan
