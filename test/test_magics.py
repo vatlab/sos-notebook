@@ -420,6 +420,7 @@ class TestMagics(NotebookTest):
             "application/x-google-chrome-pdf" in output or "application/pdf" in output
         )
 
+    @pytest.mark.xfail(reason='Some system has imagemagick refusing to read PDF due to policy reasons.')
     def test_magic_preview_pdf_as_png(self, notebook):
         try:
             from wand.image import Image
