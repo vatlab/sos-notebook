@@ -13,10 +13,10 @@ from sos_notebook.converter import notebook_to_script, script_to_notebook
 
 class TestConvert(unittest.TestCase):
     def setUp(self):
-        self.olddir = os.getcwd()
-        file_dir = os.path.split(__file__)[0]
-        if file_dir:
-            os.chdir(file_dir)
+        # self.olddir = os.getcwd()
+        # file_dir = os.path.split(__file__)[0]
+        # if file_dir:
+        #     os.chdir(file_dir)
         if not os.path.isdir('temp'):
             os.mkdir('temp')
         with open('temp/script1.sos', 'w') as script:
@@ -46,7 +46,7 @@ report('this is action report')
 
     def tearDown(self):
         shutil.rmtree('temp')
-        os.chdir(self.olddir)
+        # os.chdir(self.olddir)
 
     def testScriptToAndFromNotebook(self):
         '''Test sos show script --notebook'''
