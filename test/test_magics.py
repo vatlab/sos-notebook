@@ -250,6 +250,7 @@ class TestMagics(NotebookTest):
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
+        pytest.importorskip('matplotlib')
         assert "data:image/png;base64" in notebook.check_output(
             """\
             %matplotlib inline
@@ -415,6 +416,11 @@ class TestMagics(NotebookTest):
         )
         assert "a.pdf" in output and ("application/x-google-chrome-pdf" in output or 'application/pdf' in output)
 
+    def test_magic_preview_pdf_as_png(self, notebook):
+        try:
+            from wand.image import Image
+        except ImportError:
+            pytest.skip('Skip because imagemagick is not properly installed')
         # preview as png
         output = notebook.check_output(
             """\
