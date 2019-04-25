@@ -66,6 +66,7 @@ script:
     - docker exec -u root  sosnotebook_sos-notebook_1 mkdir -p /home/jovyan/.local
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
+    - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/test/
     - docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'
 after_success:
     - coverage combine
