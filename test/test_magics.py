@@ -250,7 +250,7 @@ class TestMagics(NotebookTest):
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
-        pytest.importorskip('matplotlib')
+        pytest.importorskip("matplotlib")
         assert "data:image/png;base64" in notebook.check_output(
             """\
             %matplotlib inline
@@ -399,7 +399,9 @@ class TestMagics(NotebookTest):
             kernel="SoS",
             selector="img",
         )
-        assert "a.jpg" in output and ("data:image/jpeg;base64" in output or "data:image/png;base64" in output)
+        assert "a.jpg" in output and (
+            "data:image/jpeg;base64" in output or "data:image/png;base64" in output
+        )
 
     def test_magic_preview_pdf(self, notebook):
         output = notebook.check_output(
@@ -414,13 +416,15 @@ class TestMagics(NotebookTest):
             selector="embed",
             attribute="type",
         )
-        assert "a.pdf" in output and ("application/x-google-chrome-pdf" in output or 'application/pdf' in output)
+        assert "a.pdf" in output and (
+            "application/x-google-chrome-pdf" in output or "application/pdf" in output
+        )
 
     def test_magic_preview_pdf_as_png(self, notebook):
         try:
             from wand.image import Image
         except ImportError:
-            pytest.skip('Skip because imagemagick is not properly installed')
+            pytest.skip("Skip because imagemagick is not properly installed")
         # preview as png
         output = notebook.check_output(
             """\
@@ -431,7 +435,7 @@ class TestMagics(NotebookTest):
                 dev.off()
             """,
             kernel="SoS",
-            selector="img"
+            selector="img",
         )
         assert "a.pdf" in output and "data:image/png;base64" in output
 
@@ -717,22 +721,26 @@ class TestMagics(NotebookTest):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
     @pytest.mark.skipIf(
-        'TRAVIS' in os.environ, reason='Skip test because travis fails on this test for unknown reason')
+        "TRAVIS" in os.environ,
+        reason="Skip test because travis fails on this test for unknown reason",
     )
     def test_magic_sossave(self, notebook):
         #
         notebook.save()
 
-        tmp_file = os.path.join(tempfile.gettempdir(), 'test_sossave.html')
+        tmp_file = os.path.join(tempfile.gettempdir(), "test_sossave.html")
         if os.path.isfile(tmp_file):
             os.remove(tmp_file)
-        assert 'Workflow saved to' in notebook.check_output(f"""\
+        assert "Workflow saved to" in notebook.check_output(
+            f"""\
             %sossave {tmp_file} --force
             [10]
             print('kkk')
-            """, kernel="SoS")
+            """,
+            kernel="SoS",
+        )
         with open(tmp_file) as tt:
-            assert 'kkk' in tt.read()
+            assert "kkk" in tt.read()
 
     def test_magic_use(self, notebook):
         idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
