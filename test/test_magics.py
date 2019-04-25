@@ -397,7 +397,7 @@ class TestMagics(NotebookTest):
             kernel="SoS",
             selector="img",
         )
-        assert "a.jpg" in output and "data:image/jpeg;base64" in output
+        assert "a.jpg" in output and ("data:image/jpeg;base64" in output or "data:image/png;base64" in output)
 
     def test_magic_preview_pdf(self, notebook):
         output = notebook.check_output(
@@ -412,7 +412,7 @@ class TestMagics(NotebookTest):
             selector="embed",
             attribute="type",
         )
-        assert "a.pdf" in output and "application/x-google-chrome-pdf" in output
+        assert "a.pdf" in output and ("application/x-google-chrome-pdf" in output or 'application/pdf' in output)
 
         # preview as png
         output = notebook.check_output(

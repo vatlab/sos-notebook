@@ -62,6 +62,8 @@ before_script:
     # - sh build_test_docker.sh
 script:
     #- docker exec -u root  sosnotebook_sos-notebook_1  pytest ./test -x -v --cov sos_notebook --cov-report=term-missing
+    - mkdir -p /home/jovyan/.sos
+    - mkdir -p /home/jovyan/.local
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
     - docker exec -u root  sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
     - docker exec sosnotebook_sos-notebook_1  pytest ./test/test_*
