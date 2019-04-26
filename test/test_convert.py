@@ -12,6 +12,7 @@ from sos_notebook.converter import notebook_to_script, script_to_notebook
 
 
 class TestConvert(unittest.TestCase):
+
     def setUp(self):
         # self.olddir = os.getcwd()
         # file_dir = os.path.split(__file__)[0]
@@ -54,67 +55,96 @@ report('this is action report')
             script_to_notebook(script_file, script_file[:-4] + '.ipynb')
             notebook_to_script(script_file[:-4] + '.ipynb', script_file)
 
-
     def testConvertHTML(self):
-        subprocess.call('sos convert sample_notebook.ipynb test_wf.html', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf.html', shell=True)
         self.assertTrue(os.path.isfile('test_wf.html'))
         # test the use of jupyter templates
-        subprocess.call('sos convert sample_notebook.ipynb test_wf1.html --template basic', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf1.html --template basic',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf1.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf2.html --template sos-report', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf2.html --template sos-report',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf2.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf3.html --template sos-full', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf3.html --template sos-full',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf3.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf4.html --template sos-cm', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf4.html --template sos-cm',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf4.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf5.html --template sos-full-toc', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf5.html --template sos-full-toc',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf5.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf6.html --template sos-report-toc', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf6.html --template sos-report-toc',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf6.html'))
         #
-        subprocess.call('sos convert sample_notebook.ipynb test_wf7.html --template sos-cm-toc', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf7.html --template sos-cm-toc',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf7.html'))
 
-    @unittest.skipIf(not shutil.which('xelatex'), 'No XeLatex under windows to compile pdf')
+    @unittest.skipIf(not shutil.which('xelatex'),
+                     'No XeLatex under windows to compile pdf')
     def testConvertPDF(self):
-        subprocess.call('sos convert sample_notebook.ipynb test_wf.pdf', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf.pdf', shell=True)
         self.assertTrue(os.path.isfile('test_wf.pdf'))
 
     def testConvertMD(self):
-        subprocess.call('sos convert sample_notebook.ipynb test_wf.md', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb test_wf.md', shell=True)
         self.assertTrue(os.path.isfile('test_wf.md'))
         # output to stdout
-        subprocess.call('sos convert sample_notebook.ipynb --to md > test_wf1.md', shell=True)
+        subprocess.call(
+            'sos convert sample_notebook.ipynb --to md > test_wf1.md',
+            shell=True)
         self.assertTrue(os.path.isfile('test_wf1.md'))
 
     def testConvertNotebook(self):
-        ret = subprocess.call('sos convert sample_notebook.ipynb test_nonSoS.ipynb --kernel python3', shell=True)
+        ret = subprocess.call(
+            'sos convert sample_notebook.ipynb test_nonSoS.ipynb --kernel python3',
+            shell=True)
         self.assertEqual(ret, 0)
         self.assertTrue(os.path.isfile('test_nonSoS.ipynb'))
         #
-        ret= subprocess.call('sos convert test_nonSoS.ipynb test_SoS.ipynb', shell=True)
+        ret = subprocess.call(
+            'sos convert test_nonSoS.ipynb test_SoS.ipynb', shell=True)
         self.assertEqual(ret, 0)
         self.assertTrue(os.path.isfile('test_SoS.ipynb'))
         # cannot convert to invalid kernel
-        ret = subprocess.call('sos convert sample_notebook.ipynb test_invalid.ipynb --kernel nonexisting', shell=True)
+        ret = subprocess.call(
+            'sos convert sample_notebook.ipynb test_invalid.ipynb --kernel nonexisting',
+            shell=True)
         self.assertNotEqual(ret, 0)
 
     def testComments(self):
         '''Test if comments before section headers are correctly extracted'''
-        subprocess.call('sos convert sample_workflow.ipynb sample_workflow.sos', shell=True)
+        subprocess.call(
+            'sos convert sample_workflow.ipynb sample_workflow.sos', shell=True)
         with open('sample_workflow.sos') as sw:
             wf = sw.read()
         self.assertFalse('this is a test workflow' in wf)
-        self.assertEqual(wf.count('this comment will be included but not shown in help'), 1)
-        self.assertTrue(wf.count('this comment will become the comment for parameter b'), 1)
-        self.assertTrue(wf.count('this comment will become the comment for parameter d'), 1)
+        self.assertEqual(
+            wf.count('this comment will be included but not shown in help'), 1)
+        self.assertTrue(
+            wf.count('this comment will become the comment for parameter b'), 1)
+        self.assertTrue(
+            wf.count('this comment will become the comment for parameter d'), 1)
         self.assertFalse('this is a cell with another kernel' in wf)
-        self.assertFalse('this comment will not be included in exported workflow' in wf)
+        self.assertFalse(
+            'this comment will not be included in exported workflow' in wf)
 
     # @unittest.skipIf(sys.platform == 'win32', 'This test hangs for no obvious reason under windows')
     # def testPreprocess(self):
@@ -146,7 +176,6 @@ report('this is action report')
     #     with open('test_magic.html') as html:
     #         # listdir only shows the current file once because of magic %cd
     #         self.assertTrue(html.read().count('test_jupyter_convert.py'), 1)
-
 
 
 if __name__ == '__main__':

@@ -619,7 +619,7 @@ class SoS_Kernel(IPythonKernel):
         # 'sos.R.sos_R' is the language module.
         # '#FFEEAABB' is the background color
         #
-        if 'KERNEL' in env.config['SOS_DEBUG']:
+        if env.is_debugging('KERNEL'):
             env.log_to_file('KERNEL', f'Starting SoS Kernel')
 
         self.kernels = {}
@@ -641,7 +641,6 @@ class SoS_Kernel(IPythonKernel):
             'toc': '',
             'batch_mode': False
         }
-        self._debug_mode = False
         self._supported_languages = None
         self._completer = None
         self._inspector = None
@@ -662,8 +661,7 @@ class SoS_Kernel(IPythonKernel):
             'output', 'depends'
         }
 
-        # remove all other ahdnlers
-        env.logger.handlers = []
+        # env.logger.handlers = []
         env.logger.addHandler(
             NotebookLoggingHandler(
                 {
@@ -1180,7 +1178,7 @@ Available subkernels:\n{}'''.format(
             if kinfo.name not in self.kernels:
                 # start a new kernel
                 try:
-                    if 'KERNEL' in env.config['SOS_DEBUG']:
+                    if env.is_debugging('KERNEL'):
                         env.log_to_file('KERNEL',
                                         f'Starting subkernel {kinfo.name}')
                     self.kernels[kinfo.name] = manager.start_new_kernel(
@@ -1268,7 +1266,7 @@ Available subkernels:\n{}'''.format(
         while self.KC.iopub_channel.msg_ready():
             sub_msg = self.KC.iopub_channel.get_msg()
             if sub_msg['header']['msg_type'] != 'status':
-                if 'MESSAGE' in env.config['SOS_DEBUG']:
+                if env.is_debugging('MESSAGE'):
                     env.log_to_file(
                         'MESSAGE',
                         f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}"
@@ -1284,7 +1282,7 @@ Available subkernels:\n{}'''.format(
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
-                if 'MESSAGE' in env.config['SOS_DEBUG']:
+                if env.is_debugging('MESSAGE'):
                     env.log_to_file(
                         'MESSAGE', f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
@@ -1297,14 +1295,14 @@ Available subkernels:\n{}'''.format(
                 if msg_type in msg_types and (name is None or
                                               sub_msg['content'].get(
                                                   'name', None) in name):
-                    if 'MESSAGE' in env.config['SOS_DEBUG']:
+                    if env.is_debugging('MESSAGE'):
                         env.log_to_file(
                             'MESSAGE',
                             f'Capture response: {msg_type}: {sub_msg["content"]}'
                         )
                     responses.append([msg_type, sub_msg['content']])
                 else:
-                    if 'MESSAGE' in env.config['SOS_DEBUG']:
+                    if env.is_debugging('MESSAGE'):
                         env.log_to_file(
                             'MESSAGE',
                             f'Non-response: {msg_type}: {sub_msg["content"]}')
@@ -1316,13 +1314,13 @@ Available subkernels:\n{}'''.format(
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
-                if 'MESSAGE' in env.config['SOS_DEBUG']:
+                if env.is_debugging('MESSAGE'):
                     env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
                 shell_ended = True
             time.sleep(0.001)
 
         if not responses:
-            if 'MESSAGE' in env.config['SOS_DEBUG']:
+            if env.is_debugging('MESSAGE'):
                 env.log_to_file(
                     'MESSAGE',
                     f'Failed to get a response from message type {msg_types} for the execution of {statement}'
@@ -1523,7 +1521,7 @@ Available subkernels:\n{}'''.format(
                    user_expressions=None,
                    allow_stdin=True):
         if env.is_debugging('KERNEL'):
-            env.log_to_file('KERNEL', f'do_execute: {code}')
+            env.log_to_file('KERNEL', f'execute: {code}')
         if not self.controller:
             self.controller = start_controller(self)
         # load basic configuration each time in case user modifies the configuration during

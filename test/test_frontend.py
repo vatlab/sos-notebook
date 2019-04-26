@@ -3,7 +3,6 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-
 import time
 import unittest
 
@@ -13,6 +12,7 @@ from selenium.webdriver.common.keys import Keys
 
 
 class TestFrontEnd(NotebookTest):
+
     def test_toggle_console(self, notebook):
         time.sleep(2)
         assert notebook.is_console_panel_open()
@@ -82,10 +82,8 @@ class TestFrontEnd(NotebookTest):
         # test change to R kernel by click
         notebook.select_kernel(index=0, kernel_name="R", by_click=True)
         # check background color for R kernel
-        assert all(
-            [a == b]
-            for a, b in zip(backgroundColor["R"], notebook.get_input_backgroundColor(0))
-        )
+        assert all([a == b] for a, b in zip(
+            backgroundColor["R"], notebook.get_input_backgroundColor(0)))
 
         # the cell keeps its color after evaluation
         notebook.edit_cell(
@@ -98,12 +96,8 @@ class TestFrontEnd(NotebookTest):
         )
         output = notebook.get_cell_output(0)
         assert "rn" in output and "num" in output
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["R"], notebook.get_output_backgroundColor(0)
-            )
-        )
+        assert all([a == b] for a, b in zip(
+            backgroundColor["R"], notebook.get_output_backgroundColor(0)))
 
         # test $get and shift to SoS kernel
         idx = notebook.call(
@@ -113,12 +107,8 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["SoS"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert all([a == b] for a, b in zip(
+            backgroundColor["SoS"], notebook.get_input_backgroundColor(idx)))
         assert "5" in notebook.get_cell_output(idx)
 
         # switch to python3 kernel
@@ -128,19 +118,13 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["python3"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert all([a == b]
+                   for a, b in zip(backgroundColor["python3"],
+                                   notebook.get_input_backgroundColor(idx)))
         notebook.append_cell("")
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["python3"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert all([a == b]
+                   for a, b in zip(backgroundColor["python3"],
+                                   notebook.get_input_backgroundColor(idx)))
 
 
 def get_completions(kc, text):
@@ -165,6 +149,7 @@ def is_complete(kc, code):
 
 
 class TestKernelInteraction(unittest.TestCase):
+
     def testInspector(self):
         with sos_kernel() as kc:
             # match magics
@@ -173,7 +158,8 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertTrue("%with " in get_completions(kc, "%w")["matches"])
             # path complete
             self.assertGreater(len(get_completions(kc, "!ls ")["matches"]), 0)
-            self.assertEqual(len(get_completions(kc, "!ls SOMETHING")["matches"]), 0)
+            self.assertEqual(
+                len(get_completions(kc, "!ls SOMETHING")["matches"]), 0)
             #
             wait_for_idle(kc)
             # variable complete
@@ -184,18 +170,26 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertTrue("alpha" in get_completions(kc, "al")["matches"])
             self.assertTrue("all(" in get_completions(kc, "al")["matches"])
             # for no match
-            self.assertEqual(len(get_completions(kc, "alphabetatheta")["matches"]), 0)
+            self.assertEqual(
+                len(get_completions(kc, "alphabetatheta")["matches"]), 0)
             # get with all variables in
             self.assertTrue("alpha" in get_completions(kc, "%get ")["matches"])
-            self.assertTrue("alpha" in get_completions(kc, "%get al")["matches"])
+            self.assertTrue(
+                "alpha" in get_completions(kc, "%get al")["matches"])
             # with use and restart has kernel name
-            self.assertTrue("Python3" in get_completions(kc, "%with ")["matches"])
-            self.assertTrue("Python3" in get_completions(kc, "%use ")["matches"])
-            self.assertTrue("Python3" in get_completions(kc, "%shutdown ")["matches"])
-            self.assertTrue("Python3" in get_completions(kc, "%shutdown ")["matches"])
-            self.assertTrue("Python3" in get_completions(kc, "%use Py")["matches"])
+            self.assertTrue(
+                "Python3" in get_completions(kc, "%with ")["matches"])
+            self.assertTrue(
+                "Python3" in get_completions(kc, "%use ")["matches"])
+            self.assertTrue(
+                "Python3" in get_completions(kc, "%shutdown ")["matches"])
+            self.assertTrue(
+                "Python3" in get_completions(kc, "%shutdown ")["matches"])
+            self.assertTrue(
+                "Python3" in get_completions(kc, "%use Py")["matches"])
             #
-            self.assertEqual(len(get_completions(kc, "%use SOME")["matches"]), 0)
+            self.assertEqual(
+                len(get_completions(kc, "%use SOME")["matches"]), 0)
             #
             wait_for_idle(kc)
             execute(kc=kc, code="%use SoS")
@@ -205,14 +199,14 @@ class TestKernelInteraction(unittest.TestCase):
         with sos_kernel() as kc:
             # match magics
             ins_print = inspect(kc, "print")["data"]["text/plain"]
-            self.assertTrue("print" in ins_print, "Returned: {}".format(ins_print))
+            self.assertTrue("print" in ins_print,
+                            "Returned: {}".format(ins_print))
             wait_for_idle(kc)
             #
             # keywords
             ins_depends = inspect(kc, "depends:")["data"]["text/plain"]
-            self.assertTrue(
-                "dependent targets" in ins_depends, "Returned: {}".format(ins_depends)
-            )
+            self.assertTrue("dependent targets" in ins_depends,
+                            "Returned: {}".format(ins_depends))
             wait_for_idle(kc)
             #
             execute(kc=kc, code="alpha=5")
@@ -221,7 +215,8 @@ class TestKernelInteraction(unittest.TestCase):
             wait_for_idle(kc)
             # action
             ins_run = inspect(kc, "run:")["data"]["text/plain"]
-            self.assertTrue("sos.actions" in ins_run, "Returned: {}".format(ins_run))
+            self.assertTrue("sos.actions" in ins_run,
+                            "Returned: {}".format(ins_run))
             wait_for_idle(kc)
             #
             ins_alpha = inspect(kc, "alpha")["data"]["text/plain"]
@@ -229,9 +224,8 @@ class TestKernelInteraction(unittest.TestCase):
             wait_for_idle(kc)
             for magic in ("get", "run", "set", "sosrun", "toc"):
                 ins_magic = inspect(kc, "%" + magic, 2)["data"]["text/plain"]
-                self.assertTrue(
-                    "usage: %" + magic in ins_magic, "Returned: {}".format(ins_magic)
-                )
+                self.assertTrue("usage: %" + magic in ins_magic,
+                                "Returned: {}".format(ins_magic))
             wait_for_idle(kc)
             execute(kc=kc, code="%use SoS")
             wait_for_idle(kc)
