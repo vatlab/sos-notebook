@@ -209,7 +209,7 @@ class Capture_Magic(SoS_Magic):
                 args.as_type = 'raw'
                 content = self.sos_kernel._meta['capture_result']
 
-            ienv.log_to_file(
+            env.log_to_file(
                 'MAGIC',
                 f'Captured {self.sos_kernel._meta["capture_result"][:40]}')
             if not args.as_type or args.as_type == 'text':
