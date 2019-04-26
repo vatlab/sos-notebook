@@ -12,6 +12,7 @@ from sos_notebook.test_utils import NotebookTest
 
 
 class TestMagics(NotebookTest):
+
     def test_magic_in_subkernel(self, notebook):
         """test %pwd in the python3 kernel (which is not a sos magic)"""
         assert len(notebook.check_output("%pwd", kernel="Python3")) > 0
@@ -19,27 +20,27 @@ class TestMagics(NotebookTest):
     def test_help_messages(self, notebook):
         """test help functions of magics"""
         for magic in (
-            "cd",
-            "debug",
-            "dict",
-            "get",
-            "matplotlib",
-            "preview",
-            "put",
-            "render",
-            "run",
-            "runfile",
-            "save",
-            "sandbox",
-            "sessioninfo",
-            "set",
-            "sosrun",
-            "sossave",
-            "shutdown",
-            "task",
-            "toc",
-            "use",
-            "with",
+                "cd",
+                "debug",
+                "dict",
+                "get",
+                "matplotlib",
+                "preview",
+                "put",
+                "render",
+                "run",
+                "runfile",
+                "save",
+                "sandbox",
+                "sessioninfo",
+                "set",
+                "sosrun",
+                "sossave",
+                "shutdown",
+                "task",
+                "toc",
+                "use",
+                "with",
         ):
             output = notebook.check_output(f"%{magic} -h", kernel="SoS")
             # output does not have error
@@ -47,16 +48,13 @@ class TestMagics(NotebookTest):
 
     def test_magic_capture(self, notebook):
         # test %capture
-        assert (
-            notebook.check_output(
-                """\
+        assert (notebook.check_output(
+            """\
                 %capture --to R_out
                 cat('this is to stdout')
                 """,
-                kernel="R",
-            )
-            == "this is to stdout"
-        )
+            kernel="R",
+        ) == "this is to stdout")
 
         notebook.call("%capture --to R_out \n ", kernel="R")
         assert notebook.check_output("R_out", kernel="SoS") == "''"
@@ -128,7 +126,8 @@ class TestMagics(NotebookTest):
 
     def test_magic_connectinfo(self, notebook):
         # test %capture
-        assert "Connection file" in notebook.check_output("%connectinfo", kernel="SoS")
+        assert "Connection file" in notebook.check_output(
+            "%connectinfo", kernel="SoS")
 
     def test_magic_debug(self, notebook):
         assert "debug" in notebook.check_output(
@@ -341,7 +340,8 @@ class TestMagics(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert "2" == notebook.check_output("%runfile check_run --var=2", kernel="SoS")
+        assert "2" == notebook.check_output(
+            "%runfile check_run --var=2", kernel="SoS")
 
     @pytest.mark.skipif(
         sys.platform == "win32" or "TRAVIS" in os.environ,
@@ -399,9 +399,8 @@ class TestMagics(NotebookTest):
             kernel="SoS",
             selector="img",
         )
-        assert "a.jpg" in output and (
-            "data:image/jpeg;base64" in output or "data:image/png;base64" in output
-        )
+        assert "a.jpg" in output and ("data:image/jpeg;base64" in output or
+                                      "data:image/png;base64" in output)
 
     def test_magic_preview_pdf(self, notebook):
         output = notebook.check_output(
@@ -417,10 +416,12 @@ class TestMagics(NotebookTest):
             attribute="type",
         )
         assert "a.pdf" in output and (
-            "application/x-google-chrome-pdf" in output or "application/pdf" in output
-        )
+            "application/x-google-chrome-pdf" in output or
+            "application/pdf" in output)
 
-    @pytest.mark.xfail(reason='Some system has imagemagick refusing to read PDF due to policy reasons.')
+    @pytest.mark.xfail(
+        reason='Some system has imagemagick refusing to read PDF due to policy reasons.'
+    )
     def test_magic_preview_pdf_as_png(self, notebook):
         try:
             from wand.image import Image
@@ -605,11 +606,8 @@ class TestMagics(NotebookTest):
             ''',
             kernel="SoS",
         )
-        assert (
-            "> a.html" in output
-            and "My First Heading" in output
-            and "My first paragraph" in output
-        )
+        assert ("> a.html" in output and "My First Heading" in output and
+                "My first paragraph" in output)
 
     def test_magic_put(self, notebook):
         # test %put from subkernel to SoS Kernel
@@ -627,7 +625,8 @@ class TestMagics(NotebookTest):
 
         assert "[1, 2, 3]" in notebook.check_output(content="b", kernel="SoS")
 
-        assert "R variable" in notebook.check_output(content="R_var", kernel="SoS")
+        assert "R variable" in notebook.check_output(
+            content="R_var", kernel="SoS")
 
         # test %put from SoS to other kernel
         #
@@ -641,7 +640,8 @@ class TestMagics(NotebookTest):
         )
         assert "123" in notebook.check_output(content="cat(a1)", kernel="R")
 
-        assert "this is python" in notebook.check_output(content="cat(b1)", kernel="R")
+        assert "this is python" in notebook.check_output(
+            content="cat(b1)", kernel="R")
         #
         # test put variable with invalid names
         notebook.call(
@@ -717,14 +717,16 @@ class TestMagics(NotebookTest):
         #
         # not accept workflow name
         assert "Magic %set cannot set positional argument" in notebook.check_output(
-            "%set haha", kernel="SoS", expect_error=True
-        )
+            "%set haha", kernel="SoS", expect_error=True)
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="! magic does not support built-in command #203")
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="! magic does not support built-in command #203")
     def test_magic_shell(self, notebook):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
-    @pytest.mark.skip(reason="Cannot figure out why the file sometimes does not exist")
+    @pytest.mark.skip(
+        reason="Cannot figure out why the file sometimes does not exist")
     def test_magic_sossave(self, notebook):
         #
         notebook.save()
@@ -744,12 +746,12 @@ class TestMagics(NotebookTest):
             assert "kkk" in tt.read()
 
     def test_magic_use(self, notebook):
-        idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
+        idx = notebook.call(
+            "%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
         assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         idx = notebook.call(
-            "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS"
-        )
+            "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS")
         assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         notebook.call("%use R2 -k ir", kernel="SoS")
@@ -779,4 +781,3 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         assert len(notebook.check_output("ran", kernel="SoS")) > 0
-

@@ -558,11 +558,6 @@ class SoS_Kernel(IPythonKernel):
     }
     banner = "SoS kernel - script of scripts"
 
-    _debug_mode = property(lambda self: self.warn(
-        'Magic %debug is deprecated. Please set environment variable SOS_DEBUG to ALL or a comma '
-        'separated topics such as KERNEL, MESSAGE, and MAGIC, and check log messages in ~/.sos/sos_debug.log.'
-    ))
-
     def get_supported_languages(self):
         if self._supported_languages is not None:
             return self._supported_languages
@@ -641,6 +636,7 @@ class SoS_Kernel(IPythonKernel):
             'toc': '',
             'batch_mode': False
         }
+        self._debug_mode = False
         self._supported_languages = None
         self._completer = None
         self._inspector = None

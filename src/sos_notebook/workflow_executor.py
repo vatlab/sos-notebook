@@ -98,7 +98,8 @@ def execute_scratch_cell(code, raw_args, kernel):
     sys.argv = ['%run'] + raw_args
     env.verbosity = args.verbosity
 
-    if not any(isinstance(x, NotebookLoggingHandler) for x in env.logger.handlers):
+    if not any(
+            isinstance(x, NotebookLoggingHandler) for x in env.logger.handlers):
         levels = {
             0: logging.ERROR,
             1: logging.WARNING,

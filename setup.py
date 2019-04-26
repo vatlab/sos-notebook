@@ -11,9 +11,11 @@ from distutils import log
 from setuptools import find_packages, setup
 
 _py_ver = sys.version_info
-if _py_ver.major == 2 or (_py_ver.major == 3 and (_py_ver.minor, _py_ver.micro) < (6, 0)):
-    raise SystemError('sos-notebook requires Python 3.6 or higher. Please upgrade your Python {}.{}.{}.'
-                      .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
+if _py_ver.major == 2 or (_py_ver.major == 3 and
+                          (_py_ver.minor, _py_ver.micro) < (6, 0)):
+    raise SystemError(
+        'sos-notebook requires Python 3.6 or higher. Please upgrade your Python {}.{}.{}.'
+        .format(_py_ver.major, _py_ver.minor, _py_ver.micro))
 
 # obtain version of SoS
 with open('src/sos_notebook/_version.py') as version:
@@ -23,11 +25,10 @@ with open('src/sos_notebook/_version.py') as version:
             break
 
 kernel_json = {
-    "argv":         ["python", "-m", "sos_notebook.kernel", "-f", "{connection_file}"],
+    "argv": ["python", "-m", "sos_notebook.kernel", "-f", "{connection_file}"],
     "display_name": "SoS",
-    "language":     "sos",
+    "language": "sos",
 }
-
 
 dest = '''\
 Complex bioinformatic data analysis workflows involving multiple scripts
@@ -50,53 +51,54 @@ complications of cross-language communications.
 Please refer to http://vatlab.github.io/SOS/ for more details on SoS.
 '''
 
-setup(name="sos-notebook",
-      version=__version__,
-      description='Script of Scripts (SoS): an interactive, cross-platform, and cross-language workflow system for reproducible data analysis',
-      long_description=dest,
-      author='Bo Peng',
-      url='https://github.com/vatlab/SOS',
-      author_email='bpeng@mdanderson.org',
-      maintainer='Bo Peng',
-      maintainer_email='bpeng@mdanderson.org',
-      license='3-clause BSD',
-      include_package_data=True,
-      classifiers=[
-          'Development Status :: 4 - Beta',
-          'Environment :: Console',
-          'License :: OSI Approved :: BSD License',
-          'Natural Language :: English',
-          'Operating System :: POSIX :: Linux',
-          'Operating System :: MacOS :: MacOS X',
-          'Operating System :: Microsoft :: Windows',
-          'Intended Audience :: Information Technology',
-          'Intended Audience :: Science/Research',
-          'Programming Language :: Python :: 3 :: Only',
-          'Programming Language :: Python :: 3.6',
-          'Programming Language :: Python :: Implementation :: CPython',
-      ],
-      zip_safe=False,
-      packages=find_packages('src'),
-      package_dir={'': 'src'},
-      python_requires='>=3.6',
-      install_requires=[
-          'sos>=0.19.3',
-          'nbformat',
-          'nbconvert>=5.1.1',
-          'ipython',
-          'ipykernel',
-          'notebook>=5.0.0',
-          #'jupyter_contrib_nbextensions',
-          'tabulate',
-          #'markdown',
-          'pandas',
-          'numpy',
-          #'selenium',
-          #'requests',
-          #'pytest',
-          'psutil'
-      ],
-      entry_points='''
+setup(
+    name="sos-notebook",
+    version=__version__,
+    description='Script of Scripts (SoS): an interactive, cross-platform, and cross-language workflow system for reproducible data analysis',
+    long_description=dest,
+    author='Bo Peng',
+    url='https://github.com/vatlab/SOS',
+    author_email='bpeng@mdanderson.org',
+    maintainer='Bo Peng',
+    maintainer_email='bpeng@mdanderson.org',
+    license='3-clause BSD',
+    include_package_data=True,
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'License :: OSI Approved :: BSD License',
+        'Natural Language :: English',
+        'Operating System :: POSIX :: Linux',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Intended Audience :: Information Technology',
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python :: 3 :: Only',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: Implementation :: CPython',
+    ],
+    zip_safe=False,
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
+    python_requires='>=3.6',
+    install_requires=[
+        'sos>=0.19.3',
+        'nbformat',
+        'nbconvert>=5.1.1',
+        'ipython',
+        'ipykernel',
+        'notebook>=5.0.0',
+        #'jupyter_contrib_nbextensions',
+        'tabulate',
+        #'markdown',
+        'pandas',
+        'numpy',
+        #'selenium',
+        #'requests',
+        #'pytest',
+        'psutil'
+    ],
+    entry_points='''
 [sos_converters]
 sos-ipynb.parser = sos_notebook.converter:get_script_to_notebook_parser
 sos-ipynb.func = sos_notebook.converter:script_to_notebook
@@ -118,5 +120,4 @@ ipynb-ipynb.func = sos_notebook.converter:notebook_to_notebook
 
 rmd-ipynb.parser = sos_notebook.converter:get_Rmarkdown_to_notebook_parser
 rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
-'''
-)
+''')

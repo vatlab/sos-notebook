@@ -12,6 +12,7 @@ from sos.utils import env, short_repr
 
 
 class Interactive_Step_Executor(Step_Executor):
+
     def __init__(self, step, mode='interactive'):
         # This is the only interesting part of this executor. Basically
         # it derives everything from SP_Step_Executor but does not
@@ -54,10 +55,14 @@ class Interactive_Step_Executor(Step_Executor):
                     len(tasks), 's' if len(tasks) > 1 else '',
                     f"""<a onclick="task_info('{tasks[0]}', '{self.host.alias}')">{tasks[0][:4]}</a>""",
                     f"""<a onclick="task_info('{tasks[1]}', '{self.host.alias}')">{tasks[1][:4]}</a>""",
-                    f"""<a onclick="task_info('{tasks[-1]}', '{self.host.alias}')">{tasks[-1][:4]}</a>"""))
+                    f"""<a onclick="task_info('{tasks[-1]}', '{self.host.alias}')">{tasks[-1][:4]}</a>"""
+                ))
             else:
-                print('HINT: {} task{} completed: {}'.format(len(tasks), 's' if len(tasks) > 1 else '',
-                                                             ','.join([f"""<a onclick="task_info('{x}', '{self.host.alias}')">{x[:4]}</a>""" for x in tasks])))
+                print('HINT: {} task{} completed: {}'.format(
+                    len(tasks), 's' if len(tasks) > 1 else '', ','.join([
+                        f"""<a onclick="task_info('{x}', '{self.host.alias}')">{x[:4]}</a>"""
+                        for x in tasks
+                    ])))
             return self.host.retrieve_results(tasks)
         while True:
             res = self.host.check_status(tasks)
@@ -77,8 +82,9 @@ class Interactive_Step_Executor(Step_Executor):
 
     def log(self, stage=None, msg=None):
         if stage == 'start':
-            env.logger.debug('{} ``{}``: {}'.format('Checking' if self.run_mode == 'dryrun' else 'Executing',
-                                                    self.step.step_name(), self.step.comment.strip()))
+            env.logger.debug('{} ``{}``: {}'.format(
+                'Checking' if self.run_mode == 'dryrun' else 'Executing',
+                self.step.step_name(), self.step.comment.strip()))
         elif stage == 'input':
             if env.sos_dict['step_input'] is not None:
                 env.logger.debug('input:    ``{}``'.format(

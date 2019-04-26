@@ -115,10 +115,12 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(
+            idx)
 
         notebook.append_cell("")
-        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(
+            idx)
 
 
 def get_completions(kc, text):

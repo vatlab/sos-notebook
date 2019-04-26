@@ -56,13 +56,17 @@ def notebook_server():
         env = os.environ.copy()
         env.update(info['extra_env'])
 
-        command = [sys.executable, '-m', 'notebook',
-                   '--no-browser',
-                   '--notebook-dir', nbdir,
-                   # run with a base URL that would be escaped,
-                   # to test that we don't double-escape URLs
-                   '--NotebookApp.base_url=/a@b/',
-                   ]
+        command = [
+            sys.executable,
+            '-m',
+            'notebook',
+            '--no-browser',
+            '--notebook-dir',
+            nbdir,
+            # run with a base URL that would be escaped,
+            # to test that we don't double-escape URLs
+            '--NotebookApp.base_url=/a@b/',
+        ]
         print("command=", command)
         proc = info['popen'] = Popen(command, cwd=nbdir, env=env)
         info_file_path = pjoin(td, 'jupyter_runtime',
@@ -72,15 +76,16 @@ def notebook_server():
         print("Notebook server info:", info)
         yield info
 
-    # manually try to clean up, which would fail under windows because 
+    # manually try to clean up, which would fail under windows because
     # a permission error caused by iPython history.sqlite.
     try:
         temp_dir.cleanup()
     except:
         pass
     # Shut the server down
-    requests.post(urljoin(info['url'], 'api/shutdown'),
-                  headers={'Authorization': 'token '+info['token']})
+    requests.post(
+        urljoin(info['url'], 'api/shutdown'),
+        headers={'Authorization': 'token ' + info['token']})
 
 
 def make_sauce_driver():
@@ -105,8 +110,9 @@ def make_sauce_driver():
         capabilities['version'] = '57.0'
     hub_url = "%s:%s@localhost:4445" % (username, access_key)
     print("Connecting remote driver on Sauce Labs")
-    driver = Remote(desired_capabilities=capabilities,
-                    command_executor="http://%s/wd/hub" % hub_url)
+    driver = Remote(
+        desired_capabilities=capabilities,
+        command_executor="http://%s/wd/hub" % hub_url)
     return driver
 
 
@@ -114,7 +120,7 @@ def make_sauce_driver():
 def selenium_driver():
 
     if "JUPYTER_TEST_BROWSER" not in os.environ:
-        os.environ["JUPYTER_TEST_BROWSER"] ='chrome'
+        os.environ["JUPYTER_TEST_BROWSER"] = 'chrome'
 
     if os.environ.get('SAUCE_USERNAME'):
         driver = make_sauce_driver()
@@ -130,7 +136,9 @@ def selenium_driver():
     elif os.environ.get('JUPYTER_TEST_BROWSER') == 'firefox':
         driver = Firefox()
     else:
-        raise ValueError('Invalid setting for JUPYTER_TEST_BROWSER. Valid options include live, chrome, and firefox')
+        raise ValueError(
+            'Invalid setting for JUPYTER_TEST_BROWSER. Valid options include live, chrome, and firefox'
+        )
 
     yield driver
 
@@ -144,6 +152,8 @@ def authenticated_browser(selenium_driver, notebook_server):
     selenium_driver.get("{url}?token={token}".format(**notebook_server))
     return selenium_driver
 
+
 @pytest.fixture(scope="class")
 def notebook(authenticated_browser):
-    return Notebook.new_notebook(authenticated_browser, kernel_name='kernel-sos')
+    return Notebook.new_notebook(
+        authenticated_browser, kernel_name='kernel-sos')
