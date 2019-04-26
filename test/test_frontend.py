@@ -82,10 +82,7 @@ class TestFrontEnd(NotebookTest):
         # test change to R kernel by click
         notebook.select_kernel(index=0, kernel_name="R", by_click=True)
         # check background color for R kernel
-        assert all(
-            [a == b]
-            for a, b in zip(backgroundColor["R"], notebook.get_input_backgroundColor(0))
-        )
+        assert backgroundColor["R"], notebook.get_input_backgroundColor(0)
 
         # the cell keeps its color after evaluation
         notebook.edit_cell(
@@ -98,12 +95,7 @@ class TestFrontEnd(NotebookTest):
         )
         output = notebook.get_cell_output(0)
         assert "rn" in output and "num" in output
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["R"], notebook.get_output_backgroundColor(0)
-            )
-        )
+        assert backgroundColor["R"], notebook.get_output_backgroundColor(0)
 
         # test $get and shift to SoS kernel
         idx = notebook.call(
@@ -113,12 +105,7 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["SoS"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert backgroundColor["SoS"], notebook.get_input_backgroundColor(idx)
         assert "5" in notebook.get_cell_output(idx)
 
         # switch to python3 kernel
@@ -128,19 +115,10 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["python3"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
+
         notebook.append_cell("")
-        assert all(
-            [a == b]
-            for a, b in zip(
-                backgroundColor["python3"], notebook.get_input_backgroundColor(idx)
-            )
-        )
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
 
 
 def get_completions(kc, text):
