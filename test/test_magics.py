@@ -453,6 +453,7 @@ class TestMagics(NotebookTest):
         output = notebook.check_output(
             """\
             %preview var -n -l 5
+            import numpy as np
             import pandas as pd
             var = pd.DataFrame(np.random.random((20, 2)))
             """,
