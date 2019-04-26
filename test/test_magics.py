@@ -455,11 +455,12 @@ class TestMagics(NotebookTest):
             %preview var -n -l 5
             import numpy as np
             import pandas as pd
-            var = pd.DataFrame(np.random.random((20, 2)))
+            var = pd.DataFrame(
+                np.asmatrix([[i*10, i*10+1] for i in range(100)]))
             """,
             kernel="SoS",
         )
-        assert "mtcars" in output and "Duster" in output and "Maserati" not in output
+        assert "var" in output and "41" in output and "80" not in output
 
     # def test_magic_preview_var_scatterplot(self, notebook):
     #     output = notebook.check_output('''\
