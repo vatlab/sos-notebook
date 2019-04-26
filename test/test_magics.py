@@ -452,8 +452,9 @@ class TestMagics(NotebookTest):
     def test_magic_preview_var_limit(self, notebook):
         output = notebook.check_output(
             """\
-            %preview mtcars -n -l 10
-            %get mtcars --from R
+            %preview var -n -l 5
+            import pandas as pd
+            var = pd.DataFrame(np.random.random((20, 2)))
             """,
             kernel="SoS",
         )
