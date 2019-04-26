@@ -18,16 +18,18 @@ class TestWorkflow(NotebookTest):
             [10]
             input: for_each={'i': range(1)}
             task:
-            run: expand=True
-            echo this is "{i}"
-            sleep {i}
+            python: expand=True
+            import time
+            print("this is {i}")
+            time.sleep({i})
 
             [20]
             input: for_each={'i': range(2)}
             task:
-            run: expand=True
-            echo this aa is "{i}"
-            sleep {i}
+            python: expand=True
+            import time
+            print("this aa is {i}")
+            time.sleep({i})
             ''', kernel='SoS')
 
         output = notebook.get_cell_output(index=idx)
