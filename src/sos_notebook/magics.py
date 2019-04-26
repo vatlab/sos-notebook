@@ -958,7 +958,7 @@ class Preview_Magic(SoS_Magic):
             result = previewer_func(filename, self.sos_kernel, style)
             self.show_preview_result(result)
         except Exception as e:
-            if env.is_logging('MAGIC'):
+            if env.is_debugging('MAGIC'):
                 env.log_to_file('MAGIC', f'Failed to preview {filename}: {e}')
 
     def get_parser(self):
@@ -1176,7 +1176,7 @@ class Preview_Magic(SoS_Magic):
                                 name='stderr',
                                 text='> Failed to preview file or expression {item}'
                             ))
-                        if env.is_logging('MAGIC'):
+                        if env.is_debugging('MAGIC'):
                             env.log_to_file('MAGIC', str(e))
         finally:
             self.sos_kernel.switch_kernel(orig_kernel)
@@ -1250,7 +1250,7 @@ class Preview_Magic(SoS_Magic):
                         x for x in rargs
                         if x not in ('-n', '--notebook', '-p', '--panel')
                     ]
-                    if env.is_logging('MAGIC'):
+                    if env.is_debugging('MAGIC'):
                         env.log_to_file('MAGIC', f'Running "{" ".join(rargs)}"')
                     for msg in eval(subprocess.check_output(rargs)):
                         self.sos_kernel.send_frontend_msg(msg[0], msg[1])
@@ -1258,7 +1258,7 @@ class Preview_Magic(SoS_Magic):
                     self.sos_kernel.warn(
                         f'Failed to preview {args.items} on remote host {args.host}'
                     )
-                    if env.is_logging('MAGIC'):
+                    if env.is_debugging('MAGIC'):
                         env.log_to_file('MAGIC', str(e))
 
 
@@ -1674,13 +1674,13 @@ class Revisions_Magic(SoS_Magic):
                 repo = origin[:-4] if origin.endswith('.git') else origin
             except Exception as e:
                 repo = ''
-                if env.is_logging('MAGIC'):
+                if env.is_debugging('MAGIC'):
                     env.log_to_file(
                         'MAGIC', f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
-                    if env.is_logging('MAGIC'):
+                    if env.is_debugging('MAGIC'):
                         env.log_to_file(
                         'MAGIC', f"source is set to {args.source} with repo={repo}")
                 else:
@@ -1804,7 +1804,7 @@ class Run_Magic(SoS_Magic):
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
                 # %run is executed in its own namespace
-                if env.is_logging('MAGIC'):
+                if env.is_debugging('MAGIC'):
                     env.log_to_file(
                         'MAGIC', f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':

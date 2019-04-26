@@ -879,7 +879,7 @@ class SoS_Kernel(IPythonKernel):
                         items, to_kernel='SoS')
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
-                if env.is_logging('MAGIC'):
+                if env.is_debugging('MAGIC'):
                     env.log_to_file(
                         'MAGIC',
                         f'Failed to call put_var({items}) from {kinfo.kernel}')
