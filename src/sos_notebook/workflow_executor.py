@@ -26,6 +26,7 @@ from .step_executor import Interactive_Step_Executor
 
 
 class NotebookLoggingHandler(logging.Handler):
+
     def __init__(self, level, kernel=None, title="Log Messages"):
         super(NotebookLoggingHandler, self).__init__(level)
         self.kernel = kernel
@@ -35,12 +36,16 @@ class NotebookLoggingHandler(logging.Handler):
         self.title = title
 
     def emit(self, record):
-        msg = re.sub(r'``([^`]*)``',
-                     r'<span class="sos_highlight">\1</span>', record.msg)
-        self.kernel.send_frontend_msg('display_data', {
-            'metadata': {},
-            'data': {'text/html': f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'}
-        })
+        msg = re.sub(r'``([^`]*)``', r'<span class="sos_highlight">\1</span>',
+                     record.msg)
+        self.kernel.send_frontend_msg(
+            'display_data', {
+                'metadata': {},
+                'data': {
+                    'text/html':
+                        f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'
+                }
+            })
         #self.kernel.send_response(self.kernel.iopub_socket, 'stream',
         #                          {'name': 'stdout', 'text': record.msg})
 
@@ -103,16 +108,19 @@ def execute_scratch_cell(code, raw_args, kernel):
             4: logging.DEBUG,
             None: logging.INFO
         }
-        env.logger.addHandler(NotebookLoggingHandler(
-            levels[env.verbosity], kernel, title=' '.join(sys.argv)))
+        env.logger.addHandler(
+            NotebookLoggingHandler(
+                levels[env.verbosity], kernel, title=' '.join(sys.argv)))
     else:
         env.logger.handers[0].setTitle(' '.join(sys.argv))
 
     # clear __step_input__, __step_output__ etc because there is
     # no concept of passing input/outputs across cells.
     env.sos_dict.set('__step_output__', sos_targets([]))
-    for k in ['__step_input__', '__default_output__', 'step_input', 'step_output',
-              'step_depends', '_input', '_output', '_depends']:
+    for k in [
+            '__step_input__', '__default_output__', 'step_input', 'step_output',
+            'step_depends', '_input', '_output', '_depends'
+    ]:
         env.sos_dict.pop(k, None)
 
     config = {
@@ -138,7 +146,10 @@ def execute_scratch_cell(code, raw_args, kernel):
     env.config.update(config)
 
     try:
-        if not any([SOS_SECTION_HEADER.match(line) or line.startswith('%from') or line.startswith('%include') for line in code.splitlines()]):
+        if not any([
+                SOS_SECTION_HEADER.match(line) or line.startswith('%from') or
+                line.startswith('%include') for line in code.splitlines()
+        ]):
             code = '[scratch_0]\n' + code
             script = SoS_Script(content=code)
         else:
@@ -164,7 +175,9 @@ def execute_scratch_cell(code, raw_args, kernel):
             sys.stderr.write(get_traceback())
         raise
 
+
 class Tapped_Executor(mp.Process):
+
     def __init__(self, code, args, config):
         # the worker process knows configuration file, command line argument etc
         super(Tapped_Executor, self).__init__()
@@ -185,22 +198,22 @@ class Tapped_Executor(mp.Process):
             (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
 
         try:
-            filename = os.path.join(tempfile.gettempdir(), f'interactive_{os.getpid()}.sos')
+            filename = os.path.join(tempfile.gettempdir(),
+                                    f'interactive_{os.getpid()}.sos')
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
             cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
-            ret_code = pexpect_run(
-                cmd, shell=True, stdout_socket=stdout_socket)
+            ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
             # status will not trigger frontend update if it was not
             # started with a pending status
-            informer_socket.send_pyobj(
-                {'msg_type': 'workflow_status',
-                 'data': {
-                     'cell_id': env.config['slave_id'],
-                     'status': 'completed' if ret_code == 0 else 'failed'
-                 }
-                 })
+            informer_socket.send_pyobj({
+                'msg_type': 'workflow_status',
+                'data': {
+                    'cell_id': env.config['slave_id'],
+                    'status': 'completed' if ret_code == 0 else 'failed'
+                }
+            })
         except Exception as e:
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
             informer_socket.send_pyobj({
@@ -221,6 +234,7 @@ class Tapped_Executor(mp.Process):
 
 # workflow queue that holds all workflow
 g_workflow_queue = []
+
 
 def run_next_workflow_in_queue():
     # execute the first available item
@@ -243,6 +257,7 @@ def run_next_workflow_in_queue():
             # if already running, do not submit new one
             break
 
+
 def execute_pending_workflow(cell_ids, kernel):
     # we are giving a list of cell_ids because some cells might be removed
     # we use this list to clear workflow queue of removed cells
@@ -252,26 +267,32 @@ def execute_pending_workflow(cell_ids, kernel):
     run_next_workflow_in_queue()
 
 
-def run_sos_workflow(code, raw_args='', kernel=None, workflow_mode=False, run_in_queue=False):
+def run_sos_workflow(code,
+                     raw_args='',
+                     kernel=None,
+                     workflow_mode=False,
+                     run_in_queue=False):
     # when user asks to execute a cell as workflow. We either
     # execute the workflow or put it in queue
     global g_workflow_queue
 
     # if a cell already exist, remove previous pending job (a tuple)
     # completed job (dead process), or running job.
-    if kernel.cell_id in [cid for cid, proc in g_workflow_queue if proc is not None]:
+    if kernel.cell_id in [
+            cid for cid, proc in g_workflow_queue if proc is not None
+    ]:
         cancel_workflow(kernel.cell_id, kernel)
 
     if run_in_queue:
         # put to the back
         g_workflow_queue.append([kernel.cell_id, (code, raw_args, env.config)])
         # in any case, we start with a pending status
-        kernel.send_frontend_msg('workflow_status',
-                                 {
-                                     'cell_id': kernel.cell_id,
-                                     'status': 'pending',
-                                     'index': len(g_workflow_queue)
-                                 })
+        kernel.send_frontend_msg(
+            'workflow_status', {
+                'cell_id': kernel.cell_id,
+                'status': 'pending',
+                'index': len(g_workflow_queue)
+            })
         run_next_workflow_in_queue()
     else:
         env.config['slave_id'] = kernel.cell_id

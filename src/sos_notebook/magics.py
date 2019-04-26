@@ -1,4 +1,3 @@
-
 import argparse
 import fnmatch
 import os
@@ -21,7 +20,8 @@ from jupyter_client import find_connection_file
 from sos.eval import SoS_eval, interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env, pretty_size, short_repr, pexpect_run, load_config_files
-from sos._version import  __version__
+from sos._version import __version__
+
 
 class SoS_Magic(object):
     name = 'BaseMagic'
@@ -35,13 +35,16 @@ class SoS_Magic(object):
         try:
             new_text = interpolate(text, local_dict=env.sos_dict._dict)
             if new_text != text and not quiet:
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                          {
-                                              'metadata': {},
-                                              'data': {
-                                                  'text/html': HTML(
-                                                      f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>').data}
-                                          })
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'display_data', {
+                        'metadata': {},
+                        'data': {
+                            'text/html':
+                                HTML(
+                                    f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>'
+                                ).data
+                        }
+                    })
             return new_text
         except Exception as e:
             self.sos_kernel.warn(
@@ -77,8 +80,11 @@ class SoS_Magic(object):
             return
         try:
             with self.sos_kernel.redirect_sos_io():
-                pexpect_run(cmd, shell=True,
-                            win_width=40 if self.sos_kernel._meta['cell_id'] == "" else 80)
+                pexpect_run(
+                    cmd,
+                    shell=True,
+                    win_width=40
+                    if self.sos_kernel._meta['cell_id'] == "" else 80)
         except Exception as e:
             self.sos_kernel.warn(e)
 
@@ -98,7 +104,9 @@ class Command_Magic(SoS_Magic):
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         self.run_shell_command(code.split(' ')[0][1:] + ' ' + options)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Capture_Magic(SoS_Magic):
@@ -108,34 +116,54 @@ class Capture_Magic(SoS_Magic):
         super(Capture_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%capture',
-                                         description='''Capture output (stdout) or output file from a subkernel
+        parser = argparse.ArgumentParser(
+            prog='%capture',
+            description='''Capture output (stdout) or output file from a subkernel
                                          as variable in SoS''')
-        parser.add_argument('msg_type', nargs='?', default='stdout', choices=['stdout', 'stderr', 'text', 'markdown',
-                                                                              'html', 'raw'],
-                            help='''Message type to capture, default to standard output. In terms of Jupyter message
+        parser.add_argument(
+            'msg_type',
+            nargs='?',
+            default='stdout',
+            choices=['stdout', 'stderr', 'text', 'markdown', 'html', 'raw'],
+            help='''Message type to capture, default to standard output. In terms of Jupyter message
                         types, "stdout" refers to "stream" message with "stdout" type, "stderr" refers to "stream"
                         message with "stderr" type, "text", "markdown" and "html" refers to "display_data" message
                         with "text/plain", "text/markdown" and "text/html" type respectively. If "raw" is specified,
-                        all returned messages will be returned in a list format.''')
-        parser.add_argument('--as', dest='as_type', default='text', nargs='?', choices=('text', 'json', 'csv', 'tsv'),
-                            help='''How to interpret the captured text. This only applicable to stdout, stderr and
+                        all returned messages will be returned in a list format.'''
+        )
+        parser.add_argument(
+            '--as',
+            dest='as_type',
+            default='text',
+            nargs='?',
+            choices=('text', 'json', 'csv', 'tsv'),
+            help='''How to interpret the captured text. This only applicable to stdout, stderr and
                             text message type where the text from cell output will be collected. If this
                             option is given, SoS will try to parse the text as json, csv (comma separated text),
                              tsv (tab separated text), and store text (from text), Pandas DataFrame
-                            (from csv or tsv), dict or other types (from json) to the variable.''')
+                            (from csv or tsv), dict or other types (from json) to the variable.'''
+        )
         grp = parser.add_mutually_exclusive_group(required=False)
-        grp.add_argument('-t', '--to', dest='__to__', metavar='VAR',
-                         help='''Name of variable to which the captured content will be saved. If no varialbe is
+        grp.add_argument(
+            '-t',
+            '--to',
+            dest='__to__',
+            metavar='VAR',
+            help='''Name of variable to which the captured content will be saved. If no varialbe is
                          specified, the return value will be saved to variable "__captured" and be displayed
                          at the side panel. ''')
-        grp.add_argument('-a', '--append', dest='__append__', metavar='VAR',
-                         help='''Name of variable to which the captured content will be appended.
+        grp.add_argument(
+            '-a',
+            '--append',
+            dest='__append__',
+            metavar='VAR',
+            help='''Name of variable to which the captured content will be appended.
                             This option is equivalent to --to if VAR does not exist. If VAR exists
                             and is of the same type of new content (str or dict or DataFrame), the
                             new content will be appended to VAR if VAR is of str (str concatenation),
                             dict (dict update), or DataFrame (DataFrame.append) types. If VAR is of
-                            list type, the new content will be appended to the end of the list.''')
+                            list type, the new content will be appended to the end of the list.'''
+        )
         parser.error = self._parse_error
         return parser
 
@@ -148,7 +176,9 @@ class Capture_Magic(SoS_Magic):
             return
         try:
             self.sos_kernel._meta['capture_result'] = []
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             # parse capture_result
             content = ''
@@ -162,27 +192,32 @@ class Capture_Magic(SoS_Magic):
                         content += msg[1]['text']
             elif args.msg_type == 'text':
                 for msg in self.sos_kernel._meta['capture_result']:
-                    if msg[0] == 'display_data' and 'data' in msg[1] and 'text/plain' in msg[1]['data']:
+                    if msg[0] == 'display_data' and 'data' in msg[
+                            1] and 'text/plain' in msg[1]['data']:
                         content += msg[1]['data']['text/plain']
             elif args.msg_type == 'markdown':
                 for msg in self.sos_kernel._meta['capture_result']:
-                    if msg[0] == 'display_data' and 'data' in msg[1] and 'text/markdown' in msg[1]['data']:
+                    if msg[0] == 'display_data' and 'data' in msg[
+                            1] and 'text/markdown' in msg[1]['data']:
                         content += msg[1]['data']['text/markdown']
             elif args.msg_type == 'html':
                 for msg in self.sos_kernel._meta['capture_result']:
-                    if msg[0] == 'display_data' and 'data' in msg[1] and 'text/html' in msg[1]['data']:
+                    if msg[0] == 'display_data' and 'data' in msg[
+                            1] and 'text/html' in msg[1]['data']:
                         content += msg[1]['data']['text/html']
             else:
                 args.as_type = 'raw'
                 content = self.sos_kernel._meta['capture_result']
 
-            if self.sos_kernel._debug_mode:
-                self.sos_kernel.warn(
+            if env.is_debugging('MAGIC'):
+                env.log_to_file(
+                    'MAGIC',
                     f'Captured {self.sos_kernel._meta["capture_result"][:40]}')
             if not args.as_type or args.as_type == 'text':
                 if not isinstance(content, str):
                     self.sos_kernel.warn(
-                        'Option --as is only available for message types stdout, stderr, and text.')
+                        'Option --as is only available for message types stdout, stderr, and text.'
+                    )
             elif args.as_type == 'json':
                 import json
                 try:
@@ -190,10 +225,12 @@ class Capture_Magic(SoS_Magic):
                         content = json.loads(content)
                     else:
                         self.sos_kernel.warn(
-                            'Option --as is only available for message types stdout, stderr, and text.')
+                            'Option --as is only available for message types stdout, stderr, and text.'
+                        )
                 except Exception as e:
                     self.sos_kernel.warn(
-                        f'Failed to capture output in JSON format, text returned: {e}')
+                        f'Failed to capture output in JSON format, text returned: {e}'
+                    )
             elif args.as_type == 'csv':
                 try:
                     if isinstance(content, str):
@@ -201,10 +238,12 @@ class Capture_Magic(SoS_Magic):
                             content = pd.read_csv(ifile)
                     else:
                         self.sos_kernel.warn(
-                            'Option --as is only available for message types stdout, stderr, and text.')
+                            'Option --as is only available for message types stdout, stderr, and text.'
+                        )
                 except Exception as e:
                     self.sos_kernel.warn(
-                        f'Failed to capture output in {args.as_type} format, text returned: {e}')
+                        f'Failed to capture output in {args.as_type} format, text returned: {e}'
+                    )
             elif args.as_type == 'tsv':
                 try:
                     if isinstance(content, str):
@@ -212,10 +251,12 @@ class Capture_Magic(SoS_Magic):
                             content = pd.read_csv(ifile, sep='\t')
                     else:
                         self.sos_kernel.warn(
-                            'Option --as is only available for message types stdout, stderr, and text.')
+                            'Option --as is only available for message types stdout, stderr, and text.'
+                        )
                 except Exception as e:
                     self.sos_kernel.warn(
-                        f'Failed to capture output in {args.as_type} format, text returned: {e}')
+                        f'Failed to capture output in {args.as_type} format, text returned: {e}'
+                    )
             #
             if args.__to__ and not args.__to__.isidentifier():
                 self.sos_kernel.warn(f'Invalid variable name {args.__to__}')
@@ -236,32 +277,39 @@ class Capture_Magic(SoS_Magic):
                         env.sos_dict[args.__append__] += content
                     else:
                         self.sos_kernel.warn(
-                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}'
+                        )
                 elif isinstance(env.sos_dict[args.__append__], dict):
                     if isinstance(content, dict):
                         env.sos_dict[args.__append__].update(content)
                     else:
                         self.sos_kernel.warn(
-                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}'
+                        )
                 elif isinstance(env.sos_dict[args.__append__], pd.DataFrame):
                     if isinstance(content, pd.DataFrame):
                         env.sos_dict.set(
-                            args.__append__, env.sos_dict[args.__append__].append(content))
+                            args.__append__,
+                            env.sos_dict[args.__append__].append(content))
                     else:
                         self.sos_kernel.warn(
-                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                            f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}'
+                        )
                 elif isinstance(env.sos_dict[args.__append__], list):
                     env.sos_dict[args.__append__].append(content)
                 else:
                     self.sos_kernel.warn(
-                        f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}')
+                        f'Cannot append new content of type {type(content).__name__} to {args.__append__} of type {type(env.sos_dict[args.__append__]).__name__}'
+                    )
             else:
                 env.sos_dict.set('__captured', content)
                 import pprint
-                self.sos_kernel.send_frontend_msg('display_data',
-                                              {'metadata': {},
-                                               'data': {'text/plain': pprint.pformat(content)}
-                                               })
+                self.sos_kernel.send_frontend_msg('display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/plain': pprint.pformat(content)
+                    }
+                })
         self.sos_kernel._meta['capture_result'] = None
 
 
@@ -272,8 +320,9 @@ class Cd_Magic(SoS_Magic):
         super(Cd_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%cd',
-                                         description='''change directory of SoS and all subkernels.''')
+        parser = argparse.ArgumentParser(
+            prog='%cd',
+            description='''change directory of SoS and all subkernels.''')
         parser.add_argument('dir', help='''destination directory''')
         parser.error = self._parse_error
         return parser
@@ -284,8 +333,11 @@ class Cd_Magic(SoS_Magic):
         to_dir = option.strip()
         try:
             os.chdir(os.path.expanduser(to_dir))
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                      {'name': 'stdout', 'text': os.getcwd()})
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                          'stream', {
+                                              'name': 'stdout',
+                                              'text': os.getcwd()
+                                          })
         except Exception as e:
             self.sos_kernel.warn(
                 f'Failed to change dir to {os.path.expanduser(to_dir)}: {e}')
@@ -296,7 +348,8 @@ class Cd_Magic(SoS_Magic):
             for kernel in self.sos_kernel.kernels.keys():
                 if kernel not in self.sos_kernel.supported_languages:
                     self.sos_kernel.warn(
-                        f'Current directory of kernel {kernel} is not changed: unsupported language')
+                        f'Current directory of kernel {kernel} is not changed: unsupported language'
+                    )
                     continue
                 lan = self.sos_kernel.supported_languages[kernel]
                 if hasattr(lan, 'cd_command'):
@@ -304,13 +357,18 @@ class Cd_Magic(SoS_Magic):
                         self.sos_kernel.switch_kernel(kernel)
                         cmd = interpolate(lan.cd_command, {'dir': to_dir})
                         self.sos_kernel.run_cell(
-                            cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
+                            cmd,
+                            True,
+                            False,
+                            on_error=f'Failed to execute {cmd} in {kernel}')
                     except Exception as e:
                         self.sos_kernel.warn(
-                            f'Current directory of kernel {kernel} is not changed: {e}')
+                            f'Current directory of kernel {kernel} is not changed: {e}'
+                        )
                 else:
                     self.sos_kernel.warn(
-                        f'Current directory of kernel {kernel} is not changed: cd_command not defined')
+                        f'Current directory of kernel {kernel} is not changed: cd_command not defined'
+                    )
         finally:
             self.sos_kernel.switch_kernel(cur_kernel)
 
@@ -322,7 +380,9 @@ class Cd_Magic(SoS_Magic):
         except SystemExit:
             return
         self.handle_magic_cd(args.dir)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Clear_Magic(SoS_Magic):
@@ -332,16 +392,29 @@ class Clear_Magic(SoS_Magic):
         super(Clear_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%clear',
-                                         description='''Clear the output of the current cell, or the current
+        parser = argparse.ArgumentParser(
+            prog='%clear',
+            description='''Clear the output of the current cell, or the current
             active cell if executed in the sidepanel.''')
-        parser.add_argument('-a', '--all', action='store_true',
-                            help='''Clear all output or selected status or class of the current notebook.''')
+        parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''Clear all output or selected status or class of the current notebook.'''
+        )
         grp = parser.add_mutually_exclusive_group()
-        grp.add_argument('-s', '--status', nargs='+',
-                         help='''Clear tasks that match specifie status (e.g. completed).''')
-        grp.add_argument('-c', '--class', nargs='+', dest='elem_class',
-                         help='''Clear all HTML elements with specified classes (e.g. sos_hint)''')
+        grp.add_argument(
+            '-s',
+            '--status',
+            nargs='+',
+            help='''Clear tasks that match specifie status (e.g. completed).''')
+        grp.add_argument(
+            '-c',
+            '--class',
+            nargs='+',
+            dest='elem_class',
+            help='''Clear all HTML elements with specified classes (e.g. sos_hint)'''
+        )
         parser.error = self._parse_error
         return parser
 
@@ -355,7 +428,9 @@ class Clear_Magic(SoS_Magic):
         # self.sos_kernel._meta['cell_id'] could be reset by _do_execute
         cell_id = self.sos_kernel._meta['cell_id']
         try:
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             if self.sos_kernel._meta.get('batch_mode', False):
                 return
@@ -364,7 +439,8 @@ class Clear_Magic(SoS_Magic):
             else:
                 status_style = None
             self.sos_kernel.send_frontend_msg(
-                'clear-output', [cell_id, args.all, status_style, args.elem_class])
+                'clear-output',
+                [cell_id, args.all, status_style, args.elem_class])
 
 
 class ConnectInfo_Magic(SoS_Magic):
@@ -378,9 +454,14 @@ class ConnectInfo_Magic(SoS_Magic):
         cfile = find_connection_file()
         with open(cfile) as conn:
             conn_info = conn.read()
-        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                  {'name': 'stdout', 'text': 'Connection file: {}\n{}'.format(cfile, conn_info)})
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        self.sos_kernel.send_response(
+            self.sos_kernel.iopub_socket, 'stream', {
+                'name': 'stdout',
+                'text': 'Connection file: {}\n{}'.format(cfile, conn_info)
+            })
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Debug_Magic(SoS_Magic):
@@ -390,10 +471,10 @@ class Debug_Magic(SoS_Magic):
         super(Debug_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%debug',
-                                         description='''Turn on or off debug information''')
-        parser.add_argument('status', choices=['on', 'off'],
-                            help='''Turn on or off debugging''')
+        parser = argparse.ArgumentParser(
+            prog='%debug', description='''deprecated''')
+        parser.add_argument(
+            'status', choices=['on', 'off'], help='''deprecated''')
         parser.error = self._parse_error
         return parser
 
@@ -404,10 +485,13 @@ class Debug_Magic(SoS_Magic):
             args = parser.parse_args(options.split())
         except SystemExit:
             return
-        self.sos_kernel._debug_mode = args.status == 'on'
-        if self.sos_kernel._debug_mode:
-            self.sos_kernel.warn(remaining_code)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        self.sos_kernel.warn(
+            'Magic %debug is deprecated. Please set environment variable SOS_DEBUG to ALL or a comma '
+            'separated topics such as KERNEL, MESSAGE, and MAGIC, and check log messages in ~/.sos/sos_debug.log.'
+        )
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Dict_Magic(SoS_Magic):
@@ -417,17 +501,29 @@ class Dict_Magic(SoS_Magic):
         super(Dict_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%dict',
-                                         description='Inspect or reset SoS dictionary')
+        parser = argparse.ArgumentParser(
+            prog='%dict', description='Inspect or reset SoS dictionary')
         parser.add_argument('vars', nargs='*')
-        parser.add_argument('-k', '--keys', action='store_true',
-                            help='Return only keys')
-        parser.add_argument('-r', '--reset', action='store_true',
-                            help='Rest SoS dictionary (clear all user variables)')
-        parser.add_argument('-a', '--all', action='store_true',
-                            help='Return all variales, including system functions and variables')
-        parser.add_argument('-d', '--del', nargs='+', metavar='VAR', dest='__del__',
-                            help='Remove specified variables from SoS dictionary')
+        parser.add_argument(
+            '-k', '--keys', action='store_true', help='Return only keys')
+        parser.add_argument(
+            '-r',
+            '--reset',
+            action='store_true',
+            help='Rest SoS dictionary (clear all user variables)')
+        parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='Return all variales, including system functions and variables'
+        )
+        parser.add_argument(
+            '-d',
+            '--del',
+            nargs='+',
+            metavar='VAR',
+            dest='__del__',
+            help='Remove specified variables from SoS dictionary')
         parser.error = self._parse_error
         return parser
 
@@ -463,23 +559,34 @@ class Dict_Magic(SoS_Magic):
             elif args.vars:
                 self.sos_kernel.send_result(set(args.vars))
             else:
-                self.sos_kernel.send_result({x for x in env.sos_dict._dict.keys(
-                ) if not x.startswith('__')} - self.sos_kernel.original_keys)
+                self.sos_kernel.send_result({
+                    x for x in env.sos_dict._dict.keys()
+                    if not x.startswith('__')
+                } - self.sos_kernel.original_keys)
         else:
             if args.all:
                 self.sos_kernel.send_result(env.sos_dict._dict)
             elif args.vars:
-                self.sos_kernel.send_result(
-                    {x: y for x, y in env.sos_dict._dict.items() if x in args.vars})
+                self.sos_kernel.send_result({
+                    x: y
+                    for x, y in env.sos_dict._dict.items()
+                    if x in args.vars
+                })
             else:
-                self.sos_kernel.send_result({x: y for x, y in env.sos_dict._dict.items() if
-                                         x not in self.sos_kernel.original_keys and not x.startswith('__')})
+                self.sos_kernel.send_result({
+                    x: y
+                    for x, y in env.sos_dict._dict.items()
+                    if x not in self.sos_kernel.original_keys and
+                    not x.startswith('__')
+                })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         # %dict should be the last magic
         options, remaining_code = self.get_magic_and_code(code, False)
         self.handle_magic_dict(options)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Expand_Magic(SoS_Magic):
@@ -489,12 +596,19 @@ class Expand_Magic(SoS_Magic):
         super(Expand_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%expand',
-                                         description='''Expand the script in the current cell with default ({}) or
+        parser = argparse.ArgumentParser(
+            prog='%expand',
+            description='''Expand the script in the current cell with default ({}) or
                 specified sigil.''')
-        parser.add_argument('sigil', nargs='?', help='''Sigil to be used to interpolated the
+        parser.add_argument(
+            'sigil',
+            nargs='?',
+            help='''Sigil to be used to interpolated the
             texts. It can be quoted, or be specified as two options.''')
-        parser.add_argument('right_sigil', nargs='?', help='''Right sigil if the sigil is
+        parser.add_argument(
+            'right_sigil',
+            nargs='?',
+            help='''Right sigil if the sigil is
             specified as two pieces.''')
         parser.error = self._parse_error
         return parser
@@ -518,7 +632,9 @@ class Expand_Magic(SoS_Magic):
         lines = lines[1:]
         start_line: int = 0
         for idx, line in enumerate(lines):
-            if line.strip() and not any(line.startswith(f'%{x} ') for x in SoS_Magics.names) and not line.startswith('!'):
+            if line.strip() and not any(
+                    line.startswith(f'%{x} ')
+                    for x in SoS_Magics.names) and not line.startswith('!'):
                 start_line = idx
                 break
         text = '\n'.join(lines[start_line:])
@@ -527,10 +643,12 @@ class Expand_Magic(SoS_Magic):
             text = replace_sigil(text, sigil)
         try:
             interpolated = interpolate(text, local_dict=env.sos_dict._dict)
-            remaining_code = '\n'.join(
-                lines[:start_line] + [interpolated]) + '\n'
+            remaining_code = '\n'.join(lines[:start_line] +
+                                       [interpolated]) + '\n'
             # self.sos_kernel.options will be set to inflence the execution of remaing_code
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(e)
             return
@@ -543,14 +661,17 @@ class Get_Magic(SoS_Magic):
         super(Get_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%get',
-                                         description='''Get specified variables from another kernel, which is
+        parser = argparse.ArgumentParser(
+            prog='%get',
+            description='''Get specified variables from another kernel, which is
                 by default the SoS kernel.''')
-        parser.add_argument('--from', dest='__from__',
-                            help='''Name of kernel from which the variables will be obtained.
+        parser.add_argument(
+            '--from',
+            dest='__from__',
+            help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
-        parser.add_argument('vars', nargs='*',
-                            help='''Names of SoS variables''')
+        parser.add_argument(
+            'vars', nargs='*', help='''Names of SoS variables''')
         parser.error = self._parse_error
         return parser
 
@@ -564,14 +685,17 @@ class Get_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Matplotlib_Magic(SoS_Magic):
@@ -581,14 +705,23 @@ class Matplotlib_Magic(SoS_Magic):
         super(Matplotlib_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%matplotlib',
-                                         description='''Set matplotlib parser type''')
-        parser.add_argument('gui', choices=['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg',
-                                            'notebook', 'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'],
-                            nargs='?',
-                            help='''Name of the matplotlib backend to use (‘agg’, ‘gtk’, ‘gtk3’,''')
-        parser.add_argument('-l', '--list', action='store_true',
-                            help='''Show available matplotlib backends''')
+        parser = argparse.ArgumentParser(
+            prog='%matplotlib', description='''Set matplotlib parser type''')
+        parser.add_argument(
+            'gui',
+            choices=[
+                'agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg', 'notebook',
+                'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget',
+                'wx'
+            ],
+            nargs='?',
+            help='''Name of the matplotlib backend to use (‘agg’, ‘gtk’, ‘gtk3’,'''
+        )
+        parser.add_argument(
+            '-l',
+            '--list',
+            action='store_true',
+            help='''Show available matplotlib backends''')
         parser.error = self._parse_error
         return parser
 
@@ -600,21 +733,32 @@ class Matplotlib_Magic(SoS_Magic):
         except SystemExit:
             return
         if args.list:
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                      {'name': 'stdout', 'text': 'Available matplotlib backends: {}'.format(
-                                          ['agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg', 'notebook',
-                                           'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5', 'svg', 'tk', 'widget', 'wx'])})
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'stream', {
+                    'name':
+                        'stdout',
+                    'text':
+                        'Available matplotlib backends: {}'.format([
+                            'agg', 'gtk', 'gtk3', 'inline', 'ipympl', 'nbagg',
+                            'notebook', 'osx', 'pdf', 'ps', 'qt', 'qt4', 'qt5',
+                            'svg', 'tk', 'widget', 'wx'
+                        ])
+                })
             return
         try:
             _, backend = self.sos_kernel.shell.enable_matplotlib(args.gui)
             if not args.gui or args.gui == 'auto':
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                          {'name': 'stdout',
-                                           'text': f'Using matplotlib backend {backend}'})
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'stream', {
+                        'name': 'stdout',
+                        'text': f'Using matplotlib backend {backend}'
+                    })
         except Exception as e:
             self.sos_kernel.warn(
                 'Failed to set matplotlib backnd {}: {}'.format(options, e))
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Paste_Magic(SoS_Magic):
@@ -641,13 +785,16 @@ class Paste_Magic(SoS_Magic):
             except ClipboardEmpty:
                 raise UsageError("The clipboard appears to be empty")
             except Exception as e:
-                env.logger.warn(
-                    f'Failed to get text from the clipboard: {e}')
+                env.logger.warn(f'Failed to get text from the clipboard: {e}')
                 return
             #
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                      {'name': 'stdout', 'text': code.strip() + '\n## -- End pasted text --\n'})
-            return self.sos_kernel._do_execute(code, silent, store_history, user_expressions, allow_stdin)
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'stream', {
+                    'name': 'stdout',
+                    'text': code.strip() + '\n## -- End pasted text --\n'
+                })
+            return self.sos_kernel._do_execute(code, silent, store_history,
+                                               user_expressions, allow_stdin)
         finally:
             self.sos_kernel.options = old_options
 
@@ -675,10 +822,14 @@ class Preview_Magic(SoS_Magic):
         elif isinstance(obj, Sized):
             txt += f' of length {obj.__len__()}'
         if isinstance(obj, ModuleType):
-            return txt, ({'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)}, {})
+            return txt, ({
+                'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
+            }, {})
         elif callable(obj):
             env.log_to_file(f'hand {item}')
-            return txt, ({'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)}, {})
+            return txt, ({
+                'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
+            }, {})
         elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
                 from sos.visualize import Visualizer
@@ -691,7 +842,8 @@ class Preview_Magic(SoS_Magic):
                     return txt, None
                 else:
                     raise ValueError(
-                        f'Unrecognized return value from visualizer: {short_repr(result)}.')
+                        f'Unrecognized return value from visualizer: {short_repr(result)}.'
+                    )
             except Exception as e:
                 self.sos_kernel.warn(f'Failed to preview variable: {e}')
                 return txt, self.sos_kernel.format_obj(obj)
@@ -706,44 +858,63 @@ class Preview_Magic(SoS_Magic):
                 result = result.splitlines()
                 hint_line = result[0][6:].strip()
                 result = '\n'.join(result[1:])
-                self.sos_kernel.send_frontend_msg('display_data',
-                                              {
-                                                  'metadata': {},
-                                                  'data': {'text/html': HTML(
-                                                      f'<div class="sos_hint">{hint_line}</div>').data}
-                                              })
+                self.sos_kernel.send_frontend_msg(
+                    'display_data', {
+                        'metadata': {},
+                        'data': {
+                            'text/html':
+                                HTML(f'<div class="sos_hint">{hint_line}</div>'
+                                    ).data
+                        }
+                    })
             if result:
-                self.sos_kernel.send_frontend_msg('stream',
-                                              {'name': 'stdout',
-                                                  'text': result},
-                                              )
+                self.sos_kernel.send_frontend_msg(
+                    'stream',
+                    {
+                        'name': 'stdout',
+                        'text': result
+                    },
+                )
         elif isinstance(result, dict):
-            self.sos_kernel.send_frontend_msg('display_data',
-                                          {'data': result, 'metadata': {}},
-                                          )
+            self.sos_kernel.send_frontend_msg(
+                'display_data',
+                {
+                    'data': result,
+                    'metadata': {}
+                },
+            )
         elif isinstance(result, (list, tuple)) and len(result) == 2:
-            self.sos_kernel.send_frontend_msg('display_data',
-                                          {'data': result[0],
-                                           'metadata': result[1]},
-                                          )
+            self.sos_kernel.send_frontend_msg(
+                'display_data',
+                {
+                    'data': result[0],
+                    'metadata': result[1]
+                },
+            )
         else:
-            self.sos_kernel.send_frontend_msg('stream',
-                                          dict(
-                                              name='stderr', text=f'Unrecognized preview content: {result}'),
-                                          )
+            self.sos_kernel.send_frontend_msg(
+                'stream',
+                dict(
+                    name='stderr',
+                    text=f'Unrecognized preview content: {result}'),
+            )
 
     def preview_file(self, filename, style=None):
         if not os.path.isfile(filename):
             self.sos_kernel.warn('\n> ' + filename + ' does not exist')
             return
-        self.sos_kernel.send_frontend_msg('display_data',
-                                      {'metadata': {},
-                                       'data': {
-                                          'text/plain': f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
-                                          'text/html': HTML(
-                                              f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>').data,
-                                      }
-                                      })
+        self.sos_kernel.send_frontend_msg(
+            'display_data', {
+                'metadata': {},
+                'data': {
+                    'text/plain':
+                        f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
+                    'text/html':
+                        HTML(
+                            f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>'
+                        ).data,
+                }
+            })
         previewer_func = None
         # lazy import of previewers
         if self.previewers is None:
@@ -765,17 +936,19 @@ class Preview_Magic(SoS_Magic):
                         try:
                             previewer_func = y.load()
                         except Exception as e:
-                            self.sos_kernel.send_frontend_msg('stream',
-                                                          dict(name='stderr',
-                                                               text=f'Failed to load previewer {y}: {e}'),
-                                                          )
+                            self.sos_kernel.send_frontend_msg(
+                                'stream',
+                                dict(
+                                    name='stderr',
+                                    text=f'Failed to load previewer {y}: {e}'),
+                            )
                             continue
                         break
                 except Exception as e:
                     self.sos_kernel.send_frontend_msg('stream', {
                         'name': 'stderr',
-                        'text': str(e)}
-                        )
+                        'text': str(e)
+                    })
                     continue
         #
         # if no previewer can be found
@@ -785,43 +958,69 @@ class Preview_Magic(SoS_Magic):
             result = previewer_func(filename, self.sos_kernel, style)
             self.show_preview_result(result)
         except Exception as e:
-            if self.sos_kernel._debug_mode:
-                self.sos_kernel.send_frontend_msg('stream',
-                                              dict(
-                                                  name='stderr', text=f'Failed to preview {filename}: {e}'),
-                                              )
+            if env.is_logging('MAGIC'):
+                env.log_to_file('MAGIC', f'Failed to preview {filename}: {e}')
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%preview',
-                                         description='''Preview files, sos variables, or expressions in the
+        parser = argparse.ArgumentParser(
+            prog='%preview',
+            description='''Preview files, sos variables, or expressions in the
                 side panel, or notebook if side panel is not opened, unless
                 options --panel or --notebook is specified.''')
-        parser.add_argument('items', nargs='*',
-                            help='''Filename, variable name, or expression. Wildcard characters
+        parser.add_argument(
+            'items',
+            nargs='*',
+            help='''Filename, variable name, or expression. Wildcard characters
                 such as '*' and '?' are allowed for filenames.''')
-        parser.add_argument('-k', '--kernel',
-                            help='''kernel in which variables will be previewed. By default
-            the variable will be previewed in the current kernel of the cell.''')
-        parser.add_argument('-w', '--workflow', action='store_true',
-                            help='''Preview notebook workflow''')
-        parser.add_argument('-o', '--keep-output', action='store_true',
-                            help='''Do not clear the output of the side panel.''')
+        parser.add_argument(
+            '-k',
+            '--kernel',
+            help='''kernel in which variables will be previewed. By default
+            the variable will be previewed in the current kernel of the cell.'''
+        )
+        parser.add_argument(
+            '-w',
+            '--workflow',
+            action='store_true',
+            help='''Preview notebook workflow''')
+        parser.add_argument(
+            '-o',
+            '--keep-output',
+            action='store_true',
+            help='''Do not clear the output of the side panel.''')
         # this option is currently hidden
-        parser.add_argument('-s', '--style', choices=['table', 'scatterplot', 'png'],
-                            help='''Option for preview file or variable, which by default is "table"
+        parser.add_argument(
+            '-s',
+            '--style',
+            choices=['table', 'scatterplot', 'png'],
+            help='''Option for preview file or variable, which by default is "table"
             for Pandas DataFrame. The %%preview magic also accepts arbitrary additional
             keyword arguments, which would be interpreted by individual style. Passing
             '-h' with '--style' would display the usage information of particular
             style.''')
-        parser.add_argument('-r', '--host', dest='host', metavar='HOST',
-                            help='''Preview files on specified remote host, which should
+        parser.add_argument(
+            '-r',
+            '--host',
+            dest='host',
+            metavar='HOST',
+            help='''Preview files on specified remote host, which should
             be one of the hosts defined in sos configuration files.''')
         loc = parser.add_mutually_exclusive_group()
-        loc.add_argument('-p', '--panel', action='store_true',
-                         help='''Preview in side panel even if the panel is currently closed''')
-        loc.add_argument('-n', '--notebook', action='store_true',
-                         help='''Preview in the main notebook.''')
-        parser.add_argument('-c', '--config', help='''A configuration file with host
+        loc.add_argument(
+            '-p',
+            '--panel',
+            action='store_true',
+            help='''Preview in side panel even if the panel is currently closed'''
+        )
+        loc.add_argument(
+            '-n',
+            '--notebook',
+            action='store_true',
+            help='''Preview in the main notebook.''')
+        parser.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.error = self._parse_error
@@ -846,13 +1045,18 @@ class Preview_Magic(SoS_Magic):
                 if os.path.isdir(item):
                     handled[idx] = True
                     _, dirs, files = os.walk(item).__next__()
-                    self.sos_kernel.send_frontend_msg('display_data',
-                                                  {'metadata': {},
-                                                   'data': {'text/plain': '>>> ' + item + ':\n',
-                                                            'text/html': HTML(
-                                                                f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>').data
-                                                            }
-                                                   })
+                    self.sos_kernel.send_frontend_msg(
+                        'display_data', {
+                            'metadata': {},
+                            'data': {
+                                'text/plain':
+                                    '>>> ' + item + ':\n',
+                                'text/html':
+                                    HTML(
+                                        f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>'
+                                    ).data
+                            }
+                        })
                     continue
                 else:
                     import glob
@@ -867,14 +1071,15 @@ class Preview_Magic(SoS_Magic):
                 continue
 
         # non-sos kernel
-        use_sos = kernel in ('sos', 'SoS') or (
-            kernel is None and self.sos_kernel.kernel == 'SoS')
+        use_sos = kernel in ('sos', 'SoS') or (kernel is None and
+                                               self.sos_kernel.kernel == 'SoS')
         orig_kernel = self.sos_kernel.kernel
-        if kernel is not None and self.sos_kernel.kernel != self.sos_kernel.subkernels.find(kernel).name:
+        if kernel is not None and self.sos_kernel.kernel != self.sos_kernel.subkernels.find(
+                kernel).name:
             self.sos_kernel.switch_kernel(kernel)
         if self.sos_kernel._meta['use_panel']:
-            self.sos_kernel.send_frontend_msg(
-                'preview-kernel', self.sos_kernel.kernel)
+            self.sos_kernel.send_frontend_msg('preview-kernel',
+                                              self.sos_kernel.kernel)
         try:
             for idx, item in enumerate(items):
                 try:
@@ -887,34 +1092,49 @@ class Preview_Magic(SoS_Magic):
                             pass
                     if use_sos:
                         obj_desc, preview = self.preview_var(item, style)
-                        if isinstance(preview, str) and preview.startswith('Unknown variable') and handled[idx]:
+                        if isinstance(preview, str) and preview.startswith(
+                                'Unknown variable') and handled[idx]:
                             continue
-                        self.sos_kernel.send_frontend_msg('display_data',
-                                                      {'metadata': {},
-                                                       'data': {'text/plain': '>>> ' + item + ':\n',
-                                                                'text/html': HTML(
-                                                                    f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
-                                                                }
-                                                       })
+                        self.sos_kernel.send_frontend_msg(
+                            'display_data', {
+                                'metadata': {},
+                                'data': {
+                                    'text/plain':
+                                        '>>> ' + item + ':\n',
+                                    'text/html':
+                                        HTML(
+                                            f'<div class="sos_hint">> {item}: {obj_desc}</div>'
+                                        ).data
+                                }
+                            })
                         self.show_preview_result(preview)
                         continue
                     # not sos
                     if self.sos_kernel.kernel in self.sos_kernel.supported_languages:
-                        lan = self.sos_kernel.supported_languages[self.sos_kernel.kernel]
-                        kinfo = self.sos_kernel.subkernels.find(self.sos_kernel.kernel)
+                        lan = self.sos_kernel.supported_languages[
+                            self.sos_kernel.kernel]
+                        kinfo = self.sos_kernel.subkernels.find(
+                            self.sos_kernel.kernel)
                         lan_obj = lan(self.sos_kernel, kinfo.kernel)
-                        if hasattr(lan_obj, 'preview') and callable(lan_obj.preview):
+                        if hasattr(lan_obj, 'preview') and callable(
+                                lan_obj.preview):
                             try:
                                 obj_desc, preview = lan_obj.preview(item)
-                                if preview.startswith('Unknown variable') and handled[idx]:
+                                if preview.startswith(
+                                        'Unknown variable') and handled[idx]:
                                     continue
-                                self.sos_kernel.send_frontend_msg('display_data',
-                                          {'metadata': {},
-                                           'data': {'text/plain': '>>> ' + item + ':\n',
-                                                    'text/html': HTML(
-                                                        f'<div class="sos_hint">> {item}: {obj_desc}</div>').data
-                                                    }
-                                           })
+                                self.sos_kernel.send_frontend_msg(
+                                    'display_data', {
+                                        'metadata': {},
+                                        'data': {
+                                            'text/plain':
+                                                '>>> ' + item + ':\n',
+                                            'text/html':
+                                                HTML(
+                                                    f'<div class="sos_hint">> {item}: {obj_desc}</div>'
+                                                ).data
+                                        }
+                                    })
                                 self.show_preview_result(preview)
                             except Exception:
                                 pass
@@ -923,19 +1143,21 @@ class Preview_Magic(SoS_Magic):
                     # if no preview function defined
                     # evaluate the expression itself
                     responses = self.sos_kernel.get_response(
-                        item, ['stream', 'display_data', 'execute_result', 'error'])
-                    if not self.sos_kernel._debug_mode:
-                        # if the variable or expression is invalid, do not do anything
-                        responses = [
-                            x for x in responses if x[0] != 'error']
+                        item,
+                        ['stream', 'display_data', 'execute_result', 'error'])
                     if responses:
-                        self.sos_kernel.send_frontend_msg('display_data',
-                                                      {'metadata': {},
-                                                       'data': {'text/plain': '>>> ' + item + ':\n',
-                                                                'text/html': HTML(
-                                                                    f'<div class="sos_hint">> {item}:</div>').data
-                                                                }
-                                                       })
+                        self.sos_kernel.send_frontend_msg(
+                            'display_data', {
+                                'metadata': {},
+                                'data': {
+                                    'text/plain':
+                                        '>>> ' + item + ':\n',
+                                    'text/html':
+                                        HTML(
+                                            f'<div class="sos_hint">> {item}:</div>'
+                                        ).data
+                                }
+                            })
                         for response in responses:
                             # self.sos_kernel.warn(f'{response[0]} {response[1]}' )
                             if response[0] == 'execute_result':
@@ -945,15 +1167,17 @@ class Preview_Magic(SoS_Magic):
                                 self.sos_kernel.send_frontend_msg(
                                     response[0], response[1])
                     else:
-                        raise ValueError(
-                            f'Cannot preview expresison {item}')
+                        raise ValueError(f'Cannot preview expresison {item}')
                 except Exception as e:
                     if not handled[idx]:
-                        self.sos_kernel.send_frontend_msg('stream',
-                                                      dict(name='stderr',
-                                                           text='> Failed to preview file or expression {}{}'.format(
-                                                               item, f': {e}' if self.sos_kernel._debug_mode else ''))
-                                                      )
+                        self.sos_kernel.send_frontend_msg(
+                            'stream',
+                            dict(
+                                name='stderr',
+                                text='> Failed to preview file or expression {item}'
+                            ))
+                        if env.is_logging('MAGIC'):
+                            env.log_to_file('MAGIC', str(e))
         finally:
             self.sos_kernel.switch_kernel(orig_kernel)
 
@@ -983,49 +1207,59 @@ class Preview_Magic(SoS_Magic):
             # inside a %preview magic, auto preview will be disabled
             self.sos_kernel._no_auto_preview = True
             self.sos_kernel._meta['auto_preview'] = False
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             self.sos_kernel._no_auto_preview = False
             # preview workflow
             if args.workflow:
                 import random
                 ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                    'display_data',  {
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'display_data', {
                         'data': {
-                            'text/plain': self.sos_kernel._meta['workflow'],
-                            'text/html': HTML(
-                                f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>').data
+                            'text/plain':
+                                self.sos_kernel._meta['workflow'],
+                            'text/html':
+                                HTML(
+                                    f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>'
+                                ).data
                         },
-                       'metadata': {},
-                       'transient': {'display_id': ta_id }
-                })
-                self.sos_kernel.send_frontend_msg('highlight-workflow', [self.sos_kernel._meta['cell_id'], ta_id])
+                        'metadata': {},
+                        'transient': {
+                            'display_id': ta_id
+                        }
+                    })
+                self.sos_kernel.send_frontend_msg(
+                    'highlight-workflow',
+                    [self.sos_kernel._meta['cell_id'], ta_id])
             if not args.items:
                 return
             if args.host is None:
-                self.handle_magic_preview(
-                    args.items, args.kernel, style)
+                self.handle_magic_preview(args.items, args.kernel, style)
             elif args.workflow:
-                self.sos_kernel.warn(
-                    'Invalid option --kernel with -r (--host)')
+                self.sos_kernel.warn('Invalid option --kernel with -r (--host)')
             elif args.kernel:
-                self.sos_kernel.warn(
-                    'Invalid option --kernel with -r (--host)')
+                self.sos_kernel.warn('Invalid option --kernel with -r (--host)')
             else:
                 load_config_files(args.config)
                 try:
                     rargs = ['sos', 'preview', '--html'] + options
-                    rargs = [x for x in rargs if x not in (
-                        '-n', '--notebook', '-p', '--panel')]
-                    if self.sos_kernel._debug_mode:
-                        self.sos_kernel.warn(f'Running "{" ".join(rargs)}"')
+                    rargs = [
+                        x for x in rargs
+                        if x not in ('-n', '--notebook', '-p', '--panel')
+                    ]
+                    if env.is_logging('MAGIC'):
+                        env.log_to_file('MAGIC', f'Running "{" ".join(rargs)}"')
                     for msg in eval(subprocess.check_output(rargs)):
-                        self.sos_kernel.send_frontend_msg(
-                            msg[0], msg[1])
+                        self.sos_kernel.send_frontend_msg(msg[0], msg[1])
                 except Exception as e:
-                    self.sos_kernel.warn('Failed to preview {} on remote host {}{}'.format(
-                        args.items, args.host, f': {e}' if self.sos_kernel._debug_mode else ''))
+                    self.sos_kernel.warn(
+                        f'Failed to preview {args.items} on remote host {args.host}'
+                    )
+                    if env.is_logging('MAGIC'):
+                        env.log_to_file('MAGIC', str(e))
 
 
 class Pull_Magic(SoS_Magic):
@@ -1035,20 +1269,36 @@ class Pull_Magic(SoS_Magic):
         super(Pull_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser('pull',
-                                         description='''Pull files or directories from remote host to local host''')
-        parser.add_argument('items', nargs='+', help='''Files or directories to be
+        parser = argparse.ArgumentParser(
+            'pull',
+            description='''Pull files or directories from remote host to local host'''
+        )
+        parser.add_argument(
+            'items',
+            nargs='+',
+            help='''Files or directories to be
             retrieved from remote host. The files should be relative to local file
             system. The files to retrieve are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
-        parser.add_argument('-f', '--from', dest='host',
-                            help='''Remote host to which the files will be sent, which should
+        parser.add_argument(
+            '-f',
+            '--from',
+            dest='host',
+            help='''Remote host to which the files will be sent, which should
             be one of the hosts defined in sos configuration files.''')
-        parser.add_argument('-c', '--config', help='''A configuration file with host
+        parser.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
-        parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        parser.add_argument(
+            '-v',
+            '--verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
@@ -1061,16 +1311,18 @@ class Pull_Magic(SoS_Magic):
             #
             received = host.receive_from_host(args.items)
             #
-            msg = '{} item{} received from {}:<br>{}'.format(len(received),
-                                                             ' is' if len(
-                                                                 received) <= 1 else 's are', args.host,
-                                                             '<br>'.join([f'{x} <= {received[x]}' for x in
-                                                                          sorted(received.keys())]))
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                      {
-                                          'metadata': {},
-                                          'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                                      })
+            msg = '{} item{} received from {}:<br>{}'.format(
+                len(received), ' is' if len(received) <= 1 else 's are',
+                args.host, '<br>'.join(
+                    [f'{x} <= {received[x]}' for x in sorted(received.keys())]))
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/html':
+                            HTML(f'<div class="sos_hint">{msg}</div>').data
+                    }
+                })
         except Exception as e:
             self.sos_kernel.warn(
                 f'Failed to retrieve {", ".join(args.items)}: {e}')
@@ -1085,14 +1337,17 @@ class Pull_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         self.handle_magic_pull(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Push_Magic(SoS_Magic):
@@ -1102,19 +1357,34 @@ class Push_Magic(SoS_Magic):
         super(Push_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser('push',
-                                         description='''Push local files or directory to a remote host''')
-        parser.add_argument('items', nargs='+', help='''Files or directories to be sent
+        parser = argparse.ArgumentParser(
+            'push',
+            description='''Push local files or directory to a remote host''')
+        parser.add_argument(
+            'items',
+            nargs='+',
+            help='''Files or directories to be sent
             to remote host. The location of remote files are determined by "path_map"
             determined by "paths" definitions of local and remote hosts.''')
-        parser.add_argument('-t', '--to', dest='host',
-                            help='''Remote host to which the files will be sent. SoS will list all
+        parser.add_argument(
+            '-t',
+            '--to',
+            dest='host',
+            help='''Remote host to which the files will be sent. SoS will list all
             configured queues if no such key is defined''')
-        parser.add_argument('-c', '--config', help='''A configuration file with host
+        parser.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
-        parser.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        parser.add_argument(
+            '-v',
+            '--verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         parser.error = self._parse_error
         return parser
@@ -1127,15 +1397,17 @@ class Push_Magic(SoS_Magic):
             #
             sent = host.send_to_host(args.items)
             #
-            msg = '{} item{} sent to {}:<br>{}'.format(len(sent),
-                                                       ' is' if len(
-                                                           sent) <= 1 else 's are', args.host,
-                                                       '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                      {
-                                          'metadata': {},
-                                          'data': {'text/html': HTML(f'<div class="sos_hint">{msg}</div>').data}
-                                      })
+            msg = '{} item{} sent to {}:<br>{}'.format(
+                len(sent), ' is' if len(sent) <= 1 else 's are', args.host,
+                '<br>'.join([f'{x} => {sent[x]}' for x in sorted(sent.keys())]))
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/html':
+                            HTML(f'<div class="sos_hint">{msg}</div>').data
+                    }
+                })
         except Exception as e:
             self.sos_kernel.warn(f'Failed to send {", ".join(args.items)}: {e}')
 
@@ -1149,14 +1421,17 @@ class Push_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         self.handle_magic_push(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Put_Magic(SoS_Magic):
@@ -1166,14 +1441,17 @@ class Put_Magic(SoS_Magic):
         super(Put_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%put',
-                                         description='''Put specified variables in the subkernel to another
+        parser = argparse.ArgumentParser(
+            prog='%put',
+            description='''Put specified variables in the subkernel to another
             kernel, which is by default the SoS kernel.''')
-        parser.add_argument('--to', dest='__to__',
-                            help='''Name of kernel from which the variables will be obtained.
+        parser.add_argument(
+            '--to',
+            dest='__to__',
+            help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
-        parser.add_argument('vars', nargs='*',
-                            help='''Names of SoS variables''')
+        parser.add_argument(
+            'vars', nargs='*', help='''Names of SoS variables''')
         parser.error = self._parse_error
         return parser
 
@@ -1187,14 +1465,17 @@ class Put_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         try:
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True)
 
@@ -1206,14 +1487,24 @@ class Render_Magic(SoS_Magic):
         super(Render_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%render',
-                                         description='''Treat the output of a SoS cell as another format, default to markdown.''')
-        parser.add_argument('msg_type', default='stdout', choices=['stdout', 'text'], nargs='?',
-                            help='''Message type to capture, default to standard output. In terms of Jupyter message
+        parser = argparse.ArgumentParser(
+            prog='%render',
+            description='''Treat the output of a SoS cell as another format, default to markdown.'''
+        )
+        parser.add_argument(
+            'msg_type',
+            default='stdout',
+            choices=['stdout', 'text'],
+            nargs='?',
+            help='''Message type to capture, default to standard output. In terms of Jupyter message
                         types, "stdout" refers to "stream" message with "stdout" type, and "text" refers to
                         "display_data" message with "text/plain" type.''')
-        parser.add_argument('--as', dest='as_type', default='Markdown', nargs='?',
-                            help='''Format to render output of cell, default to Markdown, but can be any
+        parser.add_argument(
+            '--as',
+            dest='as_type',
+            default='Markdown',
+            nargs='?',
+            help='''Format to render output of cell, default to Markdown, but can be any
             format that is supported by the IPython.display module such as HTML, Math, JSON,
             JavaScript and SVG.''')
         parser.error = self._parse_error
@@ -1229,7 +1520,9 @@ class Render_Magic(SoS_Magic):
         try:
             self.sos_kernel._meta['capture_result'] = []
             self.sos_kernel._meta['render_result'] = args.as_type
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             content = ''
             if args.msg_type == 'stdout':
@@ -1238,16 +1531,18 @@ class Render_Magic(SoS_Magic):
                         content += msg[1]['text']
             elif args.msg_type == 'text':
                 for msg in self.sos_kernel._meta['capture_result']:
-                    if msg[0] == 'display_data' and 'data' in msg[1] and 'text/plain' in msg[1]['data']:
+                    if msg[0] == 'display_data' and 'data' in msg[
+                            1] and 'text/plain' in msg[1]['data']:
                         content += msg[1]['data']['text/plain']
             try:
                 if content:
                     format_dict, md_dict = self.sos_kernel.format_obj(
                         self.sos_kernel.render_result(content))
-                    self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                              {'metadata': md_dict,
-                                               'data': format_dict
-                                               })
+                    self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                                  'display_data', {
+                                                      'metadata': md_dict,
+                                                      'data': format_dict
+                                                  })
             finally:
                 self.sos_kernel._meta['capture_result'] = None
                 self.sos_kernel._meta['render_result'] = False
@@ -1260,12 +1555,12 @@ class Runfile_Magic(SoS_Magic):
         super(Runfile_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%runfile',
+        parser = argparse.ArgumentParser(
+            prog='%runfile',
             description='''Execute an external SoS script, which is identical to
             run !sos run script but allows the display of task and workflow status
             in notebook. It also accepts default parameters of %set magic.''')
-        parser.add_argument('script',
-            help='''Script to be executed.''')
+        parser.add_argument('script', help='''Script to be executed.''')
         parser.error = self._parse_error
         return parser
 
@@ -1285,7 +1580,8 @@ class Runfile_Magic(SoS_Magic):
         except SystemExit:
             return
 
-        self.sos_kernel.options = ' '.join(run_options) + ' ' + self.sos_kernel.options
+        self.sos_kernel.options = ' '.join(
+            run_options) + ' ' + self.sos_kernel.options
         try:
             if os.path.isfile(os.path.expanduser(args.script)):
                 if args.script.endswith('.ipynb'):
@@ -1295,28 +1591,32 @@ class Runfile_Magic(SoS_Magic):
                     with open(os.path.expanduser(args.script), 'r') as script:
                         content = script.read()
             elif os.path.isfile(os.path.expanduser(args.script + '.sos')):
-                with open(os.path.expanduser(args.script + '.sos'), 'r') as script:
+                with open(os.path.expanduser(args.script + '.sos'),
+                          'r') as script:
                     content = script.read()
             elif os.path.isfile(os.path.expanduser(args.script + '.ipynb')):
                 from sos.converter import extract_workflow
-                content = extract_workflow(os.path.expanduser(args.script + '.ipynb'))
+                content = extract_workflow(
+                    os.path.expanduser(args.script + '.ipynb'))
             else:
-                raise RuntimeError(f'{args.script}, {args.script}.sos or {args.script}.ipynb) does not exist.')
+                raise RuntimeError(
+                    f'{args.script}, {args.script}.sos or {args.script}.ipynb) does not exist.'
+                )
 
             if self.sos_kernel.kernel != 'SoS':
                 self.sos_kernel.switch_kernel('SoS')
 
-            self.sos_kernel._do_execute(content, silent,
-                            store_history, user_expressions, allow_stdin)
+            self.sos_kernel._do_execute(content, silent, store_history,
+                                        user_expressions, allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')
             raise
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = old_options
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history,
-            user_expressions, allow_stdin)
-
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Revisions_Magic(SoS_Magic):
@@ -1326,28 +1626,42 @@ class Revisions_Magic(SoS_Magic):
         super(Revisions_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%revision',
-                                         description='''Revision history of the document, parsed from the log
+        parser = argparse.ArgumentParser(
+            prog='%revision',
+            description='''Revision history of the document, parsed from the log
             message of the notebook if it is kept in a git repository. Additional parameters to "git log" command
-            (e.g. -n 5 --since --after) could be specified to limit the revisions to display.''')
-        parser.add_argument('-s', '--source', nargs='?', default='',
-                            help='''Source URL to to create links for revisions.
+            (e.g. -n 5 --since --after) could be specified to limit the revisions to display.'''
+        )
+        parser.add_argument(
+            '-s',
+            '--source',
+            nargs='?',
+            default='',
+            help='''Source URL to to create links for revisions.
             SoS automatically parse source URL of the origin and provides variables "repo" for complete origin
             URL without trailing ".git" (e.g. https://github.com/vatlab/sos-notebook), "path" for complete
             path name (e.g. src/document/doc.ipynb), "filename" for only the name of the "path", and "revision"
             for revisions. Because sos interpolates command line by default, variables in URL template should be
             included with double braceses (e.g. --source {{repo}}/blob/{{revision}}/{{path}})). If this option is
-            provided without value and the document is hosted on github, a default template will be provided.''')
-        parser.add_argument('-l', '--links', nargs='+', help='''Name and URL or additional links for related
-            files (e.g. --links report URL_to_repo ) with URL interpolated as option --source.''')
+            provided without value and the document is hosted on github, a default template will be provided.'''
+        )
+        parser.add_argument(
+            '-l',
+            '--links',
+            nargs='+',
+            help='''Name and URL or additional links for related
+            files (e.g. --links report URL_to_repo ) with URL interpolated as option --source.'''
+        )
         parser.error = self._parse_error
         return parser
 
     def handle_magic_revisions(self, args, unknown_args):
         filename = self.sos_kernel._meta['notebook_name'] + '.ipynb'
         path = self.sos_kernel._meta['notebook_path']
-        revisions = subprocess.check_output(['git', 'log'] + unknown_args + ['--date=short', '--pretty=%H!%cN!%cd!%s',
-                                                                             '--', filename]).decode().splitlines()
+        revisions = subprocess.check_output(
+            ['git', 'log'] + unknown_args +
+            ['--date=short', '--pretty=%H!%cN!%cd!%s', '--', filename]).decode(
+            ).splitlines()
         if not revisions:
             return
         # args.source is None for --source without option
@@ -1355,22 +1669,25 @@ class Revisions_Magic(SoS_Magic):
             # need to determine origin etc for interpolation
             try:
                 origin = subprocess.check_output(
-                    ['git', 'ls-remote', '--get-url', 'origin']).decode().strip()
+                    ['git', 'ls-remote', '--get-url',
+                     'origin']).decode().strip()
                 repo = origin[:-4] if origin.endswith('.git') else origin
             except Exception as e:
                 repo = ''
-                if self.sos_kernel._debug_mode:
-                    self.sos_kernel.warn(f'Failed to get repo URL: {e}')
+                if env.is_logging('MAGIC'):
+                    env.log_to_file(
+                        'MAGIC', f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
-                    if self.sos_kernel._debug_mode:
-                        self.sos_kernel.warn(
-                            f"source is set to {args.source} with repo={repo}")
+                    if env.is_logging('MAGIC'):
+                        env.log_to_file(
+                        'MAGIC', f"source is set to {args.source} with repo={repo}")
                 else:
                     args.source = ''
                     self.sos_kernel.warn(
-                        f'A default source URL is unavailable for repository {repo}')
+                        f'A default source URL is unavailable for repository {repo}'
+                    )
         text = '''
         <table class="revision_table">
         <tr>
@@ -1386,8 +1703,13 @@ class Revisions_Magic(SoS_Magic):
             fields[0] = f'<span class="revision_id">{fields[0][:7]}<span>'
             if args.source != '':
                 # source URL
-                URL = interpolate(args.source, {'revision': revision, 'repo': repo,
-                                                'filename': filename, 'path': path})
+                URL = interpolate(
+                    args.source, {
+                        'revision': revision,
+                        'repo': repo,
+                        'filename': filename,
+                        'path': path
+                    })
                 fields[0] = f'<a target="_blank" href="{URL}">{fields[0]}</a>'
             links = []
             if args.links:
@@ -1395,33 +1717,42 @@ class Revisions_Magic(SoS_Magic):
                     name = args.links[2 * i]
                     if len(args.links) == 2 * i + 1:
                         continue
-                    URL = interpolate(args.links[2 * i + 1],
-                                      {'revision': revision, 'repo': repo, 'filename': filename, 'path': path})
+                    URL = interpolate(
+                        args.links[2 * i + 1], {
+                            'revision': revision,
+                            'repo': repo,
+                            'filename': filename,
+                            'path': path
+                        })
                     links.append(f'<a target="_blank" href="{URL}">{name}</a>')
             if links:
                 fields[0] += ' (' + ', '.join(links) + ')'
             text += '<tr>' + \
                 '\n'.join(f'<td>{x}</td>' for x in fields) + '</tr>'
         text += '</table>'
-        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                           {
-                               'metadata': {},
-                               'data': {'text/html': HTML(text).data}
-                           })
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                      'display_data', {
+                                          'metadata': {},
+                                          'data': {
+                                              'text/html': HTML(text).data
+                                          }
+                                      })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, True)
         parser = self.get_parser()
         try:
-            args, unknown_args = parser.parse_known_args(
-                shlex.split(options))
+            args, unknown_args = parser.parse_known_args(shlex.split(options))
         except SystemExit:
             return
         try:
             self.handle_magic_revisions(args, unknown_args)
         except Exception as e:
-            self.sos_kernel.warn(f'Failed to retrieve revisions of notebook: {e}')
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            self.sos_kernel.warn(
+                f'Failed to retrieve revisions of notebook: {e}')
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Run_Magic(SoS_Magic):
@@ -1431,7 +1762,8 @@ class Run_Magic(SoS_Magic):
         super(Run_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%run',
+        parser = argparse.ArgumentParser(
+            prog='%run',
             description='''Execute the current cell with specified command line
             arguments. Arguments set by magic %set will be appended at the
             end of command line. If the magic ends with "&", it will be sent
@@ -1445,18 +1777,21 @@ class Run_Magic(SoS_Magic):
         run_options = []
         while True:
             if self.pattern.match(run_code):
-                options, run_code = self.get_magic_and_code(
-                    run_code, False)
+                options, run_code = self.get_magic_and_code(run_code, False)
                 run_options.append(options)
             else:
                 break
         # if there are more magics after %run, they will be ignored so a warning
         # is needed.
-        if run_code.lstrip().startswith('%') and not any(run_code.lstrip().startswith(x) for x in ('%include', '%from')):
+        if run_code.lstrip().startswith('%') and not any(
+                run_code.lstrip().startswith(x) for x in ('%include', '%from')):
             self.sos_kernel.warn(
-                f'Magic {run_code.split()[0]} after magic %run will be ignored.')
+                f'Magic {run_code.split()[0]} after magic %run will be ignored.'
+            )
 
-        if not any(SOS_SECTION_HEADER.match(line) for line in run_code.splitlines()):
+        if not any(
+                SOS_SECTION_HEADER.match(line)
+                for line in run_code.splitlines()):
             run_code = '[default]\n' + run_code
         # now we need to run the code multiple times with each option
         for options in run_options:
@@ -1469,12 +1804,14 @@ class Run_Magic(SoS_Magic):
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
                 # %run is executed in its own namespace
-                if self.sos_kernel._debug_mode:
-                    self.sos_kernel.warn(f'Executing\n{run_code}')
+                if env.is_logging('MAGIC'):
+                    env.log_to_file(
+                        'MAGIC', f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':
                     self.sos_kernel.switch_kernel('SoS')
-                ret = self.sos_kernel._do_execute(run_code, silent, store_history, user_expressions,
-                                              allow_stdin)
+                ret = self.sos_kernel._do_execute(run_code, silent,
+                                                  store_history,
+                                                  user_expressions, allow_stdin)
             except Exception as e:
                 self.sos_kernel.warn(f'Failed to execute workflow: {e}')
                 raise
@@ -1484,7 +1821,6 @@ class Run_Magic(SoS_Magic):
         return ret
 
 
-
 class Sandbox_Magic(SoS_Magic):
     name = 'sandbox'
 
@@ -1492,17 +1828,26 @@ class Sandbox_Magic(SoS_Magic):
         super(Sandbox_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%sandbox',
-                                         description='''Execute content of a cell in a temporary directory
+        parser = argparse.ArgumentParser(
+            prog='%sandbox',
+            description='''Execute content of a cell in a temporary directory
                 with fresh dictionary (by default).''')
-        parser.add_argument('-d', '--dir',
-                            help='''Execute workflow in specified directory. The directory
+        parser.add_argument(
+            '-d',
+            '--dir',
+            help='''Execute workflow in specified directory. The directory
                 will be created if does not exist, and will not be removed
                 after the completion. ''')
-        parser.add_argument('-k', '--keep-dict', action='store_true',
-                            help='''Keep current sos dictionary.''')
-        parser.add_argument('-e', '--expect-error', action='store_true',
-                            help='''If set, expect error from the excution and report
+        parser.add_argument(
+            '-k',
+            '--keep-dict',
+            action='store_true',
+            help='''Keep current sos dictionary.''')
+        parser.add_argument(
+            '-e',
+            '--expect-error',
+            action='store_true',
+            help='''If set, expect error from the excution and report
                 success if an error occurs.''')
         parser.error = self._parse_error
         return parser
@@ -1532,13 +1877,17 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 old_dict = env.sos_dict
                 env.sos_dict._dict.clear()
-            ret = self.sos_kernel._do_execute(
-                remaining_code, silent, store_history, user_expressions, allow_stdin)
+            ret = self.sos_kernel._do_execute(remaining_code, silent,
+                                              store_history, user_expressions,
+                                              allow_stdin)
             if args.expect_error and ret['status'] == 'error':
                 # self.sos_kernel.warn('\nSandbox execution failed.')
-                return {'status': 'ok',
-                        'payload': [], 'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count}
+                return {
+                    'status': 'ok',
+                    'payload': [],
+                    'user_expressions': {},
+                    'execution_count': self.sos_kernel._execution_count
+                }
             else:
                 return ret
         finally:
@@ -1558,20 +1907,34 @@ class Save_Magic(SoS_Magic):
         super(Save_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%save',
+        parser = argparse.ArgumentParser(
+            prog='%save',
             description='''Save the content of the cell to specified file. It
             ignores magic lines after the %save magic unless a blank line is used
             to separate the magics and the content to be saved.''')
-        parser.add_argument('filename',
-                            help='''Filename of saved report or script.''')
-        parser.add_argument('-r', '--run', action='store_true',
-                            help='''Continue to execute the cell once content is saved.''')
-        parser.add_argument('-f', '--force', action='store_true',
-                            help='''If destination file already exists, overwrite it.''')
-        parser.add_argument('-a', '--append', action='store_true',
-                            help='''If destination file already exists, append to it.''')
-        parser.add_argument('-x', '--set-executable', dest="setx", action='store_true',
-                            help='''Set `executable` permission to saved script.''')
+        parser.add_argument(
+            'filename', help='''Filename of saved report or script.''')
+        parser.add_argument(
+            '-r',
+            '--run',
+            action='store_true',
+            help='''Continue to execute the cell once content is saved.''')
+        parser.add_argument(
+            '-f',
+            '--force',
+            action='store_true',
+            help='''If destination file already exists, overwrite it.''')
+        parser.add_argument(
+            '-a',
+            '--append',
+            action='store_true',
+            help='''If destination file already exists, append to it.''')
+        parser.add_argument(
+            '-x',
+            '--set-executable',
+            dest="setx",
+            action='store_true',
+            help='''Set `executable` permission to saved script.''')
         parser.error = self._parse_error
         return parser
 
@@ -1588,7 +1951,8 @@ class Save_Magic(SoS_Magic):
             filename = os.path.expanduser(args.filename)
             if os.path.isfile(filename) and not args.force:
                 raise ValueError(
-                    f'{filename} already exists. Use "-f" if you would like to overwrite this file.')
+                    f'{filename} already exists. Use "-f" if you would like to overwrite this file.'
+                )
 
             with open(filename, 'a' if args.append else 'w') as script:
                 line_no = -1
@@ -1604,30 +1968,37 @@ class Save_Magic(SoS_Magic):
 
             if args.setx:
                 import stat
-                os.chmod(filename, os.stat(
-                    filename).st_mode | stat.S_IEXEC)
+                os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
 
             about_run = "" if args.run else ", use option -r to also execute the cell."
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                      {'metadata': {},
-                                       'data': {
-                                          'text/plain': f'Cell content saved to {filename}{about_run}\n',
-                                          'text/html': HTML(
-                                              f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a>{about_run}</div>').data
-                                      }
-                    })
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/plain':
+                            f'Cell content saved to {filename}{about_run}\n',
+                        'text/html':
+                            HTML(
+                                f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a>{about_run}</div>'
+                            ).data
+                    }
+                })
             if args.run:
-                return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+                return self.sos_kernel._do_execute(remaining_code, silent,
+                                                   store_history,
+                                                   user_expressions,
+                                                   allow_stdin)
             else:
                 return None
         except Exception as e:
             self.sos_kernel.warn(f'Failed to save cell: {e}')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
 
 
 class SessionInfo_Magic(SoS_Magic):
@@ -1637,8 +2008,9 @@ class SessionInfo_Magic(SoS_Magic):
         super(SessionInfo_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%sessioninfo',
-                                         description='''List the session info of all subkernels, and information
+        parser = argparse.ArgumentParser(
+            prog='%sessioninfo',
+            description='''List the session info of all subkernels, and information
             stored in variable sessioninfo''')
         parser.error = self._parse_error
         return parser
@@ -1656,10 +2028,8 @@ class SessionInfo_Magic(SoS_Magic):
             for kernel in self.sos_kernel.kernels.keys():
                 kinfo = self.sos_kernel.subkernels.find(kernel)
                 self.sos_kernel.switch_kernel(kernel)
-                result[kernel] = [
-                    ('Kernel', kinfo.kernel),
-                    ('Language', kinfo.language)
-                ]
+                result[kernel] = [('Kernel', kinfo.kernel),
+                                  ('Language', kinfo.language)]
                 if kernel not in self.sos_kernel.supported_languages:
                     continue
                 lan = self.sos_kernel.supported_languages[kernel]
@@ -1673,10 +2043,12 @@ class SessionInfo_Magic(SoS_Magic):
                         elif isinstance(sinfo, list):
                             result[kernel].extend(sinfo)
                         else:
-                            self.sos_kernel.warn(f'Unrecognized session info: {sinfo}')
+                            self.sos_kernel.warn(
+                                f'Unrecognized session info: {sinfo}')
                     except Exception as e:
                         self.sos_kernel.warn(
-                            f'Failed to obtain sessioninfo of kernel {kernel}: {e}')
+                            f'Failed to obtain sessioninfo of kernel {kernel}: {e}'
+                        )
         finally:
             self.sos_kernel.switch_kernel(cur_kernel)
         #
@@ -1697,12 +2069,17 @@ class SessionInfo_Magic(SoS_Magic):
                     res += f'<th>{item[0]}</th><td><pre>{item[1]}</pre></td>\n'
                 else:
                     self.sos_kernel.warn(
-                        f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}')
+                        f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}'
+                    )
                 res += '</tr>\n'
             res += '</table>\n'
-        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                           {'metadata': {},
-                            'data': {'text/html': HTML(res).data}})
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                      'display_data', {
+                                          'metadata': {},
+                                          'data': {
+                                              'text/html': HTML(res).data
+                                          }
+                                      })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1712,7 +2089,9 @@ class SessionInfo_Magic(SoS_Magic):
         except SystemExit:
             return
         self.handle_sessioninfo()
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Set_Magic(SoS_Magic):
@@ -1722,8 +2101,9 @@ class Set_Magic(SoS_Magic):
         super(Set_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%set',
-                                         description='''Set persistent command line options for SoS runs.''')
+        parser = argparse.ArgumentParser(
+            prog='%set',
+            description='''Set persistent command line options for SoS runs.''')
         parser.error = self._parse_error
         return parser
 
@@ -1733,20 +2113,33 @@ class Set_Magic(SoS_Magic):
             #    {'name': 'stdout', 'text': 'sos options set to "{}"\n'.format(options)})
             if not options.strip().startswith('-'):
                 self.sos_kernel.warn(
-                    f'Magic %set cannot set positional argument, {options} provided.\n')
+                    f'Magic %set cannot set positional argument, {options} provided.\n'
+                )
             else:
                 self.sos_kernel.options = options.strip()
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                          dict(name='stdout', text=f'Set sos options to "{self.sos_kernel.options}"\n'))
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'stream',
+                    dict(
+                        name='stdout',
+                        text=f'Set sos options to "{self.sos_kernel.options}"\n'
+                    ))
         else:
             if self.sos_kernel.options:
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                          dict(name='stdout', text=f'Reset sos options from "{self.sos_kernel.options}" to ""\n'))
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'stream',
+                    dict(
+                        name='stdout',
+                        text=f'Reset sos options from "{self.sos_kernel.options}" to ""\n'
+                    ))
                 self.sos_kernel.options = ''
             else:
-                self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                                          {'name': 'stdout',
-                                           'text': 'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'})
+                self.sos_kernel.send_response(
+                    self.sos_kernel.iopub_socket, 'stream', {
+                        'name':
+                            'stdout',
+                        'text':
+                            'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'
+                    })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1758,7 +2151,9 @@ class Set_Magic(SoS_Magic):
             return
         self.handle_magic_set(options)
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Shutdown_Magic(SoS_Magic):
@@ -1768,13 +2163,19 @@ class Shutdown_Magic(SoS_Magic):
         super(Shutdown_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%shutdown',
-                                         description='''Shutdown or restart specified subkernel''')
-        parser.add_argument('kernel', nargs='?',
-                            help='''Name of the kernel to be restarted, default to the
+        parser = argparse.ArgumentParser(
+            prog='%shutdown',
+            description='''Shutdown or restart specified subkernel''')
+        parser.add_argument(
+            'kernel',
+            nargs='?',
+            help='''Name of the kernel to be restarted, default to the
             current running kernel.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-                            help='''Restart the kernel''')
+        parser.add_argument(
+            '-r',
+            '--restart',
+            action='store_true',
+            help='''Restart the kernel''')
         parser.error = self._parse_error
         return parser
 
@@ -1786,8 +2187,11 @@ class Shutdown_Magic(SoS_Magic):
         except SystemExit:
             return
         self.sos_kernel.shutdown_kernel(
-            args.kernel if args.kernel else self.sos_kernel.kernel, args.restart)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            args.kernel if args.kernel else self.sos_kernel.kernel,
+            args.restart)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class SoSRun_Magic(SoS_Magic):
@@ -1797,8 +2201,9 @@ class SoSRun_Magic(SoS_Magic):
         super(SoSRun_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%sosrun',
-                                         description='''Execute the entire notebook with steps consisting of SoS
+        parser = argparse.ArgumentParser(
+            prog='%sosrun',
+            description='''Execute the entire notebook with steps consisting of SoS
             cells (cells with SoS kernel) with section header, with specified command
             line arguments. Arguments set by magic %set will be appended at the
             end of command line. If the magic ends with "&", it will be sent
@@ -1831,15 +2236,18 @@ class SoSRun_Magic(SoS_Magic):
                 self.sos_kernel.warn(
                     'Nothing to execute (notebook workflow is empty).')
             else:
-                self.sos_kernel._do_execute(self.sos_kernel._meta['workflow'], silent,
-                                        store_history, user_expressions, allow_stdin)
+                self.sos_kernel._do_execute(self.sos_kernel._meta['workflow'],
+                                            silent, store_history,
+                                            user_expressions, allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')
             raise
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = old_options
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class SoSSave_Magic(SoS_Magic):
@@ -1849,32 +2257,60 @@ class SoSSave_Magic(SoS_Magic):
         super(SoSSave_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%sossave',
-                                         description='''Save the jupyter notebook as workflow (consisting of all sos
+        parser = argparse.ArgumentParser(
+            prog='%sossave',
+            description='''Save the jupyter notebook as workflow (consisting of all sos
             steps defined in cells starting with section header) or a HTML report to
             specified file.''')
-        parser.add_argument('filename', nargs='?',
-                            help='''Filename of saved report or script. Default to notebookname with file
+        parser.add_argument(
+            'filename',
+            nargs='?',
+            help='''Filename of saved report or script. Default to notebookname with file
             extension determined by option --to.''')
-        parser.add_argument('-t', '--to', dest='__to__', choices=['sos', 'html'],
-                            help='''Destination format, default to sos.''')
-        parser.add_argument('-c', '--commit', action='store_true',
-                            help='''Commit the saved file to git directory using command
+        parser.add_argument(
+            '-t',
+            '--to',
+            dest='__to__',
+            choices=['sos', 'html'],
+            help='''Destination format, default to sos.''')
+        parser.add_argument(
+            '-c',
+            '--commit',
+            action='store_true',
+            help='''Commit the saved file to git directory using command
             git commit FILE''')
-        parser.add_argument('-a', '--all', action='store_true',
-                            help='''The --all option for sos convert script.ipynb script.sos, which
+        parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''The --all option for sos convert script.ipynb script.sos, which
             saves all cells and their metadata to a .sos file, that contains all input
-            information of the notebook but might not be executable in batch mode.''')
-        parser.add_argument('-m', '--message',
-                            help='''Message for git commit. Default to "save FILENAME"''')
-        parser.add_argument('-p', '--push', action='store_true',
-                            help='''Push the commit with command "git push"''')
-        parser.add_argument('-f', '--force', action='store_true',
-                            help='''If destination file already exists, overwrite it.''')
-        parser.add_argument('-x', '--set-executable', dest="setx", action='store_true',
-                            help='''Set `executable` permission to saved script.''')
-        parser.add_argument('--template', default='default-sos-template',
-                            help='''Template to generate HTML output. The default template is a
+            information of the notebook but might not be executable in batch mode.'''
+        )
+        parser.add_argument(
+            '-m',
+            '--message',
+            help='''Message for git commit. Default to "save FILENAME"''')
+        parser.add_argument(
+            '-p',
+            '--push',
+            action='store_true',
+            help='''Push the commit with command "git push"''')
+        parser.add_argument(
+            '-f',
+            '--force',
+            action='store_true',
+            help='''If destination file already exists, overwrite it.''')
+        parser.add_argument(
+            '-x',
+            '--set-executable',
+            dest="setx",
+            action='store_true',
+            help='''Set `executable` permission to saved script.''')
+        parser.add_argument(
+            '--template',
+            default='default-sos-template',
+            help='''Template to generate HTML output. The default template is a
             template defined by configuration key default-sos-template, or
             sos-report-toc if such a key does not exist.''')
         parser.error = self._parse_error
@@ -1897,7 +2333,8 @@ class SoSSave_Magic(SoS_Magic):
                         ftype = 'html'
                     elif args.__to__ != 'html':
                         self.sos_kernel.warn(
-                            f'%sossave to an .html file in {args.__to__} format')
+                            f'%sossave to an .html file in {args.__to__} format'
+                        )
                         ftype = args.__to__
                 else:
                     ftype = 'sos'
@@ -1922,11 +2359,13 @@ class SoSSave_Magic(SoS_Magic):
                     arg.execute = False
                     arg.all = True
                     notebook_to_script(
-                        self.sos_kernel._meta['notebook_name'] + '.ipynb', filename, args=arg, unknown_args=[])
+                        self.sos_kernel._meta['notebook_name'] + '.ipynb',
+                        filename,
+                        args=arg,
+                        unknown_args=[])
                 if args.setx:
                     import stat
-                    os.chmod(filename, os.stat(
-                        filename).st_mode | stat.S_IEXEC)
+                    os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
             else:
                 # convert to sos report
                 from .converter import notebook_to_html
@@ -1941,32 +2380,42 @@ class SoSSave_Magic(SoS_Magic):
                     arg.template = args.template
                 arg.view = False
                 arg.execute = False
-                notebook_to_html(self.sos_kernel._meta['notebook_name'] + '.ipynb',
-                                 filename, sargs=arg, unknown_args=[])
+                notebook_to_html(
+                    self.sos_kernel._meta['notebook_name'] + '.ipynb',
+                    filename,
+                    sargs=arg,
+                    unknown_args=[])
 
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                      {'metadata': {},
-                                       'data': {
-                                          'text/plain': f'Workflow saved to {filename}\n',
-                                          'text/html': HTML(
-                                              f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>').data
-                                      }
-                                      })
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/plain':
+                            f'Workflow saved to {filename}\n',
+                        'text/html':
+                            HTML(
+                                f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>'
+                            ).data
+                    }
+                })
             #
             if args.commit:
-                self.run_shell_command({'git', 'commit', filename, '-m',
-                                           args.message if args.message else f'save {filename}'})
+                self.run_shell_command({
+                    'git', 'commit', filename, '-m',
+                    args.message if args.message else f'save {filename}'
+                })
             if args.push:
                 self.run_shell_command(['git', 'push'])
             return
         except Exception as e:
             self.sos_kernel.warn(f'Failed to save workflow: {e}')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
 
 
 class Task_Magic(SoS_Magic):
@@ -1976,116 +2425,213 @@ class Task_Magic(SoS_Magic):
         super(Task_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%task',
-                                         description='''Get information on specified task. By default
+        parser = argparse.ArgumentParser(
+            prog='%task',
+            description='''Get information on specified task. By default
             sos would query against all running task queues but it would
             start a task queue and query status if option -q is specified.
             ''')
         subparsers = parser.add_subparsers(help='actions')
         status = subparsers.add_parser('status', help='task status')
-        status.add_argument('tasks', nargs='*', help='''ID of the task. All tasks
+        status.add_argument(
+            'tasks',
+            nargs='*',
+            help='''ID of the task. All tasks
             that are releted to the workflow executed under the current directory
             will be checked if unspecified. There is no need to specify compelete
             task IDs because SoS will match specified name with tasks starting with
             these names.''')
-        status.add_argument('-q', '--queue',
-                            help='''Check the status of job on specified tasks queue or remote host
+        status.add_argument(
+            '-q',
+            '--queue',
+            help='''Check the status of job on specified tasks queue or remote host
             if the tasks . The queue can be defined in global or local sos
             configuration file, or a file specified by option  --config. A host is
             assumed to be a remote machine with process type if no configuration
             is found.''')
-        status.add_argument('-c', '--config', help='''A configuration file with host
-            definitions, in case the definitions are not defined in global sos config.yml files.''')
-        status.add_argument('-a', '--all', action='store_true',
-                            help='''Check the status of all tasks on local or specified remote task queue,
-            including tasks created by workflows executed from other directories.''')
-        status.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        status.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
+            definitions, in case the definitions are not defined in global sos config.yml files.'''
+        )
+        status.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''Check the status of all tasks on local or specified remote task queue,
+            including tasks created by workflows executed from other directories.'''
+        )
+        status.add_argument(
+            '-v',
+            dest='verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
-        status.add_argument('-t', '--tags', nargs='*', help='''Only list tasks with
+        status.add_argument(
+            '-t',
+            '--tags',
+            nargs='*',
+            help='''Only list tasks with
             one of the specified tags.''')
-        status.add_argument('-s', '--status', nargs='*', help='''Display tasks with
+        status.add_argument(
+            '-s',
+            '--status',
+            nargs='*',
+            help='''Display tasks with
             one of the specified status.''')
-        status.add_argument('--age', help='''Limit to tasks that are created more than
+        status.add_argument(
+            '--age',
+            help='''Limit to tasks that are created more than
             (default) or within specified age. Value of this parameter can be in units
             s (second), m (minute), h (hour), or d (day, default), or in the foramt of
             HH:MM:SS, with optional prefix + for older (default) and - for newer than
             specified age.''')
-        status.add_argument('--html', action='store_true',
-                            help='''Output results in HTML format. This option will override option
+        status.add_argument(
+            '--html',
+            action='store_true',
+            help='''Output results in HTML format. This option will override option
                 verbosity and output detailed status information in HTML tables and
                 figures.''')
-        status.add_argument('--numeric-times', action='store_true',
-                            help=argparse.SUPPRESS)
+        status.add_argument(
+            '--numeric-times', action='store_true', help=argparse.SUPPRESS)
         status.set_defaults(func=self.status)
 
         execute = subparsers.add_parser('execute', help='execute task')
-        execute.add_argument('tasks', nargs='*', help='''ID of the tasks to be removed.
+        execute.add_argument(
+            'tasks',
+            nargs='*',
+            help='''ID of the tasks to be removed.
             There is no need to specify compelete task IDs because SoS will match specified
             name with tasks starting with these names. If no task ID is specified,
-            all tasks related to specified workflows (option -w) will be removed.''')
-        execute.add_argument('-q', '--queue',
-                            help='''Remove tasks on specified tasks queue or remote host
+            all tasks related to specified workflows (option -w) will be removed.'''
+        )
+        execute.add_argument(
+            '-q',
+            '--queue',
+            help='''Remove tasks on specified tasks queue or remote host
             if the tasks . The queue can be defined in global or local sos
             configuration file, or a file specified by option  --config. A host is
             assumed to be a remote machine with process type if no configuration
             is found. ''')
-        execute.add_argument('-c', '--config', help='''A configuration file with host
-            definitions, in case the definitions are not defined in global sos config.yml files.''')
-        execute.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        execute.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
+            definitions, in case the definitions are not defined in global sos config.yml files.'''
+        )
+        execute.add_argument(
+            '-v',
+            dest='verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         execute.set_defaults(func=self.execute)
 
-        kill = subparsers.add_parser('kill', help='kill single task or tasks with the same tags')
-        kill.add_argument('tasks', nargs='*', help='''IDs of the tasks
+        kill = subparsers.add_parser(
+            'kill', help='kill single task or tasks with the same tags')
+        kill.add_argument(
+            'tasks',
+            nargs='*',
+            help='''IDs of the tasks
             that will be killed. There is no need to specify compelete task IDs because
-            SoS will match specified name with tasks starting with these names.''')
-        kill.add_argument('-a', '--all', action='store_true',
-                            help='''Kill all tasks in local or specified remote task queue''')
-        kill.add_argument('-q', '--queue',
-                            help='''Kill jobs on specified tasks queue or remote host
+            SoS will match specified name with tasks starting with these names.'''
+        )
+        kill.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''Kill all tasks in local or specified remote task queue''')
+        kill.add_argument(
+            '-q',
+            '--queue',
+            help='''Kill jobs on specified tasks queue or remote host
             if the tasks . The queue can be defined in global or local sos
             configuration file, or a file specified by option  --config. A host is
             assumed to be a remote machine with process type if no configuration
             is found.''')
-        kill.add_argument('-t', '--tags', nargs='*', help='''Only kill tasks with
+        kill.add_argument(
+            '-t',
+            '--tags',
+            nargs='*',
+            help='''Only kill tasks with
             one of the specified tags.''')
-        kill.add_argument('-c', '--config', help='''A configuration file with host
-            definitions, in case the definitions are not defined in global sos config.yml files.''')
-        kill.add_argument('-v', '--verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        kill.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
+            definitions, in case the definitions are not defined in global sos config.yml files.'''
+        )
+        kill.add_argument(
+            '-v',
+            '--verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         kill.set_defaults(func=self.kill)
 
         purge = subparsers.add_parser('purge', help='kill and purge task')
-        purge.add_argument('tasks', nargs='*', help='''ID of the tasks to be removed.
+        purge.add_argument(
+            'tasks',
+            nargs='*',
+            help='''ID of the tasks to be removed.
             There is no need to specify compelete task IDs because SoS will match specified
             name with tasks starting with these names. If no task ID is specified,
-            all tasks related to specified workflows (option -w) will be removed.''')
-        purge.add_argument('-a', '--all', action='store_true',
-                            help='''Clear all task information on local or specified remote task queue,
+            all tasks related to specified workflows (option -w) will be removed.'''
+        )
+        purge.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''Clear all task information on local or specified remote task queue,
             including tasks created by other workflows.''')
-        purge.add_argument('--age', help='''Limit to tasks that are created more than
+        purge.add_argument(
+            '--age',
+            help='''Limit to tasks that are created more than
             (default) or within specified age. Value of this parameter can be in units
             s (second), m (minute), h (hour), or d (day, default), or in the foramt of
             HH:MM:SS, with optional prefix + for older (default) and - for newer than
             specified age.''')
-        purge.add_argument('-s', '--status', nargs='+', help='''Only remove tasks with
+        purge.add_argument(
+            '-s',
+            '--status',
+            nargs='+',
+            help='''Only remove tasks with
             specified status, which can be pending, submitted, running, completed, failed,
             and aborted. One of more status can be specified.''')
-        purge.add_argument('-t', '--tags', nargs='*', help='''Only remove tasks with
+        purge.add_argument(
+            '-t',
+            '--tags',
+            nargs='*',
+            help='''Only remove tasks with
             one of the specified tags.''')
-        purge.add_argument('-q', '--queue',
-                            help='''Remove tasks on specified tasks queue or remote host
+        purge.add_argument(
+            '-q',
+            '--queue',
+            help='''Remove tasks on specified tasks queue or remote host
             if the tasks . The queue can be defined in global or local sos
             configuration file, or a file specified by option  --config. A host is
             assumed to be a remote machine with process type if no configuration
             is found. ''')
-        purge.add_argument('-c', '--config', help='''A configuration file with host
-            definitions, in case the definitions are not defined in global sos config.yml files.''')
-        purge.add_argument('-v', dest='verbosity', type=int, choices=range(5), default=2,
-                            help='''Output error (0), warning (1), info (2), and debug (3)
+        purge.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
+            definitions, in case the definitions are not defined in global sos config.yml files.'''
+        )
+        purge.add_argument(
+            '-v',
+            dest='verbosity',
+            type=int,
+            choices=range(5),
+            default=2,
+            help='''Output error (0), warning (1), info (2), and debug (3)
                 information to standard output (default to 2).''')
         purge.set_defaults(func=self.purge)
         parser.error = self._parse_error
@@ -2096,73 +2642,80 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(
+                args.queue, e))
             return
 
         if args.tasks:
             result = host._task_engine.query_tasks(
                 args.tasks, verbosity=2, html=True)
             # log_to_file(result)
-            self.sos_kernel.send_frontend_msg('display_data', {
-                'metadata': {},
-                'data': {'text/plain': result,
-                         'text/html': HTML(result).data
-                         }})
+            self.sos_kernel.send_frontend_msg(
+                'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/plain': result,
+                        'text/html': HTML(result).data
+                    }
+                })
             # now, there is a possibility that the status of the task is different from what
             # task engine knows (e.g. a task is runfile outside of jupyter). In this case, since we
             # already get the status, we should update the task engine...
             #
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
-            status = result.split(
-                '>Status<', 1)[-1].split('</div', 1)[0].split('>')[-1]
-            self.sos_kernel.send_frontend_msg('task_status',
-                {
+            status = result.split('>Status<', 1)[-1].split('</div',
+                                                           1)[0].split('>')[-1]
+            self.sos_kernel.send_frontend_msg(
+                'task_status', {
                     'update_only': True,
                     'queue': args.queue,
                     'task_id': args.tasks[0],
                     'status': status,
-                }
-            )
+                })
         elif args.tags:
-            status_output = host._task_engine.query_tasks(tags=args.tags, verbosity=2)
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': status_output })
+            status_output = host._task_engine.query_tasks(
+                tags=args.tags, verbosity=2)
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                          'stream', {
+                                              'name': 'stdout',
+                                              'text': status_output
+                                          })
             for line in status_output.split('\n'):
                 if not line.strip():
                     continue
                 try:
                     # return creation time, start time, and duration
                     tid, tags, _, tst = line.split('\t')
-                    self.sos_kernel.send_frontend_msg('task_status',
-                        {
+                    self.sos_kernel.send_frontend_msg(
+                        'task_status', {
                             'update_only': True,
                             'queue': args.queue,
                             'task_id': tid,
                             'status': tst,
                             'tags': tags
-                        }
-                    )
+                        })
                 except Exception as e:
                     env.logger.warning(
-                        f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
+                        f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}'
+                    )
 
     def execute(self, args):
         from sos.hosts import Host
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(
+                args.queue, e))
             return
         for task in args.tasks:
             host._task_engine.submit_task(task)
-            self.sos_kernel.send_frontend_msg('task_status',
-                {
+            self.sos_kernel.send_frontend_msg(
+                'task_status', {
                     'update_only': True,
                     'queue': args.queue,
                     'task_id': task,
                     'status': 'pening',
-                }
-            )
+                })
 
     def kill(self, args):
         # kill specified task
@@ -2170,7 +2723,8 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(
+                args.queue, e))
             return
         if args.tasks:
             # kill specified task
@@ -2178,28 +2732,30 @@ class Task_Magic(SoS_Magic):
         elif args.tags:
             ret = host._task_engine.kill_tasks([], tags=args.tags)
         else:
-            self.sos_kernel.warn('Please specify either a list of task or a tag')
+            self.sos_kernel.warn(
+                'Please specify either a list of task or a tag')
             return
-        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-            {'name': 'stdout', 'text': ret })
+        self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream', {
+            'name': 'stdout',
+            'text': ret
+        })
         for line in ret.split('\n'):
             if not line.strip():
                 continue
             try:
                 # return creation time, start time, and duration
                 tid, tst = line.split('\t')
-                self.sos_kernel.send_frontend_msg('task_status',
-                    {
+                self.sos_kernel.send_frontend_msg(
+                    'task_status', {
                         'update_only': True,
                         'queue': args.queue,
                         'task_id': tid,
                         'status': tst
-                    }
-                )
+                    })
             except Exception as e:
                 env.logger.warning(
-                    f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}')
-
+                    f'Unrecognized response "{line}" ({e.__class__.__name__}): {e}'
+                )
 
     def purge(self, args):
         # kill specified task
@@ -2207,7 +2763,8 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn('Invalid task queue {}: {}'.format(
+                args.queue, e))
             return
         if args.tasks:
             # kill specified task
@@ -2215,34 +2772,39 @@ class Task_Magic(SoS_Magic):
         elif args.tags:
             ret = host._task_engine.purge_tasks([], tags=args.tags)
         else:
-            self.sos_kernel.warn('Please specify either a list of task or a tag')
+            self.sos_kernel.warn(
+                'Please specify either a list of task or a tag')
             return
         if ret:
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                {'name': 'stdout', 'text': ret })
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                                          'stream', {
+                                              'name': 'stdout',
+                                              'text': ret
+                                          })
         else:
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                {'name': 'stderr', 'text': 'No matching task to purge' })
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'stream', {
+                    'name': 'stderr',
+                    'text': 'No matching task to purge'
+                })
         if args.tasks:
             for task in args.tasks:
-                self.sos_kernel.send_frontend_msg('task_status',
-                    {
+                self.sos_kernel.send_frontend_msg(
+                    'task_status', {
                         'update_only': True,
                         'queue': args.queue,
                         'task_id': task,
                         'status': 'purged'
-                    }
-                )
+                    })
         else:
             for tag in args.tags:
-                self.sos_kernel.send_frontend_msg('task_status',
-                    {
+                self.sos_kernel.send_frontend_msg(
+                    'task_status', {
                         'update_only': True,
                         'queue': args.queue,
                         'tag': args.tags,
                         'status': 'purged'
-                    }
-                )
+                    })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -2254,7 +2816,9 @@ class Task_Magic(SoS_Magic):
         load_config_files(args.config)
 
         args.func(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Tasks_Magic(SoS_Magic):
@@ -2264,18 +2828,30 @@ class Tasks_Magic(SoS_Magic):
         super(Tasks_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%tasks',
-                                         description='''Show a list of tasks from specified queue''')
+        parser = argparse.ArgumentParser(
+            prog='%tasks',
+            description='''Show a list of tasks from specified queue''')
         parser.add_argument('tasks', nargs='*', help='ID of tasks')
-        parser.add_argument('-s', '--status', nargs='*',
-                            help='''Display tasks of specified status. Default to all.''')
-        parser.add_argument('-q', '--queue',
-                            help='''Task queue on which the tasks are retrived.''')
-        parser.add_argument('--age', help='''Limit to tasks that is created more than
+        parser.add_argument(
+            '-s',
+            '--status',
+            nargs='*',
+            help='''Display tasks of specified status. Default to all.''')
+        parser.add_argument(
+            '-q',
+            '--queue',
+            help='''Task queue on which the tasks are retrived.''')
+        parser.add_argument(
+            '--age',
+            help='''Limit to tasks that is created more than
             (default) or within specified age. Value of this parameter can be in units
             s (second), m (minute), h (hour), or d (day, default), with optional
-            prefix + for older (default) and - for younder than specified age.''')
-        parser.add_argument('-c', '--config', help='''A configuration file with host
+            prefix + for older (default) and - for younder than specified age.'''
+        )
+        parser.add_argument(
+            '-c',
+            '--config',
+            help='''A configuration file with host
             definitions, in case the definitions are not defined in global or local
             sos config.yml files.''')
         parser.error = self._parse_error
@@ -2289,12 +2865,15 @@ class Tasks_Magic(SoS_Magic):
             self.sos_kernel.warn('Invalid task queue {}: {}'.format(queue, e))
             return
         # get all tasks
-        for tid, tst, tdt in host._task_engine.monitor_tasks(tasks, status=status, age=age):
-            self.sos_kernel.send_frontend_msg('task_status',
-                {'cell_id': self.sos_kernel.cell_id,
-                 'queue': queue,
-                 'task_id': tid,
-                 'status': tst})
+        for tid, tst, tdt in host._task_engine.monitor_tasks(
+                tasks, status=status, age=age):
+            self.sos_kernel.send_frontend_msg(
+                'task_status', {
+                    'cell_id': self.sos_kernel.cell_id,
+                    'queue': queue,
+                    'task_id': tid,
+                    'status': tst
+                })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -2304,9 +2883,11 @@ class Tasks_Magic(SoS_Magic):
         except SystemExit:
             return
         load_config_files(args.config)
-        self.handle_tasks(
-            args.tasks, args.queue if args.queue else 'localhost', args.status, args.age)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        self.handle_tasks(args.tasks, args.queue if args.queue else 'localhost',
+                          args.status, args.age)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 def header_to_toc(text, id):
@@ -2330,8 +2911,7 @@ def header_to_toc(text, id):
         if matched:
             text = text.replace(matched.group(1), '')
         if not anchor:
-            anchor = re.sub('[^ a-zA-Z0-9]', '',
-                            text).strip().replace(' ', '-')
+            anchor = re.sub('[^ a-zA-Z0-9]', '', text).strip().replace(' ', '-')
         # handle ` ` in header
         text = re.sub('`(.*?)`', '<code>\\1</code>', text)
         line_level = header.count('#')
@@ -2365,13 +2945,22 @@ class Toc_Magic(SoS_Magic):
         super(Toc_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%toc',
-                                         description='''Generate a table of content from the current notebook.''')
+        parser = argparse.ArgumentParser(
+            prog='%toc',
+            description='''Generate a table of content from the current notebook.'''
+        )
         loc = parser.add_mutually_exclusive_group()
-        loc.add_argument('-p', '--panel', action='store_true',
-                         help='''Show the TOC in side panel even if the panel is currently closed''')
-        loc.add_argument('-n', '--notebook', action='store_true',
-                         help='''Show the TOC in the main notebook.''')
+        loc.add_argument(
+            '-p',
+            '--panel',
+            action='store_true',
+            help='''Show the TOC in side panel even if the panel is currently closed'''
+        )
+        loc.add_argument(
+            '-n',
+            '--notebook',
+            action='store_true',
+            help='''Show the TOC in the main notebook.''')
         parser.add_argument(
             '--id', help='''Optional ID of the generated TOC.''')
         parser.error = self._parse_error
@@ -2391,13 +2980,17 @@ class Toc_Magic(SoS_Magic):
         if self.sos_kernel._meta['use_panel']:
             self.sos_kernel.send_frontend_msg('show_toc')
         else:
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'display_data',
-                                      {'metadata': {},
-                                       'data': {
-                                          'text/html': header_to_toc(self.sos_kernel._meta['toc'], args.id)
-                                      },
-                                      })
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/html':
+                            header_to_toc(self.sos_kernel._meta['toc'], args.id)
+                    },
+                })
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class Use_Magic(SoS_Magic):
@@ -2407,33 +3000,46 @@ class Use_Magic(SoS_Magic):
         super(Use_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%use',
-                                         description='''Switch to an existing subkernel
+        parser = argparse.ArgumentParser(
+            prog='%use',
+            description='''Switch to an existing subkernel
             or start a new subkernel.''')
-        parser.add_argument('name', nargs='?', default='',
-                            help='''Displayed name of kernel to start (if no kernel with name is
+        parser.add_argument(
+            'name',
+            nargs='?',
+            default='',
+            help='''Displayed name of kernel to start (if no kernel with name is
             specified) or switch to (if a kernel with this name is already started).
             The name is usually a kernel name (e.g. %%use ir) or a language name
             (e.g. %%use R) in which case the language name will be used. One or
             more parameters --language or --kernel will need to be specified
             if a new name is used to start a separate instance of a kernel.''')
-        parser.add_argument('-k', '--kernel',
-                            help='''kernel name as displayed in the output of jupyter kernelspec
+        parser.add_argument(
+            '-k',
+            '--kernel',
+            help='''kernel name as displayed in the output of jupyter kernelspec
             list. Default to the default kernel of selected language (e.g. ir for
             language R.''')
-        parser.add_argument('-l', '--language',
-                            help='''Language extension that enables magics such as %%get and %%put
+        parser.add_argument(
+            '-l',
+            '--language',
+            help='''Language extension that enables magics such as %%get and %%put
             for the kernel, which should be in the name of a registered language
             (e.g. R), or a specific language module in the format of
             package.module:class. SoS maitains a list of languages and kernels
             so this option is only needed for starting a new instance of a kernel.
             ''')
-        parser.add_argument('-c', '--color',
-                            help='''Background color of new or existing kernel, which overrides
+        parser.add_argument(
+            '-c',
+            '--color',
+            help='''Background color of new or existing kernel, which overrides
             the default color of the language. A special value "default" can be
             used to reset color to default.''')
-        parser.add_argument('-r', '--restart', action='store_true',
-                            help='''Restart the kernel if it is running.''')
+        parser.add_argument(
+            '-r',
+            '--restart',
+            action='store_true',
+            help='''Restart the kernel if it is running.''')
         parser.error = self._parse_error
         return parser
 
@@ -2448,28 +3054,33 @@ class Use_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'abort',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'abort',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         if args.restart and args.name in self.kernel.kernels:
             self.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
             self.sos_kernel.switch_kernel(args.name, None, args.kernel,
-                                      args.language, args.color)
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+                                          args.language, args.color)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(
-                f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+                f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}'
+            )
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
 
 
 class With_Magic(SoS_Magic):
@@ -2479,15 +3090,27 @@ class With_Magic(SoS_Magic):
         super(With_Magic, self).__init__(kernel)
 
     def get_parser(self):
-        parser = argparse.ArgumentParser(prog='%with',
-                                         description='''Use specified subkernel to evaluate current
+        parser = argparse.ArgumentParser(
+            prog='%with',
+            description='''Use specified subkernel to evaluate current
             cell, with optional input and output variables''')
-        parser.add_argument('name', nargs='?', default='',
-                            help='''Name of an existing kernel.''')
-        parser.add_argument('-i', '--in', nargs='*', dest='in_vars',
-                            help='Input variables (variables to get from SoS kernel)')
-        parser.add_argument('-o', '--out', nargs='*', dest='out_vars',
-                            help='''Output variables (variables to put back to SoS kernel
+        parser.add_argument(
+            'name',
+            nargs='?',
+            default='',
+            help='''Name of an existing kernel.''')
+        parser.add_argument(
+            '-i',
+            '--in',
+            nargs='*',
+            dest='in_vars',
+            help='Input variables (variables to get from SoS kernel)')
+        parser.add_argument(
+            '-o',
+            '--out',
+            nargs='*',
+            dest='out_vars',
+            help='''Output variables (variables to put back to SoS kernel
             before switching back to the SoS kernel''')
         parser.error = self._parse_error
         return parser
@@ -2502,12 +3125,13 @@ class With_Magic(SoS_Magic):
                 return
         except Exception as e:
             self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
 
         original_kernel = self.sos_kernel.kernel
         try:
@@ -2515,49 +3139,29 @@ class With_Magic(SoS_Magic):
         except Exception as e:
             self.sos_kernel.warn(
                 f'Failed to switch to subkernel {args.name}): {e}')
-            return {'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self.sos_kernel._execution_count,
-                    }
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
         try:
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
         finally:
             self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
 
 
 class SoS_Magics(object):
     magics = [
-        Command_Magic,
-        Capture_Magic,
-        Cd_Magic,
-        Clear_Magic,
-        ConnectInfo_Magic,
-        Debug_Magic,
-        Dict_Magic,
-        Expand_Magic,
-        Get_Magic,
-        Matplotlib_Magic,
-        Preview_Magic,
-        Pull_Magic,
-        Paste_Magic,
-        Push_Magic,
-        Put_Magic,
-        Render_Magic,
-        Run_Magic,
-        Runfile_Magic,
-        Revisions_Magic,
-        Save_Magic,
-        Set_Magic,
-        SessionInfo_Magic,
-        Shutdown_Magic,
-        SoSRun_Magic,
-        SoSSave_Magic,
-        Task_Magic,
-        Toc_Magic,
-        Sandbox_Magic,
-        Use_Magic,
+        Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic,
+        Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
+        Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic, Put_Magic,
+        Render_Magic, Run_Magic, Runfile_Magic, Revisions_Magic, Save_Magic,
+        Set_Magic, SessionInfo_Magic, Shutdown_Magic, SoSRun_Magic,
+        SoSSave_Magic, Task_Magic, Toc_Magic, Sandbox_Magic, Use_Magic,
         With_Magic
     ]
     names = [x.name for x in magics if x.name != '!']
