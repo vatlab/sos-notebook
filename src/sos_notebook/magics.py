@@ -209,10 +209,9 @@ class Capture_Magic(SoS_Magic):
                 args.as_type = 'raw'
                 content = self.sos_kernel._meta['capture_result']
 
-            if env.is_debugging('MAGIC'):
-                env.log_to_file(
-                    'MAGIC',
-                    f'Captured {self.sos_kernel._meta["capture_result"][:40]}')
+            ienv.log_to_file(
+                'MAGIC',
+                f'Captured {self.sos_kernel._meta["capture_result"][:40]}')
             if not args.as_type or args.as_type == 'text':
                 if not isinstance(content, str):
                     self.sos_kernel.warn(
@@ -958,8 +957,7 @@ class Preview_Magic(SoS_Magic):
             result = previewer_func(filename, self.sos_kernel, style)
             self.show_preview_result(result)
         except Exception as e:
-            if env.is_debugging('MAGIC'):
-                env.log_to_file('MAGIC', f'Failed to preview {filename}: {e}')
+            env.log_to_file('MAGIC', f'Failed to preview {filename}: {e}')
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1176,8 +1174,7 @@ class Preview_Magic(SoS_Magic):
                                 name='stderr',
                                 text='> Failed to preview file or expression {item}'
                             ))
-                        if env.is_debugging('MAGIC'):
-                            env.log_to_file('MAGIC', str(e))
+                        env.log_to_file('MAGIC', str(e))
         finally:
             self.sos_kernel.switch_kernel(orig_kernel)
 
@@ -1250,16 +1247,14 @@ class Preview_Magic(SoS_Magic):
                         x for x in rargs
                         if x not in ('-n', '--notebook', '-p', '--panel')
                     ]
-                    if env.is_debugging('MAGIC'):
-                        env.log_to_file('MAGIC', f'Running "{" ".join(rargs)}"')
+                    env.log_to_file('MAGIC', f'Running "{" ".join(rargs)}"')
                     for msg in eval(subprocess.check_output(rargs)):
                         self.sos_kernel.send_frontend_msg(msg[0], msg[1])
                 except Exception as e:
                     self.sos_kernel.warn(
                         f'Failed to preview {args.items} on remote host {args.host}'
                     )
-                    if env.is_debugging('MAGIC'):
-                        env.log_to_file('MAGIC', str(e))
+                    env.log_to_file('MAGIC', str(e))
 
 
 class Pull_Magic(SoS_Magic):
@@ -1674,15 +1669,13 @@ class Revisions_Magic(SoS_Magic):
                 repo = origin[:-4] if origin.endswith('.git') else origin
             except Exception as e:
                 repo = ''
-                if env.is_debugging('MAGIC'):
-                    env.log_to_file(
-                        'MAGIC', f'Failed to get repo URL: {e}')
+                env.log_to_file('MAGIC', f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
                     args.source = '{repo}/blob/{revision}/{path}'
-                    if env.is_debugging('MAGIC'):
-                        env.log_to_file(
-                        'MAGIC', f"source is set to {args.source} with repo={repo}")
+                    env.log_to_file(
+                        'MAGIC',
+                        f"source is set to {args.source} with repo={repo}")
                 else:
                     args.source = ''
                     self.sos_kernel.warn(
@@ -1804,9 +1797,7 @@ class Run_Magic(SoS_Magic):
             self.sos_kernel.options = options + ' ' + self.sos_kernel.options
             try:
                 # %run is executed in its own namespace
-                if env.is_debugging('MAGIC'):
-                    env.log_to_file(
-                        'MAGIC', f'Executing\n{run_code}')
+                env.log_to_file('MAGIC', f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':
                     self.sos_kernel.switch_kernel('SoS')
                 ret = self.sos_kernel._do_execute(run_code, silent,

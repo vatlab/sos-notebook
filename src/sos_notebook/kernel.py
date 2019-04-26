@@ -614,8 +614,7 @@ class SoS_Kernel(IPythonKernel):
         # 'sos.R.sos_R' is the language module.
         # '#FFEEAABB' is the background color
         #
-        if env.is_debugging('KERNEL'):
-            env.log_to_file('KERNEL', f'Starting SoS Kernel')
+        env.log_to_file('KERNEL', f'Starting SoS Kernel')
 
         self.kernels = {}
         # self.shell = InteractiveShell.instance()
@@ -657,7 +656,10 @@ class SoS_Kernel(IPythonKernel):
             'output', 'depends'
         }
 
-        env.logger.handlers = [x for x in env.logger.handlers if not isinstance(x, logging.StreamHandler)]
+        env.logger.handlers = [
+            x for x in env.logger.handlers
+            if not isinstance(x, logging.StreamHandler)
+        ]
         env.logger.addHandler(
             NotebookLoggingHandler(
                 {
@@ -879,10 +881,9 @@ class SoS_Kernel(IPythonKernel):
                         items, to_kernel='SoS')
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
-                if env.is_debugging('MAGIC'):
-                    env.log_to_file(
-                        'MAGIC',
-                        f'Failed to call put_var({items}) from {kinfo.kernel}')
+                env.log_to_file(
+                    'MAGIC',
+                    f'Failed to call put_var({items}) from {kinfo.kernel}')
                 objects = {}
             if isinstance(objects, dict):
                 # returns a SOS dictionary
@@ -977,10 +978,8 @@ class SoS_Kernel(IPythonKernel):
             try:
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
-                if env.is_debugging('KERNEL'):
-                    env.log_to_file(
-                        'KERNEL',
-                        f'Failed to get subkernels {cell_kernel.name}')
+                env.log_to_file('KERNEL',
+                                f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
@@ -991,16 +990,14 @@ class SoS_Kernel(IPythonKernel):
                     else:
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
-                        if env.is_debugging('MESSAGE'):
-                            env.log_to_file(
-                                'MESSAGE',
-                                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-                            )
+                        env.log_to_file(
+                            'MESSAGE',
+                            f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
+                        )
                         break
             except Exception as e:
-                if env.is_debugging('KERNEL'):
-                    env.log_to_file('KERNEL',
-                                    f'Completion fail with exception: {e}')
+                env.log_to_file('KERNEL',
+                                f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
@@ -1017,10 +1014,8 @@ class SoS_Kernel(IPythonKernel):
             try:
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
-                if env.is_debugging('KERNEL'):
-                    env.log_to_file(
-                        'KERNEL',
-                        f'Failed to get subkernels {cell_kernel.name}')
+                env.log_to_file('KERNEL',
+                                f'Failed to get subkernels {cell_kernel.name}')
                 KC = self.KC
             try:
                 KC.complete(code, cursor_pos)
@@ -1031,16 +1026,14 @@ class SoS_Kernel(IPythonKernel):
                     else:
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
-                        if env.is_debugging('KERNEL'):
-                            env.log_to_file(
-                                'KERNEL',
-                                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-                            )
+                        env.log_to_file(
+                            'KERNEL',
+                            f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
+                        )
                         break
             except Exception as e:
-                if env.is_debugging('KERNEL'):
-                    env.log_to_file('KERNEL',
-                                    f'Completion fail with exception: {e}')
+                env.log_to_file('KERNEL',
+                                f'Completion fail with exception: {e}')
 
     def warn(self, message):
         message = str(message).rstrip() + '\n'
@@ -1075,10 +1068,10 @@ class SoS_Kernel(IPythonKernel):
             # display intermediate print statements, etc.
             while self.KC.stdin_channel.msg_ready():
                 sub_msg = self.KC.stdin_channel.get_msg()
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file(
-                        'MESSAGE', f"MSG TYPE {sub_msg['header']['msg_type']}")
-                    env.log_to_file('MESSAGE', f'CONTENT  {sub_msg}')
+                env.log_to_file(
+                    'MESSAGE',
+                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg}"
+                )
                 if sub_msg['header']['msg_type'] != 'input_request':
                     self.send_response(self.stdin_socket,
                                        sub_msg['header']['msg_type'],
@@ -1093,9 +1086,10 @@ class SoS_Kernel(IPythonKernel):
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file('MESSAGE', f'MSG TYPE {msg_type}')
-                    env.log_to_file('MESSAGE', f'CONTENT  {sub_msg["content"]}')
+                env.log_to_file(
+                    'MESSAGE',
+                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg}"
+                )
                 if msg_type == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         iopub_started = True
@@ -1124,8 +1118,7 @@ class SoS_Kernel(IPythonKernel):
                 # now get the real result
                 reply = self.KC.get_shell_msg()
                 reply['content']['execution_count'] = self._execution_count
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
+                env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
                 res = reply['content']
                 shell_ended = True
             time.sleep(0.001)
@@ -1165,18 +1158,16 @@ Available subkernels:\n{}'''.format(
             self.switch_kernel(kinfo.name, in_vars)
         else:
             # SoS to non-SoS
-            if env.is_debugging('KERNEL'):
-                env.log_to_file('KERNEL',
-                                f'Switch from {self.kernel} to {kinfo.name}')
+            env.log_to_file('KERNEL',
+                            f'Switch from {self.kernel} to {kinfo.name}')
             # case when self.kernel == 'sos', kernel != 'sos'
             # to a subkernel
             new_kernel = False
             if kinfo.name not in self.kernels:
                 # start a new kernel
                 try:
-                    if env.is_debugging('KERNEL'):
-                        env.log_to_file('KERNEL',
-                                        f'Starting subkernel {kinfo.name}')
+                    env.log_to_file('KERNEL',
+                                    f'Starting subkernel {kinfo.name}')
                     self.kernels[kinfo.name] = manager.start_new_kernel(
                         startup_timeout=60,
                         kernel_name=kinfo.kernel,
@@ -1262,11 +1253,10 @@ Available subkernels:\n{}'''.format(
         while self.KC.iopub_channel.msg_ready():
             sub_msg = self.KC.iopub_channel.get_msg()
             if sub_msg['header']['msg_type'] != 'status':
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file(
-                        'MESSAGE',
-                        f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}"
-                    )
+                env.log_to_file(
+                    'MESSAGE',
+                    f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}"
+                )
         responses = []
         self.KC.execute(statement, silent=False, store_history=False)
         # first thing is wait for any side effects (output, stdin, etc.)
@@ -1278,9 +1268,8 @@ Available subkernels:\n{}'''.format(
             while self.KC.iopub_channel.msg_ready():
                 sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file(
-                        'MESSAGE', f'Received {msg_type} {sub_msg["content"]}')
+                env.log_to_file('MESSAGE',
+                                f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         iopub_started = True
@@ -1291,17 +1280,14 @@ Available subkernels:\n{}'''.format(
                 if msg_type in msg_types and (name is None or
                                               sub_msg['content'].get(
                                                   'name', None) in name):
-                    if env.is_debugging('MESSAGE'):
-                        env.log_to_file(
-                            'MESSAGE',
-                            f'Capture response: {msg_type}: {sub_msg["content"]}'
-                        )
+                    env.log_to_file(
+                        'MESSAGE',
+                        f'Capture response: {msg_type}: {sub_msg["content"]}')
                     responses.append([msg_type, sub_msg['content']])
                 else:
-                    if env.is_debugging('MESSAGE'):
-                        env.log_to_file(
-                            'MESSAGE',
-                            f'Non-response: {msg_type}: {sub_msg["content"]}')
+                    env.log_to_file(
+                        'MESSAGE',
+                        f'Non-response: {msg_type}: {sub_msg["content"]}')
                     #
                     # we ignore the messages we are not interested.
                     #
@@ -1310,17 +1296,15 @@ Available subkernels:\n{}'''.format(
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
-                if env.is_debugging('MESSAGE'):
-                    env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
+                env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
                 shell_ended = True
             time.sleep(0.001)
 
         if not responses:
-            if env.is_debugging('MESSAGE'):
-                env.log_to_file(
-                    'MESSAGE',
-                    f'Failed to get a response from message type {msg_types} for the execution of {statement}'
-                )
+            env.log_to_file(
+                'MESSAGE',
+                f'Failed to get a response from message type {msg_types} for the execution of {statement}'
+            )
         return responses
 
     def run_sos_code(self, code, silent):
@@ -1468,8 +1452,7 @@ Available subkernels:\n{}'''.format(
             }
             return self._meta
 
-        if env.is_debugging('KERNEL'):
-            env.log_to_file('KERNEL', f"Meta info: {meta}")
+        env.log_to_file('KERNEL', f"Meta info: {meta}")
         self._meta = {
             'workflow':
                 meta['workflow'] if 'workflow' in meta else '',
@@ -1516,8 +1499,7 @@ Available subkernels:\n{}'''.format(
                    store_history=True,
                    user_expressions=None,
                    allow_stdin=True):
-        if env.is_debugging('KERNEL'):
-            env.log_to_file('KERNEL', f'execute: {code}')
+        env.log_to_file('KERNEL', f'execute: {code}')
         if not self.controller:
             self.controller = start_controller(self)
         # load basic configuration each time in case user modifies the configuration during
