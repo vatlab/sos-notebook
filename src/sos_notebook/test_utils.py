@@ -257,7 +257,6 @@ def execute_promise(js, browser):
     state, data = browser.execute_async_script(promise_js % js)
     if state == 'success':
         return data
-    return 'failed'
     raise Exception(data)
 
 class Notebook:
@@ -452,9 +451,9 @@ class Notebook:
         outputs = ""
         if in_console:
             outputs = wait_for_selector(
-                self.panel_cells[index], "div .output_subarea")
+                self.panel_cells[index], "div .output_area")
         else:
-            outputs = wait_for_selector(self.cells[index], "div .output_subarea")
+            outputs = wait_for_selector(self.cells[index], "div .output_area")
         output_text = ""
         has_error = False
         for output in outputs:

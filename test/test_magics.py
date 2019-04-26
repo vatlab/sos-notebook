@@ -309,8 +309,8 @@ class TestMagics(NotebookTest):
             print(test_mode)
             print(INT_LIST)
             print(infile.name)
-            sh: expand=True
-            echo {b}
+            python: expand=True
+            print({b})
             """,
             kernel="SoS",
         )
@@ -336,8 +336,8 @@ class TestMagics(NotebookTest):
             %save check_run -f
             %run --var 1
             parameter: var=0
-            sh: expand=True
-            echo {var}
+            python: expand=True
+            print({var})
             """,
             kernel="SoS",
         )
@@ -452,12 +452,15 @@ class TestMagics(NotebookTest):
     def test_magic_preview_var_limit(self, notebook):
         output = notebook.check_output(
             """\
-            %preview mtcars -n -l 10
-            %get mtcars --from R
+            %preview var -n -l 5
+            import numpy as np
+            import pandas as pd
+            var = pd.DataFrame(
+                np.asmatrix([[i*10, i*10+1] for i in range(100)]))
             """,
             kernel="SoS",
         )
-        assert "mtcars" in output and "Duster" in output and "Maserati" not in output
+        assert "var" in output and "41" in output and "80" not in output
 
     # def test_magic_preview_var_scatterplot(self, notebook):
     #     output = notebook.check_output('''\
@@ -509,24 +512,26 @@ class TestMagics(NotebookTest):
     def test_magic_preview_zip(self, notebook):
         output = notebook.check_output(
             """\
-            !echo "blah" > a.csv
             %preview -n a.zip
             import zipfile
-
+            with open('a.csv', 'w') as tmp:
+                tmp.write('blah')
             with zipfile.ZipFile('a.zip', 'w') as zfile:
                 zfile.write('a.csv')
             """,
             kernel="SoS",
         )
+        import time
+        time.sleep(20)
         assert "> a.zip" in output and "1 file" in output and "a.csv" in output
 
     def test_magic_preview_tar(self, notebook):
         output = notebook.check_output(
             """\
-            !echo "blah" > a.csv
             %preview -n a.tar
             import tarfile
-
+            with open('a.csv', 'w') as tmp:
+                tmp.write('blah')
             with tarfile.open('a.tar', 'w') as tar:
                 tar.add('a.csv')
             """,
@@ -537,10 +542,10 @@ class TestMagics(NotebookTest):
     def test_magic_preview_tar_gz(self, notebook):
         output = notebook.check_output(
             """\
-            !echo "blah" > a.csv
             %preview -n a.tar.gz
             import tarfile
-
+            with open('a.csv', 'w') as tmp:
+                tmp.write('blah')
             with tarfile.open('a.tar.gz', 'w:gz') as tar:
                 tar.add('a.csv')
             """,
@@ -715,9 +720,7 @@ class TestMagics(NotebookTest):
             "%set haha", kernel="SoS", expect_error=True
         )
 
-    @pytest.mark.skipIf(
-        sys.platform == "win32", reason="! magic does not support built-in command #203"
-    )
+    @pytest.mark.skipif(sys.platform == "win32", reason="! magic does not support built-in command #203")
     def test_magic_shell(self, notebook):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
@@ -742,18 +745,12 @@ class TestMagics(NotebookTest):
 
     def test_magic_use(self, notebook):
         idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
-        assert all(
-            [a == b]
-            for a, b in zip([80, 80, 80], notebook.get_input_backgroundColor(idx))
-        )
+        assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         idx = notebook.call(
             "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS"
         )
-        assert all(
-            [a == b]
-            for a, b in zip([80, 80, 80], notebook.get_input_backgroundColor(idx))
-        )
+        assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         notebook.call("%use R2 -k ir", kernel="SoS")
         notebook.call("a <- 1024", kernel="R2")
