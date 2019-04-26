@@ -657,7 +657,7 @@ class SoS_Kernel(IPythonKernel):
             'output', 'depends'
         }
 
-        # env.logger.handlers = []
+        env.logger.handlers = [x for x in env.logger.handlers if isinstance(x, logging.StreamHandler)]
         env.logger.addHandler(
             NotebookLoggingHandler(
                 {

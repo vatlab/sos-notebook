@@ -100,6 +100,7 @@ def execute_scratch_cell(code, raw_args, kernel):
 
     if not any(
             isinstance(x, NotebookLoggingHandler) for x in env.logger.handlers):
+        env.logger.handlers = [x for x in env.logger.handlers if isinstance(x, logging.StreamHandler)]
         levels = {
             0: logging.ERROR,
             1: logging.WARNING,
