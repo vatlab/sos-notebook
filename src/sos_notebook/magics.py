@@ -825,7 +825,6 @@ class Preview_Magic(SoS_Magic):
                 'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
             }, {})
         elif callable(obj):
-            env.log_to_file(f'hand {item}')
             return txt, ({
                 'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
             }, {})
