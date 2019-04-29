@@ -61,10 +61,11 @@ class FlushableStringIO:
                     'name': self.name,
                     'text': content
                 }))
-            self.kernel.send_response(self.kernel.iopub_socket, 'stream', {
-                'name': self.name,
-                'text': content
-            })
+            if self.kernel._meta['render_result'] is False:
+                self.kernel.send_response(self.kernel.iopub_socket, 'stream', {
+                    'name': self.name,
+                    'text': content
+                })
 
     def flush(self):
         pass
@@ -1112,10 +1113,12 @@ class SoS_Kernel(IPythonKernel):
                     if self._meta['capture_result'] is not None:
                         self._meta['capture_result'].append(
                             (msg_type, sub_msg['content']))
-                    if silent:
-                        continue
-                self.send_response(self.iopub_socket, msg_type,
-                                   sub_msg['content'])
+                    if not silent and self._meta['render_result'] is False:
+                        self.send_response(self.iopub_socket, msg_type,
+                                           sub_msg['content'])
+                else:
+                    self.send_response(self.iopub_socket, msg_type,
+                                       sub_msg['content'])
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
@@ -1206,8 +1209,7 @@ Available subkernels:\n{}'''.format(
                                                                    kinfo.kernel)
                 init_stmts = lan_module.init_statements
 
-                if hasattr(
-                    lan_module, '__version__'):
+                if hasattr(lan_module, '__version__'):
                     module_version = f' (version {lan_module.__version__})'
                 else:
                     module_version = f' (version unavailable)'
