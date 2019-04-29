@@ -614,7 +614,10 @@ class SoS_Kernel(IPythonKernel):
         # 'sos.R.sos_R' is the language module.
         # '#FFEEAABB' is the background color
         #
-        env.log_to_file('KERNEL', f'Starting SoS Kernel')
+        env.log_to_file(
+            'KERNEL',
+            f'Starting SoS Kernel version {__notebook_version__} with SoS {__version__}'
+        )
 
         self.kernels = {}
         # self.shell = InteractiveShell.instance()
@@ -655,10 +658,9 @@ class SoS_Kernel(IPythonKernel):
             'SOS_VERSION', 'CONFIG', 'step_name', '__builtins__', 'input',
             'output', 'depends'
         }
-
         env.logger.handlers = [
             x for x in env.logger.handlers
-            if not isinstance(x, logging.StreamHandler)
+            if type(x) is not logging.StreamHandler
         ]
         env.logger.addHandler(
             NotebookLoggingHandler(
@@ -1200,8 +1202,20 @@ Available subkernels:\n{}'''.format(
                         'codemirror_mode', '')
                 self.subkernels.notify_frontend()
             if new_kernel and self.kernel in self.supported_languages:
-                init_stmts = self.supported_languages[self.kernel](
-                    self, kinfo.kernel).init_statements
+                lan_module = self.supported_languages[self.kernel](self,
+                                                                   kinfo.kernel)
+                init_stmts = lan_module.init_statements
+
+                if hasattr(
+                    lan_module, '__version__'):
+                    module_version = f' (version {lan_module.__version__})'
+                else:
+                    module_version = f' (version unavailable)'
+
+                env.log_to_file(
+                    'KERNEL',
+                    f'Loading language module for kernel {kinfo.name}{module_version}'
+                )
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             # passing
