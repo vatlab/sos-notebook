@@ -267,7 +267,7 @@ class TestMagics(NotebookTest):
 
     def test_magic_render(self, notebook):
         # test %put from subkernel to SoS Kernel
-        assert "header" in notebook.check_output(
+        output = notebook.check_output(
             '''\
             %render
             """
@@ -279,6 +279,8 @@ class TestMagics(NotebookTest):
             ''',
             kernel="SoS",
         )
+        assert "header" in output and 'item1' in output and 'item2' in output
+        assert '# header' not in output and '* item1' not in output and '* item2' not in output
 
     def test_magic_run(self, notebook):
         # test passing parameters and %run
