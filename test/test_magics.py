@@ -48,6 +48,17 @@ class TestMagics(NotebookTest):
 
     def test_magic_capture(self, notebook):
         # test %capture
+        # capture raw
+        notebook.call(
+            """\
+                %capture raw
+                cat('this is to stdout')
+                """,
+            kernel="R",
+        )
+        output = notebook.check_output('__captured', kernel='SoS')
+        assert 'stream' in output and 'stdout' in output and 'this is to stdout' in output
+        #
         assert (notebook.check_output(
             """\
                 %capture --to R_out
@@ -55,7 +66,7 @@ class TestMagics(NotebookTest):
                 """,
             kernel="R",
         ) == "this is to stdout")
-
+        #
         notebook.call("%capture --to R_out \n ", kernel="R")
         assert notebook.check_output("R_out", kernel="SoS") == "''"
         #
@@ -68,6 +79,7 @@ class TestMagics(NotebookTest):
         )
         output = notebook.check_output("R_out", kernel="SoS")
         assert "this is the return value" in output
+        #
         # capture as csv
         notebook.call(
             """\
@@ -77,6 +89,8 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         assert "a" in notebook.check_output("res", kernel="SoS")
+        assert "DataFrame" in notebook.check_output("type(res)", kernel="SoS")
+        #
         # capture as tsv
         notebook.call(
             """\
@@ -86,6 +100,8 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         assert "a" in notebook.check_output("res", kernel="SoS")
+        assert "DataFrame" in notebook.check_output("type(res)", kernel="SoS")
+        #
         # capture as json
         notebook.call(
             """\
@@ -94,12 +110,44 @@ class TestMagics(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert "[1, 2, 3]" in notebook.check_output(
+        assert "[1, 2, 3]" in notebook.check_output('res', kernel="SoS")
+        #
+        # test append to str
+        notebook.call(
             """\
-            res
+            %capture --to captured_text
+            print('from sos')
             """,
             kernel="SoS",
         )
+        notebook.call(
+            """\
+            %capture --append captured_text
+            cat('from R')
+            """,
+            kernel="R",
+        )
+        output = notebook.check_output("captured_text", kernel="SoS")
+        assert 'from sos' in output and 'from R' in output
+        assert 'str' in notebook.check_output("type(captured_text)", kernel="SoS")
+        # test append to dataframe
+        notebook.call(
+            """\
+            %capture --as tsv --to table
+            print('a\\tb\\n11\\t22')
+            """,
+            kernel="SoS",
+        )
+        notebook.call(
+            """\
+            %capture --as tsv --append table
+            print('a\\tb\\n33\\t44')
+            """,
+            kernel="SoS",
+        )
+        output = notebook.check_output("table", kernel="SoS")
+        assert '11' in output and '22' in output and '33' in output and '44' in output
+        assert 'DataFrame' in notebook.check_output("type(table)", kernel="SoS")
 
     def test_magic_cd(self, notebook):
         # magic cd that changes directory of all subfolders
@@ -169,11 +217,35 @@ class TestMagics(NotebookTest):
     def test_magic_expand(self, notebook):
         # test %expand
         notebook.call("par=100", kernel="SoS")
+        assert "A parameter {par} greater than 50 is specified." == notebook.check_output(
+            """\
+            cat('A parameter {par} greater than 50 is specified.');
+            """,
+            kernel="R",
+        )
+        assert "A parameter 100 greater than 50 is specified." == notebook.check_output(
+            """\
+            %expand
+            if ({par} > 50) {{
+                cat('A parameter {par} greater than 50 is specified.');
+            }}
+            """,
+            kernel="R",
+        )
         assert "A parameter 100 greater than 50 is specified." == notebook.check_output(
             """\
             %expand ${ }
             if (${par} > 50) {
                 cat('A parameter ${par} greater than 50 is specified.');
+            }
+            """,
+            kernel="R",
+        )
+        assert "A parameter 100 greater than 50 is specified." == notebook.check_output(
+            """\
+            %expand [ ]
+            if ([par] > 50) {
+                cat('A parameter [par] greater than 50 is specified.');
             }
             """,
             kernel="R",
