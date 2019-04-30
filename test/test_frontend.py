@@ -66,7 +66,10 @@ class TestFrontEnd(NotebookTest):
         notebook.edit_prompt_cell("a = 1", execute=True)
         notebook.edit_prompt_cell("b <- 2", kernel="R", execute=True)
         # use "clear" to clear all panel cells
-        notebook.edit_prompt_cell("clear", kernel="SoS", execute=True)
+        notebook.edit_prompt_cell("clear", kernel="SoS", execute=False)
+        # we cannot wait for the completion of the cell because the cells
+        # will be cleared
+        notebook.prompt_cell.send_keys(Keys.CONTROL, Keys.ENTER)
         assert not notebook.panel_cells
 
     def test_switch_kernel(self, notebook):
