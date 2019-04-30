@@ -118,19 +118,21 @@ class Capture_Magic(SoS_Magic):
     def get_parser(self):
         parser = argparse.ArgumentParser(
             prog='%capture',
-            description='''Capture output (stdout) or output file from a subkernel
-                                         as variable in SoS''')
+            description='''Capture output from a subkernel as variable in SoS'''
+        )
         parser.add_argument(
             'msg_type',
             nargs='?',
-            default='stdout',
+            default='raw',
             choices=['stdout', 'stderr', 'text', 'markdown', 'html', 'raw'],
-            help='''Message type to capture, default to standard output. In terms of Jupyter message
-                        types, "stdout" refers to "stream" message with "stdout" type, "stderr" refers to "stream"
-                        message with "stderr" type, "text", "markdown" and "html" refers to "display_data" message
-                        with "text/plain", "text/markdown" and "text/html" type respectively. If "raw" is specified,
-                        all returned messages will be returned in a list format.'''
-        )
+            help='''Message type to capture. In terms of Jupyter message types,
+                "stdout" refers to "stream" message with "stdout" type, "stderr"
+                refers to "stream" message with "stderr" type, "text", "markdown"
+                and "html" refers to "display_data" or "execute_result" messages
+                with "text/plain", "text/markdown" and "text/html" type respectively.
+                If no value or "raw" is specified, all returned messages will be
+                returned in alist format, and will be displayed in the console panel.
+                This will help you determine the right type to capture.''')
         parser.add_argument(
             '--as',
             dest='as_type',
@@ -138,10 +140,10 @@ class Capture_Magic(SoS_Magic):
             nargs='?',
             choices=('text', 'json', 'csv', 'tsv'),
             help='''How to interpret the captured text. This only applicable to stdout, stderr and
-                            text message type where the text from cell output will be collected. If this
-                            option is given, SoS will try to parse the text as json, csv (comma separated text),
-                             tsv (tab separated text), and store text (from text), Pandas DataFrame
-                            (from csv or tsv), dict or other types (from json) to the variable.'''
+                text message type where the text from cell output will be collected. If this
+                option is given, SoS will try to parse the text as json, csv (comma separated text),
+                tsv (tab separated text), and store text (from text), Pandas DataFrame
+                (from csv or tsv), dict or other types (from json) to the variable.'''
         )
         grp = parser.add_mutually_exclusive_group(required=False)
         grp.add_argument(
@@ -150,8 +152,8 @@ class Capture_Magic(SoS_Magic):
             dest='__to__',
             metavar='VAR',
             help='''Name of variable to which the captured content will be saved. If no varialbe is
-                         specified, the return value will be saved to variable "__captured" and be displayed
-                         at the side panel. ''')
+                specified, the return value will be saved to variable "__captured" and be displayed
+                at the side panel. ''')
         grp.add_argument(
             '-a',
             '--append',
@@ -303,6 +305,15 @@ class Capture_Magic(SoS_Magic):
             else:
                 env.sos_dict.set('__captured', content)
                 import pprint
+                self.sos_kernel.send_frontend_msg(
+                    'display_data', {
+                        'metadata': {},
+                        'data': {
+                            'text/html':
+                                HTML(f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
+                                    ).data
+                        }
+                    })
                 self.sos_kernel.send_frontend_msg('display_data', {
                     'metadata': {},
                     'data': {

@@ -48,26 +48,48 @@ class TestMagics(NotebookTest):
 
     def test_magic_capture(self, notebook):
         # test %capture
-        # capture raw
+        # capture raw (default)
         notebook.call(
             """\
-                %capture raw
-                cat('this is to stdout')
-                """,
+            %capture
+            cat('this is to stdout')
+            """,
+            kernel="R",
+        )
+        output = notebook.check_output('__captured', kernel='SoS')
+        assert 'stream' in output and 'stdout' in output and 'this is to stdout' in output
+        # specify raw
+        notebook.call(
+            """\
+            %capture raw
+            cat('this is to stdout')
+            """,
             kernel="R",
         )
         output = notebook.check_output('__captured', kernel='SoS')
         assert 'stream' in output and 'stdout' in output and 'this is to stdout' in output
         #
+        # capture SoS execute_result (#220)
+        notebook.call(
+            """\
+            %capture raw
+            'this is to texts'
+            """,
+            kernel="SoS",
+        )
+        output = notebook.check_output('__captured', kernel='SoS')
+        assert 'execute_result' in output and 'text/plain' in output and 'this is to texts' in output
+        #
+        # capture to variable
         assert (notebook.check_output(
             """\
-                %capture --to R_out
-                cat('this is to stdout')
-                """,
+            %capture stdout --to R_out
+            cat('this is to stdout')
+            """,
             kernel="R",
         ) == "this is to stdout")
         #
-        notebook.call("%capture --to R_out \n ", kernel="R")
+        notebook.call("%capture stdout --to R_out \n ", kernel="R")
         assert notebook.check_output("R_out", kernel="SoS") == "''"
         #
         notebook.call(
@@ -83,7 +105,7 @@ class TestMagics(NotebookTest):
         # capture as csv
         notebook.call(
             """\
-            %capture --as csv --to res
+            %capture stdout --as csv --to res
             print('a,b\\nc,d')
             """,
             kernel="SoS",
@@ -94,7 +116,7 @@ class TestMagics(NotebookTest):
         # capture as tsv
         notebook.call(
             """\
-            %capture --as tsv --to res
+            %capture stdout --as tsv --to res
             print('a\\tb\\nc\\td')
             """,
             kernel="SoS",
@@ -105,7 +127,7 @@ class TestMagics(NotebookTest):
         # capture as json
         notebook.call(
             """\
-            %capture --as json --to res
+            %capture stdout --as json --to res
             print('[1,2,3]')
             """,
             kernel="SoS",
@@ -115,32 +137,33 @@ class TestMagics(NotebookTest):
         # test append to str
         notebook.call(
             """\
-            %capture --to captured_text
+            %capture stdout --to captured_text
             print('from sos')
             """,
             kernel="SoS",
         )
         notebook.call(
             """\
-            %capture --append captured_text
+            %capture stdout --append captured_text
             cat('from R')
             """,
             kernel="R",
         )
         output = notebook.check_output("captured_text", kernel="SoS")
         assert 'from sos' in output and 'from R' in output
-        assert 'str' in notebook.check_output("type(captured_text)", kernel="SoS")
+        assert 'str' in notebook.check_output(
+            "type(captured_text)", kernel="SoS")
         # test append to dataframe
         notebook.call(
             """\
-            %capture --as tsv --to table
+            %capture stdout --as tsv --to table
             print('a\\tb\\n11\\t22')
             """,
             kernel="SoS",
         )
         notebook.call(
             """\
-            %capture --as tsv --append table
+            %capture stdout --as tsv --append table
             print('a\\tb\\n33\\t44')
             """,
             kernel="SoS",
@@ -353,6 +376,35 @@ class TestMagics(NotebookTest):
         )
         assert "header" in output and 'item1' in output and 'item2' in output
         assert '# header' not in output and '* item1' not in output and '* item2' not in output
+        # render wrong type from subkernel
+        output = notebook.check_output(
+            '''\
+            %render text
+            cat("\\n# header\\n* item1\\n* item2\\n")
+            ''',
+            kernel="R",
+        )
+        assert "header" not in output and 'item1' not in output and 'item2' not in output
+        # render correct type
+        output = notebook.check_output(
+            '''\
+            %render
+            cat("\\n# header\\n* item1\\n* item2\\n")
+            ''',
+            kernel="R",
+        )
+        assert "header" in output and 'item1' in output and 'item2' in output
+        #
+        # test render as other types
+        output = notebook.check_output(
+            '''\
+            %render --as Latex
+            """
+            $$c = \\sqrt{a^2 + b^2}$$
+            """
+            ''',
+            kernel="SoS")
+        assert "c=" in output and 'a2+b2' in output
 
     def test_magic_run(self, notebook):
         # test passing parameters and %run

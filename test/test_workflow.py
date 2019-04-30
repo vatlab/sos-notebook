@@ -10,6 +10,13 @@ from sos_notebook.test_utils import NotebookTest
 
 class TestWorkflow(NotebookTest):
 
+    def test_no_output(self, notebook):
+        '''Test no output from workflow cell'''
+        assert not notebook.check_output('''
+            [1]
+            print('hellp world')
+            ''', kernel='SoS')
+
     def test_task(self, notebook):
         '''Test the execution of tasks with -s force'''
         idx = notebook.call('''\

@@ -1091,7 +1091,7 @@ class SoS_Kernel(IPythonKernel):
                 msg_type = sub_msg['header']['msg_type']
                 env.log_to_file(
                     'MESSAGE',
-                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg}"
+                    f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg['content']}"
                 )
                 if msg_type == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
@@ -1113,7 +1113,9 @@ class SoS_Kernel(IPythonKernel):
                     if self._meta['capture_result'] is not None:
                         self._meta['capture_result'].append(
                             (msg_type, sub_msg['content']))
-                    if not silent and self._meta['render_result'] is False:
+                    if msg_type == 'execute_result' or (
+                            not silent and
+                            self._meta['render_result'] is False):
                         self.send_response(self.iopub_socket, msg_type,
                                            sub_msg['content'])
                 else:
@@ -1437,6 +1439,9 @@ Available subkernels:\n{}'''.format(
         # this is Ok, send result back
         if not silent and res is not None:
             format_dict, md_dict = self.format_obj(self.render_result(res))
+            if self._meta['capture_result'] is not None:
+                self._meta['capture_result'].append(('execute_result', format_dict))
+            env.log_to_file('MESSAGE', f'IOPUB execute_result with content {format_dict}')
             self.send_response(
                 self.iopub_socket, 'execute_result', {
                     'execution_count': self._execution_count,

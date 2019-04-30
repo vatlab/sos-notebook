@@ -451,6 +451,7 @@ class Notebook:
         self._focus_cell(index)
         if in_console:
             self.current_cell.send_keys(Keys.CONTROL, Keys.SHIFT, Keys.ENTER)
+            self._wait_for_done(-1, expect_error)
         else:
             self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
             self._wait_for_done(index, expect_error)
@@ -497,10 +498,11 @@ class Notebook:
                         attribute='src'):
         outputs = ""
         if in_console:
-            outputs = wait_for_selector(self.panel_cells[index],
-                                        "div .output_subarea")
+            outputs = self.panel_cells[index].find_elements_by_css_selector(
+                "div .output_subarea")
         else:
-            outputs = wait_for_selector(self.cells[index], "div .output_subarea")
+            outputs = self.cells[index].find_elements_by_css_selector(
+                "div .output_subarea")
         output_text = ""
         has_error = False
         for output in outputs:
@@ -528,7 +530,11 @@ class Notebook:
         panelButton = self.browser.find_element_by_id("panel_button")
         panelButton.click()
 
-    def edit_prompt_cell(self, content, kernel='SoS', execute=False):
+    def edit_prompt_cell(self,
+                         content,
+                         kernel='SoS',
+                         execute=False,
+                         expect_error=False):
         # print("panel", self.prompt_cell.get_attribute("innerHTML"))
         self.browser.execute_script("window.my_panel.cell.set_text(" +
                                     repr(dedent(content)) + ")")
@@ -539,6 +545,7 @@ class Notebook:
         #   self.prompt_cell.find_element_by_css_selector('.CodeMirror').click()
         if execute:
             self.prompt_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+            self._wait_for_done(-1, expect_error=expect_error)
 
     def get_prompt_content(self):
         JS = 'return window.my_panel.cell.get_text();'
@@ -603,10 +610,17 @@ class Notebook:
         self._focus_cell(index)
         return self.current_cell
 
-    def _wait_for_done(self, index=0, expect_error=False):
+    def _wait_for_done(self, index, expect_error=False):
+        #
+        # index < 0 means console panel
         while True:
-            prompt = self.cells[index].find_element_by_css_selector(
-                '.input_prompt').text
+            # main notebook
+            if index >= 0:
+                prompt = self.cells[index].find_element_by_css_selector(
+                    '.input_prompt').text
+            else:
+                prompt = self.panel_cells[-1].find_element_by_css_selector(
+                    '.input_prompt').text
             if '*' not in prompt:
                 break
             else:
