@@ -3185,6 +3185,8 @@ class With_Magic(SoS_Magic):
                                                allow_stdin)
         finally:
             self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
+            self.sos_kernel.send_frontend_msg('cell-kernel',
+                                       [self.sos_kernel._meta['cell_id'], original_kernel])
 
 
 class SoS_Magics(object):
