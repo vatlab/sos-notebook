@@ -7,7 +7,7 @@ import shlex
 import builtins
 import subprocess
 import sys
-from collections import Sized, OrderedDict
+from collections import Sized, OrderedDict, Sequence
 from io import StringIO
 from types import ModuleType
 
@@ -310,8 +310,9 @@ class Capture_Magic(SoS_Magic):
                         'metadata': {},
                         'data': {
                             'text/html':
-                                HTML(f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
-                                    ).data
+                                HTML(
+                                    f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
+                                ).data
                         }
                     })
                 self.sos_kernel.send_frontend_msg('display_data', {
@@ -2013,11 +2014,15 @@ class SessionInfo_Magic(SoS_Magic):
             prog='%sessioninfo',
             description='''List the session info of all subkernels, and information
             stored in variable sessioninfo''')
-        parser.add_argument('-w', '--with', dest='__with__',
-            help='''Name of variable that contains extra information to be appended. 
+        parser.add_argument(
+            '-w',
+            '--with',
+            dest='__with__',
+            help='''Name of variable that contains extra information to be appended.
                 This variable should be a dictionary, with keys being the section headers
                 and items being the session information, which can be a string, a list of
-                strings, a dictionary, or a list of `(key, value)` pairs. ''')
+                strings, a dictionary, or a list of `(key, value)` pairs. Encoded strings
+                (bytes) are acceptable in places of strings. ''')
         parser.error = self._parse_error
         return parser
 
@@ -2060,21 +2065,32 @@ class SessionInfo_Magic(SoS_Magic):
         #
         if args.__with__:
             if args.__with__ not in env.sos_dict:
-                self.sos_kernel.warn(f'Variable {args.__with__} not defined for additional session information.')
+                self.sos_kernel.warn(
+                    f'Variable {args.__with__} not defined for additional session information.'
+                )
             result.update(env.sos_dict[args.__with__])
         #
         res = ''
         for key, items in result.items():
             res += f'<p class="session_section">{key}</p>\n'
             res += '<table class="session_info">\n'
+            if isinstance(items, (str, bytes)):
+                items = [items]
+            elif isinstance(items, dict):
+                items = list(items.items())
             for item in items:
                 res += '<tr>\n'
                 if isinstance(item, (str, bytes)):
                     res += f'<td colspan="2"><pre>{self.prepare_string(item)}</pre></td>\n'
-                elif len(item) == 1:
-                    res += f'<td colspan="2"><pre>{self.prepare_string(item[0])}</pre></td>\n'
-                elif len(item) == 2:
-                    res += f'<th>{item[0]}</th><td><pre>{self.prepare_string(item[1])}</pre></td>\n'
+                elif isinstance(item, Sequence):
+                    if len(item) == 1:
+                        res += f'<td colspan="2"><pre>{self.prepare_string(item[0])}</pre></td>\n'
+                    elif len(item) == 2:
+                        res += f'<th>{self.prepare_string(item[0])}</th><td><pre>{self.prepare_string(item[1])}</pre></td>\n'
+                    else:
+                        self.sos_kernel.warn(
+                            f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}'
+                        )
                 else:
                     self.sos_kernel.warn(
                         f'Invalid session info item of type {item.__class__.__name__}: {short_repr(item)}'

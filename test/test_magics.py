@@ -28,6 +28,7 @@ class TestMagics(NotebookTest):
                 "preview",
                 "put",
                 "render",
+                'revisions',
                 "run",
                 "runfile",
                 "save",
@@ -829,6 +830,28 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         assert "SoS Version" in output and "Python3" in output
+        # test the with option
+        notebook.call(
+            '''
+        sinfo = {
+            'str_section': 'rsync 3.2',
+            'list_section': [('v1', 'v2'), ('v3', b'v4')],
+            'dict_section': {'d1': 'd2', 'd3': b'd4'}
+        }
+        ''',
+            kernel='SoS')
+        output = notebook.check_output(
+            """\
+            %use Python3
+            %use SoS
+            %sessioninfo --with sinfo
+            """,
+            kernel="SoS",
+        )
+        assert "SoS Version" in output and "Python3" in output
+        assert all(
+            x in output for x in ('rsync 3.2', 'v1', 'v2', 'v3', 'v4', 'd1',
+                                  'd2', 'd3', 'd4'))
 
     def test_magic_set(self, notebook):
         assert "set" in notebook.check_output(
