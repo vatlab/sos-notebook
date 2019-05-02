@@ -568,10 +568,12 @@ class SoS_Kernel(IPythonKernel):
         for entrypoint in pkg_resources.iter_entry_points(group=group):
             # Grab the function that is the actual plugin.
             name = entrypoint.name
+            env.log_to_file('KERNEL', f'Found registered language {name}')
             try:
                 plugin = entrypoint.load()
                 self._supported_languages[name] = plugin
             except Exception as e:
+                env.log_to_file('KERNEL', f'Failed to load registered language {name}: {e}')
                 self._failed_languages[name] = e
         return self._supported_languages
 
