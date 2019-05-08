@@ -167,7 +167,11 @@ def execute_scratch_cell(code, raw_args, kernel):
             '__changed_vars__': res['changed_vars']
         })
         executor = Interactive_Step_Executor(section, mode='interactive')
-        return executor.run()['__last_res__']
+        ret = executor.run()
+        try:
+            return ret['__last_res__']
+        except Exception as e:
+            raise RuntimeError(f'Unknown result returned from executor {ret}: {e}')
     except (UnknownTarget, RemovedTarget) as e:
         raise RuntimeError(f'Unavailable target {e.target}')
     except SystemExit:

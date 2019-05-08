@@ -7,18 +7,14 @@ import sys
 import time
 
 from sos.hosts import Host
-from sos.step_executor import Base_Step_Executor, Step_Executor
+from sos.step_executor import Base_Step_Executor
 from sos.utils import env, short_repr
 
 
-class Interactive_Step_Executor(Step_Executor):
+class Interactive_Step_Executor(Base_Step_Executor):
 
     def __init__(self, step, mode='interactive'):
-        # This is the only interesting part of this executor. Basically
-        # it derives everything from SP_Step_Executor but does not
-        # use the Queue mechanism, so the __init__ and the run
-        # functions are copied from Base_Step_Executor
-        Base_Step_Executor.__init__(self, step)
+        super(Interactive_Step_Executor, self).__init__(step)
         self.run_mode = mode
         self.host = None
 
@@ -93,3 +89,15 @@ class Interactive_Step_Executor(Step_Executor):
             if env.sos_dict['step_output'] is not None:
                 env.logger.debug('output:   ``{}``'.format(
                     short_repr(env.sos_dict['step_output'])))
+
+    def wait_for_subworkflows(self, workflow_results):
+        '''Wait for results from subworkflows'''
+        raise RuntimeError('Nested workflow is not supported in interactive mode')
+
+    def handle_unknown_target(self, e):
+        # wait for the clearnce of unknown target
+        yield None
+        raise e
+
+    def verify_dynamic_targets(self, targets):
+        raise RuntimeError('Dynamic targets are not supported in interative mode')
