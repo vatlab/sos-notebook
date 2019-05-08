@@ -19,7 +19,7 @@ class TestWorkflow(NotebookTest):
 
     def test_task(self, notebook):
         '''Test the execution of tasks with -s force'''
-        idx = notebook.call('''\
+        output = notebook.check_output('''\
             %set -v1
             %run -s force
             [10]
@@ -38,7 +38,22 @@ class TestWorkflow(NotebookTest):
             print("this aa is {i}")
             time.sleep({i})
             ''', kernel='SoS')
+        assert "Ran for < 5 seconds" in output and 'completed' in output
 
-        output = notebook.get_cell_output(index=idx)
-        assert "this aa is 1" in output and 'this is 0' in output
+
+    def test_background_mode(self, notebook):
+        '''test executing sos workflows in background'''
+        idx = notebook.call('''\
+            %run &
+            import time
+            for i in range(5):
+                print(f'output {i}')
+                time.sleep(1)
+            ''', kernel='SoS')
+        output = notebook.get_cell_output(idx)
+        assert 'output 4' not in output
+        import time
+        time.sleep(10)
+        output = notebook.get_cell_output(idx)
+        assert 'output 4' in output
 
