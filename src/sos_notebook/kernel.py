@@ -573,7 +573,8 @@ class SoS_Kernel(IPythonKernel):
                 plugin = entrypoint.load()
                 self._supported_languages[name] = plugin
             except Exception as e:
-                env.log_to_file('KERNEL', f'Failed to load registered language {name}: {e}')
+                env.log_to_file(
+                    'KERNEL', f'Failed to load registered language {name}: {e}')
                 self._failed_languages[name] = e
         return self._supported_languages
 
@@ -1017,6 +1018,15 @@ class SoS_Kernel(IPythonKernel):
         else:
             cell_kernel = self.subkernels.find(self.editor_kernel)
             try:
+                if cell_kernel.name not in self.kernels:
+                    if not self.start_kernel(cell_kernel):
+                        return {
+                            'matches': [],
+                            'cursor_end': cursor_pos,
+                            'cursor_start': cursor_pos - len(text),
+                            'metadata': {},
+                            'status': 'error'
+                        }
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 env.log_to_file('KERNEL',
@@ -1174,31 +1184,8 @@ Available subkernels:\n{}'''.format(
             new_kernel = False
             if kinfo.name not in self.kernels:
                 # start a new kernel
-                try:
-                    env.log_to_file('KERNEL',
-                                    f'Starting subkernel {kinfo.name}')
-                    self.kernels[kinfo.name] = manager.start_new_kernel(
-                        startup_timeout=60,
-                        kernel_name=kinfo.kernel,
-                        cwd=os.getcwd())
-                    new_kernel = True
-                except Exception as e:
-                    # try toget error message
-                    import tempfile
-                    with tempfile.TemporaryFile() as ferr:
-                        try:
-                            # this should fail
-                            manager.start_new_kernel(
-                                startup_timeout=60,
-                                kernel_name=kinfo.kernel,
-                                cwd=os.getcwd(),
-                                stdout=subprocess.DEVNULL,
-                                stderr=ferr)
-                        except:
-                            ferr.seek(0)
-                            self.warn(
-                                f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
-                            )
+                new_kernel = self.start_kernel(kinfo)
+                if not new_kernel:
                     return
             self.KM, self.KC = self.kernels[kinfo.name]
             self.kernel = kinfo.name
@@ -1226,6 +1213,31 @@ Available subkernels:\n{}'''.format(
                     self.run_cell(init_stmts, True, False)
             # passing
             self.get_vars_from(in_vars)
+
+    def start_kernel(self, kinfo):
+        try:
+            env.log_to_file('KERNEL', f'Starting subkernel {kinfo.name}')
+            self.kernels[kinfo.name] = manager.start_new_kernel(
+                startup_timeout=60, kernel_name=kinfo.kernel, cwd=os.getcwd())
+            return True
+        except Exception as e:
+            # try toget error message
+            import tempfile
+            with tempfile.TemporaryFile() as ferr:
+                try:
+                    # this should fail
+                    manager.start_new_kernel(
+                        startup_timeout=60,
+                        kernel_name=kinfo.kernel,
+                        cwd=os.getcwd(),
+                        stdout=subprocess.DEVNULL,
+                        stderr=ferr)
+                except:
+                    ferr.seek(0)
+                    self.warn(
+                        f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
+                    )
+            return False
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
@@ -1442,8 +1454,10 @@ Available subkernels:\n{}'''.format(
         if not silent and res is not None:
             format_dict, md_dict = self.format_obj(self.render_result(res))
             if self._meta['capture_result'] is not None:
-                self._meta['capture_result'].append(('execute_result', format_dict))
-            env.log_to_file('MESSAGE', f'IOPUB execute_result with content {format_dict}')
+                self._meta['capture_result'].append(
+                    ('execute_result', format_dict))
+            env.log_to_file('MESSAGE',
+                            f'IOPUB execute_result with content {format_dict}')
             self.send_response(
                 self.iopub_socket, 'execute_result', {
                     'execution_count': self._execution_count,
