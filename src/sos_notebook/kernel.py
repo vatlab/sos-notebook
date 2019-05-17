@@ -573,7 +573,8 @@ class SoS_Kernel(IPythonKernel):
                 plugin = entrypoint.load()
                 self._supported_languages[name] = plugin
             except Exception as e:
-                env.log_to_file('KERNEL', f'Failed to load registered language {name}: {e}')
+                env.log_to_file(
+                    'KERNEL', f'Failed to load registered language {name}: {e}')
                 self._failed_languages[name] = e
         return self._supported_languages
 
@@ -1014,7 +1015,7 @@ class SoS_Kernel(IPythonKernel):
                 'metadata': {},
                 'status': 'ok'
             }
-        else:
+        try:
             cell_kernel = self.subkernels.find(self.editor_kernel)
             if cell_kernel.name not in self.kernels:
                 try:
@@ -1023,29 +1024,28 @@ class SoS_Kernel(IPythonKernel):
                     self.switch_kernel(cell_kernel.name)
                 finally:
                     self.switch_kernel(orig_kernel)
-            try:
-                _, KC = self.kernels[cell_kernel.name]
-            except Exception as e:
-                env.log_to_file('KERNEL',
-                                f'Failed to get subkernels {cell_kernel.name}')
-                KC = self.KC
-            try:
-                KC.complete(code, cursor_pos)
-                while KC.shell_channel.msg_ready():
-                    msg = KC.shell_channel.get_msg()
-                    if msg['header']['msg_type'] == 'complete_reply':
-                        return msg['content']
-                    else:
-                        # other messages, do not know what is going on but
-                        # we should not wait forever and cause a deadloop here
-                        env.log_to_file(
-                            'MESSAGE',
-                            f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-                        )
-                        break
-            except Exception as e:
-                env.log_to_file('KERNEL',
-                                f'Completion fail with exception: {e}')
+
+            KC = self.kernels[cell_kernel.name][1]
+            # clear the shell channel
+            while KC.shell_channel.msg_ready():
+                KC.shell_channel.get_msg()
+            KC.complete(code, cursor_pos)
+            msg = KC.shell_channel.get_msg()
+            if msg['header']['msg_type'] == 'complete_reply':
+                return msg['content']
+
+            raise RuntimError(
+                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
+            )
+        except Exception as e:
+            env.logger.debug(f'Completion fail with exception: {e}')
+            return {
+                'matches': [],
+                'cursor_end': cursor_pos,
+                'cursor_start': cursor_pos,
+                'metadata': {},
+                'status': 'error'
+            }
 
     def warn(self, message):
         message = str(message).rstrip() + '\n'
@@ -1449,8 +1449,10 @@ Available subkernels:\n{}'''.format(
         if not silent and res is not None:
             format_dict, md_dict = self.format_obj(self.render_result(res))
             if self._meta['capture_result'] is not None:
-                self._meta['capture_result'].append(('execute_result', format_dict))
-            env.log_to_file('MESSAGE', f'IOPUB execute_result with content {format_dict}')
+                self._meta['capture_result'].append(
+                    ('execute_result', format_dict))
+            env.log_to_file('MESSAGE',
+                            f'IOPUB execute_result with content {format_dict}')
             self.send_response(
                 self.iopub_socket, 'execute_result', {
                     'execution_count': self._execution_count,
