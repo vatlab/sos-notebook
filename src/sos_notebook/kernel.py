@@ -1016,6 +1016,13 @@ class SoS_Kernel(IPythonKernel):
             }
         else:
             cell_kernel = self.subkernels.find(self.editor_kernel)
+            if cell_kernel.name not in self.kernels:
+                try:
+                    orig_kernel = self.kernel
+                    # switch to start the new kernel
+                    self.switch_kernel(cell_kernel.name)
+                finally:
+                    self.switch_kernel(orig_kernel)
             try:
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
@@ -1032,7 +1039,7 @@ class SoS_Kernel(IPythonKernel):
                         # other messages, do not know what is going on but
                         # we should not wait forever and cause a deadloop here
                         env.log_to_file(
-                            'KERNEL',
+                            'MESSAGE',
                             f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
                         )
                         break
