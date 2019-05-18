@@ -38,7 +38,9 @@ class TestWorkflow(NotebookTest):
             print("this aa is {i}")
             time.sleep({i})
             ''', kernel='SoS')
-        assert "Ran for < 5 seconds" in output and 'completed' in output
+        assert "Ran for < 5 seconds" in output
+        assert 'this aa is' not in output
+        assert 'start' not in output
 
 
     def test_background_mode(self, notebook):
