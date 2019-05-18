@@ -42,6 +42,21 @@ class TestWorkflow(NotebookTest):
         assert 'this aa is' not in output
         assert 'start' not in output
 
+    def test_identical_task(self, notebook):
+        '''Test running two identical tasks in different cells #225'''
+        output = notebook.check_output('''\
+            %run -s force
+            task:
+            print('hello')
+            ''', kernel='SoS')
+        assert "Ran for < 5 seconds" in output
+        #
+        output = notebook.check_output('''\
+            %run -s force
+            task:
+            print('hello')
+            ''', kernel='SoS')
+        assert "Ran for < 5 seconds" in output
 
     def test_background_mode(self, notebook):
         '''test executing sos workflows in background'''
