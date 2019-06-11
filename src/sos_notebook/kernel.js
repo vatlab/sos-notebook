@@ -2033,12 +2033,68 @@ define([
       var cm = cell.code_mirror;
       var line_ch = cm.getCursor();
       var cur_line = line_ch["line"];
+
       text = cm.getLine(cur_line);
-      // jump to the next non-empty line
-      var line_cnt = cm.lineCount();
-      while (++cur_line < line_cnt) {
-        if (cm.getLine(cur_line).replace(/^\s+|\s+$/gm, "").length !== 0) {
-          cell.code_mirror.setCursor(cur_line, line_ch["ch"]);
+      // no selection, find the complete statement around the current line
+      let srcLines = cell.get_text().split("\n");
+      let curLine = line_ch["line"];
+      while (
+        curLine < cm.lineCount() &&
+        !srcLines[curLine].replace(/\s/g, "").length
+      ) {
+        curLine += 1;
+      }
+      let firstLine = curLine;
+      let lastLine = curLine + 1;
+      while (true) {
+        // at least for ipykernel, a = [1, \n 2] returns "incomplete" so
+        // we need to join lines by space, not by newline, but this might
+        // not work for all languages/kernels.
+        let msg = {};
+
+        let completed = false;
+        cell.kernel.send_shell_message(
+          "is_complete_request",
+          {
+            code: srcLines.slice(firstLine, lastLine).join(" ")
+          },
+          {
+            shell: {
+              reply: reply => {
+                completed = reply.content.status === "complete";
+              }
+            }
+          }
+        );
+
+        if (completed) {
+          text = srcLines.slice(firstLine, lastLine).join("\n");
+          while (
+            lastLine < cm.lineCount() &&
+            !srcLines[lastLine].replace(/\s/g, "").length
+          ) {
+            lastLine += 1;
+          }
+          cell.code_mirror.setCursor(lastLine, line_ch["ch"]);
+          break;
+        } else if (lastLine < cm.lineCount()) {
+          // if incomplete and there are more lines, add the line and check again
+          lastLine += 1;
+        } else if (firstLine > 0) {
+          // if reached last line, try to look before the current line
+          firstLine -= 1;
+          lastLine = curLine + 1;
+        } else {
+          // if we have looked everything but could not find a complete statement,
+          // submit only the current line while knowing it is incomplete
+          text = srcLines[curLine];
+          while (
+            curLine + 1 < cm.lineCount() &&
+            !srcLines[curLine + 1].replace(/\s/g, "").length
+          ) {
+            curLine += 1;
+          }
+          cell.code_mirror.setCursor(curLine + 1, line_ch["ch"]);
           break;
         }
       }
