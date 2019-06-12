@@ -2020,7 +2020,7 @@ define([
     }
   };
 
-  var execute_in_panel = function(evt) {
+  var execute_in_panel = async function(evt) {
     //var cell = nb.get_selected_cell();
     var cell = evt.notebook.get_selected_cell();
     // if the current cell does not has focus, ignore this shortcut
@@ -2047,27 +2047,24 @@ define([
       let firstLine = curLine;
       let lastLine = curLine + 1;
       while (true) {
-        // at least for ipykernel, a = [1, \n 2] returns "incomplete" so
-        // we need to join lines by space, not by newline, but this might
-        // not work for all languages/kernels.
-        let msg = {};
-
-        let completed = false;
-        cell.kernel.send_shell_message(
-          "is_complete_request",
-          {
-            code: srcLines.slice(firstLine, lastLine).join(" ")
-          },
-          {
-            shell: {
-              reply: reply => {
-                completed = reply.content.status === "complete";
+        let check_completed = new Promise((resolve, reject) => {
+          cell.kernel.send_shell_message(
+            "is_complete_request",
+            {
+              code: srcLines.slice(firstLine, lastLine).join(" ")
+            },
+            {
+              shell: {
+                reply: reply => {
+                  resolve(reply.content.status);
+                }
               }
             }
-          }
-        );
+          );
+        });
 
-        if (completed) {
+        let completed = await check_completed;
+        if (completed  === 'complete') {
           text = srcLines.slice(firstLine, lastLine).join("\n");
           while (
             lastLine < cm.lineCount() &&
