@@ -2044,14 +2044,17 @@ define([
       ) {
         curLine += 1;
       }
-      let firstLine = curLine;
-      let lastLine = curLine + 1;
+      // if curLine > 0, we first do a search from beginning
+      let fromFirst = curLine > 0;
+      let firstLine = 0;
+      let lastLine = firstLine + 1;
       while (true) {
+        text = srcLines.slice(firstLine, lastLine).join("\n");
         let check_completed = new Promise((resolve, reject) => {
           cell.kernel.send_shell_message(
             "is_complete_request",
             {
-              code: srcLines.slice(firstLine, lastLine).join(" ")
+              code: text
             },
             {
               shell: {
@@ -2064,26 +2067,33 @@ define([
         });
 
         let completed = await check_completed;
-        if (completed  === 'complete') {
-          text = srcLines.slice(firstLine, lastLine).join("\n");
-          while (
-            lastLine < cm.lineCount() &&
-            !srcLines[lastLine].replace(/\s/g, "").length
-          ) {
-            lastLine += 1;
+        if (completed === "complete") {
+          if (curLine < lastLine) {
+            // we find a block of complete statement containing the current line, great!
+            while (
+              lastLine < cm.lineCount() &&
+              !srcLines[lastLine].replace(/\s/g, "").length
+            ) {
+              lastLine += 1;
+            }
+            cell.code_mirror.setCursor(lastLine, line_ch["ch"]);
+            break;
+          } else {
+            // discard the complete statement before the current line and continue
+            firstLine = lastLine;
+            lastLine = firstLine + 1;
           }
-          cell.code_mirror.setCursor(lastLine, line_ch["ch"]);
-          break;
         } else if (lastLine < cm.lineCount()) {
           // if incomplete and there are more lines, add the line and check again
           lastLine += 1;
-        } else if (firstLine > 0) {
-          // if reached last line, try to look before the current line
-          firstLine -= 1;
+        } else if (fromFirst) {
+          // we search from the first line and failed, we search again from current line
+          firstLine = curLine;
           lastLine = curLine + 1;
+          fromFirst = false;
         } else {
-          // if we have looked everything but could not find a complete statement,
-          // submit only the current line while knowing it is incomplete
+          // if we have searched both from first line and from current line and we
+          // cannot find anything, we submit the current line.
           text = srcLines[curLine];
           while (
             curLine + 1 < cm.lineCount() &&
