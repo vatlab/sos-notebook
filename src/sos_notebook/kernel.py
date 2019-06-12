@@ -22,7 +22,7 @@ from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, SoS_exec
-from sos.syntax import SOS_SECTION_HEADER
+from sos.syntax import SOS_SECTION_HEADER, SOS_DIRECTIVE
 from sos.utils import WorkflowDict, env, short_repr, load_config_files
 from sos.targets import file_target
 from sos.executor_utils import prepare_env
@@ -949,24 +949,78 @@ class SoS_Kernel(IPythonKernel):
         code = code.strip()
         if not code:
             return {'status': 'complete', 'indent': ''}
-        if any(
-                code.startswith(x)
-                for x in ['%dict', '%paste', '%edit', '%cd', '!']):
-            return {'status': 'complete', 'indent': ''}
-        if code.endswith(':') or code.endswith(','):
-            return {'status': 'incomplete', 'indent': '  '}
+
+        env.log_to_file('MESSAGE', f'Checking is_complete of "{code}"')
         lines = code.split('\n')
-        if lines[-1].startswith(' ') or lines[-1].startswith('\t'):
-            # if it is a new line, complte
-            empty = [
-                idx for idx, x in enumerate(lines[-1]) if x not in (' ', '\t')
-            ][0]
-            return {'status': 'incomplete', 'indent': lines[-1][:empty]}
-        #
-        if SOS_SECTION_HEADER.match(lines[-1]):
+        # first let us remove "valid" magics
+        while any(line.startswith('%') or line.startswith('!') for line in lines):
+            for idx, line in enumerate(lines):
+                if line.startswith('%') or line.startswith('!'):
+                    # if the last line ending with \, incomplete
+                    if line.endswith('\\'):
+                        if idx == len(lines) - 1:
+                            return {'status': 'incomplete', 'indent': ''}
+                        lines[idx] = lines[idx][:-1] + lines[idx+1]
+                        lines[idx + 1] = ''
+                    else:
+                        # valid, complete, ignore
+                        lines[idx] = ''
+
+        if self.kernel == 'SoS':
+            for idx, line in enumerate(lines):
+                # remove header
+                if SOS_SECTION_HEADER.match(line):
+                    lines[idx] = ''
+                # remove input stuff?
+                if SOS_DIRECTIVE.match(line):
+                    if any(line.startswith(x) for x in ('input:', 'output:', 'depends:')):
+                        # directive, remvoe them
+                        lines[idx] = lines[idx].split(':', 1)[-1]
+                    elif idx == len(lines) - 1:
+                        # sh: with no script, incomplete
+                        return {'status': 'incomplete', 'indent': '  '}
+                    else:
+                        # remove the rest of them because they are embedded script
+                        for i in range(idx, len(lines)):
+                            lines[i] = ''
+            # check the rest if it is ok
+            try:
+                from IPython.core.inputtransformer2 import TransformerManager as ipf
+            except ImportError:
+                from IPython.core.inputsplitter import InputSplitter as ipf
+            code = '\n'.join(lines)
+            res = ipf().check_complete(code)
+            env.log_to_file(f'MESSAGE', f'SoS kernel returns {res} for code {code}')
+            return {'status': res[0], 'indent': res[1]}
+        # non-SoS kernels
+        try:
+            cell_kernel = self.subkernels.find(self.editor_kernel)
+            if cell_kernel.name not in self.kernels:
+                try:
+                    orig_kernel = self.kernel
+                    # switch to start the new kernel
+                    self.switch_kernel(cell_kernel.name)
+                finally:
+                    self.switch_kernel(orig_kernel)
+
+            KC = self.kernels[cell_kernel.name][1]
+            # clear the shell channel
+            while KC.shell_channel.msg_ready():
+                KC.shell_channel.get_msg()
+            code = '\n'.join(lines)
+            KC.is_complete(code)
+            msg = KC.shell_channel.get_msg()
+            if msg['header']['msg_type'] == 'is_complete_reply':
+                env.log_to_file(f'MESSAGE', f'{self.kernel} kernel returns {msg["content"]} for code {code}')
+                return msg['content']
+
+            raise RuntimError(
+                f"is_complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
+            )
+        except Exception as e:
+            env.logger.debug(f'Completion fail with exception: {e}')
             return {'status': 'incomplete', 'indent': ''}
-        #
-        return {'status': 'incomplete', 'indent': ''}
+
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
