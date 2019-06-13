@@ -233,16 +233,16 @@ class TestKernelInteraction(unittest.TestCase):
         with sos_kernel() as kc:
             # match magics
             status = is_complete(kc, "prin")
-            self.assertEqual(status["status"], "incomplete")
+            self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "a=1")
-            self.assertEqual(status["status"], "incomplete")
+            self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "")
             self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "input:\n a=1,")
-            self.assertEqual(status["status"], "incomplete")
+            self.assertEqual(status["status"], "invalid")
             #
             status = is_complete(kc, "%dict -r")
             self.assertEqual(status["status"], "complete")
