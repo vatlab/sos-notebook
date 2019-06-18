@@ -2037,11 +2037,10 @@ define([
       text = cm.getLine(cur_line);
       // no selection, find the complete statement around the current line
       let srcLines = cell.get_text().split("\n");
+      // indentation levels, -1 for empty lines
+      let srcIndents = srcLines.map(x => x.search(/\S/));
       let curLine = line_ch["line"];
-      while (
-        curLine < cm.lineCount() &&
-        !srcLines[curLine].replace(/\s/g, "").length
-      ) {
+      while (curLine < cm.lineCount() && srcIndents[curLine] === -1) {
         curLine += 1;
       }
       // if curLine > 0, we first do a search from beginning
@@ -2049,12 +2048,28 @@ define([
       let firstLine = 0;
       let lastLine = firstLine + 1;
       while (true) {
+        // move to first non-empty line
+        while (firstLine < cm.lineCount() && srcIndents[firstLine] === -1) {
+          firstLine += 1;
+        }
+        // if firstLine moves away from an empty line, move lastLine as well
+        if (lastLine <= firstLine) {
+          lastLine = firstLine + 1;
+        }
+        // search for lastLine whose indent is equal to or smaller than the first
+        while (
+          lastLine < cm.lineCount() &&
+          (srcIndents[lastLine] === -1 ||
+            srcIndents[lastLine] > srcIndents[firstLine])
+        ) {
+          lastLine += 1;
+        }
         text = srcLines.slice(firstLine, lastLine).join("\n");
         let check_completed = new Promise((resolve, reject) => {
           cell.kernel.send_shell_message(
             "is_complete_request",
             {
-              code: text
+              code: text + "\n\n"
             },
             {
               shell: {
@@ -2072,7 +2087,7 @@ define([
             // we find a block of complete statement containing the current line, great!
             while (
               lastLine < cm.lineCount() &&
-              !srcLines[lastLine].replace(/\s/g, "").length
+              srcIndents[lastLine] === -1
             ) {
               lastLine += 1;
             }
@@ -2097,7 +2112,7 @@ define([
           text = srcLines[curLine];
           while (
             curLine + 1 < cm.lineCount() &&
-            !srcLines[curLine + 1].replace(/\s/g, "").length
+            srcIndents[curLine + 1] === -1
           ) {
             curLine += 1;
           }

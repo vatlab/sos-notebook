@@ -988,7 +988,7 @@ class SoS_Kernel(IPythonKernel):
                 from IPython.core.inputtransformer2 import TransformerManager as ipf
             except ImportError:
                 from IPython.core.inputsplitter import InputSplitter as ipf
-            code = '\n'.join(lines)
+            code = '\n'.join(lines) + '\n\n'
             res = ipf().check_complete(code)
             env.log_to_file(f'MESSAGE', f'SoS kernel returns {res} for code {code}')
             return {'status': res[0], 'indent': res[1]}
