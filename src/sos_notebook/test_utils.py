@@ -368,7 +368,7 @@ class Notebook:
 
     def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
         self._focus_cell(index)
-        kernel_selector = 'option[value={}]'.format(kernel_name)
+        kernel_selector = "option[value='{}']".format(kernel_name)
         kernelList = self.current_cell.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
@@ -552,7 +552,7 @@ class Notebook:
         return self.browser.execute_script(JS)
 
     def select_console_kernel(self, kernel_name="SoS"):
-        kernel_selector = 'option[value={}]'.format(kernel_name)
+        kernel_selector = "option[value='{}']".format(kernel_name)
         kernelList = self.prompt_cell.find_element_by_tag_name("select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         kernel.click()
