@@ -973,7 +973,7 @@ class SoS_Kernel(IPythonKernel):
                     lines[idx] = ''
                 # remove input stuff?
                 if SOS_DIRECTIVE.match(line):
-                    if any(line.startswith(x) for x in ('input:', 'output:', 'depends:')):
+                    if any(line.startswith(x) for x in ('input:', 'output:', 'depends:', 'parameter:')):
                         # directive, remvoe them
                         lines[idx] = lines[idx].split(':', 1)[-1]
                     elif idx == len(lines) - 1:

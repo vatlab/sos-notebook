@@ -243,9 +243,13 @@ class TestKernelInteraction(unittest.TestCase):
             #
             status = is_complete(kc, "input:\n a=1,")
             self.assertEqual(status["status"], "invalid")
+            # 227
+            status = is_complete(kc, "parameter: a=1,")
+            self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "%dict -r")
             self.assertEqual(status["status"], "complete")
+
             wait_for_idle(kc)
 
 
