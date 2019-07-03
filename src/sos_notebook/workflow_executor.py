@@ -118,15 +118,6 @@ def execute_scratch_cell(code, raw_args, kernel):
     else:
         env.logger.handers[0].setTitle(' '.join(sys.argv))
 
-    # clear __step_input__, __step_output__ etc because there is
-    # no concept of passing input/outputs across cells.
-    env.sos_dict.set('__step_output__', sos_targets([]))
-    for k in [
-            '__step_input__', '__default_output__', 'step_input', 'step_output',
-            'step_depends', '_input', '_output', '_depends'
-    ]:
-        env.sos_dict.pop(k, None)
-
     config = {
         'config_file': args.__config__,
         'default_queue': '' if args.__queue__ is None else args.__queue__,

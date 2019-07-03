@@ -9,7 +9,7 @@ import time
 from sos.hosts import Host
 from sos.step_executor import Base_Step_Executor
 from sos.utils import env, short_repr
-
+from sos.targets import sos_targets
 
 class Interactive_Step_Executor(Base_Step_Executor):
 
@@ -17,6 +17,17 @@ class Interactive_Step_Executor(Base_Step_Executor):
         super(Interactive_Step_Executor, self).__init__(step)
         self.run_mode = mode
         self.host = None
+
+    def init_input_output_vars(self):
+        # we keep these variables (which can be result of stepping through previous statements)
+        # if no input and/or output statement is defined
+        if any(x[0] == ':' and x[1] == 'input' for x in self.step.statements):
+            env.sos_dict.set('step_input', sos_targets([]))
+            env.sos_dict.set('_input', sos_targets([]))
+        if any(x[0] == ':' and x[1] == 'output' for x in self.step.statements):
+            env.sos_dict.set('step_output', sos_targets([]))
+            env.sos_dict.set('_output', sos_targets([]))
+        env.sos_dict.pop('__default_output__', None)
 
     def submit_tasks(self, tasks):
         if not tasks:
