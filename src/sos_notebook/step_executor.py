@@ -21,6 +21,9 @@ class Interactive_Step_Executor(Base_Step_Executor):
     def init_input_output_vars(self):
         # we keep these variables (which can be result of stepping through previous statements)
         # if no input and/or output statement is defined
+        for key in ('step_input', '_depends', 'step_output', '_output', 'step_depends', '_depends'):
+            if key not in env.sos_dict:
+                env.sos_dict.set(key, sos_targets([]))
         if any(x[0] == ':' and x[1] == 'input' for x in self.step.statements):
             env.sos_dict.set('step_input', sos_targets([]))
             env.sos_dict.set('_input', sos_targets([]))
