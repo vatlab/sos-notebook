@@ -122,6 +122,8 @@ def execute_scratch_cell(code, raw_args, kernel):
         'config_file': args.__config__,
         'default_queue': '' if args.__queue__ is None else args.__queue__,
         'run_mode': 'dryrun' if args.dryrun else 'interactive',
+        # issue 230, ignore sig mode in interactive mode
+        'sig_mode': 'ignore',
         'verbosity': args.verbosity,
         # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
         'max_procs': args.__max_procs__,
