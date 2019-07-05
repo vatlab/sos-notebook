@@ -17,6 +17,26 @@ class TestWorkflow(NotebookTest):
             print('hellp world')
             ''', kernel='SoS')
 
+    def test_no_signature(self, notebook):
+        '''Test no signature for interactive mode'''
+        notebook.call('''
+            output: 'a.txt'
+            a=2
+            _output.touch()
+            ''', kernel='SoS')
+        assert '2' in notebook.check_output('a', kernel='SoS')
+        # change it
+        assert '4' in notebook.check_output('''\
+            a=4
+            a''', kernel='SoS')
+        # this step will be rerun again     
+        notebook.call('''
+            output: 'a.txt'
+            a=2
+            _output.touch()
+            ''', kernel='SoS')
+        assert '2' in notebook.check_output('a', kernel='SoS')
+
     def test_task(self, notebook):
         '''Test the execution of tasks with -s force'''
         output = notebook.check_output('''\
