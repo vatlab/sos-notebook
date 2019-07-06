@@ -40,8 +40,7 @@ class TestWorkflow(NotebookTest):
     def test_task(self, notebook):
         '''Test the execution of tasks with -s force'''
         output = notebook.check_output('''\
-            %set -v1
-            %run -s force
+            %run -s force -v1
             [10]
             input: for_each={'i': range(1)}
             task:
