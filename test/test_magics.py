@@ -853,21 +853,6 @@ class TestMagics(NotebookTest):
             x in output for x in ('rsync 3.2', 'v1', 'v2', 'v3', 'v4', 'd1',
                                   'd2', 'd3', 'd4'))
 
-    def test_magic_set(self, notebook):
-        assert "set" in notebook.check_output(
-            """\
-            %set
-            %set -v2
-            %set
-            %set -v1
-            """,
-            kernel="SoS",
-        )
-        #
-        # not accept workflow name
-        assert "Magic %set cannot set positional argument" in notebook.check_output(
-            "%set haha", kernel="SoS", expect_error=True)
-
     @pytest.mark.skipif(
         sys.platform == "win32",
         reason="! magic does not support built-in command #203")

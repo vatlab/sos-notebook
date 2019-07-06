@@ -783,8 +783,7 @@ class Paste_Magic(SoS_Magic):
             return
         options, remaining_code = self.get_magic_and_code(code, True)
         try:
-            old_options = self.sos_kernel.options
-            self.sos_kernel.options = options + ' ' + self.sos_kernel.options
+            self.sos_kernel.options = options
             try:
                 if sys.platform == 'darwin':
                     try:
@@ -807,7 +806,7 @@ class Paste_Magic(SoS_Magic):
             return self.sos_kernel._do_execute(code, silent, store_history,
                                                user_expressions, allow_stdin)
         finally:
-            self.sos_kernel.options = old_options
+            self.sos_kernel.options = ''
 
 
 class Preview_Magic(SoS_Magic):
@@ -1572,8 +1571,6 @@ class Runfile_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        old_options = self.sos_kernel.options
-
         if options.strip().endswith('&'):
             self.sos_kernel._meta['workflow_mode'] = 'nowait'
             options = options[:-1]
@@ -1586,8 +1583,7 @@ class Runfile_Magic(SoS_Magic):
         except SystemExit:
             return
 
-        self.sos_kernel.options = ' '.join(
-            run_options) + ' ' + self.sos_kernel.options
+        self.sos_kernel.options = ' '.join(run_options)
         try:
             if os.path.isfile(os.path.expanduser(args.script)):
                 if args.script.endswith('.ipynb'):
@@ -1619,7 +1615,7 @@ class Runfile_Magic(SoS_Magic):
             raise
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
-            self.sos_kernel.options = old_options
+            self.sos_kernel.options = ''
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)
@@ -1769,8 +1765,7 @@ class Run_Magic(SoS_Magic):
         parser = argparse.ArgumentParser(
             prog='%run',
             description='''Execute the current cell with specified command line
-            arguments. Arguments set by magic %set will be appended at the
-            end of command line. If the magic ends with "&", it will be sent
+            arguments. If the magic ends with "&", it will be sent
             to a queue to be executed sequentially.''')
         parser.error = self._parse_error
         return parser
@@ -1804,8 +1799,7 @@ class Run_Magic(SoS_Magic):
                 options = options[:-1]
             else:
                 self.sos_kernel._meta['workflow_mode'] = 'wait'
-            old_options = self.sos_kernel.options
-            self.sos_kernel.options = options + ' ' + self.sos_kernel.options
+            self.sos_kernel.options = options
             try:
                 # %run is executed in its own namespace
                 env.log_to_file('MAGIC', f'Executing\n{run_code}')
@@ -1819,7 +1813,7 @@ class Run_Magic(SoS_Magic):
                 raise
             finally:
                 self.sos_kernel._meta['workflow_mode'] = False
-                self.sos_kernel.options = old_options
+                self.sos_kernel.options = ''
         return ret
 
 
@@ -2136,43 +2130,9 @@ class Set_Magic(SoS_Magic):
     def get_parser(self):
         parser = argparse.ArgumentParser(
             prog='%set',
-            description='''Set persistent command line options for SoS runs.''')
+            description='''Deprecated''')
         parser.error = self._parse_error
         return parser
-
-    def handle_magic_set(self, options):
-        if options.strip():
-            # self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-            #    {'name': 'stdout', 'text': 'sos options set to "{}"\n'.format(options)})
-            if not options.strip().startswith('-'):
-                self.sos_kernel.warn(
-                    f'Magic %set cannot set positional argument, {options} provided.\n'
-                )
-            else:
-                self.sos_kernel.options = options.strip()
-                self.sos_kernel.send_response(
-                    self.sos_kernel.iopub_socket, 'stream',
-                    dict(
-                        name='stdout',
-                        text=f'Set sos options to "{self.sos_kernel.options}"\n'
-                    ))
-        else:
-            if self.sos_kernel.options:
-                self.sos_kernel.send_response(
-                    self.sos_kernel.iopub_socket, 'stream',
-                    dict(
-                        name='stdout',
-                        text=f'Reset sos options from "{self.sos_kernel.options}" to ""\n'
-                    ))
-                self.sos_kernel.options = ''
-            else:
-                self.sos_kernel.send_response(
-                    self.sos_kernel.iopub_socket, 'stream', {
-                        'name':
-                            'stdout',
-                        'text':
-                            'Usage: set persistent sos command line options such as "-v 3" (debug output)\n'
-                    })
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -2182,7 +2142,7 @@ class Set_Magic(SoS_Magic):
                 args = parser.parse_args([options])
         except SystemExit:
             return
-        self.handle_magic_set(options)
+        self.sos_kernel.warn(f'Magic %set is deprecated (vatlab/sos-notebook#231)')
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -2254,13 +2214,12 @@ class SoSRun_Magic(SoS_Magic):
                 args = parser.parse_args([options])
         except SystemExit:
             return
-        old_options = self.sos_kernel.options
         if options.strip().endswith('&'):
             self.sos_kernel._meta['workflow_mode'] = 'nowait'
             options = options[:-1]
         else:
             self.sos_kernel._meta['workflow_mode'] = 'wait'
-        self.sos_kernel.options = options + ' ' + self.sos_kernel.options
+        self.sos_kernel.options = options
         try:
             if self.sos_kernel.kernel != 'SoS':
                 self.sos_kernel.switch_kernel('SoS')
@@ -2277,7 +2236,7 @@ class SoSRun_Magic(SoS_Magic):
             raise
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
-            self.sos_kernel.options = old_options
+            self.sos_kernel.options = ''
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)
