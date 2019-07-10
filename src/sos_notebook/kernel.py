@@ -163,7 +163,7 @@ class Subkernels(object):
                         kernel='sos',
                         options={
                             'variable_pattern':
-                                r'^\s*[_A-Za-z0-9\.]+\s*$',
+                                r'^\s*[_A-Za-z][_A-Za-z0-9\.]*\s*$',
                             'assignment_pattern':
                                 r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'
                         },
