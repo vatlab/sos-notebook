@@ -1111,6 +1111,7 @@ class SoS_Kernel(IPythonKernel):
 
     def run_cell(self, code, silent, store_history, on_error=None):
         #
+        import pprint
         if not self.KM.is_alive():
             self.send_response(
                 self.iopub_socket, 'stream',
@@ -1136,12 +1137,17 @@ class SoS_Kernel(IPythonKernel):
                 sub_msg = self.KC.stdin_channel.get_msg()
                 env.log_to_file(
                     'MESSAGE',
-                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg}"
+                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
                 )
                 if sub_msg['header']['msg_type'] != 'input_request':
-                    self.send_response(self.stdin_socket,
-                                       sub_msg['header']['msg_type'],
-                                       sub_msg["content"])
+                    # self.send_response(self.stdin_socket,
+                    #                    sub_msg['header']['msg_type'],
+                    #                    sub_msg["content"])
+                    self.session.send(self.stdin_socket, sub_msg['header']['msg_type'],
+                        sub_msg['content'],
+                        sub_msg['parent_header'], ident=None, buffers=None, track=False,
+                        header=sub_msg.get('header', None),
+                        metadata=sub_msg.get('metadata', None))
                 else:
                     content = sub_msg["content"]
                     if content['password']:
@@ -1154,7 +1160,7 @@ class SoS_Kernel(IPythonKernel):
                 msg_type = sub_msg['header']['msg_type']
                 env.log_to_file(
                     'MESSAGE',
-                    f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  {sub_msg['content']}"
+                    f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  \n {pprint.pformat(sub_msg)}"
                 )
                 if msg_type == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
@@ -1179,39 +1185,24 @@ class SoS_Kernel(IPythonKernel):
                     if msg_type == 'execute_result' or (
                             not silent and
                             self._meta['render_result'] is False):
-                        self.send_response(self.iopub_socket, msg_type,
-                                           sub_msg['content'])
+                        env.log_to_file(
+                            'MESSAGE',
+                            f"SEND IOPUB MSG TYPE {sub_msg['header']['msg_type']} \n parent header: {pprint.pformat(sub_msg['parent_header'])} \n self._parent_header {pprint.pformat(self._parent_header)}"
+                        )
+
+                        #pheader['']
+                        #self.send_response(self.iopub_socket, msg_type,
+                        #                    sub_msg['content'])
+                        self.session.send(self.iopub_socket, msg_type, sub_msg['content'],
+                            self._parent_header)
+                        #     #sub_msg['parent_header'], ident=None, buffers=None, track=False,
+                        #     #header=sub_msg.get('header', None),
+                        #     #metadata=sub_msg.get('metadata', None)
+                        # )
                 else:
-                    # def send_response(self, stream, msg_or_type, content=None, ident=None,
-                    #     buffers=None, track=False, header=None, metadata=None):
-                    # """Send a response to the message we're currently processing.
-                    # This accepts all the parameters of :meth:`jupyter_client.session.Session.send`
-                    # except ``parent``.
-                    # This relies on :meth:`set_parent` having been called for the current
-                    # message.
-                    # """
-                    # return self.session.send(stream, msg_or_type, content, self._parent_header,
-                    #                         ident, buffers, track, header, metadata)
-# {'buffers': [],
-#  'content': {'comm_id': '5181eb7a9a6d43ae9a58468d608154e8',
-#              'data': {'buffer_paths': [],
-#                       'method': 'update',
-#                       'state': {'bar_style': 'success'}}},
-#  'header': {'date': 1,
-#             'msg_id': 'c3c1b007-d9e52b4cd7cf36255770f193',
-#             'msg_type': 'comm_msg',
-#             'session': '34ec242e-7ec2aad324db55feaf2892a4',
-#             'username': 'bpeng1',
-#             'version': '5.3'},
-#  'metadata': {},
-#  'msg_id': 'c3c1b007-d9e52b4cd7cf36255770f193',
-#  'msg_type': 'comm_msg',
-#  'parent_header': {'date': datetime.datetime(2019, 7, 15, 2, 52, 30, 998364),
-#                    'msg_id': '5942f4ee-54bc887a0192a636f7b79d83',
-#                    'msg_type': 'execute_request',
-#                    'session': '70a821da-e2549095975fffec9ef089b5',
-#                    'username': 'bpeng1',
-#                    'version': '5.3'}}
+                    # when other types of messages are passed, e.g. common_open, common_msg
+                    # we pass the messages to the frontend, along with the parent_header
+                    # so that the widgets can be created correctly.
                     self.session.send(self.iopub_socket, msg_type, sub_msg['content'],
                         sub_msg['parent_header'], ident=None, buffers=None, track=False,
                         header=sub_msg.get('header', None),
