@@ -1182,8 +1182,40 @@ class SoS_Kernel(IPythonKernel):
                         self.send_response(self.iopub_socket, msg_type,
                                            sub_msg['content'])
                 else:
-                    self.send_response(self.iopub_socket, msg_type,
-                                       sub_msg['content'])
+                    # def send_response(self, stream, msg_or_type, content=None, ident=None,
+                    #     buffers=None, track=False, header=None, metadata=None):
+                    # """Send a response to the message we're currently processing.
+                    # This accepts all the parameters of :meth:`jupyter_client.session.Session.send`
+                    # except ``parent``.
+                    # This relies on :meth:`set_parent` having been called for the current
+                    # message.
+                    # """
+                    # return self.session.send(stream, msg_or_type, content, self._parent_header,
+                    #                         ident, buffers, track, header, metadata)
+# {'buffers': [],
+#  'content': {'comm_id': '5181eb7a9a6d43ae9a58468d608154e8',
+#              'data': {'buffer_paths': [],
+#                       'method': 'update',
+#                       'state': {'bar_style': 'success'}}},
+#  'header': {'date': 1,
+#             'msg_id': 'c3c1b007-d9e52b4cd7cf36255770f193',
+#             'msg_type': 'comm_msg',
+#             'session': '34ec242e-7ec2aad324db55feaf2892a4',
+#             'username': 'bpeng1',
+#             'version': '5.3'},
+#  'metadata': {},
+#  'msg_id': 'c3c1b007-d9e52b4cd7cf36255770f193',
+#  'msg_type': 'comm_msg',
+#  'parent_header': {'date': datetime.datetime(2019, 7, 15, 2, 52, 30, 998364),
+#                    'msg_id': '5942f4ee-54bc887a0192a636f7b79d83',
+#                    'msg_type': 'execute_request',
+#                    'session': '70a821da-e2549095975fffec9ef089b5',
+#                    'username': 'bpeng1',
+#                    'version': '5.3'}}
+                    self.session.send(self.iopub_socket, msg_type, sub_msg['content'],
+                        sub_msg['parent_header'], ident=None, buffers=None, track=False,
+                        header=sub_msg.get('header', None),
+                        metadata=sub_msg.get('metadata', None))
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
