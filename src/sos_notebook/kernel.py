@@ -543,7 +543,6 @@ class Subkernels(object):
             x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options
         ] for x in self._kernel_list])
 
-
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
     implementation_version = __version__
@@ -1123,8 +1122,17 @@ class SoS_Kernel(IPythonKernel):
         # flush stale replies, which could have been ignored, due to missed heartbeats
         while self.KC.shell_channel.msg_ready():
             self.KC.shell_channel.get_msg()
-        # executing code in another kernel
-        self.KC.execute(code, silent=silent, store_history=store_history)
+        # executing code in another kernel. 
+        # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
+        content = dict(code=code, silent=silent, store_history=store_history,
+                       user_expressions={}, allow_stdin=False)
+        msg = self.KC.session.msg('execute_request', content)
+        # use the msg_id of the sos kernel for the subkernel to make sure that the messages sent
+        # from the subkernel has the correct msg_id in parent_header so that they can be
+        # displayed directly in the notebook (without using self._parent_header
+        msg['msg_id'] = msg['header']['msg_id'] = self._parent_header['header']['msg_id']
+        self.KC.shell_channel.send(msg)
+        #self.KC.execute(code, silent=silent, store_history=store_history)
 
         # first thing is wait for any side effects (output, stdin, etc.)
         iopub_started = False
@@ -1189,29 +1197,14 @@ class SoS_Kernel(IPythonKernel):
                             'MESSAGE',
                             f"SEND IOPUB MSG TYPE {sub_msg['header']['msg_type']} \n parent header: {pprint.pformat(sub_msg['parent_header'])} \n self._parent_header {pprint.pformat(self._parent_header)}"
                         )
-
-                        #pheader['']
-                        #self.send_response(self.iopub_socket, msg_type,
-                        #                    sub_msg['content'])
-                        self.session.send(self.iopub_socket, msg_type, sub_msg['content'],
-                            self._parent_header)
-                        #     #sub_msg['parent_header'], ident=None, buffers=None, track=False,
-                        #     #header=sub_msg.get('header', None),
-                        #     #metadata=sub_msg.get('metadata', None)
-                        # )
+                        self.session.send(self.iopub_socket, sub_msg)
                 else:
-                    # when other types of messages are passed, e.g. common_open, common_msg
-                    # we pass the messages to the frontend, along with the parent_header
-                    # so that the widgets can be created correctly.
-                    self.session.send(self.iopub_socket, msg_type, sub_msg['content'],
-                        sub_msg['parent_header'], ident=None, buffers=None, track=False,
-                        header=sub_msg.get('header', None),
-                        metadata=sub_msg.get('metadata', None))
+                    self.session.send(self.iopub_socket, sub_msg)
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
                 reply['content']['execution_count'] = self._execution_count
-                env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
+                env.log_to_file('MESSAGE', f'GET SHELL MSG {pprint.pformat(reply)}')
                 res = reply['content']
                 shell_ended = True
             time.sleep(0.001)
