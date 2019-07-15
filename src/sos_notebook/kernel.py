@@ -12,10 +12,13 @@ import sys
 import time
 from collections import defaultdict
 from textwrap import dedent
+import pprint
+
 
 import pandas as pd
 import pkg_resources
 from ipykernel.ipkernel import IPythonKernel
+from ipykernel.comm.manager import CommManager
 from IPython.core.display import HTML
 
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
@@ -543,6 +546,40 @@ class Subkernels(object):
             x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options
         ] for x in self._kernel_list])
 
+class FakeComm(object):
+    def __init__(self, id, KC):
+        self._comm_id = id
+        self._client = KC
+
+
+    def handle_msg(self, msg):
+        env.log_to_file('MESSAGE', f"handle comm {self._comm_id} \n message {pprint.pformat(msg)}")
+        self._client.iopub_channel.send(msg)
+
+class SoSCommManager(CommManager):
+    def __init__(self, *args, **kwargs):
+        super(SoSCommManager, self).__init__(*args, **kwargs)
+        self._sub_comms = {}
+
+    def register_subcomm(self,  comm_id, kernel):
+        self._sub_comms[comm_id] = kernel
+
+    def sub_kernel(self, comm_id):
+        return self._sub_comms[comm_id]
+
+    def get_comm(self, comm_id):
+        try:
+            return self.comms[comm_id]
+        except:
+            if comm_id in self._sub_comms:
+                KC = self._sub_comms[comm_id]
+                return FakeComm(comm_id, KC)
+            self.log.warning("No such comm: %s", comm_id)
+            if self.log.isEnabledFor(logging.DEBUG):
+                # don't create the list of keys if debug messages aren't enabled
+                self.log.debug("Current comms: %s", list(self.comms.keys()))
+                
+
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
     implementation_version = __version__
@@ -648,6 +685,13 @@ class SoS_Kernel(IPythonKernel):
         self._real_execution_count = 1
         self._execution_count = 1
         self.frontend_comm = None
+        self.comm_manager = SoSCommManager(parent=self, kernel=self)
+        # remove the old comm_manager
+        self.shell.configurables.pop()
+        self.shell.configurables.append(self.comm_manager)
+        for msg_type in [ 'comm_open', 'comm_msg', 'comm_close' ]:
+            self.shell_handlers[msg_type] = getattr(self.comm_manager, msg_type)
+
         self.comm_manager.register_target('sos_comm', self.sos_comm)
         self.my_tasks = {}
         self.magics = SoS_Magics(self)
@@ -682,6 +726,13 @@ class SoS_Kernel(IPythonKernel):
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
+
+    def passing_comm(self, comm, msg):
+        
+        #comm.on_msg
+        def handle_subkernel_msg(msg):
+            env.log_to_file('MESSAGE', f'SUBKERNEL FRONTEND COMM {msg}')
+
 
     def sos_comm(self, comm, msg):
         # record frontend_comm to send messages
@@ -1110,7 +1161,6 @@ class SoS_Kernel(IPythonKernel):
 
     def run_cell(self, code, silent, store_history, on_error=None):
         #
-        import pprint
         if not self.KM.is_alive():
             self.send_response(
                 self.iopub_socket, 'stream',
@@ -1199,6 +1249,14 @@ class SoS_Kernel(IPythonKernel):
                         )
                         self.session.send(self.iopub_socket, sub_msg)
                 else:
+                    # if the subkernel tried to create a customized comm
+                    if msg_type == 'comm_open':
+                        self.comm_manager.register_target(
+                            sub_msg['content']['target_name'], self.passing_comm
+                        )
+                        self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
+                        self.warn(f"register target {sub_msg['content']['target_name']} for comm {sub_msg['content']['comm_id']}")
+
                     self.session.send(self.iopub_socket, sub_msg)
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
