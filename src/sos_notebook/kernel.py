@@ -14,7 +14,6 @@ from collections import defaultdict
 from textwrap import dedent
 import pprint
 
-
 import pandas as pd
 import pkg_resources
 from ipykernel.ipkernel import IPythonKernel
@@ -546,39 +545,37 @@ class Subkernels(object):
             x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options
         ] for x in self._kernel_list])
 
-class FakeComm(object):
-    def __init__(self, id, KC, kernel):
-        self._comm_id = id
-        self._client = KC
-        self._sos_kernel = kernel
+
+class CommForwarder(object):
+
+    def __init__(self, KC):
+        self._KC = KC
 
     def handle_msg(self, msg):
-        env.log_to_file('MESSAGE', f"handle comm {self._comm_id} \n message {pprint.pformat(msg)}")
-        self._client.shell_channel.send(msg)
-        time.sleep(5)
-        while self._client.iopub_channel.msg_ready():
-            sub_msg = self._client.iopub_channel.get_msg()
-            self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
+        self._KC.shell_channel.send(msg)
+
 
 class SoSCommManager(CommManager):
+    '''This comm manager will replace the system default comm manager.
+    When a comm is requested, it will return a `CommForwarder` instead
+    of a real comm if the comm is created by the subkerel.
+    '''
+
     def __init__(self, parent=None, kernel=None):
         super(SoSCommManager, self).__init__(parent=parent, kernel=kernel)
+        self._forwarders = {}
         self._sos_kernel = kernel
-        self._sub_comms = {}
 
-    def register_subcomm(self,  comm_id, kernel):
-        self._sub_comms[comm_id] = kernel
-
-    def sub_kernel(self, comm_id):
-        return self._sub_comms[comm_id]
+    def register_subcomm(self, comm_id, KC):
+        self._forwarders[comm_id] = CommForwarder(KC)
 
     def get_comm(self, comm_id):
         try:
             return self.comms[comm_id]
         except:
-            if comm_id in self._sub_comms:
-                KC = self._sub_comms[comm_id]
-                return FakeComm(comm_id, KC, self._sos_kernel)
+            if comm_id in self._forwarders:
+                #self._sos_kernel.start_forwarding_ioPub()
+                return self._forwarders[comm_id]
             self.log.warning("No such comm: %s", comm_id)
             if self.log.isEnabledFor(logging.DEBUG):
                 # don't create the list of keys if debug messages aren't enabled
@@ -690,11 +687,13 @@ class SoS_Kernel(IPythonKernel):
         self._real_execution_count = 1
         self._execution_count = 1
         self.frontend_comm = None
+
+        #
         self.comm_manager = SoSCommManager(parent=self, kernel=self)
         # remove the old comm_manager
         self.shell.configurables.pop()
         self.shell.configurables.append(self.comm_manager)
-        for msg_type in [ 'comm_open', 'comm_msg', 'comm_close' ]:
+        for msg_type in ['comm_open', 'comm_msg', 'comm_close']:
             self.shell_handlers[msg_type] = getattr(self.comm_manager, msg_type)
 
         self.comm_manager.register_target('sos_comm', self.sos_comm)
@@ -731,13 +730,6 @@ class SoS_Kernel(IPythonKernel):
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
-
-    def passing_comm(self, comm, msg):
-
-        @comm.on_msg
-        def handle_subkernel_msg(msg):
-            env.log_to_file('MESSAGE', f'SUBKERNEL FRONTEND COMM {msg}')
-
 
     def sos_comm(self, comm, msg):
         # record frontend_comm to send messages
@@ -1008,14 +1000,15 @@ class SoS_Kernel(IPythonKernel):
         env.log_to_file('MESSAGE', f'Checking is_complete of "{code}"')
         lines = code.split('\n')
         # first let us remove "valid" magics
-        while any(line.startswith('%') or line.startswith('!') for line in lines):
+        while any(
+                line.startswith('%') or line.startswith('!') for line in lines):
             for idx, line in enumerate(lines):
                 if line.startswith('%') or line.startswith('!'):
                     # if the last line ending with \, incomplete
                     if line.endswith('\\'):
                         if idx == len(lines) - 1:
                             return {'status': 'incomplete', 'indent': ''}
-                        lines[idx] = lines[idx][:-1] + lines[idx+1]
+                        lines[idx] = lines[idx][:-1] + lines[idx + 1]
                         lines[idx + 1] = ''
                     else:
                         # valid, complete, ignore
@@ -1028,7 +1021,10 @@ class SoS_Kernel(IPythonKernel):
                     lines[idx] = ''
                 # remove input stuff?
                 if SOS_DIRECTIVE.match(line):
-                    if any(line.startswith(x) for x in ('input:', 'output:', 'depends:', 'parameter:')):
+                    if any(
+                            line.startswith(x)
+                            for x in ('input:', 'output:', 'depends:',
+                                      'parameter:')):
                         # directive, remvoe them
                         lines[idx] = lines[idx].split(':', 1)[-1]
                     elif idx == len(lines) - 1:
@@ -1045,7 +1041,8 @@ class SoS_Kernel(IPythonKernel):
                 from IPython.core.inputsplitter import InputSplitter as ipf
             code = '\n'.join(lines) + '\n\n'
             res = ipf().check_complete(code)
-            env.log_to_file(f'MESSAGE', f'SoS kernel returns {res} for code {code}')
+            env.log_to_file(f'MESSAGE',
+                            f'SoS kernel returns {res} for code {code}')
             return {'status': res[0], 'indent': res[1]}
         # non-SoS kernels
         try:
@@ -1066,7 +1063,10 @@ class SoS_Kernel(IPythonKernel):
             KC.is_complete(code)
             msg = KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'is_complete_reply':
-                env.log_to_file(f'MESSAGE', f'{self.kernel} kernel returns {msg["content"]} for code {code}')
+                env.log_to_file(
+                    f'MESSAGE',
+                    f'{self.kernel} kernel returns {msg["content"]} for code {code}'
+                )
                 return msg['content']
 
             raise RuntimError(
@@ -1075,7 +1075,6 @@ class SoS_Kernel(IPythonKernel):
         except Exception as e:
             env.logger.debug(f'Completion fail with exception: {e}')
             return {'status': 'incomplete', 'indent': ''}
-
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
@@ -1179,15 +1178,19 @@ class SoS_Kernel(IPythonKernel):
             self.KC.shell_channel.get_msg()
         # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
-        content = dict(code=code, silent=silent, store_history=store_history,
-                       user_expressions={}, allow_stdin=False)
+        content = dict(
+            code=code,
+            silent=silent,
+            store_history=store_history,
+            user_expressions={},
+            allow_stdin=False)
         msg = self.KC.session.msg('execute_request', content)
         # use the msg_id of the sos kernel for the subkernel to make sure that the messages sent
         # from the subkernel has the correct msg_id in parent_header so that they can be
         # displayed directly in the notebook (without using self._parent_header
-        msg['msg_id'] = msg['header']['msg_id'] = self._parent_header['header']['msg_id']
+        msg['msg_id'] = self._parent_header['header']['msg_id']
+        msg['header']['msg_id'] = msg['msg_id']
         self.KC.shell_channel.send(msg)
-        #self.KC.execute(code, silent=silent, store_history=store_history)
 
         # first thing is wait for any side effects (output, stdin, etc.)
         iopub_started = False
@@ -1203,14 +1206,7 @@ class SoS_Kernel(IPythonKernel):
                     f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
                 )
                 if sub_msg['header']['msg_type'] != 'input_request':
-                    # self.send_response(self.stdin_socket,
-                    #                    sub_msg['header']['msg_type'],
-                    #                    sub_msg["content"])
-                    self.session.send(self.stdin_socket, sub_msg['header']['msg_type'],
-                        sub_msg['content'],
-                        sub_msg['parent_header'], ident=None, buffers=None, track=False,
-                        header=sub_msg.get('header', None),
-                        metadata=sub_msg.get('metadata', None))
+                    self.session.send(self.stdin_socket, sub_msg)
                 else:
                     content = sub_msg["content"]
                     if content['password']:
@@ -1248,26 +1244,19 @@ class SoS_Kernel(IPythonKernel):
                     if msg_type == 'execute_result' or (
                             not silent and
                             self._meta['render_result'] is False):
-                        env.log_to_file(
-                            'MESSAGE',
-                            f"SEND IOPUB MSG TYPE {sub_msg['header']['msg_type']} \n parent header: {pprint.pformat(sub_msg['parent_header'])} \n self._parent_header {pprint.pformat(self._parent_header)}"
-                        )
                         self.session.send(self.iopub_socket, sub_msg)
                 else:
                     # if the subkernel tried to create a customized comm
                     if msg_type == 'comm_open':
-                        # self.comm_manager.register_target(
-                        #     sub_msg['content']['target_name'], self.passing_comm
-                        # )
-                        self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
-                        self.warn(f"register target {sub_msg['content']['target_name']} for comm {sub_msg['content']['comm_id']}")
-
+                        self.comm_manager.register_subcomm(
+                            sub_msg['content']['comm_id'], self.KC)
                     self.session.send(self.iopub_socket, sub_msg)
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
                 reply['content']['execution_count'] = self._execution_count
-                env.log_to_file('MESSAGE', f'GET SHELL MSG {pprint.pformat(reply)}')
+                env.log_to_file('MESSAGE',
+                                f'GET SHELL MSG {pprint.pformat(reply)}')
                 res = reply['content']
                 shell_ended = True
             time.sleep(0.001)
