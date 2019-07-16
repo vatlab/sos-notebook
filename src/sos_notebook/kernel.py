@@ -547,18 +547,23 @@ class Subkernels(object):
         ] for x in self._kernel_list])
 
 class FakeComm(object):
-    def __init__(self, id, KC):
+    def __init__(self, id, KC, kernel):
         self._comm_id = id
         self._client = KC
-
+        self._sos_kernel = kernel
 
     def handle_msg(self, msg):
         env.log_to_file('MESSAGE', f"handle comm {self._comm_id} \n message {pprint.pformat(msg)}")
-        self._client.iopub_channel.send(msg)
+        self._client.shell_channel.send(msg)
+        time.sleep(5)
+        while self._client.iopub_channel.msg_ready():
+            sub_msg = self._client.iopub_channel.get_msg()
+            self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
 
 class SoSCommManager(CommManager):
-    def __init__(self, *args, **kwargs):
-        super(SoSCommManager, self).__init__(*args, **kwargs)
+    def __init__(self, parent=None, kernel=None):
+        super(SoSCommManager, self).__init__(parent=parent, kernel=kernel)
+        self._sos_kernel = kernel
         self._sub_comms = {}
 
     def register_subcomm(self,  comm_id, kernel):
@@ -573,12 +578,12 @@ class SoSCommManager(CommManager):
         except:
             if comm_id in self._sub_comms:
                 KC = self._sub_comms[comm_id]
-                return FakeComm(comm_id, KC)
+                return FakeComm(comm_id, KC, self._sos_kernel)
             self.log.warning("No such comm: %s", comm_id)
             if self.log.isEnabledFor(logging.DEBUG):
                 # don't create the list of keys if debug messages aren't enabled
                 self.log.debug("Current comms: %s", list(self.comms.keys()))
-                
+
 
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
@@ -728,8 +733,8 @@ class SoS_Kernel(IPythonKernel):
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
 
     def passing_comm(self, comm, msg):
-        
-        #comm.on_msg
+
+        @comm.on_msg
         def handle_subkernel_msg(msg):
             env.log_to_file('MESSAGE', f'SUBKERNEL FRONTEND COMM {msg}')
 
@@ -1172,7 +1177,7 @@ class SoS_Kernel(IPythonKernel):
         # flush stale replies, which could have been ignored, due to missed heartbeats
         while self.KC.shell_channel.msg_ready():
             self.KC.shell_channel.get_msg()
-        # executing code in another kernel. 
+        # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
         content = dict(code=code, silent=silent, store_history=store_history,
                        user_expressions={}, allow_stdin=False)
@@ -1251,9 +1256,9 @@ class SoS_Kernel(IPythonKernel):
                 else:
                     # if the subkernel tried to create a customized comm
                     if msg_type == 'comm_open':
-                        self.comm_manager.register_target(
-                            sub_msg['content']['target_name'], self.passing_comm
-                        )
+                        # self.comm_manager.register_target(
+                        #     sub_msg['content']['target_name'], self.passing_comm
+                        # )
                         self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
                         self.warn(f"register target {sub_msg['content']['target_name']} for comm {sub_msg['content']['comm_id']}")
 
