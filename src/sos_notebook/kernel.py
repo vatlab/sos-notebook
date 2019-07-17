@@ -7,6 +7,7 @@ import contextlib
 import fnmatch
 import logging
 import os
+import threading
 import subprocess
 import sys
 import time
@@ -727,6 +728,7 @@ class SoS_Kernel(IPythonKernel):
         env.logger.print = lambda cell_id, msg, *args: \
             self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
+        self._kernel_busy = threading.Event()
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -1164,6 +1166,7 @@ class SoS_Kernel(IPythonKernel):
             })
 
     def run_cell(self, code, silent, store_history, on_error=None):
+        self._kernel_busy.set()
         #
         if not self.KM.is_alive():
             self.send_response(
@@ -1260,6 +1263,7 @@ class SoS_Kernel(IPythonKernel):
                 res = reply['content']
                 shell_ended = True
             time.sleep(0.001)
+        self._kernel_busy.clear()
         return res
 
     def switch_kernel(self,
@@ -1646,6 +1650,16 @@ Available subkernels:\n{}'''.format(
             # frontend_comm to re-connect to the frontend.
             self.comm_manager.register_target('sos_comm', self.sos_comm)
         return self._meta
+
+    def kernel_idle_func(self):
+        ''' forward ioPub messages from subkernels to frontend '''
+        # self._kernel_busy needs to be a signal because `kernel_idle_func` will be called
+        # in a thread (controller)
+        if self._kernel_busy.is_set():
+            return
+        for _, kc in self.kernels.values():
+            while kc.iopub_channel.msg_ready():
+                self.session.send(self.iopub_socket, kc.iopub_channel.get_msg())
 
     def do_execute(self,
                    code,
