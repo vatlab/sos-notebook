@@ -1783,7 +1783,7 @@ Available subkernels:\n{}'''.format(
             if self._meta['cell_id']:
                 self.send_frontend_msg('cell-kernel',
                                        [self._meta['cell_id'], self.kernel])
-            if code is None:
+            if code is None or not code.strip():
                 return
             try:
                 # We remove leading new line in case that users have a SoS
