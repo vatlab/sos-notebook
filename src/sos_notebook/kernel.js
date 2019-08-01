@@ -3104,6 +3104,8 @@ color: green;
       function findMode(mode) {
         if (mode in modeMap) {
           return modeMap[mode];
+        } else if (typeof mode === 'string' && mode.toLowerCase() in modeMap) {
+          return modeMap[mode.toLowerCase()]
         }
         return null;
       }
