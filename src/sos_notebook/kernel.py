@@ -567,6 +567,7 @@ class CommProxyHandler(object):
                     elif comm_msg_started and sub_msg["content"][
                             "execution_state"] == 'idle':
                         comm_msg_ended = True
+                    continue
                 self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
             time.sleep(0.001)
 
