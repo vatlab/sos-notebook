@@ -547,18 +547,33 @@ class Subkernels(object):
         ] for x in self._kernel_list])
 
 
-class CommForwarder(object):
+class CommProxyHandler(object):
 
-    def __init__(self, KC):
+    def __init__(self, KC, sos_kernel):
         self._KC = KC
+        self._sos_kernel = sos_kernel
 
     def handle_msg(self, msg):
         self._KC.shell_channel.send(msg)
+        # wait for subkernel to handle
+        comm_msg_started = False
+        comm_msg_ended = False
+        while not (comm_msg_started and comm_msg_ended):
+            while self._KC.iopub_channel.msg_ready():
+                sub_msg = self._KC.iopub_channel.get_msg()
+                if sub_msg['header']['msg_type'] == 'status':
+                    if sub_msg["content"]["execution_state"] == 'busy':
+                        comm_msg_started = True
+                    elif comm_msg_started and sub_msg["content"][
+                            "execution_state"] == 'idle':
+                        comm_msg_ended = True
+                self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
+            time.sleep(0.001)
 
 
 class SoSCommManager(CommManager):
     '''This comm manager will replace the system default comm manager.
-    When a comm is requested, it will return a `CommForwarder` instead
+    When a comm is requested, it will return a `CommProxyHandler` instead
     of a real comm if the comm is created by the subkerel.
     '''
 
@@ -568,7 +583,7 @@ class SoSCommManager(CommManager):
         self._sos_kernel = kernel
 
     def register_subcomm(self, comm_id, KC):
-        self._forwarders[comm_id] = CommForwarder(KC)
+        self._forwarders[comm_id] = CommProxyHandler(KC, self._sos_kernel)
 
     def get_comm(self, comm_id):
         try:
@@ -581,7 +596,6 @@ class SoSCommManager(CommManager):
             if self.log.isEnabledFor(logging.DEBUG):
                 # don't create the list of keys if debug messages aren't enabled
                 self.log.debug("Current comms: %s", list(self.comms.keys()))
-
 
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
@@ -728,7 +742,6 @@ class SoS_Kernel(IPythonKernel):
         env.logger.print = lambda cell_id, msg, *args: \
             self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
-        self._kernel_busy = threading.Event()
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -1166,7 +1179,6 @@ class SoS_Kernel(IPythonKernel):
             })
 
     def run_cell(self, code, silent, store_history, on_error=None):
-        self._kernel_busy.set()
         #
         if not self.KM.is_alive():
             self.send_response(
@@ -1263,7 +1275,6 @@ class SoS_Kernel(IPythonKernel):
                 res = reply['content']
                 shell_ended = True
             time.sleep(0.001)
-        self._kernel_busy.clear()
         return res
 
     def switch_kernel(self,
@@ -1650,16 +1661,6 @@ Available subkernels:\n{}'''.format(
             # frontend_comm to re-connect to the frontend.
             self.comm_manager.register_target('sos_comm', self.sos_comm)
         return self._meta
-
-    def kernel_idle_func(self):
-        ''' forward ioPub messages from subkernels to frontend '''
-        # self._kernel_busy needs to be a signal because `kernel_idle_func` will be called
-        # in a thread (controller)
-        if self._kernel_busy.is_set():
-            return
-        for _, kc in self.kernels.values():
-            while kc.iopub_channel.msg_ready():
-                self.session.send(self.iopub_socket, kc.iopub_channel.get_msg())
 
     def do_execute(self,
                    code,
