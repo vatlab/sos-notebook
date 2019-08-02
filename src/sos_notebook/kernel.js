@@ -1980,7 +1980,7 @@ define([
         // if index = cells.length, we are getting the first cell
         let text = cells[
           cells.length - this.history_index
-        ].getElementsByClassName("input_area")[0].innerText;
+        ].getElementsByClassName("input_area")[0].getElementsByClassName('CodeMirror-sizer')[0].innerText;
         // set text
         this.cell.set_text(text.replace(/\u200B$/g, ""));
       }
