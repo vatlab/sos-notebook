@@ -2028,11 +2028,16 @@ define([
       return false;
 
     var text = cell.code_mirror.getSelection();
+    let cell_kernel = cell.metadata.kernel;
+
     if (text === "") {
       // get current line and move the cursor to the next line
       var cm = cell.code_mirror;
       var line_ch = cm.getCursor();
       var cur_line = line_ch["line"];
+
+      let indentation_aware = cell_kernel === 'SoS' || (KernelOptions[cell_kernel] &&
+        KernelOptions[cell_kernel]["indentation_aware"])
 
       text = cm.getLine(cur_line);
       // no selection, find the complete statement around the current line
@@ -2057,12 +2062,14 @@ define([
           lastLine = firstLine + 1;
         }
         // search for lastLine whose indent is equal to or smaller than the first
-        while (
+        if (indentation_aware) {
+          while (
           lastLine < cm.lineCount() &&
           (srcIndents[lastLine] === -1 ||
             srcIndents[lastLine] > srcIndents[firstLine])
-        ) {
-          lastLine += 1;
+          ) {
+            lastLine += 1;
+          }
         }
         text = srcLines.slice(firstLine, lastLine).join("\n");
         let check_completed = new Promise((resolve, reject) => {
@@ -2123,7 +2130,6 @@ define([
     }
     if (!nb.metadata["sos"]["panel"].displayed) toggle_panel();
     //
-    let cell_kernel = cell.metadata.kernel;
     window.my_panel.cell.metadata.kernel = cell_kernel;
 
     if (
