@@ -126,7 +126,7 @@ def execute_scratch_cell(code, raw_args, kernel):
         'sig_mode': 'ignore',
         'verbosity': args.verbosity,
         # for backward compatibility, we try both args.__worker_procs__ and args.__max_procs__
-        'worker_procs': args.__worker_procs__ if hasattr('__worker_procs__') else args.__max_procs__,
+        'worker_procs': args.__worker_procs__ if hasattr(args, '__worker_procs__') else args.__max_procs__,
         'max_running_jobs': args.__max_running_jobs__,
         # for infomration and resume only
         'workdir': os.getcwd(),
