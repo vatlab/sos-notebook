@@ -125,8 +125,8 @@ def execute_scratch_cell(code, raw_args, kernel):
         # issue 230, ignore sig mode in interactive mode
         'sig_mode': 'ignore',
         'verbosity': args.verbosity,
-        # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
-        'max_procs': args.__max_procs__,
+        # for backward compatibility, we try both args.__worker_procs__ and args.__max_procs__
+        'worker_procs': args.__worker_procs__ if hasattr('__worker_procs__') else args.__max_procs__,
         'max_running_jobs': args.__max_running_jobs__,
         # for infomration and resume only
         'workdir': os.getcwd(),
