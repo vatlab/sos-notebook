@@ -40,11 +40,11 @@ RUN ln -s /usr/bin/chromedriver && chmod 777 /usr/bin/chromedriver
 RUN chmod 777 /home/jovyan/.local/share/jupyter/
 
 
-COPY ./development/.ssh /root/.ssh
+COPY ./.ssh /root/.ssh
 RUN chmod 700 /root/.ssh
 RUN chmod 600 /root/.ssh/*
 
-COPY ./development/.ssh /home/jovyan/.ssh
+COPY ./.ssh /home/jovyan/.ssh
 RUN chmod 700 /home/jovyan/.ssh
 RUN chmod 600 /home/jovyan/.ssh/*
 

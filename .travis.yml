@@ -56,7 +56,7 @@ install:
     - docker-compose up -d
     - cd ..
     - docker cp . sosnotebook_sos-notebook_1:/home/jovyan
-    - docker exec -u root sosnotebook_sos-notebook_1 sh ./src/sos_notebook/install_sos_notebook.sh
+    - docker exec -u root sosnotebook_sos-notebook_1 sh ./development/install_sos_notebook.sh
 before_script:
     # - cd test
     # - sh build_test_docker.sh

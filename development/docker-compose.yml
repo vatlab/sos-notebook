@@ -3,7 +3,7 @@ version: '3'
 services:
     sos-notebook:
         build:
-            context: .
+            context: ./sos_notebook
         image: mdabioinfo/sos_notebook_test:latest
         restart: "no"
         shm_size:
