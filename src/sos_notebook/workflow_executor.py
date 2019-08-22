@@ -120,13 +120,13 @@ def execute_scratch_cell(code, raw_args, kernel):
 
     config = {
         'config_file': args.__config__,
-        'default_queue': '' if args.__queue__ is None else args.__queue__,
+        'default_queue': args.__queue__,
         'run_mode': 'dryrun' if args.dryrun else 'interactive',
         # issue 230, ignore sig mode in interactive mode
         'sig_mode': 'ignore',
         'verbosity': args.verbosity,
-        # wait if -w or in dryrun mode, not wait if -W, otherwise use queue default
-        'max_procs': args.__max_procs__,
+        # for backward compatibility, we try both args.__worker_procs__ and args.__max_procs__
+        'worker_procs': args.__worker_procs__ if hasattr(args, '__worker_procs__') else args.__max_procs__,
         'max_running_jobs': args.__max_running_jobs__,
         # for infomration and resume only
         'workdir': os.getcwd(),
@@ -191,12 +191,10 @@ class Tapped_Executor(mp.Process):
         # start a socket?
         context = zmq.Context()
         stdout_socket = context.socket(zmq.PUSH)
-        stdout_socket.connect(
-            (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_logging"]}'))
+        stdout_socket.connect(self.config["sockets"]["tapping_logging"])
 
         informer_socket = context.socket(zmq.PUSH)
-        informer_socket.connect(
-            (f'tcp://127.0.0.1:{self.config["sockets"]["tapping_listener"]}'))
+        informer_socket.connect(self.config["sockets"]["tapping_listener"])
 
         try:
             filename = os.path.join(tempfile.gettempdir(),

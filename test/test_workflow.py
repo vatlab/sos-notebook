@@ -40,7 +40,7 @@ class TestWorkflow(NotebookTest):
     def test_task(self, notebook):
         '''Test the execution of tasks with -s force'''
         output = notebook.check_output('''\
-            %run -s force -v1
+            %run -s force -v1 -q localhost
             [10]
             input: for_each={'i': range(1)}
             task:
@@ -64,14 +64,14 @@ class TestWorkflow(NotebookTest):
     def test_identical_task(self, notebook):
         '''Test running two identical tasks in different cells #225'''
         output = notebook.check_output('''\
-            %run -s force
+            %run -s force -q localhost
             task:
             print('hello')
             ''', kernel='SoS')
         assert "Ran for < 5 seconds" in output
         #
         output = notebook.check_output('''\
-            %run -s force
+            %run -s force -q localhost
             task:
             print('hello')
             ''', kernel='SoS')
