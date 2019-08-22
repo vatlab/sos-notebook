@@ -568,7 +568,8 @@ class CommProxyHandler(object):
                             "execution_state"] == 'idle':
                         comm_msg_ended = True
                     continue
-                self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
+                self._sos_kernel.session.send(self._sos_kernel.iopub_socket,
+                                              sub_msg)
             time.sleep(0.001)
 
 
@@ -597,6 +598,7 @@ class SoSCommManager(CommManager):
             if self.log.isEnabledFor(logging.DEBUG):
                 # don't create the list of keys if debug messages aren't enabled
                 self.log.debug("Current comms: %s", list(self.comms.keys()))
+
 
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
@@ -703,6 +705,7 @@ class SoS_Kernel(IPythonKernel):
         self._real_execution_count = 1
         self._execution_count = 1
         self.frontend_comm = None
+        self.frontend_comm_cache = []
 
         #
         self.comm_manager = SoSCommManager(parent=self, kernel=self)
@@ -826,16 +829,36 @@ class SoS_Kernel(IPythonKernel):
             elif self._meta['use_iopub']:
                 self.send_response(self.iopub_socket, 'transient_display_data',
                                    make_transient_msg(msg_type, msg))
-            else:
+            elif self.frontend_comm:
+                if self.frontend_comm_cache:
+                    for mt, mg in self.frontend_comm_cache:
+                        self.frontend_comm.send(
+                            make_transient_msg(mt, mg),
+                            {'msg_type': 'transient_display_data'})
+                    self.frontend_comm_cache = []
                 self.frontend_comm.send(
                     make_transient_msg(msg_type, msg),
                     {'msg_type': 'transient_display_data'})
+            else:
+                self.frontend_comm_cache.append([msg_type, msg])
+                env.log_to_file(
+                    'MESSAGE',
+                    f'fronten not ready or broken. Message of type {msg_type} is cached'
+                )
         elif self.frontend_comm:
+            if self.frontend_comm_cache:
+                for mt, mg in self.frontend_comm_cache:
+                    self.frontend_comm.send({} if mg is None else mg,
+                                            {'msg_type': mt})
+                self.frontend_comm_cache = []
             self.frontend_comm.send({} if msg is None else msg,
                                     {'msg_type': msg_type})
         else:
-            self.warn(
-                'Frontend communicator is broken. Please restart jupyter server'
+            # frontend_comm is not ready
+            self.frontend_comm_cache.append([msg_type, msg])
+            env.log_to_file(
+                'MESSAGE',
+                f'fronten not ready or broken. Message of type {msg_type} is cached'
             )
 
     @contextlib.contextmanager
