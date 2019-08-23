@@ -26,6 +26,7 @@ RUN 	conda install -c r r-feather
 RUN	    DUMMY=$(git ls-remote https://github.com/vatlab/sos.git -t master)
 RUN     DUMMY=${DUMMY} pip install git+https://github.com/vatlab/sos.git
 RUN     pip install sos-r sos-python sos-bash --upgrade
+RUN     pip install ipython -U
 
 USER    root
 RUN curl https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /chrome.deb
