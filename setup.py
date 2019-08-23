@@ -82,7 +82,7 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=[
-        'sos>=0.19.14',
+        'sos>=0.19.15',
         'nbformat',
         'nbconvert>=5.1.1',
         'ipython',
