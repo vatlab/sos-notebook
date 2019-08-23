@@ -31,7 +31,7 @@ RUN curl https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.d
 RUN dpkg -i /chrome.deb || apt-get install -yf
 RUN rm /chrome.deb
 
-RUN wget -q "https://chromedriver.storage.googleapis.com/73.0.3683.20/chromedriver_linux64.zip" -O /tmp/chromedriver.zip \
+RUN wget -q "https://chromedriver.storage.googleapis.com/76.0.3809.126/chromedriver_linux64.zip" -O /tmp/chromedriver.zip \
     && unzip /tmp/chromedriver.zip -d /usr/bin/ \
     && rm /tmp/chromedriver.zip
 ENV DISPLAY=:99
