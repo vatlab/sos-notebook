@@ -276,7 +276,7 @@ class Subkernels(object):
             # but the provided kernel does not match...
             if (kernel is not None and kernel != x.kernel):
                 env.logger.warning(
-                    f"Notebook uses kernel {x.kernel} for language {x.language}, but local system uses kernel {kernel} instead."
+                    f"Overriding kernel {x.kernel} used by subkernel {x.name} with kernel {kernel}."
                 )
                 self._kernel_list[idx].kernel = kernel
                 if notify_frontend:
@@ -284,7 +284,7 @@ class Subkernels(object):
             #  similarly, identified by kernel but language names are different
             if language not in (None, '', 'None') and language != x.language:
                 env.logger.warning(
-                    f"Notebook uses language {x.language} for kernel {x.kernel}, but local system uses language {language} instead."
+                    f"Overriding language {x.language} used by subkernel {x.name} with language {language}."
                 )
                 self._kernel_list[idx].language = language
                 if notify_frontend:
@@ -885,9 +885,9 @@ class SoS_Kernel(IPythonKernel):
                     return
             if not items:
                 return
-            if self.kernel in self.supported_languages:
-                lan = self.supported_languages[self.kernel]
-                kinfo = self.subkernels.find(self.kernel)
+            kinfo = self.subkernels.find(self.kernel)
+            if kinfo.language in self.supported_languages:
+                lan = self.supported_languages[kinfo.language]
                 try:
                     lan(self, kinfo.kernel).get_vars(items)
                 except Exception as e:
@@ -954,14 +954,14 @@ class SoS_Kernel(IPythonKernel):
             if not items:
                 # we do not simply return because we need to return default variables (with name startswith sos
                 items = []
-            if self.kernel not in self.supported_languages:
+            kinfo = self.subkernels.find(self.kernel)
+            if kinfo.language not in self.supported_languages:
                 if explicit:
                     self.warn(
                         f'Subkernel {self.kernel} does not support magic %put.')
                 return
             #
-            lan = self.supported_languages[self.kernel]
-            kinfo = self.subkernels.find(self.kernel)
+            lan = self.supported_languages[kinfo.language]
             # pass language name to to_kernel
             try:
                 if to_kernel:
@@ -1376,8 +1376,8 @@ Available subkernels:\n{}'''.format(
                     timeout=10)['content']['language_info'].get(
                         'codemirror_mode', '')
                 self.subkernels.notify_frontend()
-            if new_kernel and self.kernel in self.supported_languages:
-                lan_module = self.supported_languages[self.kernel](self,
+            if new_kernel and kinfo.language in self.supported_languages:
+                lan_module = self.supported_languages[kinfo.language](self,
                                                                    kinfo.kernel)
                 init_stmts = lan_module.init_statements
 
