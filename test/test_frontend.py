@@ -242,10 +242,10 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "input:\n a=1,")
-            self.assertEqual(status["status"], "invalid")
+            self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "parameter: a=1,")
-            self.assertEqual(status["status"], "invalid")
+            self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "%dict -r")
             self.assertEqual(status["status"], "complete")
