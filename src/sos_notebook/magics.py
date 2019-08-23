@@ -1780,6 +1780,14 @@ class Run_Magic(SoS_Magic):
                 run_options.append(options)
             else:
                 break
+        #
+        if not run_code.strip():
+            parser = self.get_parser()
+            try:
+                args, unknown_args = parser.parse_known_args(shlex.split(options))
+            except SystemExit:
+                return
+
         # if there are more magics after %run, they will be ignored so a warning
         # is needed.
         if run_code.lstrip().startswith('%') and not any(
