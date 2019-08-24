@@ -1623,8 +1623,13 @@ Available subkernels:\n{}'''.format(
 
     def init_metadata(self, metadata):
         super(SoS_Kernel, self).init_metadata(metadata)
-
-        if 'sos' in metadata['content']:
+        env.log_to_file('KERNEL', f'GOT METADATA {metadata}')
+        if 'sos' in metadata['metadata']:
+            # jupyterlab-sos sends meta data through metadata
+            meta = metadata['metadata']['sos']
+        elif 'sos' in metadata['content']:
+            # classic jupyter does not use metadata but allow additional fields
+            # in content
             meta = metadata['content']['sos']
         else:
             # if there is no sos metadata, the execution should be started from a test suite
