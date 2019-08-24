@@ -688,7 +688,7 @@ class SoS_Kernel(IPythonKernel):
             'workflow_mode': False,
             'render_result': False,
             'capture_result': None,
-            'cell_id': '',
+            'cell_id': '0',
             'notebook_name': '',
             'notebook_path': '',
             'use_panel': True,
@@ -1623,6 +1623,7 @@ Available subkernels:\n{}'''.format(
 
     def init_metadata(self, metadata):
         super(SoS_Kernel, self).init_metadata(metadata)
+
         if 'sos' in metadata['content']:
             meta = metadata['content']['sos']
         else:
@@ -1633,7 +1634,7 @@ Available subkernels:\n{}'''.format(
                 'workflow_mode': False,
                 'render_result': False,
                 'capture_result': None,
-                'cell_id': '',
+                'cell_id': '0',
                 'notebook_name': '',
                 'notebook_path': '',
                 'use_panel': False,
@@ -1656,7 +1657,7 @@ Available subkernels:\n{}'''.format(
             'capture_result':
                 None,
             'cell_id':
-                meta['cell_id'] if 'cell_id' in meta else "",
+                meta['cell_id'] if 'cell_id' in meta else '0',
             'notebook_path':
                 meta['path'] if 'path' in meta else 'Untitled.ipynb',
             'use_panel':
@@ -1805,7 +1806,7 @@ Available subkernels:\n{}'''.format(
                                    user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
-            if self._meta['cell_id']:
+            if self._meta['cell_id'] != '0':
                 self.send_frontend_msg('cell-kernel',
                                        [self._meta['cell_id'], self.kernel])
             if code is None or not code.strip():
