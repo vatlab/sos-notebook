@@ -2,6 +2,7 @@
 {% macro css() %}
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.2/css/all.min.css" integrity="sha256-zmfNZmXoNWBMemUOo1XUGFfc0ihGGLYdgtJS3KCr/l0=" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.2/css/v4-shims.css" integrity="sha256-dRsB5EBF7ZbkKjvkVsZ+v+WIFJS8cpuFHKgs8IHW8Hg=" crossorigin="anonymous" />
 
 <style type="text/css">
 .dataframe_container {
