@@ -842,7 +842,7 @@ class Preview_Magic(SoS_Magic):
         elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
                 from sos.visualize import Visualizer
-                result = Visualizer(self, style).preview(obj)
+                result = Visualizer(self.sos_kernel, style).preview(obj)
                 if isinstance(result, (list, tuple)) and len(result) == 2:
                     return txt, result
                 elif isinstance(result, dict):
