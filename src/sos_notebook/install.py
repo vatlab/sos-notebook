@@ -22,7 +22,7 @@ if _py_ver.major == 2 or (_py_ver.major == 3 and
 
 kernel_json = {
     "argv": [
-        sys.executable, "-m", "sos_notebook.kernel", "-f", "{connection_file}"
+        sys.executable.split(os.sep)[-1], "-m", "sos_notebook.kernel", "-f", "{connection_file}"
     ],
     "display_name": "SoS",
     "language": "sos",
