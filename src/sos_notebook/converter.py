@@ -159,8 +159,6 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
             cell.source, re.MULTILINE)
         if run_notebook:
             meta['workflow'] = self._workflow
-        if re.search(r'^%toc\s/', cell.source, re.MULTILINE):
-            meta['toc'] = self._toc
         meta['path'] = self._filename
         meta['use_panel'] = False
         meta['rerun'] = False
@@ -266,19 +264,8 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
 
         return exec_reply, outs
 
-    def _scan_table_of_content(self, nb):
-        cells = nb.cells
-        TOC = ''
-        for cell in cells:
-            if cell.cell_type == "markdown":
-                for line in cell.source.splitlines():
-                    if re.match('^#+ ', line):
-                        TOC += line + '\n'
-        return TOC
-
     def preprocess(self, nb, *args, **kwargs):
         self._workflow = extract_workflow(nb)
-        self._toc = self._scan_table_of_content(nb)
         return super(SoS_ExecutePreprocessor,
                      self).preprocess(nb, *args, **kwargs)
 
