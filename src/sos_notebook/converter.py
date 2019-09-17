@@ -158,7 +158,7 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
             'cell_id': '0',
             'path': self._filename,
             'batch_mode': True,
-            'cell_kernel': cell.metadata.kernel
+            'cell_kernel': cell.metadata.kernel if hasattr(cell.metadata, 'kernel') else 'SoS'
             }
         if re.search(
             r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$',
