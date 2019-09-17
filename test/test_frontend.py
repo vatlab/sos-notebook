@@ -221,7 +221,7 @@ class TestKernelInteraction(unittest.TestCase):
             ins_alpha = inspect(kc, "alpha")["data"]["text/plain"]
             self.assertTrue("5" in ins_alpha, "Returned: {}".format(ins_alpha))
             wait_for_idle(kc)
-            for magic in ("get", "run", "set", "sosrun", "toc"):
+            for magic in ("get", "run", "set", "sosrun"):
                 ins_magic = inspect(kc, "%" + magic, 2)["data"]["text/plain"]
                 self.assertTrue("usage: %" + magic in ins_magic,
                                 "Returned: {}".format(ins_magic))
