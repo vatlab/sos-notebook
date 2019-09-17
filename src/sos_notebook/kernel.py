@@ -695,7 +695,6 @@ class SoS_Kernel(IPythonKernel):
             'use_iopub': False,
             'default_kernel': 'SoS',
             'cell_kernel': 'SoS',
-            'toc': '',
             'batch_mode': False
         }
         self._debug_mode = False
@@ -1646,7 +1645,6 @@ Available subkernels:\n{}'''.format(
                 'use_iopub': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
-                'toc': '',
                 'batch_mode': False
             }
             return self._meta
@@ -1674,8 +1672,6 @@ Available subkernels:\n{}'''.format(
             'cell_kernel':
                 meta['cell_kernel'] if 'cell_kernel' in meta else
                 (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
-            'toc':
-                meta.get('toc', ''),
             'batch_mode':
                 meta.get('batch_mode', False)
         }
