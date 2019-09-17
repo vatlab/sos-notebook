@@ -2890,53 +2890,6 @@ class Tasks_Magic(SoS_Magic):
                                            allow_stdin)
 
 
-def header_to_toc(text, id):
-    '''Convert a bunch of ## header to TOC'''
-    toc = [f'<div class="toc" id="{id}">' if id else '<div class="toc">']
-    lines = [x for x in text.splitlines() if x.strip()]
-    if not lines:
-        return ''
-    top_level = min(x.split(' ')[0].count('#') for x in lines)
-    level = top_level - 1
-    for line in lines:
-        header, text = line.split(' ', 1)
-        # the header might have anchor link like <a id="videos"></a>
-        matched = re.match('.*(<a\s+id="(.*)">.*</a>).*', text)
-        anchor = ''
-        if matched:
-            text = text.replace(matched.group(1), '')
-            anchor = matched.group(2)
-        # remove image
-        matched = re.match('.*(<img .*>).*', text)
-        if matched:
-            text = text.replace(matched.group(1), '')
-        if not anchor:
-            anchor = re.sub('[^ a-zA-Z0-9]', '', text).strip().replace(' ', '-')
-        # handle ` ` in header
-        text = re.sub('`(.*?)`', '<code>\\1</code>', text)
-        line_level = header.count('#')
-        if line_level > level:
-            # level          2
-            # line_leval     4
-            # add level 3, 4
-            for l in range(level + 1, line_level + 1):
-                # increase level, new ui
-                toc.append(f'<ul class="toc-item lev{l - top_level}">')
-        elif line_level < level:
-            # level          4
-            # line_level     2
-            # end level 4 and 3.
-            for level in range(level - line_level):
-                # end last one
-                toc.append('</ul>')
-        level = line_level
-        toc.append(f'''<li><a href="#{anchor}">{text}</a></li>''')
-    # if last level is 4, toplevel is 2 ...
-    if level:
-        for level in range(level - top_level):
-            toc.append('</div>')
-    return HTML('\n'.join(toc)).data
-
 
 class Toc_Magic(SoS_Magic):
     name = 'toc'
@@ -2947,7 +2900,7 @@ class Toc_Magic(SoS_Magic):
     def get_parser(self):
         parser = argparse.ArgumentParser(
             prog='%toc',
-            description='''Generate a table of content from the current notebook.'''
+            description='''This magic is deprecated.'''
         )
         loc = parser.add_mutually_exclusive_group()
         loc.add_argument(
@@ -2967,31 +2920,7 @@ class Toc_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_parser()
-        try:
-            args = parser.parse_args(shlex.split(options))
-        except SystemExit:
-            return
-        if args.panel:
-            self.sos_kernel._meta['use_panel'] = True
-        elif args.notebook:
-            self.sos_kernel._meta['use_panel'] = False
-        if self.sos_kernel._meta['use_panel']:
-            self.sos_kernel.send_frontend_msg('show_toc')
-        else:
-            self.sos_kernel.send_response(
-                self.sos_kernel.iopub_socket, 'display_data', {
-                    'metadata': {},
-                    'data': {
-                        'text/html':
-                            header_to_toc(self.sos_kernel._meta['toc'], args.id)
-                    },
-                })
-        return self.sos_kernel._do_execute(remaining_code, silent,
-                                           store_history, user_expressions,
-                                           allow_stdin)
-
+        self.sos_kernel.warn('Magic %toc is deprecated.')
 
 class Use_Magic(SoS_Magic):
     name = 'use'

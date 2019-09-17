@@ -39,7 +39,6 @@ class TestMagics(NotebookTest):
                 "sossave",
                 "shutdown",
                 "task",
-                "toc",
                 "use",
                 "with",
         ):

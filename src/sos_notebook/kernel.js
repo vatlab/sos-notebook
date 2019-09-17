@@ -254,26 +254,6 @@ define([
     window.JsLoaded.set(kernel_name, true);
   }
 
-  function hasTOCMagic(code) {
-    let lines = code.split("\n");
-    for (let l = 0; l < lines.length; ++l) {
-      // ignore starting comment, new line and ! lines
-      if (
-        lines[l].startsWith("#") ||
-        lines[l].trim() === "" ||
-        lines[l].startsWith("!")
-      ) {
-        continue;
-      }
-      // other magic
-      if (lines[l].startsWith("%toc")) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-
   // get the workflow part of text from a cell
   function getCellWorkflow(cell) {
     var lines = cell.get_text().split("\n");
@@ -320,21 +300,6 @@ define([
     return workflow;
   }
 
-  function scan_table_of_content(cells) {
-    let TOC = "";
-    for (let i = 0; i < cells.length; ++i) {
-      let cell = cells[i];
-      if (cell.cell_type === "markdown") {
-        var lines = cell.get_text().split("\n");
-        for (let l = 0; l < lines.length; ++l) {
-          if (lines[l].match("^#+ ")) {
-            TOC += lines[l] + "\n";
-          }
-        }
-      }
-    }
-    return TOC;
-  }
 
   var my_execute = function(code, callbacks, options) {
     /* check if the code is a workflow call, which is marked by
@@ -350,9 +315,6 @@ define([
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
       options.sos.workflow = getNotebookWorkflow(cells);
-    }
-    if (code.match(/^%toc\s/m)) {
-      options.sos.toc = scan_table_of_content(cells);
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
@@ -518,13 +480,6 @@ define([
       .join("\n");
     load_css(css_text);
   }
-
-  var show_toc = function(evt) {
-    var cell = create_panel_cell("");
-    var toc = cell.output_area.create_output_area().append(table_of_contents());
-    cell.output_area._safe_append(toc);
-    scrollPanel();
-  };
 
   function update_duration() {
     if (window._duration_updater) return;
@@ -1109,8 +1064,6 @@ define([
         if (data.status === "running") {
           update_duration();
         }
-      } else if (msg_type === "show_toc") {
-        show_toc();
       } else if (msg_type == "print") {
         cell = get_cell_by_id(data[0]);
         cell.output_area.append_output({
@@ -1373,151 +1326,7 @@ define([
     return elt;
   }
 
-  function highlight_toc_item(evt, data) {
-    if ($(".toc").length === 0) {
-      return;
-    }
-    var c = data.cell.element; //
-    if (c) {
-      var ll = $(c).find(":header");
-      if (ll.length === 0) {
-        ll = $(c)
-          .prevAll()
-          .find(":header");
-      }
-      var elt = ll[ll.length - 1];
-      if (elt) {
-        var highlighted_item = $(".toc").find('a[href="#' + elt.id + '"]');
-        if (evt.type === "execute") {
-          // remove the selected class and add execute class
-          // il the cell is selected again, it will be highligted as selected+running
-          highlighted_item
-            .removeClass("toc-item-highlight-select")
-            .addClass("toc-item-highlight-execute");
-          //console.log("->>> highlighted_item class",highlighted_item.attr("class"))
-        } else {
-          $(".toc")
-            .find(".toc-item-highlight-select")
-            .removeClass("toc-item-highlight-select");
-          highlighted_item.addClass("toc-item-highlight-select");
-        }
-      }
-    }
-  }
 
-  var make_link = function(h) {
-    var a = $("<a/>");
-    a.attr("href", "#" + h.attr("id"));
-    // get the text *excluding* the link text, whatever it may be
-    var hclone = h.clone();
-    hclone = removeMathJaxPreview(hclone);
-    hclone
-      .children()
-      .last()
-      .remove(); // remove the last child (that is the automatic anchor)
-    hclone.find("a[name]").remove(); //remove all named anchors
-    a.html(hclone.html());
-    a.on("click", function() {
-      setTimeout(function() {
-        $.ajax();
-      }, 100); //workaround for  https://github.com/jupyter/notebook/issues/699
-      nb.get_selected_cell().unselect(); //unselect current cell
-      var new_selected_cell = $("[id='" + h.attr("id") + "']")
-        .parents(".unselected")
-        .switchClass("unselected", "selected");
-      new_selected_cell.data("cell").selected = true;
-      var cell = new_selected_cell.data("cell"); // nb.get_selected_cell()
-      highlight_toc_item("toc_link_click", {
-        cell: cell
-      });
-    });
-    return a;
-  };
-
-  var table_of_contents = function() {
-    //process_cell_toc();
-
-    var toc = $("<div class='toc'/>");
-    var ul = $("<ul/>")
-      .addClass("toc-item")
-      .addClass("lev1")
-      .attr("id", "toc-level0");
-    toc.append(ul);
-    var depth = 1; //var depth = ol_depth(ol);
-    var li = ul; //yes, initialize li with ul!
-    var all_headers = $("#notebook").find(":header");
-    var min_lvl = 1;
-    var lbl_ary = [];
-    for (; min_lvl <= 6; min_lvl++) {
-      if (all_headers.is("h" + min_lvl)) {
-        break;
-      }
-    }
-    for (var i = min_lvl; i <= 6; i++) {
-      lbl_ary[i - min_lvl] = 0;
-    }
-
-    //loop over all headers
-    all_headers.each(function(i, h) {
-      var level = parseInt(h.tagName.slice(1), 10) - min_lvl + 1;
-      // skip headings with no ID to link to
-      if (!h.id) {
-        return;
-      }
-      //If h had already a number, remove it
-      /* $(h).find(".toc-item-num").remove(); */
-      var num_str = incr_lbl(lbl_ary, level - 1).join("."); // numbered heading labels
-      //var num_lbl = $("<span/>").addClass("toc-item-num")
-      //    .text(num_str).append("&nbsp;").append("&nbsp;");
-
-      // walk down levels
-      for (var elm = li; depth < level; depth++) {
-        var new_ul = $("<ul/>")
-          .addClass("lev" + (depth + 1).toString())
-          .addClass("toc-item");
-        elm.append(new_ul);
-        elm = ul = new_ul;
-      }
-      // walk up levels
-      for (; depth > level; depth--) {
-        // up twice: the enclosing <ol> and <li> it was inserted in
-        ul = ul.parent();
-        while (!ul.is("ul")) {
-          ul = ul.parent();
-        }
-      }
-      // Change link id -- append current num_str so as to get a kind of unique anchor
-      // A drawback of this approach is that anchors are subject to change and thus external links can fail if toc changes
-      // Anyway, one can always add a <a name="myanchor"></a> in the heading and refer to that anchor, eg [link](#myanchor)
-      // This anchor is automatically removed when building toc links. The original id is also preserved and an anchor is created
-      // using it.
-      // Finally a heading line can be linked to by [link](#initialID), or [link](#initialID-num_str) or [link](#myanchor)
-      h.id = h.id.replace(/\$/g, "").replace("\\", "");
-      if (!$(h).attr("saveid")) {
-        $(h).attr("saveid", h.id);
-      } //save original id
-      h.id = $(h).attr("saveid") + "-" + num_str.replace(/\./g, "");
-      // change the id to be "unique" and toc links to it
-      // (and replace "." with "" in num_str since it poses some pb with jquery)
-      var saveid = $(h).attr("saveid");
-      //escape special chars: http://stackoverflow.com/questions/3115150/
-      var saveid_search = saveid.replace(
-        /[-[\]{}():\/!;&@=$£%§<>%"'*+?.,~\\^$|#\s]/g,
-        "\\$&"
-      );
-      if ($(h).find("a[name=" + saveid_search + "]").length === 0) {
-        //add an anchor with original id (if it does not already exists)
-        $(h).prepend($("<a/>").attr("name", saveid));
-      }
-
-      // Create toc entry, append <li> tag to the current <ol>. Prepend numbered-labels to headings.
-      li = $("<li/>").append(make_link($(h)));
-
-      ul.append(li);
-      // $(h).prepend(num_lbl);
-    });
-    return toc;
-  };
 
   var create_panel_div = function() {
     var panel_wrapper = $("<div id='panel-wrapper'/>").append(
@@ -2155,12 +1964,6 @@ define([
     return false;
   };
 
-  var update_toc = function(evt, data) {
-    if ($(".toc").length !== 0) {
-      show_toc();
-      highlight_toc_item(evt, data);
-    }
-  };
 
   function setup_panel() {
     // lazy, hook it up to Jupyter.notebook as the handle on all the singletons
@@ -2337,36 +2140,6 @@ pre.section-header.CodeMirror-line {
 border-top: 1px dotted #cfcfcf
 }
 
-.toc {
-padding: 0px;
-overflow-y: auto;
-font-weight: normal;
-white-space: nowrap;
-overflow-x: auto;
-}
-
-.toc ol.toc-item {
-  counter-reset: item;
-  list-style: none;
-  padding: 0.1em;
-}
-
-.toc ol.toc-item li {
-  display: block;
-}
-
-.toc ul.toc-item {
-  list-style-type: none;
-  padding: 0;
-}
-
-.toc ol.toc-item li:before {
-  font-size: 90%;
-  font-family: Georgia, Times New Roman, Times, serif;
-  counter-increment: item;
-  content: counters(item, ".")" ";
-}
-
 .panel_input_prompt {
 /*  position: absolute;
   min-width: 0pt; */
@@ -2489,17 +2262,6 @@ background: #fdd
 .sos_dataframe td, .sos_dataframe th {
   white-space: nowrap;
 }
-
-.toc-item-highlight-select  {background-color: Gold}
-.toc-item-highlight-execute  {background-color: red}
-.lev1 {margin-left: 5px}
-.lev2 {margin-left: 10px}
-.lev3 {margin-left: 10px}
-.lev4 {margin-left: 10px}
-.lev5 {margin-left: 10px}
-.lev6 {margin-left: 10px}
-.lev7 {margin-left: 10px}
-.lev8 {margin-left: 10px}
 
 time.pending, time.submitted, time.running,
 
@@ -2902,8 +2664,7 @@ color: green;
     let ul = $("<ul/>")
       .addClass("panel-icons")
       .append('<li class="icon_save"><i class="fa fa-file-text-o"></i></li>')
-      .append('<li class="icon_workflow"><i class="fa fa-code"></i></li>')
-      .append('<li class="icon_toc"><i class="fa fa-map-o"></i></li>');
+      .append('<li class="icon_workflow"><i class="fa fa-code"></i></li>');
     cell.element.find("div.input_area").prepend(ul);
   }
 
@@ -2939,26 +2700,17 @@ color: green;
         wrap_execute();
       });
     }
-    events.on("rendered.MarkdownCell", update_toc);
     events.on("create.Cell", function(evt, param) {
       add_lan_selector(param.cell);
       changeStyleOnKernel(param.cell);
     });
-    // I assume that Jupyter would load the notebook before it tries to connect
-    // to the kernel, so kernel_connected.kernel is the right time to show toc
-    // However, it is possible to load a page without rebooting the kernel so
-    // a notebook_load event seems also to be necessary. It is a bit of
-    // burden to run show_toc twice but hopefully this provides a more consistent
-    // user experience.
     //
-    events.on("notebook_loaded.Notebook", show_toc);
     // restart kernel does not clear existing side panel.
     events.on("kernel_connected.Kernel", function() {
       // Issue #1: need to re-register sos_comm after kernel is restarted.
       register_sos_comm();
     });
     // #550
-    events.on("select.Cell", highlight_toc_item);
     events.on("select.Cell", notify_cell_kernel);
 
     load_panel();
@@ -2975,11 +2727,6 @@ color: green;
     $("li.icon_workflow").on("click", function() {
       // we are letting the li bind to the event
       create_panel_cell("%preview --workflow").execute();
-      scrollPanel();
-    });
-    $("li.icon_toc").on("click", function() {
-      // we are letting the li bind to the event
-      create_panel_cell("%toc").execute();
       scrollPanel();
     });
 
@@ -3055,7 +2802,6 @@ color: green;
         "shutdown",
         "taskinfo",
         "tasks",
-        "toc",
         "use",
         "with"
       ];
