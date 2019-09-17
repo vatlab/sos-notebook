@@ -12,17 +12,14 @@ from queue import Empty
 
 import nbformat
 from nbconvert.exporters import Exporter
-from nbconvert.preprocessors.execute import ExecutePreprocessor, CellExecutionError
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook, output_from_msg
 
-from sos.converter import extract_workflow
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env
 
 #
 # Converter from Notebook
 #
-
 
 def get_notebook_to_script_parser():
     parser = argparse.ArgumentParser(
@@ -145,126 +142,6 @@ def add_cell(cells, content, cell_type, cell_count, metainfo):
                 execution_count=cell_count,
                 metadata=metainfo))
 
-
-class SoS_ExecutePreprocessor(ExecutePreprocessor):
-
-    def __init__(self, filename, *args, **kwargs):
-        super(SoS_ExecutePreprocessor, self).__init__(*args, **kwargs)
-        self._filename = filename
-
-    def _prepare_meta(self, cell):
-        meta = {
-            'use_panel': False,
-            'cell_id': '0',
-            'path': self._filename,
-            'batch_mode': True,
-            'cell_kernel': cell.metadata.kernel if hasattr(cell.metadata, 'kernel') else 'SoS'
-            }
-        if re.search(
-            r'^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$',
-            cell.source, re.MULTILINE):
-            meta['workflow'] = self._workflow
-        return meta
-
-    def run_cell(self, cell, cell_index=0, store_history=True):
-        # sos is the additional meta information sent to kernel
-        content = dict(
-            code=cell.source,
-            silent=False,
-            store_history=store_history,
-            user_expressions='',
-            allow_stdin=False,
-            stop_on_error=False,
-            sos=self._prepare_meta(cell))
-        msg = self.kc.session.msg('execute_request', content)
-        self.kc.shell_channel.send(msg)
-        msg_id = msg['header']['msg_id']
-
-        # the reset is copied from https://github.com/jupyter/nbconvert/blob/master/nbconvert/preprocessors/execute.py
-        # because we only need to change the first line
-
-        #  msg_id = self.kc.execute(cell.source)
-
-        self.log.debug("Executing cell:\n%s", cell.source)
-        exec_reply = self._wait_for_reply(msg_id, cell)
-
-        outs = cell.outputs = []
-
-        while True:
-            try:
-                # We've already waited for execute_reply, so all output
-                # should already be waiting. However, on slow networks, like
-                # in certain CI systems, waiting < 1 second might miss messages.
-                # So long as the kernel sends a status:idle message when it
-                # finishes, we won't actually have to wait this long, anyway.
-                msg = self.kc.iopub_channel.get_msg(timeout=self.iopub_timeout)
-            except Empty:
-                self.log.warning("Timeout waiting for IOPub output")
-                if self.raise_on_iopub_timeout:
-                    raise RuntimeError("Timeout waiting for IOPub output")
-                else:
-                    break
-            if msg['parent_header'].get('msg_id') != msg_id:
-                # not an output from our execution
-                continue
-
-            msg_type = msg['msg_type']
-            self.log.debug("output: %s", msg_type)
-            content = msg['content']
-
-            # set the prompt number for the input and the output
-            if 'execution_count' in content:
-                cell['execution_count'] = content['execution_count']
-
-            if msg_type == 'status':
-                if content['execution_state'] == 'idle':
-                    break
-                else:
-                    continue
-            elif msg_type == 'execute_input':
-                continue
-            elif msg_type == 'clear_output':
-                outs[:] = []
-                # clear display_id mapping for this cell
-                for display_id, cell_map in self._display_id_map.items():
-                    if cell_index in cell_map:
-                        cell_map[cell_index] = []
-                continue
-            elif msg_type.startswith('comm'):
-                continue
-
-            display_id = None
-            if msg_type in {
-                    'execute_result', 'display_data', 'update_display_data'
-            }:
-                display_id = msg['content'].get('transient',
-                                                {}).get('display_id', None)
-                if display_id:
-                    self._update_display_id(display_id, msg)
-                if msg_type == 'update_display_data':
-                    # update_display_data doesn't get recorded
-                    continue
-
-            try:
-                out = output_from_msg(msg)
-            except ValueError:
-                self.log.error("unhandled iopub msg: " + msg_type)
-                continue
-            if display_id:
-                # record output index in:
-                #   _display_id_map[display_id][cell_idx]
-                cell_map = self._display_id_map.setdefault(display_id, {})
-                output_idx_list = cell_map.setdefault(cell_index, [])
-                output_idx_list.append(len(outs))
-
-            outs.append(out)
-
-        return exec_reply, outs
-
-    def preprocess(self, nb, *args, **kwargs):
-        self._workflow = extract_workflow(nb)
-        return super(SoS_ExecutePreprocessor,
-                     self).preprocess(nb, *args, **kwargs)
 
 
 def script_to_notebook(script_file, notebook_file, args=None,
@@ -471,8 +348,7 @@ def get_notebook_to_html_parser():
         '-e',
         '--execute',
         action='store_true',
-        help='''Execute the notebook in batch mode (as if running "Cell -> Run All"
-                          from Jupyter notebook interface before converting to HTML'''
+        help='''Deprecated'''
     )
     parser.add_argument(
         '-v',
@@ -490,18 +366,7 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     if unknown_args is None:
         unknown_args = []
     if sargs and sargs.execute:
-        # the step can take long time to complete
-        ep = SoS_ExecutePreprocessor(notebook_file, timeout=60000)
-        try:
-            nb = nbformat.read(notebook_file, nbformat.NO_CONVERT)
-            ep.preprocess(nb, {'metadata': {'path': '.'}})
-            tmp_file = os.path.join(env.temp_dir,
-                                    os.path.basename(notebook_file))
-            with open(tmp_file, 'w') as tmp_nb:
-                nbformat.write(nb, tmp_nb, 4)
-            notebook_file = tmp_file
-        except CellExecutionError as e:
-            env.logger.error(f'Failed to execute notebook: {e}')
+        env.logger.warning('Option --execute is deprecated. Please use sos-papermill instead.')
     if sargs.template:
         unknown_args = [
             '--template',

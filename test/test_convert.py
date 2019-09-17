@@ -146,36 +146,7 @@ report('this is action report')
         self.assertFalse(
             'this comment will not be included in exported workflow' in wf)
 
-    # @unittest.skipIf(sys.platform == 'win32', 'This test hangs for no obvious reason under windows')
-    # def testPreprocess(self):
-    #     '''Test executing the notebook with a preprocessor'''
-    #     if os.path.isfile('test_output.txt'):
-    #         os.remove('test_output.txt')
-    #     nb = nbformat.read('sample_notebook.ipynb', nbformat.NO_CONVERT)
-    #     e = SoS_ExecutePreprocessor('sample_notebook.ipynb')
-    #     #
-    #     e.preprocess(nb, {})
-    #     self.assertTrue(os.path.isfile('test_output.txt'))
-    #     #
-    #     if os.path.isfile('test_output.txt'):
-    #         os.remove('test_output.txt')
-    #     if os.path.isfile('test_wf8.html'):
-    #         os.remove('test_wf8.html')
-    #     subprocess.call('sos convert --execute sample_notebook.ipynb test_wf8.html', shell=True)
-    #     self.assertTrue(os.path.isfile('test_wf8.html'))
-    #     self.assertTrue(os.path.isfile('test_output.txt'))
-    #     #
-    #     for f in ('test_magic.html', 'test_magic.py'):
-    #         if os.path.isfile(f):
-    #             os.remove(f)
-    #     subprocess.call('sos convert --execute test_magic.ipynb test_magic.html', shell=True)
-    #     self.assertTrue(os.path.isfile('test_magic.py'))
-    #     with open('test_magic.html') as html:
-    #         # listdir only shows the current file once because of magic %cd
-    #         self.assertTrue(html.read().count('test_jupyter_convert.py'), 1)
-
-
-if __name__ == '__main__':
+ if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
     # unittest.TextTestRunner().run(suite)
     unittest.main()
