@@ -191,10 +191,6 @@ class TestMagics(NotebookTest):
         )
         assert len(output1) > len(output2) and output1.startswith(output2)
 
-    def test_magic_clear(self, notebook):
-        # test %clear
-        notebook.call("%clear --all", kernel="SoS")
-
     def test_magic_connectinfo(self, notebook):
         # test %capture
         assert "Connection file" in notebook.check_output(

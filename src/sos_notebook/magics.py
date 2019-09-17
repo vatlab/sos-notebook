@@ -402,56 +402,12 @@ class Clear_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Clear_Magic, self).__init__(kernel)
 
-    def get_parser(self):
-        parser = argparse.ArgumentParser(
-            prog='%clear',
-            description='''Clear the output of the current cell, or the current
-            active cell if executed in the sidepanel.''')
-        parser.add_argument(
-            '-a',
-            '--all',
-            action='store_true',
-            help='''Clear all output or selected status or class of the current notebook.'''
-        )
-        grp = parser.add_mutually_exclusive_group()
-        grp.add_argument(
-            '-s',
-            '--status',
-            nargs='+',
-            help='''Clear tasks that match specifie status (e.g. completed).''')
-        grp.add_argument(
-            '-c',
-            '--class',
-            nargs='+',
-            dest='elem_class',
-            help='''Clear all HTML elements with specified classes (e.g. sos_hint)'''
-        )
-        parser.error = self._parse_error
-        return parser
-
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+        self.sos_kernel.warn('Magic %clear is deprecated.')
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_parser()
-        try:
-            args = parser.parse_args(options.split())
-        except SystemExit:
-            return
-        # self.sos_kernel._meta['cell_id'] could be reset by _do_execute
-        cell_id = self.sos_kernel._meta['cell_id']
-        try:
-            return self.sos_kernel._do_execute(remaining_code, silent,
-                                               store_history, user_expressions,
-                                               allow_stdin)
-        finally:
-            if self.sos_kernel._meta.get('batch_mode', False):
-                return
-            if args.status:
-                status_style = [self.status_class[x] for x in args.status]
-            else:
-                status_style = None
-            self.sos_kernel.send_frontend_msg(
-                'clear-output',
-                [cell_id, args.all, status_style, args.elem_class])
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 
 class ConnectInfo_Magic(SoS_Magic):
@@ -2897,30 +2853,12 @@ class Toc_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Toc_Magic, self).__init__(kernel)
 
-    def get_parser(self):
-        parser = argparse.ArgumentParser(
-            prog='%toc',
-            description='''This magic is deprecated.'''
-        )
-        loc = parser.add_mutually_exclusive_group()
-        loc.add_argument(
-            '-p',
-            '--panel',
-            action='store_true',
-            help='''Show the TOC in side panel even if the panel is currently closed'''
-        )
-        loc.add_argument(
-            '-n',
-            '--notebook',
-            action='store_true',
-            help='''Show the TOC in the main notebook.''')
-        parser.add_argument(
-            '--id', help='''Optional ID of the generated TOC.''')
-        parser.error = self._parse_error
-        return parser
-
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %toc is deprecated.')
+        options, remaining_code = self.get_magic_and_code(code, False)
+        return self.sos_kernel._do_execute(remaining_code, silent,
+                                           store_history, user_expressions,
+                                           allow_stdin)
 
 class Use_Magic(SoS_Magic):
     name = 'use'
