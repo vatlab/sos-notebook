@@ -21,7 +21,6 @@ class TestMagics(NotebookTest):
         """test help functions of magics"""
         for magic in (
                 "cd",
-                "debug",
                 "dict",
                 "get",
                 "matplotlib",
