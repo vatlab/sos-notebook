@@ -318,7 +318,6 @@ define([
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;
-    options.sos.rerun = false;
     for (var i = cells.length - 1; i >= 0; --i) {
       // this is the cell that is being executed...
       // according to this.set_input_prompt("*") before execute is called.
