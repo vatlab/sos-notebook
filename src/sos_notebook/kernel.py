@@ -837,6 +837,11 @@ class SoS_Kernel(IPythonKernel):
                 self.frontend_comm.send(
                     make_transient_msg(msg_type, msg),
                     {'msg_type': 'transient_display_data'})
+            elif self._meta['batch_mode']:
+                env.log_to_file(
+                    'MESSAGE',
+                    f'frontend message of type {msg_type} is sent in batch mode.'
+                )
             else:
                 self.frontend_comm_cache.append([msg_type, msg])
                 env.log_to_file(
@@ -851,6 +856,11 @@ class SoS_Kernel(IPythonKernel):
                 self.frontend_comm_cache = []
             self.frontend_comm.send({} if msg is None else msg,
                                     {'msg_type': msg_type})
+        elif self._meta['batch_mode']:
+            env.log_to_file(
+                'MESSAGE',
+                f'frontend message of type {msg_type} is sent in batch mode.'
+            )
         else:
             # frontend_comm is not ready
             self.frontend_comm_cache.append([msg_type, msg])
@@ -1801,7 +1811,7 @@ Available subkernels:\n{}'''.format(
                                    user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
-            if self._meta['cell_id'] != '0':
+            if self._meta['cell_id'] != '0' and not self._meta['batch_mode']:
                 self.send_frontend_msg('cell-kernel',
                                        [self._meta['cell_id'], self.kernel])
             if code is None or not code.strip():
@@ -1822,7 +1832,8 @@ Available subkernels:\n{}'''.format(
             # if the cell starts with comment, and newline, remove it
             lines = code.splitlines()
             empties = [x.startswith('#') or not x.strip() for x in lines]
-            self.send_frontend_msg('cell-kernel',
+            if not self._meta['batch_mode']:
+                self.send_frontend_msg('cell-kernel',
                                    [self._meta['cell_id'], 'SoS'])
             if all(empties):
                 return {

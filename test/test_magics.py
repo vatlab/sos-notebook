@@ -34,7 +34,6 @@ class TestMagics(NotebookTest):
                 "save",
                 "sandbox",
                 "sessioninfo",
-                "set",
                 "sosrun",
                 "sossave",
                 "shutdown",
