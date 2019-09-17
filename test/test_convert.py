@@ -146,7 +146,7 @@ report('this is action report')
         self.assertFalse(
             'this comment will not be included in exported workflow' in wf)
 
- if __name__ == '__main__':
+if __name__ == '__main__':
     #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
     # unittest.TextTestRunner().run(suite)
     unittest.main()
