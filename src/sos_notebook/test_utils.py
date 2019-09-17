@@ -11,7 +11,6 @@ import atexit
 import os
 import re
 import time
-from sys import platform
 from textwrap import dedent
 
 from ipykernel.tests import utils as test_utils
@@ -28,7 +27,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
 
 pjoin = os.path.join
@@ -504,7 +502,6 @@ class Notebook:
             outputs = self.cells[index].find_elements_by_css_selector(
                 "div .output_subarea")
         output_text = ""
-        has_error = False
         for output in outputs:
             if selector:
                 try:
@@ -594,7 +591,6 @@ class Notebook:
     def _convert_cell_type(self, index=0, cell_type="code"):
         # TODO add check to see if it is already present
         self._focus_cell(index)
-        cell = self.cells[index]
         if cell_type == "markdown":
             self.current_cell.send_keys("m")
         elif cell_type == "raw":

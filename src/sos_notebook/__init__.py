@@ -4,3 +4,6 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 from ._version import __version__
+
+# suppress warning
+__version__

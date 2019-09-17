@@ -18,7 +18,7 @@ from sos.controller import Controller, connect_controllers, disconnect_controlle
 from sos.parser import SoS_Script
 from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import RemovedTarget, UnknownTarget, sos_targets, textMD5
+from sos.targets import RemovedTarget, UnknownTarget, textMD5
 
 from sos.utils import _parse_error, env, get_traceback, pexpect_run
 

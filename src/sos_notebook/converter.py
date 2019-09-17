@@ -8,11 +8,10 @@ import re
 import sys
 import time
 from io import StringIO
-from queue import Empty
 
 import nbformat
 from nbconvert.exporters import Exporter
-from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook, output_from_msg
+from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env

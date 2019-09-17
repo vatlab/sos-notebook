@@ -7,7 +7,6 @@ import contextlib
 import fnmatch
 import logging
 import os
-import threading
 import subprocess
 import sys
 import time
@@ -24,9 +23,9 @@ from IPython.core.display import HTML
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
-from sos.eval import SoS_eval, SoS_exec
+from sos.eval import SoS_eval
 from sos.syntax import SOS_SECTION_HEADER, SOS_DIRECTIVE
-from sos.utils import WorkflowDict, env, short_repr, load_config_files
+from sos.utils import env, short_repr, load_config_files
 from sos.targets import file_target
 from sos.executor_utils import prepare_env
 
@@ -974,7 +973,7 @@ class SoS_Kernel(IPythonKernel):
                 # if somethign goes wrong in the subkernel does not matter
                 env.log_to_file(
                     'MAGIC',
-                    f'Failed to call put_var({items}) from {kinfo.kernel}')
+                    f'Failed to call put_var({items}) from {kinfo.kernel}: {e}')
                 objects = {}
             if isinstance(objects, dict):
                 # returns a SOS dictionary
@@ -1107,7 +1106,7 @@ class SoS_Kernel(IPythonKernel):
                 )
                 return msg['content']
 
-            raise RuntimError(
+            raise RuntimeError(
                 f"is_complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
             )
         except Exception as e:
@@ -1131,7 +1130,7 @@ class SoS_Kernel(IPythonKernel):
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
                 env.log_to_file('KERNEL',
-                                f'Failed to get subkernels {cell_kernel.name}')
+                                f'Failed to get subkernels {cell_kernel.name}: {e}')
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
@@ -1180,7 +1179,7 @@ class SoS_Kernel(IPythonKernel):
             if msg['header']['msg_type'] == 'complete_reply':
                 return msg['content']
 
-            raise RuntimError(
+            raise RuntimeError(
                 f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
             )
         except Exception as e:
@@ -1511,12 +1510,7 @@ Available subkernels:\n{}'''.format(
             except Exception as e:
                 sys.stderr.flush()
                 sys.stdout.flush()
-                # self.send_response(self.iopub_socket, 'display_data',
-                #    {
-                #        'metadata': {},
-                #        'data': { 'text/html': HTML('<hr color="black" width="60%">').data}
-                #    })
-                raise
+                raise e
             except KeyboardInterrupt:
                 self.warn('Keyboard Interrupt\n')
                 return {

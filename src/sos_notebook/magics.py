@@ -17,7 +17,7 @@ from IPython.core.error import UsageError
 from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
 from jupyter_client import find_connection_file
-from sos.eval import SoS_eval, interpolate
+from sos.eval import interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env, pretty_size, short_repr, pexpect_run, load_config_files
 from sos._version import __version__
@@ -437,21 +437,8 @@ class Debug_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Debug_Magic, self).__init__(kernel)
 
-    def get_parser(self):
-        parser = argparse.ArgumentParser(
-            prog='%debug', description='''deprecated''')
-        parser.add_argument(
-            'status', choices=['on', 'off'], help='''deprecated''')
-        parser.error = self._parse_error
-        return parser
-
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_parser()
-        try:
-            args = parser.parse_args(options.split())
-        except SystemExit:
-            return
         self.sos_kernel.warn(
             'Magic %debug is deprecated. Please set environment variable SOS_DEBUG to ALL or a comma '
             'separated topics such as KERNEL, MESSAGE, and MAGIC, and check log messages in ~/.sos/sos_debug.log.'
@@ -2091,21 +2078,8 @@ class Set_Magic(SoS_Magic):
     def __init__(self, kernel):
         super(Set_Magic, self).__init__(kernel)
 
-    def get_parser(self):
-        parser = argparse.ArgumentParser(
-            prog='%set',
-            description='''Deprecated''')
-        parser.error = self._parse_error
-        return parser
-
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        parser = self.get_parser()
-        try:
-            if options.strip() == '-h':
-                args = parser.parse_args([options])
-        except SystemExit:
-            return
         self.sos_kernel.warn(f'Magic %set is deprecated (vatlab/sos-notebook#231)')
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
         return self.sos_kernel._do_execute(remaining_code, silent,
@@ -2175,7 +2149,7 @@ class SoSRun_Magic(SoS_Magic):
             # only show message with %sosrun -h, not with any other parameter because
             # the pipeline can have help message
             if options.strip() == '-h':
-                args = parser.parse_args([options])
+                parser.parse_args([options])
         except SystemExit:
             return
         if options.strip().endswith('&'):
