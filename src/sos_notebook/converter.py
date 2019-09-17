@@ -166,12 +166,12 @@ class SoS_ExecutePreprocessor(ExecutePreprocessor):
             meta['workflow'] = self._workflow
         return meta
 
-    def run_cell(self, cell, cell_index=0):
+    def run_cell(self, cell, cell_index=0, store_history=True):
         # sos is the additional meta information sent to kernel
         content = dict(
             code=cell.source,
             silent=False,
-            store_history=False,
+            store_history=store_history,
             user_expressions='',
             allow_stdin=False,
             stop_on_error=False,
