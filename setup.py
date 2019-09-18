@@ -30,32 +30,19 @@ kernel_json = {
     "language": "sos",
 }
 
-dest = '''\
-Complex bioinformatic data analysis workflows involving multiple scripts
-in different languages can be difficult to consolidate, share, and reproduce.
-An environment that streamlines the entire data collection, analysis,
-visualization and reporting processes of such multi-language analyses is
-currently lacking.
+CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 
-We developed Script of Scripts (SoS) Notebook, an interactive data analysis
-environment in which data from different scripting languages flow freely
-within and across languages. SoS Notebook features a multi-language notebook
-interface, a protocol for cross-language variable exchange, a preview engine
-to visualize variables and common bioinformatic file formats, and a
-report-generation tool to create dynamic documents from steps in different
-languages. SoS Notebook enables researchers to perform sophisticated
-bioinformatic analysis using the most suitable tools for different parts of
-the workflow, without the limitations of a particular language or
-complications of cross-language communications.
 
-Please refer to http://vatlab.github.io/SOS/ for more details on SoS.
-'''
+def get_long_description():
+    with open(os.path.join(CURRENT_DIR, "README.md"), "r") as ld_file:
+        return ld_file.read()
 
 setup(
     name="sos-notebook",
     version=__version__,
     description='Script of Scripts (SoS): an interactive, cross-platform, and cross-language workflow system for reproducible data analysis',
-    long_description=dest,
+    long_description=get_long_description(),
+    long_description_content_type="text/markdown",
     author='Bo Peng',
     url='https://github.com/vatlab/SOS',
     author_email='bpeng@mdanderson.org',
@@ -82,7 +69,7 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=[
-        'sos>=0.19.16',
+        'sos>=0.20.2',
         'nbformat',
         'nbconvert>=5.1.1',
         'ipython',
