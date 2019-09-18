@@ -821,9 +821,8 @@ class SoS_Kernel(IPythonKernel):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
             if self._meta['use_panel'] is False:
-                if msg_type in ('display_data', 'stream'):
-                    self.send_response(self.iopub_socket, msg_type,
-                                       {} if msg is None else msg)
+                self.send_response(self.iopub_socket, msg_type,
+                                {} if msg is None else msg)
             elif self._meta['use_iopub']:
                 self.send_response(self.iopub_socket, 'transient_display_data',
                                    make_transient_msg(msg_type, msg))
@@ -1512,7 +1511,7 @@ Available subkernels:\n{}'''.format(
                         code=code,
                         raw_args=self.options,
                         kernel=self,
-                        run_in_queue=self._workflow_mode == 'nowait')
+                        run_in_queue=self._workflow_mode == 'nowait' and not self._meta['batch_mode'])
                 else:
                     res = execute_scratch_cell(
                         code=code, raw_args=self.options, kernel=self)
@@ -1530,65 +1529,6 @@ Available subkernels:\n{}'''.format(
             finally:
                 sys.stderr.flush()
                 sys.stdout.flush()
-        #
-        if False:
-            input_files = [
-                str(x)
-                for x in env.sos_dict.get('step_input', [])
-                if isinstance(x, file_target)
-            ]
-            output_files = [
-                str(x)
-                for x in env.sos_dict.get('step_output', [])
-                if isinstance(x, file_target)
-            ]
-
-            # use a table to list input and/or output file if exist
-            if output_files and not (hasattr(self, '_no_auto_preview') and
-                                     self._no_auto_preview):
-                title = f'%preview {" ".join(output_files)}'
-                if not self._meta['use_panel']:
-                    self.send_response(
-                        self.iopub_socket, 'display_data', {
-                            'metadata': {},
-                            'data': {
-                                'text/html':
-                                    HTML(f'<div class="sos_hint">{title}</div>'
-                                        ).data
-                            }
-                        })
-
-                if hasattr(self, 'in_sandbox') and self.in_sandbox:
-                    # if in sand box, do not link output to their files because these
-                    # files will be removed soon.
-                    self.send_frontend_msg(
-                        'display_data', {
-                            'metadata': {},
-                            'data': {
-                                'text/html':
-                                    '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''
-                                    .format(', '.join(x for x in input_files),
-                                            ', '.join(x for x in output_files))
-                            }
-                        })
-                else:
-                    self.send_frontend_msg(
-                        'display_data', {
-                            'metadata': {},
-                            'data': {
-                                'text/html':
-                                    '''<div class="sos_hint"> input: {}<br>output: {}\n</div>'''
-                                    .format(
-                                        ', '.join(
-                                            f'<a target="_blank" href="{x}">{x}</a>'
-                                            for x in input_files),
-                                        ', '.join(
-                                            f'<a target="_blank" href="{x}">{x}</a>'
-                                            for x in output_files))
-                            }
-                        })
-
-                Preview_Magic(self).handle_magic_preview(output_files, "SoS")
 
     def render_result(self, res):
         if not self._meta['render_result']:
