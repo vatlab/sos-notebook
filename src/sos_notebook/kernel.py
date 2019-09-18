@@ -742,6 +742,8 @@ class SoS_Kernel(IPythonKernel):
                 }[env.verbosity],
                 kernel=self))
         env.logger.print = lambda cell_id, msg, *args: \
+            self.send_response(self.iopub_socket, 'stream', {'name': 'stdout', 'text': msg}) \
+                if self._meta['batch_mode'] else \
             self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
 
