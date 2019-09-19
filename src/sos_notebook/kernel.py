@@ -989,6 +989,10 @@ class SoS_Kernel(IPythonKernel):
             if isinstance(objects, dict):
                 # returns a SOS dictionary
                 try:
+                    # if the variable is passing through SoS, let us try to restore variables in SoS
+                    if to_kernel is not None:
+                        missing_vars = [x for x in objects.keys() if x not in env.sos_dict]
+                        existing_vars = {x:env.sos_dict[x] for x in objects.keys() if x in env.sos_dict}
                     env.sos_dict.update(objects)
                 except Exception as e:
                     self.warn(
@@ -1009,6 +1013,10 @@ class SoS_Kernel(IPythonKernel):
                 finally:
                     # switch back to the original kernel
                     self.switch_kernel(my_kernel)
+                    # restore sos_dict to avoid bypassing effect #252
+                    for missing_var in missing_vars:
+                        env.sos_dict.pop(missing_var)
+                    env.sos_dict.update(existing_vars)
             elif isinstance(objects, str):
                 # an statement that will be executed in the destination kernel
                 if to_kernel is None or to_kernel == 'SoS':
