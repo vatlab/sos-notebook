@@ -336,6 +336,31 @@ class TestMagics(NotebookTest):
             kernel="R",
         )
 
+    def test_magic_get_between_subkernels(self, notebook):
+        # test variable transfer between subkernels, which should not leave a trace in
+        # SoS
+        notebook.call(
+            """\
+            a = 'sos_a'
+            """,
+            kernel="SoS",
+        )
+        notebook.call(
+            """\
+            a = 'python_a'
+            b = 'python_b'
+            """,
+            kernel="Python3",
+        )
+        notebook.call(
+            """\
+            %get a b --from Python3
+            """,
+            kernel="R",
+        )
+        assert 'sos_a' in notebook.check_output("a", kernel='SoS')
+        assert 'NameError' in notebook.check_output("b", kernel='SoS', expect_error=True)
+
     def test_magic_matplotlib(self, notebook):
         # test %capture
         pytest.importorskip("matplotlib")
