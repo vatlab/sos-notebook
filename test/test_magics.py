@@ -341,25 +341,25 @@ class TestMagics(NotebookTest):
         # SoS
         notebook.call(
             """\
-            a = 'sos_a'
+            subs_a = 'sos_a'
             """,
             kernel="SoS",
         )
         notebook.call(
             """\
-            a = 'python_a'
-            b = 'python_b'
+            subs_a = 'python_a'
+            subs_b = 'python_b'
             """,
             kernel="Python3",
         )
         notebook.call(
             """\
-            %get a b --from Python3
+            %get subs_a subs_b --from Python3
             """,
             kernel="R",
         )
-        assert 'sos_a' in notebook.check_output("a", kernel='SoS')
-        assert 'NameError' in notebook.check_output("b", kernel='SoS', expect_error=True)
+        assert 'sos_a' in notebook.check_output("subs_a", kernel='SoS')
+        assert 'NameError' in notebook.check_output("subs_b", kernel='SoS', expect_error=True)
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
