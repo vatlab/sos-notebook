@@ -917,10 +917,10 @@ class TestMagics(NotebookTest):
         notebook.call("%use R2 -c red", kernel="R3")
         assert "1024" == notebook.check_output("a", kernel="R2")
 
-    def test_sos_vars(self, notebook):
-        # test automatic tranfer of sos variables
-        notebook.call("sosa = f'{3*8}'", kernel="Python3")
-        assert "24" in notebook.check_output("sosa", kernel="SoS")
+    # def test_sos_vars(self, notebook):
+    #     # test automatic tranfer of sos variables
+    #     notebook.call("sosa = f'{3*8}'", kernel="Python3")
+    #     assert "24" in notebook.check_output("sosa", kernel="SoS")
 
     def test_magic_with(self, notebook):
         # test %with

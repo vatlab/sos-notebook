@@ -882,12 +882,14 @@ class SoS_Kernel(IPythonKernel):
 
     def get_vars_from(self, items, from_kernel=None, explicit=False):
         if from_kernel is None or from_kernel.lower() == 'sos':
+            # Feature removed #253
             # autmatically get all variables with names start with 'sos'
-            default_items = [
-                x for x in env.sos_dict.keys()
-                if x.startswith('sos') and x not in self.original_keys
-            ]
-            items = default_items if not items else items + default_items
+            # default_items = [
+            #     x for x in env.sos_dict.keys()
+            #     if x.startswith('sos') and x not in self.original_keys
+            # ]
+            if items is None:
+                items = []
             for item in items:
                 if item not in env.sos_dict:
                     self.warn(f'Variable {item} does not exist')
