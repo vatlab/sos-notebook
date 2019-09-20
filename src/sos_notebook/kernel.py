@@ -746,6 +746,8 @@ class SoS_Kernel(IPythonKernel):
                 if self._meta['batch_mode'] else \
             self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
+        # 253 global variable
+        self._global_shared_vars = []
 
     cell_id = property(lambda self: self._meta['cell_id'])
     _workflow_mode = property(lambda self: self._meta['workflow_mode'])
@@ -890,6 +892,7 @@ class SoS_Kernel(IPythonKernel):
             # ]
             if items is None:
                 items = []
+            items.extend(self._global_shared_vars)
             for item in items:
                 if item not in env.sos_dict:
                     self.warn(f'Variable {item} does not exist')

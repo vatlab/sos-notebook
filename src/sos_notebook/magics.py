@@ -652,6 +652,56 @@ class Get_Magic(SoS_Magic):
                                            allow_stdin)
 
 
+
+class Global_Magic(SoS_Magic):
+    name = 'global'
+
+    def __init__(self, kernel):
+        super(Global_Magic, self).__init__(kernel)
+
+    def get_parser(self):
+        parser = argparse.ArgumentParser(
+            prog='%global',
+            description='''Set specified variables as "global variables" that will be pushed
+                to all subkernels automatically. If the magic is called in a subkernel, the
+                variables in the subkernel will be pushed to the SoS kernel and become
+                global there. The magic is executed after the completion of the cell and
+                are expected to be available at that time.''')
+        parser.add_argument(
+            'vars', nargs='*', help='''Names of variables to be marked as global''')
+        parser.error = self._parse_error
+        return parser
+
+    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+        options, remaining_code = self.get_magic_and_code(code, False)
+        try:
+            parser = self.get_parser()
+            try:
+                args = parser.parse_args(options.split())
+            except SystemExit:
+                return
+        except Exception as e:
+            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
+        try:
+            return self.sos_kernel._do_execute(remaining_code, silent,
+                                               store_history, user_expressions,
+                                               allow_stdin)
+        finally:
+            # if current kernel is not SoS, put vars there first.
+            if self.sos_kernel.kernel != 'SoS':
+                self.sos_kernel.put_vars_to(args.vars)
+            self.sos_kernel._global_shared_vars.extend(args.vars)
+            # remove duplicate
+            self.sos_kernel._global_shared_vars = list(set(self.sos_kernel._global_shared_vars))
+
+
 class Matplotlib_Magic(SoS_Magic):
     name = 'matplotlib'
 
@@ -3011,7 +3061,7 @@ class With_Magic(SoS_Magic):
 class SoS_Magics(object):
     magics = [
         Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic,
-        Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
+        Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Global_Magic, Matplotlib_Magic,
         Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic, Put_Magic,
         Render_Magic, Run_Magic, Runfile_Magic, Revisions_Magic, Save_Magic,
         Set_Magic, SessionInfo_Magic, Shutdown_Magic, SoSRun_Magic,
