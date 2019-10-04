@@ -1169,8 +1169,8 @@ class Preview_Magic(SoS_Magic):
                     # and will send the workflow as plain text.
                     # we could send pygments highlighted code to the HTML file, but
                     # adding css is another hassle.
-                    self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream',
-                        {
+                    self.sos_kernel.send_response(
+                        self.sos_kernel.iopub_socket, 'stream', {
                             'name': 'stdout',
                             'text': self.sos_kernel._meta['workflow']
                         })
@@ -1738,7 +1738,8 @@ class Run_Magic(SoS_Magic):
         if not run_code.strip():
             parser = self.get_parser()
             try:
-                args, unknown_args = parser.parse_known_args(shlex.split(options))
+                args, unknown_args = parser.parse_known_args(
+                    shlex.split(options))
             except SystemExit:
                 return
 
@@ -2091,7 +2092,8 @@ class Set_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
-        self.sos_kernel.warn(f'Magic %set is deprecated (vatlab/sos-notebook#231)')
+        self.sos_kernel.warn(
+            f'Magic %set is deprecated (vatlab/sos-notebook#231)')
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -2431,11 +2433,7 @@ class Task_Magic(SoS_Magic):
             HH:MM:SS, with optional prefix + for older (default) and - for newer than
             specified age.''')
         status.add_argument(
-            '--html',
-            action='store_true',
-            help='''Output results in HTML format. This option will override option
-                verbosity and output detailed status information in HTML tables and
-                figures.''')
+            '--html', action='store_true', help=argparse.SUPPRESS)
         status.add_argument(
             '--numeric-times', action='store_true', help=argparse.SUPPRESS)
         status.set_defaults(func=self.status)
@@ -2587,10 +2585,21 @@ class Task_Magic(SoS_Magic):
                 args.queue, e))
             return
 
-        if args.tasks:
-            result = host._task_engine.query_tasks(
-                args.tasks, verbosity=2, html=True)
-            # log_to_file(result)
+        result = host._task_engine.query_tasks(
+            tasks=args.tasks,
+            check_all=args.all,
+            verbosity=2,
+            html=len(args.tasks) == 1,
+            numeric_times=False,
+            age=args.age,
+            tags=args.tags,
+            status=args.status)
+        # now, there is a possibility that the status of the task is different from what
+        # task engine knows (e.g. a task is runfile outside of jupyter). In this case, since we
+        # already get the status, we should update the task engine...
+        #
+        # HTML output
+        if len(args.tasks) == 1:
             self.sos_kernel.send_frontend_msg(
                 'display_data', {
                     'metadata': {},
@@ -2599,10 +2608,6 @@ class Task_Magic(SoS_Magic):
                         'text/html': HTML(result).data
                     }
                 })
-            # now, there is a possibility that the status of the task is different from what
-            # task engine knows (e.g. a task is runfile outside of jupyter). In this case, since we
-            # already get the status, we should update the task engine...
-            #
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
             status = result.split('>Status<', 1)[-1].split('</div',
                                                            1)[0].split('>')[-1]
@@ -2613,15 +2618,14 @@ class Task_Magic(SoS_Magic):
                     'task_id': args.tasks[0],
                     'status': status,
                 })
-        elif args.tags:
-            status_output = host._task_engine.query_tasks(
-                tags=args.tags, verbosity=2)
+        else:
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
                                           'stream', {
                                               'name': 'stdout',
-                                              'text': status_output
+                                              'text': result
                                           })
-            for line in status_output.split('\n'):
+            # regular output
+            for line in result.split('\n'):
                 if not line.strip():
                     continue
                 try:
@@ -2831,7 +2835,6 @@ class Tasks_Magic(SoS_Magic):
                                            allow_stdin)
 
 
-
 class Toc_Magic(SoS_Magic):
     name = 'toc'
 
@@ -2844,6 +2847,7 @@ class Toc_Magic(SoS_Magic):
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)
+
 
 class Use_Magic(SoS_Magic):
     name = 'use'
@@ -3004,8 +3008,9 @@ class With_Magic(SoS_Magic):
                                                allow_stdin)
         finally:
             self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
-            self.sos_kernel.send_frontend_msg('cell-kernel',
-                                       [self.sos_kernel._meta['cell_id'], original_kernel])
+            self.sos_kernel.send_frontend_msg(
+                'cell-kernel',
+                [self.sos_kernel._meta['cell_id'], original_kernel])
 
 
 class SoS_Magics(object):
