@@ -2614,7 +2614,7 @@ class Task_Magic(SoS_Magic):
             self.sos_kernel.send_frontend_msg(
                 'task_status', {
                     'update_only': True,
-                    'queue': args.queue,
+                    'queue': host.alias,
                     'task_id': args.tasks[0],
                     'status': status,
                 })
@@ -2634,7 +2634,7 @@ class Task_Magic(SoS_Magic):
                     self.sos_kernel.send_frontend_msg(
                         'task_status', {
                             'update_only': True,
-                            'queue': args.queue,
+                            'queue': host.alias,
                             'task_id': tid,
                             'status': tst,
                             'tags': tags
