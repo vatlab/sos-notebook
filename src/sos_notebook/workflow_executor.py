@@ -18,7 +18,7 @@ from sos.controller import Controller, connect_controllers, disconnect_controlle
 from sos.parser import SoS_Script
 from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import RemovedTarget, UnknownTarget, textMD5
+from sos.targets import RemovedTarget, UnknownTarget, textMD5, sos_targets
 
 from sos.utils import _parse_error, env, get_traceback, pexpect_run
 
@@ -73,6 +73,7 @@ def stop_controller(controller):
     controller.join()
 
 
+last_cell_id = None
 def execute_scratch_cell(code, raw_args, kernel):
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
@@ -117,6 +118,20 @@ def execute_scratch_cell(code, raw_args, kernel):
                 levels[env.verbosity], kernel, title=' '.join(sys.argv)))
     else:
         env.logger.handers[0].setTitle(' '.join(sys.argv))
+
+    global last_cell_id
+    # we retain step_input etc only when we step through a cell  #256
+    if kernel and kernel.cell_id != last_cell_id:
+        # clear __step_input__, __step_output__ etc because there is
+        # no concept of passing input/outputs across cells.
+        env.sos_dict.set('__step_output__', sos_targets([]))
+        for k in [
+                '__step_input__', '__default_output__', 'step_input', 'step_output',
+                'step_depends', '_input', '_output', '_depends'
+        ]:
+            env.sos_dict.pop(k, None)
+
+    last_cell_id = kernel.cell_id
 
     config = {
         'config_file': args.__config__,
