@@ -191,12 +191,25 @@ class Subkernels(object):
                         color=matched[1],
                         options=matched[2]))
             else:
-                # undefined language also use default theme color
-                self._kernel_list.append(
-                    subkernel(
-                        name=spec,
-                        kernel=spec,
-                        language=km.get_kernel_spec(spec).language))
+                lan_name = km.get_kernel_spec(spec).language
+                if lan_name == 'python':
+                    lan_name = 'python3'
+                avail_names = [x for x in lan_map.keys() if x.lower() == lan_name.lower()]
+                if avail_names:
+                    self._kernel_list.append(
+                        subkernel(
+                            name=spec,
+                            kernel=spec,
+                            language=lan_map[avail_names[0]][0],
+                            color=lan_map[avail_names[0]][1],
+                            options=lan_map[avail_names[0]][2]))
+                else:
+                    # undefined language also use default theme color
+                    self._kernel_list.append(
+                        subkernel(
+                            name=spec,
+                            kernel=spec,
+                            language=lan_name))
 
     def kernel_list(self):
         return self._kernel_list
