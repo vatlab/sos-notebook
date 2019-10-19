@@ -187,8 +187,7 @@ def execute_scratch_cell(code, raw_args, kernel):
         # needs to be resumed, we simply pass
         return
     except Exception:
-        if args.verbosity and args.verbosity > 2:
-            sys.stderr.write(get_traceback())
+        env.log_to_file('PROCESS', get_traceback())
         raise
 
 

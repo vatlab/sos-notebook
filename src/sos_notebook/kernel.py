@@ -1549,6 +1549,7 @@ Available subkernels:\n{}'''.format(
                 sys.stdout.flush()
                 raise e
             except KeyboardInterrupt:
+                # this only occurs when the executor does not capture the signal.
                 self.warn('KeyboardInterrupt\n')
                 return {
                     'status': 'abort',
