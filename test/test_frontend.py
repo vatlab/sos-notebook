@@ -125,6 +125,33 @@ class TestFrontEnd(NotebookTest):
         assert backgroundColor["python3"] == notebook.get_input_backgroundColor(
             idx)
 
+    # def testInterrupt(self, notebook):
+    #     # switch to python3 kernel
+    #     from textwrap import dedent
+    #     from selenium.webdriver.common.by import By
+    #     from selenium.webdriver import ActionChains
+
+    #     import time
+    #     index = len(notebook.cells)
+    #     notebook.add_cell(
+    #         index=index - 1, cell_type="code", content=dedent(
+    #             """\
+    #             import time
+    #             while True:
+    #                 time.sleep(1)
+    #             """,
+    #         ))
+    #     notebook.select_kernel(index=index, kernel_name='SoS', by_click=True)
+    #     notebook._focus_cell(index)
+    #     notebook.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
+    #     time.sleep(2)
+
+    #     top_menu = notebook.browser.find_element_by_id("kernel_menu")
+    #     ActionChains(notebook.browser).move_to_element(top_menu).click().perform()
+    #     int_menu = notebook.browser.find_element_by_id("int_kernel").find_elements_by_tag_name('a')[0]
+    #     ActionChains(notebook.browser).move_to_element(int_menu).click().perform()
+    #     notebook._wait_for_done(index, expect_error=True)
+
 
 def get_completions(kc, text):
     flush_channels()
@@ -251,7 +278,6 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertEqual(status["status"], "complete")
 
             wait_for_idle(kc)
-
 
 if __name__ == "__main__":
     unittest.main()
