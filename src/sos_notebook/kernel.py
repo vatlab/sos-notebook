@@ -1269,68 +1269,71 @@ class SoS_Kernel(IPythonKernel):
         shell_ended = False
         res = None
         while not (iopub_started and iopub_ended and shell_ended):
-            # display intermediate print statements, etc.
-            while self.KC.stdin_channel.msg_ready():
-                sub_msg = self.KC.stdin_channel.get_msg()
-                env.log_to_file(
-                    'MESSAGE',
-                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
-                )
-                if sub_msg['header']['msg_type'] != 'input_request':
-                    self.session.send(self.stdin_socket, sub_msg)
-                else:
-                    content = sub_msg["content"]
-                    if content['password']:
-                        res = self.getpass(prompt=content['prompt'])
+            try:
+                # display intermediate print statements, etc.
+                while self.KC.stdin_channel.msg_ready():
+                    sub_msg = self.KC.stdin_channel.get_msg()
+                    env.log_to_file(
+                        'MESSAGE',
+                        f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
+                    )
+                    if sub_msg['header']['msg_type'] != 'input_request':
+                        self.session.send(self.stdin_socket, sub_msg)
                     else:
-                        res = self.raw_input(prompt=content['prompt'])
-                    self.KC.input(res)
-            while self.KC.iopub_channel.msg_ready():
-                sub_msg = self.KC.iopub_channel.get_msg()
-                msg_type = sub_msg['header']['msg_type']
-                env.log_to_file(
-                    'MESSAGE',
-                    f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  \n {pprint.pformat(sub_msg)}"
-                )
-                if msg_type == 'status':
-                    if sub_msg["content"]["execution_state"] == 'busy':
-                        iopub_started = True
-                    elif iopub_started and sub_msg["content"][
-                            "execution_state"] == 'idle':
-                        iopub_ended = True
-                    continue
-                if msg_type in ('execute_input', 'execute_result'):
-                    # override execution count with the master count,
-                    # not sure if it is needed
-                    sub_msg['content'][
-                        'execution_count'] = self._execution_count
-                #
-                if msg_type in [
-                        'display_data', 'stream', 'execute_result',
-                        'update_display_data'
-                ]:
-                    if self._meta['capture_result'] is not None:
-                        self._meta['capture_result'].append(
-                            (msg_type, sub_msg['content']))
-                    if msg_type == 'execute_result' or (
-                            not silent and
-                            self._meta['render_result'] is False):
+                        content = sub_msg["content"]
+                        if content['password']:
+                            res = self.getpass(prompt=content['prompt'])
+                        else:
+                            res = self.raw_input(prompt=content['prompt'])
+                        self.KC.input(res)
+                while self.KC.iopub_channel.msg_ready():
+                    sub_msg = self.KC.iopub_channel.get_msg()
+                    msg_type = sub_msg['header']['msg_type']
+                    env.log_to_file(
+                        'MESSAGE',
+                        f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  \n {pprint.pformat(sub_msg)}"
+                    )
+                    if msg_type == 'status':
+                        if sub_msg["content"]["execution_state"] == 'busy':
+                            iopub_started = True
+                        elif iopub_started and sub_msg["content"][
+                                "execution_state"] == 'idle':
+                            iopub_ended = True
+                        continue
+                    if msg_type in ('execute_input', 'execute_result'):
+                        # override execution count with the master count,
+                        # not sure if it is needed
+                        sub_msg['content'][
+                            'execution_count'] = self._execution_count
+                    #
+                    if msg_type in [
+                            'display_data', 'stream', 'execute_result',
+                            'update_display_data'
+                    ]:
+                        if self._meta['capture_result'] is not None:
+                            self._meta['capture_result'].append(
+                                (msg_type, sub_msg['content']))
+                        if msg_type == 'execute_result' or (
+                                not silent and
+                                self._meta['render_result'] is False):
+                            self.session.send(self.iopub_socket, sub_msg)
+                    else:
+                        # if the subkernel tried to create a customized comm
+                        if msg_type == 'comm_open':
+                            self.comm_manager.register_subcomm(
+                                sub_msg['content']['comm_id'], self.KC)
                         self.session.send(self.iopub_socket, sub_msg)
-                else:
-                    # if the subkernel tried to create a customized comm
-                    if msg_type == 'comm_open':
-                        self.comm_manager.register_subcomm(
-                            sub_msg['content']['comm_id'], self.KC)
-                    self.session.send(self.iopub_socket, sub_msg)
-            if self.KC.shell_channel.msg_ready():
-                # now get the real result
-                reply = self.KC.get_shell_msg()
-                reply['content']['execution_count'] = self._execution_count
-                env.log_to_file('MESSAGE',
-                                f'GET SHELL MSG {pprint.pformat(reply)}')
-                res = reply['content']
-                shell_ended = True
-            time.sleep(0.001)
+                if self.KC.shell_channel.msg_ready():
+                    # now get the real result
+                    reply = self.KC.get_shell_msg()
+                    reply['content']['execution_count'] = self._execution_count
+                    env.log_to_file('MESSAGE',
+                                    f'GET SHELL MSG {pprint.pformat(reply)}')
+                    res = reply['content']
+                    shell_ended = True
+                time.sleep(0.001)
+            except KeyboardInterrupt:
+                self.KM.interrupt_kernel()
         return res
 
     def switch_kernel(self,
@@ -1546,7 +1549,7 @@ Available subkernels:\n{}'''.format(
                 sys.stdout.flush()
                 raise e
             except KeyboardInterrupt:
-                self.warn('Keyboard Interrupt\n')
+                self.warn('KeyboardInterrupt\n')
                 return {
                     'status': 'abort',
                     'execution_count': self._execution_count
@@ -1787,8 +1790,7 @@ Available subkernels:\n{}'''.format(
                 # issue #58 and #33
                 return self.run_cell(code.lstrip(), silent, store_history)
             except KeyboardInterrupt:
-                self.warn('Keyboard Interrupt\n')
-                self.KM.interrupt_kernel()
+                self.warn('KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n')
                 return {
                     'status': 'abort',
                     'execution_count': self._execution_count
