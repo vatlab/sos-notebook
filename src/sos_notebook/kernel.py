@@ -207,7 +207,7 @@ class Subkernels(object):
                     # undefined language also use default theme color
                     self._kernel_list.append(
                         subkernel(
-                            name=spec,
+                            name=km.get_kernel_spec(spec).display_name,
                             kernel=spec,
                             language=lan_name))
 
