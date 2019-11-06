@@ -7,6 +7,7 @@ import argparse
 import re
 import sys
 import time
+import yaml
 from io import StringIO
 
 import nbformat
@@ -116,33 +117,6 @@ def get_script_to_notebook_parser():
     return parser
 
 
-def add_cell(cells, content, cell_type, cell_count, metainfo):
-    # if a section consist of all report, report it as a markdown cell
-    if not content:
-        return
-    if cell_type not in ('code', 'markdown'):
-        env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
-    if cell_type == 'markdown' and any(
-            x.strip() and not x.startswith('#! ') for x in content):
-        env.logger.warning(
-            'Markdown lines not starting with #!, code cell assumed.')
-        cell_type = 'code'
-    #
-    if cell_type == 'markdown':
-        cells.append(
-            new_markdown_cell(
-                source=''.join([x[3:] for x in content]).strip(),
-                metadata=metainfo))
-    else:
-        cells.append(
-            new_code_cell(
-                # remove any trailing blank lines...
-                source=''.join(content).strip(),
-                execution_count=cell_count,
-                metadata=metainfo))
-
-
-
 def script_to_notebook(script_file, notebook_file, args=None,
                        unknown_args=None):
     '''
@@ -156,6 +130,32 @@ def script_to_notebook(script_file, notebook_file, args=None,
     cell_type = 'code'
     metainfo = {}
     content = []
+
+    def add_cell(cells, content, cell_type, cell_count, metainfo):
+        # if a section consist of all report, report it as a markdown cell
+        if not content:
+            return
+        if cell_type not in ('code', 'markdown'):
+            env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
+        if cell_type == 'markdown' and any(
+                x.strip() and not x.startswith('#! ') for x in content):
+            env.logger.warning(
+                'Markdown lines not starting with #!, code cell assumed.')
+            cell_type = 'code'
+        #
+        if cell_type == 'markdown':
+            cells.append(
+                new_markdown_cell(
+                    source=''.join([x[3:] for x in content]).strip(),
+                    metadata=metainfo))
+        else:
+            cells.append(
+                new_code_cell(
+                    # remove any trailing blank lines...
+                    source=''.join(content).strip(),
+                    execution_count=cell_count,
+                    metadata=metainfo))
+
 
     with open(script_file) as script:
         first_block = True
@@ -605,53 +605,9 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                           output_file,
                           sargs=None,
                           unknown_args=None):
-    #
-    with open(rmarkdown_file) as script:
-        content = script.read()
-    #
-    # identify the headers
-    header = header = re.compile('^(#+\s.*$)', re.M)
-    paragraphs = re.split(header, content)
-    #
     cells = []
-    cell_count = 1
-    for idx, p in enumerate(paragraphs):
-        if idx % 2 == 1:
-            # this is header, let us create a markdown cell
-            cells.append(new_markdown_cell(source=p.strip()))
-        else:
-            # this is unknown yet, let us find ```{} block
-            code = re.compile('^\s*(```{.*})$', re.M)
-            endcode = re.compile('^\s*```$', re.M)
-
-            for pidx, pc in enumerate(re.split(code, p)):
-                if pidx == 0:
-                    # piece before first code block. it might contain
-                    # inline expression
-                    cells.append(new_markdown_cell(source=pc.strip()))
-                elif pidx % 2 == 0:
-                    # this is AFTER the {r} piece, let us assume all R code
-                    # for now
-                    # this is code, but it should end somewhere
-                    pieces = re.split(endcode, pc)
-                    # I belive that we should have
-                    #   pieces[0] <- code
-                    #   pieces[1] <- rest...
-                    # but I could be wrong.
-                    cells.append(
-                        new_code_cell(
-                            source=pieces[0],
-                            execution_count=cell_count,
-                            metadata={'kernel': 'R'}))
-                    cell_count += 1
-                    #
-                    for piece in pieces[1:]:
-                        cells.append(new_markdown_cell(source=piece.strip()))
-    #
-    # create header
-    nb = new_notebook(
-        cells=cells,
-        metadata={
+    cell_count = 1    
+    metadata = {
             'kernelspec': {
                 "display_name": "SoS",
                 "language": "sos",
@@ -668,7 +624,101 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                 'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']],
                 'default_kernel': 'R'
             }
-        })
+        }
+    #
+    with open(rmarkdown_file) as script:
+        rmdlines = script.readlines()
+
+    def add_cell(cells, content, cell_type, cell_count, metainfo):
+        # if a section consist of all report, report it as a markdown cell
+        if not content:
+            return
+        if cell_type not in ('code', 'markdown'):
+            env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
+        #
+        if cell_type == 'markdown':
+            cells.append(
+                new_markdown_cell(
+                    source=''.join(content).strip(),
+                    metadata=metainfo))
+        else:
+            cells.append(
+                new_code_cell(
+                    # remove any trailing blank lines...
+                    source=''.join(content).strip(),
+                    execution_count=cell_count,
+                    metadata=metainfo))
+
+
+    # YAML front matter appears to be restricted to strictly ---\nYAML\n---
+    re_yaml_delim = re.compile(r"^---\s*$")
+    delim_lines = [i for i, l in enumerate(rmdlines) if re_yaml_delim.match(l)]
+    if len(delim_lines) >= 2 and delim_lines[1] - delim_lines[0] > 1:
+        yamltext = '\n'.join(rmdlines[delim_lines[0] + 1:delim_lines[1]])
+        try:
+            header = yaml.safe_load(yamltext)
+            metadata["Rmd_header"] = header
+        except yaml.YAMLError as e:
+            env.logger.warning(f"Error reading document metadata block: {e}")
+            env.logger.warning("Trying to continue without header")
+        rmdlines = rmdlines[:delim_lines[0]] + rmdlines[delim_lines[1] + 1:]
+
+    # the behaviour of rmarkdown appears to be that a code block does not
+    # have to have matching numbers of start and end `s - just >=3
+    # and there can be any number of spaces before the {r, meta} block,
+    # but "r" must be the first character of that block
+
+    re_code_start = re.compile(r"^````*\s*{r(.*)}\s*$")
+    re_code_end = re.compile(r"^````*\s*$")
+    re_code_inline = re.compile(r"`r.+`")
+
+    MD, CODE = range(2)
+
+    state = MD
+    celldata = []
+    meta = {}
+
+    for l in rmdlines:
+        if state == MD:
+            match = re_code_start.match(l)
+            if match:
+                state = CODE
+                cell_count += 1
+                # only add MD cells with non-whitespace content
+                if any([c.strip() for c in celldata]):
+                    add_cell(cells, celldata, 'markdown', cell_count, metainfo=meta)
+
+                celldata = []
+                meta = {'kernel': 'R'}
+
+                if match.group(1):
+                    chunk_opts = match.group(1).strip(" ,")
+                    if chunk_opts:
+                        meta['Rmd_chunk_options'] = chunk_opts
+            else:
+                if re_code_inline.search(l):
+                    env.logger.warning("Inline R code detected - treated as text")
+                # cell.source in ipynb does not include implicit newlines
+                celldata.append(l.rstrip() + "\n")
+        else:  # CODE
+            if re_code_end.match(l):
+                state = MD
+                # unconditionally add code blocks regardless of content
+                add_cell(cells, celldata, 'code', cell_count, metainfo=meta)
+                celldata = []
+                meta = {}
+            else:
+                if len(celldata) > 0:
+                    celldata[-1] = celldata[-1] + "\n"
+                celldata.append(l.rstrip())
+
+    if state == CODE or celldata:
+        add_cell(cells, celldata, 'code', cell_count, metainfo=meta)
+    #
+    # create header
+    nb = new_notebook(
+        cells=cells,
+        metadata=metadata)
 
     if not output_file:
         nbformat.write(nb, sys.stdout, 4)
