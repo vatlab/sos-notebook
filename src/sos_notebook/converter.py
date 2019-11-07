@@ -699,7 +699,7 @@ def Rmarkdown_to_notebook(rmarkdown_file,
             else:
                 if re_code_inline.search(l):
                     if not meta.get('kernel', '') and any(
-                        c.strip() for c in celldata):
+                            c.strip() for c in celldata):
                         # if there is markdown text before it, see if there are entire paragraphs
                         # and put in regular markdown cell
                         last_empty_line = len(celldata) - 1

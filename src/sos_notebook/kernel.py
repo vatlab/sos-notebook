@@ -1081,7 +1081,7 @@ class SoS_Kernel(IPythonKernel):
 
         if not kernel or kernel.lower() == 'sos':
             if sigil != '{ }':
-                from .parser import replace_sigil
+                from sos.parser import replace_sigil
                 text = replace_sigil(text, sigil)
             return interpolate(text, local_dict=env.sos_dict._dict)
         # check if the language supports expand protocol

@@ -2947,16 +2947,13 @@ color: green;
                       if (stream.match(sosMagics[i])) {
                         if (sosMagics[i] === "%expand") {
                           // if there is no :, the easy case
-                          if (stream.eol() || stream.match(/\s*$/, false)) {
+                          if (stream.eol() || stream.match(/\s*$/, false) || stream.match(/\s*--in\s+.*$/, false) || stream.match(/\s*-i\s+.*$/, false)) {
                             state.overlay_state.sigil = {
                               left: "{",
                               right: "}"
                             };
                           } else {
-                            let found = stream.match(
-                              /\s+(\S+)\s+(\S+)$/,
-                              false
-                            );
+                            let found = stream.match(/\s+(\S+)\s+(\S+)\s*(-i\s*\S+|--in\s*\S+)?$/, false);
                             if (found) {
                               state.overlay_state.sigil = {
                                 left: found[1],
