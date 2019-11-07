@@ -4,9 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import os
-import shutil
 import sys
-from distutils import log
 
 from setuptools import find_packages, setup
 
@@ -36,6 +34,7 @@ CURRENT_DIR = os.path.abspath(os.path.dirname(__file__))
 def get_long_description():
     with open(os.path.join(CURRENT_DIR, "README.md"), "r") as ld_file:
         return ld_file.read()
+
 
 setup(
     name="sos-notebook",
@@ -69,20 +68,20 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=[
-        'sos>=0.20.7',
+        'sos>=0.20.8',
         'nbformat',
         'nbconvert>=5.1.1',
         'ipython',
         'ipykernel',
         'notebook>=5.0.0',
-        #'jupyter_contrib_nbextensions',
+        # 'jupyter_contrib_nbextensions',
         'tabulate',
-        #'markdown',
+        # 'markdown',
         'pandas',
         'numpy',
-        #'selenium',
-        #'requests',
-        #'pytest',
+        # 'selenium',
+        # 'requests',
+        # 'pytest',
         'psutil'
     ],
     entry_points='''
