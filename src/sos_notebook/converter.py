@@ -604,30 +604,14 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                           sargs=None,
                           unknown_args=None):
     cells = []
-    cell_count = 1
-    metadata = {
-        'kernelspec': {
-            "display_name": "SoS",
-            "language": "sos",
-            "name": "sos"
-        },
-        "language_info": {
-            "file_extension": ".sos",
-            "mimetype": "text/x-sos",
-            "name": "sos",
-            "pygments_lexer": "python",
-            'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-        },
-        'sos': {
-            'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']],
-            'default_kernel': 'R'
-        }
-    }
+    code_count = 1
+
     #
     with open(rmarkdown_file) as script:
         rmdlines = script.readlines()
 
-    def add_cell(cells, content, cell_type, cell_count, metainfo):
+    def add_cell(cells, content, cell_type, metainfo):
+        nonlocal code_count
         # if a section consist of all report, report it as a markdown cell
         if not content:
             return
@@ -635,26 +619,36 @@ def Rmarkdown_to_notebook(rmarkdown_file,
             env.logger.warning(
                 f'Unrecognized cell type {cell_type}, code assumed.')
         #
-        if cell_type == 'markdown':
-            cells.append(
-                new_markdown_cell(
-                    source=''.join(content).strip(), metadata=metainfo))
-        else:
+        if cell_type == 'code':
             cells.append(
                 new_code_cell(
                     # remove any trailing blank lines...
                     source=''.join(content).strip(),
-                    execution_count=cell_count,
+                    execution_count=code_count,
                     metadata=metainfo))
+            code_count += 1
+        elif metainfo.get('kernel', '') == 'Markdown':
+            # markdown code with inline expression
+            cells.append(
+                new_code_cell(
+                    # remove any trailing blank lines...
+                    source=f'%expand `r ` --in R\n' + ''.join(content).strip(),
+                    execution_count=code_count,
+                    metadata=metainfo))
+            code_count += 1
+        else:
+            cells.append(
+                new_markdown_cell(
+                    source=''.join(content).strip(), metadata=metainfo))
 
+    Rmd_header = {}
     # YAML front matter appears to be restricted to strictly ---\nYAML\n---
     re_yaml_delim = re.compile(r"^---\s*$")
     delim_lines = [i for i, l in enumerate(rmdlines) if re_yaml_delim.match(l)]
     if len(delim_lines) >= 2 and delim_lines[1] - delim_lines[0] > 1:
         yamltext = '\n'.join(rmdlines[delim_lines[0] + 1:delim_lines[1]])
         try:
-            header = yaml.safe_load(yamltext)
-            metadata["Rmd_header"] = header
+            Rmd_header = yaml.safe_load(yamltext)
         except yaml.YAMLError as e:
             env.logger.warning(f"Error reading document metadata block: {e}")
             env.logger.warning("Trying to continue without header")
@@ -674,17 +668,16 @@ def Rmarkdown_to_notebook(rmarkdown_file,
     state = MD
     celldata = []
     meta = {}
+    has_inline_markdown = False
 
     for l in rmdlines:
         if state == MD:
             match = re_code_start.match(l)
             if match:
                 state = CODE
-                cell_count += 1
                 # only add MD cells with non-whitespace content
                 if any([c.strip() for c in celldata]):
-                    add_cell(
-                        cells, celldata, 'markdown', cell_count, metainfo=meta)
+                    add_cell(cells, celldata, 'markdown', metainfo=meta)
 
                 celldata = []
                 meta = {'kernel': 'R'}
@@ -693,17 +686,48 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     chunk_opts = match.group(1).strip(" ,")
                     if chunk_opts:
                         meta['Rmd_chunk_options'] = chunk_opts
+                        if 'include=FALSE' in chunk_opts or 'echo=FALSE' in chunk_opts:
+                            if 'jupyter' in meta:
+                                meta['jupyter']['source_hidden'] = True
+                            else:
+                                meta["jupyter"] = {"source_hidden": True}
+                        if 'include=FALSE' in chunk_opts:
+                            if 'jupyter' in meta:
+                                meta['jupyter']['output_hidden'] = True
+                            else:
+                                meta["jupyter"] = {"output_hidden": True}
             else:
                 if re_code_inline.search(l):
-                    env.logger.warning(
-                        "Inline R code detected - treated as text")
+                    if not meta.get('kernel', '') and any(
+                        c.strip() for c in celldata):
+                        # if there is markdown text before it, see if there are entire paragraphs
+                        # and put in regular markdown cell
+                        last_empty_line = len(celldata) - 1
+                        while last_empty_line > 0:
+                            if celldata[last_empty_line].strip():
+                                last_empty_line -= 1
+                            else:
+                                break
+                        if last_empty_line > 0:
+                            add_cell(
+                                cells,
+                                celldata[:last_empty_line + 1],
+                                'markdown',
+                                metainfo=meta)
+                            celldata = celldata[last_empty_line + 1:]
+                    # inline markdown ...
+                    has_inline_markdown = True
+                    # we use hidden to indicate that the input of this code
+                    # is supposed to be hidden
+                    meta['kernel'] = 'Markdown'
+                    meta["jupyter"] = {"source_hidden": True}
                 # cell.source in ipynb does not include implicit newlines
                 celldata.append(l.rstrip() + "\n")
         else:  # CODE
             if re_code_end.match(l):
                 state = MD
                 # unconditionally add code blocks regardless of content
-                add_cell(cells, celldata, 'code', cell_count, metainfo=meta)
+                add_cell(cells, celldata, 'code', metainfo=meta)
                 celldata = []
                 meta = {}
             else:
@@ -711,10 +735,34 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     celldata[-1] = celldata[-1] + "\n"
                 celldata.append(l.rstrip())
 
-    if state == CODE or celldata:
-        add_cell(cells, celldata, 'code', cell_count, metainfo=meta)
+    if state == CODE and any([c.strip() for c in celldata]):
+        add_cell(cells, celldata, 'code', metainfo=meta)
+    elif any([c.strip() for c in celldata]):
+        add_cell(cells, celldata, 'markdown', metainfo=meta)
     #
     # create header
+    metadata = {
+        'kernelspec': {
+            "display_name": "SoS",
+            "language": "sos",
+            "name": "sos"
+        },
+        "language_info": {
+            "file_extension": ".sos",
+            "mimetype": "text/x-sos",
+            "name": "sos",
+            "pygments_lexer": "python",
+            'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+        },
+        'sos': {
+            'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']]
+        }
+    }
+    if has_inline_markdown:
+        metadata['sos']['kernels'].append(['Markdown', 'markdown', '', ''])
+    if Rmd_header:
+        metadata['Rmd_chunk_options'] = Rmd_header
+
     nb = new_notebook(cells=cells, metadata=metadata)
 
     if not output_file:
