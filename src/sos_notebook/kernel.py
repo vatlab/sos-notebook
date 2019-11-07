@@ -1352,7 +1352,7 @@ class SoS_Kernel(IPythonKernel):
                     #
                     if msg_type in [
                             'display_data', 'stream', 'execute_result',
-                            'update_display_data'
+                            'update_display_data', 'error'
                     ]:
                         if self._meta['capture_result'] is not None:
                             self._meta['capture_result'].append(
@@ -1544,9 +1544,10 @@ Available subkernels:\n{}'''.format(
                             "execution_state"] == 'idle':
                         iopub_ended = True
                     continue
-                if msg_type in msg_types and (name is None or
-                                              sub_msg['content'].get(
-                                                  'name', None) in name):
+                if msg_type in msg_types and (
+                        name is None or
+                        sub_msg['content'].get('name', None) in name or
+                        any(x in name for x in sub_msg['content'].keys())):
                     env.log_to_file(
                         'MESSAGE',
                         f'Capture response: {msg_type}: {sub_msg["content"]}')

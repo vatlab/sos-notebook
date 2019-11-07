@@ -121,12 +121,13 @@ class Capture_Magic(SoS_Magic):
             'msg_type',
             nargs='?',
             default='raw',
-            choices=['stdout', 'stderr', 'text', 'markdown', 'html', 'raw'],
+            choices=['stdout', 'stderr', 'text', 'markdown', 'html', 'raw', 'error'],
             help='''Message type to capture. In terms of Jupyter message types,
                 "stdout" refers to "stream" message with "stdout" type, "stderr"
                 refers to "stream" message with "stderr" type, "text", "markdown"
                 and "html" refers to "display_data" or "execute_result" messages
-                with "text/plain", "text/markdown" and "text/html" type respectively.
+                with "text/plain", "text/markdown" and "text/html" type respectively,
+                and 'error' refers to "evalue" of "error" messages.
                 If no value or "raw" is specified, all returned messages will be
                 returned in alist format, and will be displayed in the console panel.
                 This will help you determine the right type to capture.''')
@@ -204,6 +205,10 @@ class Capture_Magic(SoS_Magic):
                     if msg[0] == 'display_data' and 'data' in msg[
                             1] and 'text/html' in msg[1]['data']:
                         content += msg[1]['data']['text/html']
+            elif args.msg_type == 'error':
+                for msg in self.sos_kernel._meta['capture_result']:
+                    if msg[0] == 'error' and 'evalue' in msg[1]:
+                        content += msg[1]['evalue']
             else:
                 args.as_type = 'raw'
                 content = self.sos_kernel._meta['capture_result']
@@ -564,8 +569,7 @@ class Expand_Magic(SoS_Magic):
             '--in',
             dest='kernel',
             help='''Expand the cell content in specific kernel, default to "SoS". This requires
-                that the language module supports the "expand" featire.'''
-        )
+                that the language module supports the "expand" featire.''')
         parser.error = self._parse_error
         return parser
 
@@ -595,7 +599,8 @@ class Expand_Magic(SoS_Magic):
                 break
         text = '\n'.join(lines[start_line:])
         try:
-            expanded = self.sos_kernel.expand_text_in(text, args.sigil, kernel=args.kernel)
+            expanded = self.sos_kernel.expand_text_in(
+                text, args.sigil, kernel=args.kernel)
             remaining_code = '\n'.join(lines[:start_line] + [expanded]) + '\n'
             # self.sos_kernel.options will be set to inflence the execution of remaing_code
             return self.sos_kernel._do_execute(remaining_code, silent,
@@ -1263,8 +1268,7 @@ class Pull_Magic(SoS_Magic):
                 self.sos_kernel.iopub_socket, 'display_data', {
                     'metadata': {},
                     'data': {
-                        'text/html':
-                            f'<div class="sos_hint">{msg}</div>'
+                        'text/html': f'<div class="sos_hint">{msg}</div>'
                     }
                 })
         except Exception as e:
@@ -1348,8 +1352,7 @@ class Push_Magic(SoS_Magic):
                 self.sos_kernel.iopub_socket, 'display_data', {
                     'metadata': {},
                     'data': {
-                        'text/html':
-                            f'<div class="sos_hint">{msg}</div>'
+                        'text/html': f'<div class="sos_hint">{msg}</div>'
                     }
                 })
         except Exception as e:
@@ -2581,14 +2584,13 @@ class Task_Magic(SoS_Magic):
         #
         # HTML output
         if len(args.tasks) == 1:
-            self.sos_kernel.send_frontend_msg(
-                'display_data', {
-                    'metadata': {},
-                    'data': {
-                        'text/plain': result,
-                        'text/html': result
-                    }
-                })
+            self.sos_kernel.send_frontend_msg('display_data', {
+                'metadata': {},
+                'data': {
+                    'text/plain': result,
+                    'text/html': result
+                }
+            })
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>
             status = result.split('>Status<', 1)[-1].split('</div',
                                                            1)[0].split('>')[-1]
