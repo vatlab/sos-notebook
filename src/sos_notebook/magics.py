@@ -564,6 +564,13 @@ class Expand_Magic(SoS_Magic):
             nargs='?',
             help='''Right sigil if the sigil is
             specified as two pieces.''')
+        parser.add_argument(
+            '-i',
+            '--in',
+            dest='kernel',
+            help='''Expand the cell content in specific kernel, default to "SoS". This requires
+                that the language module supports the "expand" featire.'''
+        )
         parser.error = self._parse_error
         return parser
 
@@ -579,9 +586,9 @@ class Expand_Magic(SoS_Magic):
             self.sos_kernel.warn(
                 'Use of %expand magic in SoS cells is deprecated.')
         if args.sigil in ('None', None):
-            sigil = None
+            args.sigil = '{ }'
         if args.right_sigil is not None:
-            sigil = f'{args.sigil} {args.right_sigil}'
+            args.sigil = f'{args.sigil} {args.right_sigil}'
         # now we need to expand the text, but separate the SoS magics first
         lines = lines[1:]
         start_line: int = 0
@@ -592,13 +599,9 @@ class Expand_Magic(SoS_Magic):
                 start_line = idx
                 break
         text = '\n'.join(lines[start_line:])
-        if sigil is not None and sigil != '{ }':
-            from sos.parser import replace_sigil
-            text = replace_sigil(text, sigil)
         try:
-            interpolated = interpolate(text, local_dict=env.sos_dict._dict)
-            remaining_code = '\n'.join(lines[:start_line] +
-                                       [interpolated]) + '\n'
+            expanded = self.sos_kernel.expand_text_in(text, args.sigil, kernel=args.kernel)
+            remaining_code = '\n'.join(lines[:start_line] + [expanded]) + '\n'
             # self.sos_kernel.options will be set to inflence the execution of remaing_code
             return self.sos_kernel._do_execute(remaining_code, silent,
                                                store_history, user_expressions,

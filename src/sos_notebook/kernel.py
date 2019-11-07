@@ -1062,6 +1062,48 @@ class SoS_Kernel(IPythonKernel):
                 )
                 return
 
+    def expand_text_in(self, text, sigil=None, kernel='SoS'):
+        '''
+        Expand a piece of (markdown) text in specified kernel, used by
+        magic %expand
+        '''
+        if not text:
+            return ''
+        if sigil is None:
+            sigil = '{ }'
+        if sigil.count(' ') != 1:
+            raise ValueError(f'Invalid interpolation delimiter "{sigil}": should be in the format of "L R"')
+        if sigil.split(' ')[0] not in text:
+            return text
+
+        if not kernel or kernel.lower() == 'sos':
+            if sigil != '{ }':
+                from .parser import replace_sigil
+                text = replace_sigil(text, sigil)
+            return interpolate(text, local_dict=env.sos_dict._dict)
+        # check if the language supports expand protocol
+        kinfo = self.subkernels.find(kernel)
+        if kinfo.language not in self.supported_languages:
+            self.warn(
+                f'Subkernel {kernel} does not support magic %expand --in')
+            return text
+        lan = self.supported_languages[kinfo.language](self, kinfo.kernel)
+        if not hasattr(lan, 'expand'):
+            self.warn(
+                f'Subkernel {kernel} does not support magic %expand --in')
+            return text
+        try:
+            orig_kernel = self.kernel
+            self.switch_kernel(kernel)
+            return lan.expand(text, sigil)
+        except Exception as e:
+            self.warn(
+                f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}')
+            return text
+        finally:
+            self.switch_kernel(orig_kernel)
+
+
     def do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
