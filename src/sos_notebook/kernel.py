@@ -18,15 +18,13 @@ import pandas as pd
 import pkg_resources
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel.comm.manager import CommManager
-from IPython.core.display import HTML
 
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
-from sos.eval import SoS_eval
+from sos.eval import SoS_eval, interpolate
 from sos.syntax import SOS_SECTION_HEADER, SOS_DIRECTIVE
 from sos.utils import env, short_repr, load_config_files
-from sos.targets import file_target
 from sos.executor_utils import prepare_env
 
 from ._version import __version__ as __notebook_version__
@@ -34,7 +32,7 @@ from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .workflow_executor import (run_sos_workflow, execute_scratch_cell,
                                 NotebookLoggingHandler, start_controller)
-from .magics import SoS_Magics, Preview_Magic
+from .magics import SoS_Magics
 
 
 class FlushableStringIO:
@@ -52,9 +50,7 @@ class FlushableStringIO:
                 self.kernel.iopub_socket, 'display_data', {
                     'metadata': {},
                     'data': {
-                        'text/html':
-                            HTML(f'<div class="sos_hint">{hint_line}</div>'
-                                ).data
+                        'text/html': f'<div class="sos_hint">{hint_line}</div>'
                     }
                 })
         if content:
@@ -194,7 +190,9 @@ class Subkernels(object):
                 lan_name = km.get_kernel_spec(spec).language
                 if lan_name == 'python':
                     lan_name = 'python3'
-                avail_names = [x for x in lan_map.keys() if x.lower() == lan_name.lower()]
+                avail_names = [
+                    x for x in lan_map.keys() if x.lower() == lan_name.lower()
+                ]
                 if avail_names:
                     self._kernel_list.append(
                         subkernel(
@@ -602,9 +600,9 @@ class SoSCommManager(CommManager):
     def get_comm(self, comm_id):
         try:
             return self.comms[comm_id]
-        except:
+        except Exception:
             if comm_id in self._forwarders:
-                #self._sos_kernel.start_forwarding_ioPub()
+                # self._sos_kernel.start_forwarding_ioPub()
                 return self._forwarders[comm_id]
             self.log.warning("No such comm: %s", comm_id)
             if self.log.isEnabledFor(logging.DEBUG):
@@ -755,9 +753,7 @@ class SoS_Kernel(IPythonKernel):
                 }[env.verbosity],
                 kernel=self))
         env.logger.print = lambda cell_id, msg, *args: \
-            self.send_response(self.iopub_socket, 'stream', {'name': 'stdout', 'text': msg}) \
-                if self._meta['batch_mode'] else \
-            self.send_frontend_msg('print', [cell_id, msg])
+            self.send_response(self.iopub_socket, 'stream', {'name': 'stdout', 'text': msg}) if self._meta['batch_mode'] else self.send_frontend_msg('print', [cell_id, msg])
         self.controller = None
 
     cell_id = property(lambda self: self._meta['cell_id'])
@@ -837,7 +833,7 @@ class SoS_Kernel(IPythonKernel):
         if msg_type in ('display_data', 'stream'):
             if self._meta['use_panel'] is False:
                 self.send_response(self.iopub_socket, msg_type,
-                                {} if msg is None else msg)
+                                   {} if msg is None else msg)
             elif self._meta['use_iopub']:
                 self.send_response(self.iopub_socket, 'transient_display_data',
                                    make_transient_msg(msg_type, msg))
@@ -873,8 +869,7 @@ class SoS_Kernel(IPythonKernel):
         elif self._meta['batch_mode']:
             env.log_to_file(
                 'MESSAGE',
-                f'frontend message of type {msg_type} is sent in batch mode.'
-            )
+                f'frontend message of type {msg_type} is sent in batch mode.')
         else:
             # frontend_comm is not ready
             self.frontend_comm_cache.append([msg_type, msg])
@@ -1006,8 +1001,14 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     # if the variable is passing through SoS, let us try to restore variables in SoS
                     if to_kernel is not None:
-                        missing_vars = [x for x in objects.keys() if x not in env.sos_dict]
-                        existing_vars = {x:env.sos_dict[x] for x in objects.keys() if x in env.sos_dict}
+                        missing_vars = [
+                            x for x in objects.keys() if x not in env.sos_dict
+                        ]
+                        existing_vars = {
+                            x: env.sos_dict[x]
+                            for x in objects.keys()
+                            if x in env.sos_dict
+                        }
                     env.sos_dict.update(objects)
                 except Exception as e:
                     self.warn(
@@ -1072,7 +1073,9 @@ class SoS_Kernel(IPythonKernel):
         if sigil is None:
             sigil = '{ }'
         if sigil.count(' ') != 1:
-            raise ValueError(f'Invalid interpolation delimiter "{sigil}": should be in the format of "L R"')
+            raise ValueError(
+                f'Invalid interpolation delimiter "{sigil}": should be in the format of "L R"'
+            )
         if sigil.split(' ')[0] not in text:
             return text
 
@@ -1084,13 +1087,11 @@ class SoS_Kernel(IPythonKernel):
         # check if the language supports expand protocol
         kinfo = self.subkernels.find(kernel)
         if kinfo.language not in self.supported_languages:
-            self.warn(
-                f'Subkernel {kernel} does not support magic %expand --in')
+            self.warn(f'Subkernel {kernel} does not support magic %expand --in')
             return text
         lan = self.supported_languages[kinfo.language](self, kinfo.kernel)
         if not hasattr(lan, 'expand'):
-            self.warn(
-                f'Subkernel {kernel} does not support magic %expand --in')
+            self.warn(f'Subkernel {kernel} does not support magic %expand --in')
             return text
         try:
             orig_kernel = self.kernel
@@ -1098,11 +1099,11 @@ class SoS_Kernel(IPythonKernel):
             return lan.expand(text, sigil)
         except Exception as e:
             self.warn(
-                f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}')
+                f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}'
+            )
             return text
         finally:
             self.switch_kernel(orig_kernel)
-
 
     def do_is_complete(self, code):
         '''check if new line is in order'''
@@ -1205,8 +1206,9 @@ class SoS_Kernel(IPythonKernel):
             try:
                 _, KC = self.kernels[cell_kernel.name]
             except Exception as e:
-                env.log_to_file('KERNEL',
-                                f'Failed to get subkernels {cell_kernel.name}: {e}')
+                env.log_to_file(
+                    'KERNEL',
+                    f'Failed to get subkernels {cell_kernel.name}: {e}')
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
@@ -1439,7 +1441,7 @@ Available subkernels:\n{}'''.format(
                                 cwd=os.getcwd(),
                                 stdout=subprocess.DEVNULL,
                                 stderr=ferr)
-                        except:
+                        except Exception:
                             ferr.seek(0)
                             self.warn(
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
@@ -1454,8 +1456,8 @@ Available subkernels:\n{}'''.format(
                         'codemirror_mode', '')
                 self.subkernels.notify_frontend()
             if new_kernel and kinfo.language in self.supported_languages:
-                lan_module = self.supported_languages[kinfo.language](self,
-                                                                   kinfo.kernel)
+                lan_module = self.supported_languages[kinfo.language](
+                    self, kinfo.kernel)
                 init_stmts = lan_module.init_statements
 
                 if hasattr(lan_module, '__version__'):
@@ -1509,7 +1511,7 @@ Available subkernels:\n{}'''.format(
                     name='stdout',
                     text='Specify one of the kernels to shutdown: SoS{}\n'
                     .format(''.join(f', {x}' for x in self.kernels))))
-        #stop_controller(self.controller)
+        # stop_controller(self.controller)
 
     def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
@@ -1556,7 +1558,7 @@ Available subkernels:\n{}'''.format(
                     #
                     # we ignore the messages we are not interested.
                     #
-                    #self.send_response(
+                    # self.send_response(
                     #    self.iopub_socket, msg_type, sub_msg['content'])
             if self.KC.shell_channel.msg_ready():
                 # now get the real result
@@ -1581,7 +1583,8 @@ Available subkernels:\n{}'''.format(
                         code=code,
                         raw_args=self.options,
                         kernel=self,
-                        run_in_queue=self._workflow_mode == 'nowait' and not self._meta['batch_mode'])
+                        run_in_queue=self._workflow_mode == 'nowait' and
+                        not self._meta['batch_mode'])
                 else:
                     res = execute_scratch_cell(
                         code=code, raw_args=self.options, kernel=self)
@@ -1833,7 +1836,9 @@ Available subkernels:\n{}'''.format(
                 # issue #58 and #33
                 return self.run_cell(code.lstrip(), silent, store_history)
             except KeyboardInterrupt:
-                self.warn('KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n')
+                self.warn(
+                    'KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n'
+                )
                 return {
                     'status': 'abort',
                     'execution_count': self._execution_count
@@ -1844,7 +1849,7 @@ Available subkernels:\n{}'''.format(
             empties = [x.startswith('#') or not x.strip() for x in lines]
             if not self._meta['batch_mode']:
                 self.send_frontend_msg('cell-kernel',
-                                   [self._meta['cell_id'], 'SoS'])
+                                       [self._meta['cell_id'], 'SoS'])
             if all(empties):
                 return {
                     'status': 'ok',

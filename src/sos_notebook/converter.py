@@ -21,6 +21,7 @@ from sos.utils import env
 # Converter from Notebook
 #
 
+
 def get_notebook_to_script_parser():
     parser = argparse.ArgumentParser(
         'sos convert FILE.ipynb FILE.sos (or --to sos)',
@@ -136,7 +137,8 @@ def script_to_notebook(script_file, notebook_file, args=None,
         if not content:
             return
         if cell_type not in ('code', 'markdown'):
-            env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
+            env.logger.warning(
+                f'Unrecognized cell type {cell_type}, code assumed.')
         if cell_type == 'markdown' and any(
                 x.strip() and not x.startswith('#! ') for x in content):
             env.logger.warning(
@@ -155,7 +157,6 @@ def script_to_notebook(script_file, notebook_file, args=None,
                     source=''.join(content).strip(),
                     execution_count=cell_count,
                     metadata=metainfo))
-
 
     with open(script_file) as script:
         first_block = True
@@ -344,11 +345,7 @@ def get_notebook_to_html_parser():
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
     parser.add_argument(
-        '-e',
-        '--execute',
-        action='store_true',
-        help='''Deprecated'''
-    )
+        '-e', '--execute', action='store_true', help='''Deprecated''')
     parser.add_argument(
         '-v',
         '--view',
@@ -365,7 +362,8 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     if unknown_args is None:
         unknown_args = []
     if sargs and sargs.execute:
-        env.logger.warning('Option --execute is deprecated. Please use sos-papermill instead.')
+        env.logger.warning(
+            'Option --execute is deprecated. Please use sos-papermill instead.')
     if sargs.template:
         unknown_args = [
             '--template',
@@ -606,25 +604,25 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                           sargs=None,
                           unknown_args=None):
     cells = []
-    cell_count = 1    
+    cell_count = 1
     metadata = {
-            'kernelspec': {
-                "display_name": "SoS",
-                "language": "sos",
-                "name": "sos"
-            },
-            "language_info": {
-                "file_extension": ".sos",
-                "mimetype": "text/x-sos",
-                "name": "sos",
-                "pygments_lexer": "python",
-                'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
-            },
-            'sos': {
-                'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']],
-                'default_kernel': 'R'
-            }
+        'kernelspec': {
+            "display_name": "SoS",
+            "language": "sos",
+            "name": "sos"
+        },
+        "language_info": {
+            "file_extension": ".sos",
+            "mimetype": "text/x-sos",
+            "name": "sos",
+            "pygments_lexer": "python",
+            'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
+        },
+        'sos': {
+            'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']],
+            'default_kernel': 'R'
         }
+    }
     #
     with open(rmarkdown_file) as script:
         rmdlines = script.readlines()
@@ -634,13 +632,13 @@ def Rmarkdown_to_notebook(rmarkdown_file,
         if not content:
             return
         if cell_type not in ('code', 'markdown'):
-            env.logger.warning(f'Unrecognized cell type {cell_type}, code assumed.')
+            env.logger.warning(
+                f'Unrecognized cell type {cell_type}, code assumed.')
         #
         if cell_type == 'markdown':
             cells.append(
                 new_markdown_cell(
-                    source=''.join(content).strip(),
-                    metadata=metainfo))
+                    source=''.join(content).strip(), metadata=metainfo))
         else:
             cells.append(
                 new_code_cell(
@@ -648,7 +646,6 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     source=''.join(content).strip(),
                     execution_count=cell_count,
                     metadata=metainfo))
-
 
     # YAML front matter appears to be restricted to strictly ---\nYAML\n---
     re_yaml_delim = re.compile(r"^---\s*$")
@@ -686,7 +683,8 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                 cell_count += 1
                 # only add MD cells with non-whitespace content
                 if any([c.strip() for c in celldata]):
-                    add_cell(cells, celldata, 'markdown', cell_count, metainfo=meta)
+                    add_cell(
+                        cells, celldata, 'markdown', cell_count, metainfo=meta)
 
                 celldata = []
                 meta = {'kernel': 'R'}
@@ -697,7 +695,8 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                         meta['Rmd_chunk_options'] = chunk_opts
             else:
                 if re_code_inline.search(l):
-                    env.logger.warning("Inline R code detected - treated as text")
+                    env.logger.warning(
+                        "Inline R code detected - treated as text")
                 # cell.source in ipynb does not include implicit newlines
                 celldata.append(l.rstrip() + "\n")
         else:  # CODE
@@ -716,9 +715,7 @@ def Rmarkdown_to_notebook(rmarkdown_file,
         add_cell(cells, celldata, 'code', cell_count, metainfo=meta)
     #
     # create header
-    nb = new_notebook(
-        cells=cells,
-        metadata=metadata)
+    nb = new_notebook(cells=cells, metadata=metadata)
 
     if not output_file:
         nbformat.write(nb, sys.stdout, 4)

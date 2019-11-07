@@ -11,6 +11,7 @@ from sos.step_executor import Base_Step_Executor
 from sos.utils import env, short_repr
 from sos.targets import sos_targets
 
+
 class Interactive_Step_Executor(Base_Step_Executor):
 
     def __init__(self, step, mode='interactive'):
@@ -21,7 +22,8 @@ class Interactive_Step_Executor(Base_Step_Executor):
     def init_input_output_vars(self):
         # we keep these variables (which can be result of stepping through previous statements)
         # if no input and/or output statement is defined
-        for key in ('step_input', '_depends', 'step_output', 'step_depends', '_depends'):
+        for key in ('step_input', '_depends', 'step_output', 'step_depends',
+                    '_depends'):
             if key not in env.sos_dict:
                 env.sos_dict.set(key, sos_targets([]))
         if '_output' not in env.sos_dict:
@@ -79,7 +81,7 @@ class Interactive_Step_Executor(Base_Step_Executor):
         while True:
             res = self.host.check_status(tasks)
             if all(x not in ('submitted', 'pending', 'running') for x in res):
-                #completed = [task for task, status in zip(tasks, res) if status == 'completed']
+                # completed = [task for task, status in zip(tasks, res) if status == 'completed']
                 return self.host.retrieve_results(tasks)
             time.sleep(0.1)
 
@@ -108,7 +110,8 @@ class Interactive_Step_Executor(Base_Step_Executor):
 
     def wait_for_subworkflows(self, workflow_results):
         '''Wait for results from subworkflows'''
-        raise RuntimeError('Nested workflow is not supported in interactive mode')
+        raise RuntimeError(
+            'Nested workflow is not supported in interactive mode')
 
     def handle_unknown_target(self, e):
         # wait for the clearnce of unknown target
@@ -116,4 +119,5 @@ class Interactive_Step_Executor(Base_Step_Executor):
         raise e
 
     def verify_dynamic_targets(self, targets):
-        raise RuntimeError('Dynamic targets are not supported in interative mode')
+        raise RuntimeError(
+            'Dynamic targets are not supported in interative mode')

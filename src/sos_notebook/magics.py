@@ -12,7 +12,6 @@ from io import StringIO
 from types import ModuleType
 
 import pandas as pd
-from IPython.core.display import HTML
 from IPython.core.error import UsageError
 from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
@@ -28,7 +27,7 @@ class SoS_Magic(object):
 
     def __init__(self, kernel):
         self.sos_kernel = kernel
-        self.pattern = re.compile(f'%{self.name}(\s|$)')
+        self.pattern = re.compile(fr'%{self.name}(\s|$)')
 
     def _interpolate_text(self, text, quiet=False):
         # interpolate command
@@ -40,9 +39,7 @@ class SoS_Magic(object):
                         'metadata': {},
                         'data': {
                             'text/html':
-                                HTML(
-                                    f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>'
-                                ).data
+                                f'<div class="sos_hint">> {new_text.strip() + "<br>"}</div>'
                         }
                     })
             return new_text
@@ -310,9 +307,7 @@ class Capture_Magic(SoS_Magic):
                         'metadata': {},
                         'data': {
                             'text/html':
-                                HTML(
-                                    f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
-                                ).data
+                                f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
                         }
                     })
                 self.sos_kernel.send_frontend_msg('display_data', {
@@ -491,7 +486,7 @@ class Dict_Magic(SoS_Magic):
             return
 
         for x in args.vars:
-            if not x in env.sos_dict:
+            if x not in env.sos_dict:
                 self.sos_kernel.warn(
                     'Unrecognized sosdict option or variable name {}'.format(x))
                 return
@@ -818,8 +813,7 @@ class Preview_Magic(SoS_Magic):
                         'metadata': {},
                         'data': {
                             'text/html':
-                                HTML(f'<div class="sos_hint">{hint_line}</div>'
-                                    ).data
+                                f'<div class="sos_hint">{hint_line}</div>'
                         }
                     })
             if result:
@@ -865,9 +859,7 @@ class Preview_Magic(SoS_Magic):
                     'text/plain':
                         f'\n> {filename} ({pretty_size(os.path.getsize(filename))}):',
                     'text/html':
-                        HTML(
-                            f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>'
-                        ).data,
+                        f'<div class="sos_hint">> {filename} ({pretty_size(os.path.getsize(filename))}):</div>',
                 }
             })
         previewer_func = None
@@ -1006,9 +998,7 @@ class Preview_Magic(SoS_Magic):
                                 'text/plain':
                                     '>>> ' + item + ':\n',
                                 'text/html':
-                                    HTML(
-                                        f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>'
-                                    ).data
+                                    f'<div class="sos_hint">> {item}: directory<br>{len(files)}  file{"s" if len(files)>1 else ""}<br>{len(dirs)}  subdirector{"y" if len(dirs)<=1 else "ies"}</div>'
                             }
                         })
                     continue
@@ -1056,9 +1046,7 @@ class Preview_Magic(SoS_Magic):
                                     'text/plain':
                                         '>>> ' + item + ':\n',
                                     'text/html':
-                                        HTML(
-                                            f'<div class="sos_hint">> {item}: {obj_desc}</div>'
-                                        ).data
+                                        f'<div class="sos_hint">> {item}: {obj_desc}</div>'
                                 }
                             })
                         self.show_preview_result(preview)
@@ -1084,15 +1072,13 @@ class Preview_Magic(SoS_Magic):
                                             'text/plain':
                                                 '>>> ' + item + ':\n',
                                             'text/html':
-                                                HTML(
-                                                    f'<div class="sos_hint">> {item}: {obj_desc}</div>'
-                                                ).data
+                                                f'<div class="sos_hint">> {item}: {obj_desc}</div>'
                                         }
                                     })
                                 self.show_preview_result(preview)
                             except Exception:
                                 pass
-                                #self.sos_kernel.warn(f'Failed to preview {item}: {e}')
+                                # self.sos_kernel.warn(f'Failed to preview {item}: {e}')
                             continue
                     # if no preview function defined
                     # evaluate the expression itself
@@ -1107,9 +1093,7 @@ class Preview_Magic(SoS_Magic):
                                     'text/plain':
                                         '>>> ' + item + ':\n',
                                     'text/html':
-                                        HTML(
-                                            f'<div class="sos_hint">> {item}:</div>'
-                                        ).data
+                                        f'<div class="sos_hint">> {item}:</div>'
                                 }
                             })
                         for response in responses:
@@ -1186,9 +1170,7 @@ class Preview_Magic(SoS_Magic):
                                 'text/plain':
                                     self.sos_kernel._meta['workflow'],
                                 'text/html':
-                                    HTML(
-                                        f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>'
-                                    ).data
+                                    f'<textarea id="{ta_id}">{self.sos_kernel._meta["workflow"]}</textarea>'
                             },
                             'metadata': {},
                             'transient': {
@@ -1282,7 +1264,7 @@ class Pull_Magic(SoS_Magic):
                     'metadata': {},
                     'data': {
                         'text/html':
-                            HTML(f'<div class="sos_hint">{msg}</div>').data
+                            f'<div class="sos_hint">{msg}</div>'
                     }
                 })
         except Exception as e:
@@ -1367,7 +1349,7 @@ class Push_Magic(SoS_Magic):
                     'metadata': {},
                     'data': {
                         'text/html':
-                            HTML(f'<div class="sos_hint">{msg}</div>').data
+                            f'<div class="sos_hint">{msg}</div>'
                     }
                 })
         except Exception as e:
@@ -1619,8 +1601,8 @@ class Revisions_Magic(SoS_Magic):
         path = self.sos_kernel._meta['notebook_path']
         revisions = subprocess.check_output(
             ['git', 'log'] + unknown_args +
-            ['--date=short', '--pretty=%H!%cN!%cd!%s', '--', filename]).decode(
-            ).splitlines()
+            ['--date=short', '--pretty=%H!%cN!%cd!%s', '--', filename])
+        revisions = revisions.decode().splitlines()
         if not revisions:
             return
         # args.source is None for --source without option
@@ -1691,7 +1673,7 @@ class Revisions_Magic(SoS_Magic):
                                       'display_data', {
                                           'metadata': {},
                                           'data': {
-                                              'text/html': HTML(text).data
+                                              'text/html': text
                                           }
                                       })
 
@@ -1940,9 +1922,7 @@ class Save_Magic(SoS_Magic):
                         'text/plain':
                             f'Cell content saved to {filename}{about_run}\n',
                         'text/html':
-                            HTML(
-                                f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a>{about_run}</div>'
-                            ).data
+                            f'<div class="sos_hint">Cell content saved to <a href="{filename}" target="_blank">{filename}</a>{about_run}</div>'
                     }
                 })
             if args.run:
@@ -2061,7 +2041,7 @@ class SessionInfo_Magic(SoS_Magic):
                                       'display_data', {
                                           'metadata': {},
                                           'data': {
-                                              'text/html': HTML(res).data
+                                              'text/html': res
                                           }
                                       })
 
@@ -2070,7 +2050,7 @@ class SessionInfo_Magic(SoS_Magic):
         if isinstance(item, bytes):
             try:
                 item = item.decode('utf-8')
-            except:
+            except Exception:
                 return str(item)
         return item.strip()
 
@@ -2339,9 +2319,7 @@ class SoSSave_Magic(SoS_Magic):
                         'text/plain':
                             f'Workflow saved to {filename}\n',
                         'text/html':
-                            HTML(
-                                f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>'
-                            ).data
+                            f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>'
                     }
                 })
             #
@@ -2608,7 +2586,7 @@ class Task_Magic(SoS_Magic):
                     'metadata': {},
                     'data': {
                         'text/plain': result,
-                        'text/html': HTML(result).data
+                        'text/html': result
                     }
                 })
             # <tr><th align="right"  width="30%">Status</th><td align="left"><div class="one_liner">completed</div></td></tr>

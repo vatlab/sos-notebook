@@ -46,7 +46,7 @@ class NotebookLoggingHandler(logging.Handler):
                         f'<div class="sos_logging sos_{record.levelname.lower()}">{record.levelname}: {msg}</div>'
                 }
             })
-        #self.kernel.send_response(self.kernel.iopub_socket, 'stream',
+        # self.kernel.send_response(self.kernel.iopub_socket, 'stream',
         #                          {'name': 'stdout', 'text': record.msg})
 
 
@@ -74,6 +74,8 @@ def stop_controller(controller):
 
 
 last_cell_id = None
+
+
 def execute_scratch_cell(code, raw_args, kernel):
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
@@ -126,32 +128,46 @@ def execute_scratch_cell(code, raw_args, kernel):
         # no concept of passing input/outputs across cells.
         env.sos_dict.set('__step_output__', sos_targets([]))
         for k in [
-                '__step_input__', '__default_output__', 'step_input', 'step_output',
-                'step_depends', '_input', '_output', '_depends'
+                '__step_input__', '__default_output__', 'step_input',
+                'step_output', 'step_depends', '_input', '_output', '_depends'
         ]:
             env.sos_dict.pop(k, None)
 
     last_cell_id = kernel.cell_id
 
     config = {
-        'config_file': args.__config__,
-        'default_queue': args.__queue__,
-        'run_mode': 'dryrun' if args.dryrun else 'interactive',
+        'config_file':
+            args.__config__,
+        'default_queue':
+            args.__queue__,
+        'run_mode':
+            'dryrun' if args.dryrun else 'interactive',
         # issue 230, ignore sig mode in interactive mode
-        'sig_mode': 'ignore',
-        'verbosity': args.verbosity,
+        'sig_mode':
+            'ignore',
+        'verbosity':
+            args.verbosity,
         # for backward compatibility, we try both args.__worker_procs__ and args.__max_procs__
-        'worker_procs': args.__worker_procs__ if hasattr(args, '__worker_procs__') else args.__max_procs__,
-        'max_running_jobs': args.__max_running_jobs__,
+        'worker_procs':
+            args.__worker_procs__
+            if hasattr(args, '__worker_procs__') else args.__max_procs__,
+        'max_running_jobs':
+            args.__max_running_jobs__,
         # for infomration and resume only
-        'workdir': os.getcwd(),
-        'workflow': args.workflow,
-        'targets': args.__targets__,
-        'workflow_args': workflow_args,
-        'workflow_id': textMD5(code),
+        'workdir':
+            os.getcwd(),
+        'workflow':
+            args.workflow,
+        'targets':
+            args.__targets__,
+        'workflow_args':
+            workflow_args,
+        'workflow_id':
+            textMD5(code),
 
         # interactive work is also a slave of the controller
-        'slave_id': kernel.cell_id,
+        'slave_id':
+            kernel.cell_id,
     }
 
     env.sos_dict.set('workflow_id', config['workflow_id'])
@@ -179,7 +195,8 @@ def execute_scratch_cell(code, raw_args, kernel):
         try:
             return ret['__last_res__']
         except Exception as e:
-            raise RuntimeError(f'Unknown result returned from executor {ret}: {e}')
+            raise RuntimeError(
+                f'Unknown result returned from executor {ret}: {e}')
     except (UnknownTarget, RemovedTarget) as e:
         raise RuntimeError(f'Unavailable target {e.target}')
     except SystemExit:
@@ -325,8 +342,8 @@ def cancel_workflow(cell_id, kernel):
     for idx, (cid, proc) in enumerate(g_workflow_queue):
         if cid != cell_id or proc is None:
             continue
-        if not isinstance(proc, tuple) and \
-            (proc.is_alive() and psutil.pid_exists(proc.pid)):
+        if not isinstance(proc, tuple) and (proc.is_alive() and
+                                            psutil.pid_exists(proc.pid)):
             from sos.executor_utils import kill_all_subprocesses
             kill_all_subprocesses(proc.pid, include_self=True)
             proc.terminate()
