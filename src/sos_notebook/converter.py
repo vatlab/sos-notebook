@@ -683,21 +683,36 @@ def Rmarkdown_to_notebook(rmarkdown_file,
 
                 celldata = []
                 meta = {'kernel': 'R'}
+                chunk_opts = ''
 
                 if match.group(1):
                     chunk_opts = match.group(1).strip(" ,")
                     if chunk_opts:
                         meta['Rmd_chunk_options'] = chunk_opts
-                        if 'include=FALSE' in chunk_opts or 'echo=FALSE' in chunk_opts:
-                            if 'jupyter' in meta:
-                                meta['jupyter']['source_hidden'] = True
-                            else:
-                                meta["jupyter"] = {"source_hidden": True}
-                        if 'include=FALSE' in chunk_opts:
-                            if 'jupyter' in meta:
-                                meta['jupyter']['output_hidden'] = True
-                            else:
-                                meta["jupyter"] = {"output_hidden": True}
+
+                # show hide input/output
+                if 'echo=FALSE' in chunk_opts and 'include=FALSE' not in chunk_opts:
+                    # show only output
+                    meta["jupyter"] = {
+                        "source_hidden": True,
+                        'output_hidden': False
+                    }
+                    meta['tags'] = ['report_output']
+                elif 'include=FALSE' in chunk_opts:
+                    # hide the entire cell
+                    meta["jupyter"] = {
+                        "output_hidden": True,
+                        'source_hidden': True
+                    }
+                    meta['tags'] = ['scratch']
+                elif 'echo=FALSE' not in chunk_opts:
+                    # show input and output
+                    meta["tags"] = ['report_cell']
+                else:
+                    # show only input
+                    meta["jupyter"] = {
+                        "output_hidden": True
+                    }
             else:
                 if re_code_inline.search(l):
                     if not meta.get('kernel', '') and any(
@@ -710,7 +725,8 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                                 last_empty_line -= 1
                             else:
                                 break
-                        if last_empty_line > 0 or re_md_header.match(celldata[-1]):
+                        if last_empty_line > 0 or re_md_header.match(
+                                celldata[-1]):
                             add_cell(
                                 cells,
                                 celldata[:last_empty_line + 1],
@@ -722,8 +738,13 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     has_inline_markdown = True
                     # we use hidden to indicate that the input of this code
                     # is supposed to be hidden
-                    meta['kernel'] = 'Markdown'
-                    meta["jupyter"] = {"source_hidden": True}
+                    meta = {
+                        'kernel': 'Markdown',
+                        'jupyter': {
+                            "source_hidden": True
+                        },
+                        'tags': ['report_output']
+                    }
                 # if we see a header, start a new cell
                 if (re_md_header.match(l) and any(c.strip() for c in celldata)
                    ) or (celldata and re_md_major_header.match(celldata[-1])):
