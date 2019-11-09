@@ -2947,7 +2947,7 @@ color: green;
                       if (stream.match(sosMagics[i])) {
                         if (sosMagics[i] === "%expand") {
                           // if there is no :, the easy case
-                          if (stream.eol() || stream.match(/\s*$/, false) || stream.match(/\s*--in\s+.*$/, false) || stream.match(/\s*-i\s+.*$/, false)) {
+                          if (stream.eol() || stream.match(/\s*(-i\s*\S+|--in\s*\S+)?$/, false)) {
                             state.overlay_state.sigil = {
                               left: "{",
                               right: "}"
@@ -2956,8 +2956,8 @@ color: green;
                             let found = stream.match(/\s+(\S+)\s+(\S+)\s*(-i\s*\S+|--in\s*\S+)?$/, false);
                             if (found) {
                               state.overlay_state.sigil = {
-                                left: found[1],
-                                right: found[2]
+                                left: found[1].match(/^.*[A-Za-z]$/) ? found[1] + ' ' : found[1],
+                                right: found[2].match(/^[A-Za-z].*$/) ? ' ' + found[2] : found[2]
                               };
                             } else {
                               state.overlay_state.sigil = null;
@@ -3205,8 +3205,8 @@ color: green;
                       found = stream.match(/expand\s*=\s*'(\S+) (\S+)'/, false);
                     if (found) {
                       state.overlay_state.sigil = {
-                        left: found[1],
-                        right: found[2]
+                        left: found[1].match(/^.*[A-Za-z]$/) ? found[1] + ' ' : found[1],
+                        right: found[2].match(/^[A-Za-z].*$/) ? ' ' + found[2] : found[2]
                       };
                     }
                   }
