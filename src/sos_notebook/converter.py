@@ -662,6 +662,8 @@ def Rmarkdown_to_notebook(rmarkdown_file,
     re_code_start = re.compile(r"^````*\s*{r(.*)}\s*$")
     re_code_end = re.compile(r"^````*\s*$")
     re_code_inline = re.compile(r"`r.+`")
+    re_md_header = re.compile(r"^#+\s+")
+    re_md_major_header = re.compile(r"^#{1,2}\s+")
 
     MD, CODE = range(2)
 
@@ -708,19 +710,26 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                                 last_empty_line -= 1
                             else:
                                 break
-                        if last_empty_line > 0:
+                        if last_empty_line > 0 or re_md_header.match(celldata[-1]):
                             add_cell(
                                 cells,
                                 celldata[:last_empty_line + 1],
                                 'markdown',
                                 metainfo=meta)
                             celldata = celldata[last_empty_line + 1:]
+                            meta = {}
                     # inline markdown ...
                     has_inline_markdown = True
                     # we use hidden to indicate that the input of this code
                     # is supposed to be hidden
                     meta['kernel'] = 'Markdown'
                     meta["jupyter"] = {"source_hidden": True}
+                # if we see a header, start a new cell
+                if (re_md_header.match(l) and any(c.strip() for c in celldata)
+                   ) or (celldata and re_md_major_header.match(celldata[-1])):
+                    add_cell(cells, celldata, 'markdown', metainfo=meta)
+                    celldata = []
+                    meta = {}
                 # cell.source in ipynb does not include implicit newlines
                 celldata.append(l.rstrip() + "\n")
         else:  # CODE
