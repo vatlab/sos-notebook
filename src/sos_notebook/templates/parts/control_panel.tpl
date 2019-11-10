@@ -126,7 +126,7 @@ function showHideToggle() {
   btn.innerHTML = this.innerText + ' &nbsp;  <span class="caret"></span>';
 
   if (this.innerText === "Report Only") {
-    setDisplayOfElemenets(['div.input', '.hidden_content', '.output_prompt',
+    setDisplayOfElemenets(['.div.input', '.hidden_content', '.output_prompt',
       '.input_prompt', '.output_area prompt', '.output_stderr', '.sos_hint'], 'none');
     Array.from(document.querySelectorAll('div.cell')).forEach(
       function(element, index, array) {
