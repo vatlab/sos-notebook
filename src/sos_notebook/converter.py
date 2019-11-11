@@ -4,9 +4,12 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import argparse
+import pkg_resources
+import os
 import re
 import sys
 import time
+import tempfile
 import yaml
 from io import StringIO
 
@@ -345,7 +348,11 @@ def get_notebook_to_html_parser():
         prominent tag, and a control panel to control the display of the rest of the content
         ''')
     parser.add_argument(
-        '-e', '--execute', action='store_true', help='''Deprecated''')
+        '-e',
+        '--execute',
+        action='store_true',
+        help='''Execute the workflow using sos-papermill before exporting to HTML format.'''
+    )
     parser.add_argument(
         '-v',
         '--view',
@@ -358,7 +365,6 @@ def get_notebook_to_html_parser():
 
 def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.html import HTMLExporter
-    import os
     if unknown_args is None:
         unknown_args = []
     if sargs and sargs.execute:
@@ -370,6 +376,11 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
             os.path.abspath(sargs.template)
             if os.path.isfile(sargs.template) else sargs.template
         ] + unknown_args
+
+    if sargs.execute:
+        notebook_file = execute_sos_notebook(
+            notebook_file, return_content=False)
+
     export_notebook(
         HTMLExporter,
         'html',
@@ -377,6 +388,13 @@ def notebook_to_html(notebook_file, output_file, sargs=None, unknown_args=None):
         output_file,
         unknown_args,
         view=sargs.view)
+
+    if os.path.basename(output_file).startswith('__tmp_output_nb'):
+        try:
+            os.remove(output_file)
+        except Exception as e:
+            env.logger.warning(
+                f'Failed to remove temporary output file {output_file}: {e}')
 
 
 def get_notebook_to_pdf_parser():
@@ -397,7 +415,6 @@ def get_notebook_to_pdf_parser():
 
 def notebook_to_pdf(notebook_file, output_file, sargs=None, unknown_args=None):
     from nbconvert.exporters.pdf import PDFExporter
-    import os
     if unknown_args is None:
         unknown_args = []
     if sargs.template:
@@ -434,13 +451,12 @@ def notebook_to_md(notebook_file, output_file, sargs=None, unknown_args=None):
 def get_notebook_to_notebook_parser():
     parser = argparse.ArgumentParser(
         'sos convert FILE.ipynb FILE.ipynb (or --to ipynb)',
-        description='''Export a Jupyter notebook with a non-SoS kernel to a
-        SoS notebook with SoS kernel, or from a SoS notebook to a regular notebook with specified kernel.'''
-    )
+        description='''Export a Jupyter notebook with a non-SoS kernel to a SoS notebook
+        with SoS kernel, or from a SoS notebook to a regular notebook with specified kernel,
+        or execute a SoS notebook.''')
     parser.add_argument(
         '-k',
         '--kernel',
-        default='sos',
         help='''Kernel for the destination notebook. The default kernel is
         SoS which converts a non-SoS notebook to SoS Notebook. If another kernel is specified,
         this command will remove cell-specific kernel information and convert a SoS Notebook
@@ -449,6 +465,11 @@ def get_notebook_to_notebook_parser():
         '--python3-to-sos',
         action='store_true',
         help='''Convert python3 cells to SoS.''')
+    parser.add_argument(
+        '--execute',
+        action='store_true',
+        help='Execute the SoS notebook with sos-papermill',
+    )
     parser.add_argument(
         '--inplace',
         action='store_true',
@@ -564,19 +585,102 @@ def SoS_to_nonSoS_notebook(notebook, args):
     return new_notebook(cells=cells, metadata=metadata)
 
 
+def execute_sos_notebook(input_notebook,
+                         output_notebook=None,
+                         return_content=True):
+    # execute input notebook
+    # if input_notebook is a string, it will be loaded. Otherwise it should be a notebook object
+    # if output_notebook is a string, it will be used as output filename. Otherwise
+    # the notebook will be returned.
+    try:
+        from papermill.execute import execute_notebook
+    except ImportError:
+        raise RuntimeError(
+            'Please install papermill for the use of option --execute.')
+
+    if not any(entrypoint.name == 'sos'
+               for entrypoint in pkg_resources.iter_entry_points(
+                   group='papermill.engine')):
+        raise RuntimeError(
+            'Please install sos-papermill for the use of option --execute.')
+
+    if isinstance(input_notebook, str):
+        input_file = input_notebook
+    else:
+        input_file = tempfile.NamedTemporaryFile(
+            prefix='__tmp_input_nb',
+            dir=os.getcwd(),
+            suffix='.ipynb',
+            delete=False).name
+        with open(input_file, 'w') as notebook_file:
+            nbformat.write(input_notebook, notebook_file, 4)
+
+    if output_notebook is None:
+        output_file = tempfile.NamedTemporaryFile(
+            prefix='__tmp_output_nb',
+            dir=os.getcwd(),
+            suffix='.ipynb',
+            delete=False).name
+    else:
+        output_file = output_notebook
+
+    execute_notebook(
+        input_path=input_file,
+        output_path=output_file,
+        engine_name='sos',
+        kernel_name='sos')
+
+    if os.path.basename(input_file).startswith('__tmp_input_nb'):
+        try:
+            os.remove(input_file)
+        except Exception as e:
+            env.logger.warning(
+                f'Failed to remove temporary input file {input_file}: {e}')
+
+    if os.path.basename(output_file).startswith(
+            '__tmp_output_nb') and return_content:
+        new_nb = nbformat.read(output_file, nbformat.NO_CONVERT)
+        try:
+            os.remove(output_file)
+        except Exception as e:
+            env.logger.warning(
+                f'Failed to remove temporary output file {output_file}: {e}')
+        return new_nb
+    else:
+        return output_file
+
+
 def notebook_to_notebook(notebook_file,
                          output_file,
                          sargs=None,
                          unknown_args=None):
     notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
-    # if we are converting to a SoS Notebook.
-    if sargs.kernel in ('sos', 'SoS'):
-        nb = nonSoS_to_SoS_notebook(notebook, sargs)
-    else:
+    kernel_name = notebook['metadata']['kernelspec']['name']
+
+    nb = None
+    # what are we supposed to do?
+    if kernel_name == 'sos' and sargs.kernel and sargs.kernel not in ('sos',
+                                                                      'SoS'):
+        # sos => nonSoS
+        if sargs.execute:
+            notebook = execute_sos_notebook(notebook_file)
         nb = SoS_to_nonSoS_notebook(notebook, sargs)
+    elif kernel_name == 'sos' and not sargs.kernel:
+        if sargs.execute:
+            if output_file and notebook_file != output_file:
+                execute_sos_notebook(notebook_file, output_file)
+                env.logger.info(f'Jupyter notebook saved to {output_file}')
+                return
+            else:
+                nb = execute_sos_notebook(notebook_file)
+        # sos => sos
+    elif kernel_name != 'sos' and sargs.kernel in ('sos', 'SoS', None):
+        nb = nonSoS_to_SoS_notebook(notebook, sargs)
+        if sargs.execute:
+            nb = execute_sos_notebook(nb)
 
     if nb is None:
-        # nothing to do (e.g. sos -> sos)
+        # nothing to do (e.g. sos -> sos) without --execute
         return
 
     if sargs.inplace:
@@ -596,6 +700,10 @@ def get_Rmarkdown_to_notebook_parser():
         'sos convert FILE.Rmd FILE.ipynb (or --to ipynb)',
         description='''Export a Rmarkdown file kernel to a SoS notebook. It currently
         only handles code block and Markdown, and not inline expression.''')
+    parser.add_argument(
+        '--execute',
+        action='store_true',
+        help='Execute the converted notebook using sos-papermill')
     return parser
 
 
@@ -710,9 +818,7 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     meta["tags"] = ['report_cell']
                 else:
                     # show only input
-                    meta["jupyter"] = {
-                        "output_hidden": True
-                    }
+                    meta["jupyter"] = {"output_hidden": True}
             else:
                 if re_code_inline.search(l):
                     if not meta.get('kernel', '') and any(
@@ -795,9 +901,65 @@ def Rmarkdown_to_notebook(rmarkdown_file,
 
     nb = new_notebook(cells=cells, metadata=metadata)
 
+    if sargs.execute:
+        if output_file:
+            execute_sos_notebook(nb, output_file)
+            env.logger.info(f'Jupyter notebook saved to {output_file}')
+            return
+        else:
+            nb = execute_sos_notebook(nb)
+
     if not output_file:
         nbformat.write(nb, sys.stdout, 4)
     else:
         with open(output_file, 'w') as new_nb:
             nbformat.write(nb, new_nb, 4)
         env.logger.info(f'Jupyter notebook saved to {output_file}')
+
+
+def get_Rmarkdown_to_html_parser():
+    parser = argparse.ArgumentParser(
+        'sos convert FILE.Rmd FILE.html (or --to ipynb)',
+        description='''Export a Rmarkdown file kernel to a SoS report. It currently
+        only handles code block and Markdown, and not inline expression.''')
+    parser.add_argument(
+        '--execute',
+        action='store_true',
+        help='Execute the notebook using sos-papermill before exporting a report in HTML format.'
+    )
+    parser.add_argument(
+        '--template',
+        help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
+        of templates, with sos-report displays markdown cells and only output of cells with
+        prominent tag, and a control panel to control the display of the rest of the content
+        ''')
+    parser.add_argument(
+        '-v',
+        '--view',
+        action='store_true',
+        help='''Open the output file in a broswer. In case no html file is specified,
+        this option will display the HTML file in a browser, instead of writing its
+        content to standard output.''')
+    return parser
+
+
+def Rmarkdown_to_html(rmarkdown_file,
+                      output_file,
+                      sargs=None,
+                      unknown_args=None):
+    notebook_file = tempfile.NamedTemporaryFile(
+        prefix='__output_nb', dir=os.getcwd(), suffix='.ipynb',
+        delete=False).name
+    Rmarkdown_to_notebook(
+        rmarkdown_file, notebook_file, sargs=sargs, unknown_args=unknown_args)
+    # if --execute is specified, it must have been execute during Rmarkdown_to_notebook
+    sargs.execute = False
+    #
+    try:
+        notebook_to_html(notebook_file, output_file, sargs, unknown_args)
+    finally:
+        try:
+            os.remove(notebook_file)
+        except Exception as e:
+            env.logger.warning(
+                f'Failed to remove temporary output file {notebook_file}: {e}')

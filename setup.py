@@ -106,4 +106,7 @@ ipynb-ipynb.func = sos_notebook.converter:notebook_to_notebook
 
 rmd-ipynb.parser = sos_notebook.converter:get_Rmarkdown_to_notebook_parser
 rmd-ipynb.func = sos_notebook.converter:Rmarkdown_to_notebook
+
+rmd-html.parser = sos_notebook.converter:get_Rmarkdown_to_html_parser
+rmd-html.func = sos_notebook.converter:Rmarkdown_to_html
 ''')
