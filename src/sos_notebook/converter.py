@@ -749,6 +749,7 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                 new_markdown_cell(
                     source=''.join(content).strip(), metadata=metainfo))
 
+    used_kernels = [['SoS', 'sos', '', '']]
     Rmd_header = {}
     # YAML front matter appears to be restricted to strictly ---\nYAML\n---
     re_yaml_delim = re.compile(r"^---\s*$")
@@ -762,12 +763,43 @@ def Rmarkdown_to_notebook(rmarkdown_file,
             env.logger.warning("Trying to continue without header")
         rmdlines = rmdlines[:delim_lines[0]] + rmdlines[delim_lines[1] + 1:]
 
-    # the behaviour of rmarkdown appears to be that a code block does not
-    # have to have matching numbers of start and end `s - just >=3
-    # and there can be any number of spaces before the {r, meta} block,
-    # but "r" must be the first character of that block
+    lan_kernel_map = {
+        'python': ['Python3', 'ir', '', ''],
+        'sas': ['SAS', 'sas', '', ''],
+        'ruby': ['Ruby', 'ruby', '', ''],
+        'sh': ['Bash', 'bash', '', ''],
+        'bash': ['Bash', 'bash', '', ''],
+        'Node': ['JavaScript', 'javascript', '', ''],
+        'r': ['R', 'ir', '', ''],
+        'Rscript': ['R', 'ir', '', ''],
+        'stata': ['Stata', 'stata', '', ''],
+        'octave': ['Octave', 'octave', '', '']
+    }
 
-    re_code_start = re.compile(r"^````*\s*{r(.*)}\s*$")
+    re_code_start = re.compile(
+        r'''
+        ^````*\s*                        # ```
+        {                                # {
+        (?P<engine_name>                 # eignine name
+        [a-zA-Z0-9]+                     # r
+        )                                # end of engine name
+        (\s+                             # space
+        (?P<engine_options>.*)           #
+        )?                               # options
+        }                                # }
+        \s*$                             #
+        ''', re.VERBOSE)
+
+    re_engine_option = re.compile(
+        r'''
+        engine\s*=\s*                    # engine =
+        ["']
+        (?P<engine_option>               # option
+        [a-zA-Z0-9"']+
+        )
+        ["']
+        ''', re.VERBOSE)
+
     re_code_end = re.compile(r"^````*\s*$")
     re_code_inline = re.compile(r"`r.+`")
     re_md_header = re.compile(r"^#+\s+")
@@ -790,13 +822,28 @@ def Rmarkdown_to_notebook(rmarkdown_file,
                     add_cell(cells, celldata, 'markdown', metainfo=meta)
 
                 celldata = []
-                meta = {'kernel': 'R'}
+
+                engine_name = match.group('engine_name')
                 chunk_opts = ''
 
-                if match.group(1):
-                    chunk_opts = match.group(1).strip(" ,")
+                if match.group('engine_options'):
+                    chunk_opts = match.group('engine_options').strip(" ,")
                     if chunk_opts:
                         meta['Rmd_chunk_options'] = chunk_opts
+
+                    en_option = re_engine_option.search(match.group('engine_options'))
+                    if en_option and en_option.group('engine_option'):
+                        engine_name = en_option.group('engine_option')
+
+                if engine_name in lan_kernel_map:
+                    meta['kernel'] = lan_kernel_map[engine_name][0]
+                    if lan_kernel_map[engine_name] not in used_kernels:
+                        used_kernels.append(lan_kernel_map[engine_name])
+                else:
+                    meta['kernel'] = engine_name
+                    kinfo = [engine_name, engine_name, '', '']
+                    if kinfo not in used_kernels:
+                        used_kernels.append(kinfo)
 
                 # show hide input/output
                 if 'echo=FALSE' in chunk_opts and 'include=FALSE' not in chunk_opts:
@@ -891,7 +938,7 @@ def Rmarkdown_to_notebook(rmarkdown_file,
             'nbconvert_exporter': 'sos_notebook.converter.SoS_Exporter',
         },
         'sos': {
-            'kernels': [['SoS', 'sos', '', ''], ['R', 'ir', '', '']]
+            'kernels': used_kernels
         }
     }
     if has_inline_markdown:
