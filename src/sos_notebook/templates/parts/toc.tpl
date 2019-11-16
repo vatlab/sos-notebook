@@ -127,7 +127,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 {% endmacro %}
 
 {% macro js() %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.4.2/tocbot.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.8.1/tocbot.min.js"></script>
 
 <script>
 
@@ -193,6 +193,8 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
       activeListItemClass: 'active',
       //
       orderedList: false,
+      //
+      hasInnerContainers: true,
       //
       scrollSmooth: true
     });
