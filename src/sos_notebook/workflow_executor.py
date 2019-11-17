@@ -228,8 +228,11 @@ class Tapped_Executor(mp.Process):
         informer_socket.connect(self.config["sockets"]["tapping_listener"])
 
         try:
-            filename = os.path.join(tempfile.gettempdir(),
-                                    f'interactive_{os.getpid()}.sos')
+            filename = tempfile.NamedTemporaryFile(
+                prefix='.tmp_script_',
+                dir=os.getcwd(),
+                suffix='.sos',
+                delete=False).name
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
@@ -255,6 +258,10 @@ class Tapped_Executor(mp.Process):
                 }
             })
         finally:
+            try:
+                os.remove(filename)
+            except Exception as e:
+                env.logger.warning(f'Failed to remove temp script {filename}: {e}')
             stdout_socket.LINGER = 0
             stdout_socket.close()
             informer_socket.LINGER = 0
