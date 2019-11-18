@@ -68,7 +68,7 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.6',
     install_requires=[
-        'sos>=0.20.8',
+        'sos>=0.20.9',
         'nbformat',
         'nbconvert>=5.1.1',
         'ipython',
@@ -86,21 +86,10 @@ setup(
     ],
     entry_points='''
 [sos_converters]
-sos-ipynb.parser = sos_notebook.converter:get_script_to_notebook_parser
-sos-ipynb.func = sos_notebook.converter:script_to_notebook
-
-ipynb-sos.parser = sos_notebook.converter:get_notebook_to_script_parser
-ipynb-sos.func = sos_notebook.converter:notebook_to_script
-
-ipynb-html.parser = sos_notebook.converter:get_notebook_to_html_parser
-ipynb-html.func = sos_notebook.converter:notebook_to_html
-
-ipynb-pdf.parser = sos_notebook.converter:get_notebook_to_pdf_parser
-ipynb-pdf.func = sos_notebook.converter:notebook_to_pdf
-
-ipynb-md.parser = sos_notebook.converter:get_notebook_to_md_parser
-ipynb-md.func = sos_notebook.converter:notebook_to_md
-
-ipynb-ipynb.parser = sos_notebook.converter:get_notebook_to_notebook_parser
-ipynb-ipynb.func = sos_notebook.converter:notebook_to_notebook
+sos-ipynb = sos_notebook.converter:ScriptToNotebookConverter
+ipynb-sos = sos_notebook.converter:NotebookToScriptConverter
+ipynb-html = sos_notebook.converter:NotebookToHTMLConverter
+ipynb-pdf = sos_notebook.converter:NotebookToPDFConverter
+ipynb-md = sos_notebook.converter:NotebookToMarkdownConverter
+ipynb-ipynb = sos_notebook.converter:NotebookToNotebookConverter
 ''')

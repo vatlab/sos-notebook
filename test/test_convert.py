@@ -8,8 +8,6 @@ import shutil
 import subprocess
 import unittest
 
-from sos_notebook.converter import notebook_to_script, script_to_notebook
-
 
 class TestConvert(unittest.TestCase):
 
@@ -52,8 +50,12 @@ report('this is action report')
     def testScriptToAndFromNotebook(self):
         '''Test sos show script --notebook'''
         for script_file in self.scripts:
-            script_to_notebook(script_file, script_file[:-4] + '.ipynb')
-            notebook_to_script(script_file[:-4] + '.ipynb', script_file)
+            subprocess.call(
+                f'sos convert {script_file} {script_file[:-4]}.ipynb',
+                shell=True)
+            subprocess.call(
+                f'sos convert {script_file[:-4]}.ipynb {script_file}',
+                shell=True)
 
     def testConvertHTML(self):
         subprocess.call(
@@ -146,7 +148,6 @@ report('this is action report')
         self.assertFalse(
             'this comment will not be included in exported workflow' in wf)
 
+
 if __name__ == '__main__':
-    #suite = unittest.defaultTestLoader.loadTestsFromTestCase(TestConvert)
-    # unittest.TextTestRunner().run(suite)
     unittest.main()
