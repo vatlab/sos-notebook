@@ -126,7 +126,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 {% macro html() %}
 {% endmacro %}
 
-{% macro js() %}
+{% macro js(headers='h1, h2, h3, h4') %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.8.1/tocbot.min.js"></script>
 
 <script>
@@ -136,7 +136,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 
     if (!headings) {
       let content = document.querySelector('.notebook-container')
-      headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
+      headings = content.querySelectorAll('{{ headers }}')
     }
     Array.prototype.forEach.call(headings, function(heading) {
       var id = heading.id ? heading.id : heading.textContent.toLowerCase();
@@ -173,7 +173,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 
   function updateTOC ( ) {
     var content = document.querySelector('.notebook-container')
-    var headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6, h7')
+    var headings = content.querySelectorAll('{{ headers }}')
 
     fixIDsForToc(headings);
 

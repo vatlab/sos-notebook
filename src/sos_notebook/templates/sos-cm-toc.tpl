@@ -28,7 +28,7 @@
 
 {% block footer_js %}
 {{ super() }}
-{{ toc.js() }}
+{{ toc.js(headers='h1, h2, h3') }}
 {% endblock footer_js %}
 
 
