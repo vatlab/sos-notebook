@@ -2283,11 +2283,11 @@ class SoSSave_Magic(SoS_Magic):
                         script.write(self.sos_kernel._meta['workflow'])
                 else:
                     # convert to sos report
-                    from .converter import notebook_to_script
+                    from .converter import NotebookToScriptConverter
                     arg = argparse.Namespace()
                     arg.execute = False
                     arg.all = True
-                    notebook_to_script(
+                    NotebookToScriptConverter().convert(
                         self.sos_kernel._meta['notebook_name'] + '.ipynb',
                         filename,
                         args=arg,
@@ -2297,7 +2297,7 @@ class SoSSave_Magic(SoS_Magic):
                     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
             else:
                 # convert to sos report
-                from .converter import notebook_to_html
+                from .converter import NotebookToHTMLConverter
                 arg = argparse.Namespace()
                 if args.template == 'default-sos-template':
                     cfg = load_config_files()
@@ -2309,7 +2309,7 @@ class SoSSave_Magic(SoS_Magic):
                     arg.template = args.template
                 arg.view = False
                 arg.execute = False
-                notebook_to_html(
+                NotebookToHTMLConverter().convert(
                     self.sos_kernel._meta['notebook_name'] + '.ipynb',
                     filename,
                     sargs=arg,
