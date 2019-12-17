@@ -21,7 +21,7 @@ class TestMagics(NotebookTest):
         """test help functions of magics"""
         for magic in (
                 "cd",
-                "dict",
+                "convert",
                 "get",
                 "matplotlib",
                 "preview",
@@ -34,7 +34,6 @@ class TestMagics(NotebookTest):
                 "sandbox",
                 "sessioninfo",
                 "sosrun",
-                "sossave",
                 "shutdown",
                 "task",
                 "use",
@@ -570,6 +569,7 @@ class TestMagics(NotebookTest):
     def test_magic_preview_pdf_as_png(self, notebook):
         try:
             from wand.image import Image
+            Image
         except ImportError:
             pytest.skip("Skip because imagemagick is not properly installed")
         # preview as png
@@ -879,16 +879,16 @@ class TestMagics(NotebookTest):
 
     @pytest.mark.skip(
         reason="Cannot figure out why the file sometimes does not exist")
-    def test_magic_sossave(self, notebook):
+    def test_magic_convert(self, notebook):
         #
         notebook.save()
 
-        tmp_file = os.path.join(tempfile.gettempdir(), "test_sossave.html")
+        tmp_file = os.path.join(tempfile.gettempdir(), "test_convert.html")
         if os.path.isfile(tmp_file):
             os.remove(tmp_file)
         assert "Workflow saved to" in notebook.check_output(
             f"""\
-            %sossave {tmp_file} --force
+            %convert {tmp_file} --force
             [10]
             print('kkk')
             """,
