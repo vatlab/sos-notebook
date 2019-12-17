@@ -431,6 +431,118 @@ class ConnectInfo_Magic(SoS_Magic):
                                            allow_stdin)
 
 
+class Convert_Magic(SoS_Magic):
+    name = 'convert'
+
+    def __init__(self, kernel):
+        super(Convert_Magic, self).__init__(kernel)
+
+    def get_parser(self):
+        parser = argparse.ArgumentParser(
+            prog='%convert',
+            description='''Convert the current notebook to another format.''')
+        parser.add_argument(
+            'filename',
+            nargs='?',
+            help='''Filename of saved report or script. Default to notebookname with file
+            extension determined by option --to.''')
+        parser.add_argument(
+            '-t',
+            '--to',
+            dest='__to__',
+            choices=['sos', 'html'],
+            help='''Destination format, default to html.''')
+        parser.add_argument(
+            '-f',
+            '--force',
+            action='store_true',
+            help='''If destination file already exists, overwrite it.''')
+        parser.add_argument(
+            '--template',
+            default='default-sos-template',
+            help='''Template to generate HTML output. The default template is a
+            template defined by configuration key default-sos-template, or
+            sos-report-toc if such a key does not exist.''')
+        parser.error = self._parse_error
+        return parser
+
+    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+        # get the saved filename
+        options, remaining_code = self.get_magic_and_code(code, False)
+        try:
+            parser = self.get_parser()
+            try:
+                args = parser.parse_args(shlex.split(options))
+            except SystemExit:
+                return
+            if args.filename:
+                filename = args.filename
+                if filename.lower().endswith('.html'):
+                    if args.__to__ is None:
+                        ftype = 'html'
+                    elif args.__to__ != 'html':
+                        self.sos_kernel.warn(
+                            f'%sossave to an .html file in {args.__to__} format'
+                        )
+                        ftype = args.__to__
+                else:
+                    ftype = 'sos'
+            else:
+                ftype = args.__to__ if args.__to__ else 'sos'
+                filename = self.sos_kernel._meta['notebook_name'] + '.' + ftype
+
+            filename = os.path.expanduser(filename)
+
+            if os.path.isfile(filename) and not args.force:
+                raise ValueError(
+                    f'Cannot overwrite existing output file {filename}')
+            # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
+            if ftype == 'sos':
+                with open(filename, 'w') as script:
+                    script.write(self.sos_kernel._meta['workflow'])
+            else:
+                # convert to sos report
+                from .converter import NotebookToHTMLConverter
+                arg = argparse.Namespace()
+                if args.template == 'default-sos-template':
+                    cfg = load_config_files()
+                    if 'default-sos-template' in cfg:
+                        arg.template = cfg['default-sos-template']
+                    else:
+                        arg.template = 'sos-report-toc'
+                else:
+                    arg.template = args.template
+                arg.view = False
+                arg.execute = False
+                NotebookToHTMLConverter().convert(
+                    self.sos_kernel._meta['notebook_name'] + '.ipynb',
+                    filename,
+                    sargs=arg,
+                    unknown_args=[])
+
+            self.sos_kernel.send_response(
+                self.sos_kernel.iopub_socket, 'display_data', {
+                    'metadata': {},
+                    'data': {
+                        'text/plain':
+                            f'Notebook saved to {filename}\n',
+                        'text/html':
+                            f'<div class="sos_hint">Notebook saved to <a href="{filename}" target="_blank">{filename}</a></div>'
+                    }
+                })
+            #
+            return
+        except Exception as e:
+            self.sos_kernel.warn(f'Failed to save workflow: {e}')
+            return {
+                'status': 'error',
+                'ename': e.__class__.__name__,
+                'evalue': str(e),
+                'traceback': [],
+                'execution_count': self.sos_kernel._execution_count,
+            }
+
+
 class Debug_Magic(SoS_Magic):
     name = 'debug'
 
@@ -2209,14 +2321,6 @@ class SoSSave_Magic(SoS_Magic):
             help='''Commit the saved file to git directory using command
             git commit FILE''')
         parser.add_argument(
-            '-a',
-            '--all',
-            action='store_true',
-            help='''The --all option for sos convert script.ipynb script.sos, which
-            saves all cells and their metadata to a .sos file, that contains all input
-            information of the notebook but might not be executable in batch mode.'''
-        )
-        parser.add_argument(
             '-m',
             '--message',
             help='''Message for git commit. Default to "save FILENAME"''')
@@ -2246,7 +2350,7 @@ class SoSSave_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-
+        self.sos_kernel.warn('Magic %sossave is depcated. Please use %convert instead.')
         # get the saved filename
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
@@ -2278,20 +2382,8 @@ class SoSSave_Magic(SoS_Magic):
                     f'Cannot overwrite existing output file {filename}')
             # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
             if ftype == 'sos':
-                if not args.all:
-                    with open(filename, 'w') as script:
-                        script.write(self.sos_kernel._meta['workflow'])
-                else:
-                    # convert to sos report
-                    from .converter import NotebookToScriptConverter
-                    arg = argparse.Namespace()
-                    arg.execute = False
-                    arg.all = True
-                    NotebookToScriptConverter().convert(
-                        self.sos_kernel._meta['notebook_name'] + '.ipynb',
-                        filename,
-                        args=arg,
-                        unknown_args=[])
+                with open(filename, 'w') as script:
+                    script.write(self.sos_kernel._meta['workflow'])
                 if args.setx:
                     import stat
                     os.chmod(filename, os.stat(filename).st_mode | stat.S_IEXEC)
@@ -2320,9 +2412,9 @@ class SoSSave_Magic(SoS_Magic):
                     'metadata': {},
                     'data': {
                         'text/plain':
-                            f'Workflow saved to {filename}\n',
+                            f'Notebook saved to {filename}\n',
                         'text/html':
-                            f'<div class="sos_hint">Workflow saved to <a href="{filename}" target="_blank">{filename}</a></div>'
+                            f'<div class="sos_hint">Notebook saved to <a href="{filename}" target="_blank">{filename}</a></div>'
                     }
                 })
             #
@@ -2999,7 +3091,7 @@ class With_Magic(SoS_Magic):
 class SoS_Magics(object):
     magics = [
         Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic,
-        Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
+        Convert_Magic, Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
         Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic, Put_Magic,
         Render_Magic, Run_Magic, Runfile_Magic, Revisions_Magic, Save_Magic,
         Set_Magic, SessionInfo_Magic, Shutdown_Magic, SoSRun_Magic,
