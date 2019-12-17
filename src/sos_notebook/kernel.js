@@ -1468,12 +1468,12 @@ define([
       },
       "panel-execute"
     );
-    var toggle_action = this.km.actions.register(
-      {
-        handler: $.proxy(toggle_panel, this)
-      },
-      "panel-toggle"
-    );
+    // var toggle_action = this.km.actions.register(
+    //   {
+    //     handler: $.proxy(toggle_panel, this)
+    //   },
+    //   "panel-toggle"
+    // );
 
     var execute_selected_in_panel = this.km.actions.register(
       {
@@ -1482,13 +1482,13 @@ define([
       },
       "execute-selected"
     );
-    var paste_table = this.km.actions.register(
-      {
-        help: "paste table as markdown",
-        handler: paste_table_as_markdown
-      },
-      "paste-table"
-    );
+    // var paste_table = this.km.actions.register(
+    //   {
+    //     help: "paste table as markdown",
+    //     handler: paste_table_as_markdown
+    //   },
+    //   "paste-table"
+    // );
     var toggle_output = this.km.actions.register(
       {
         help: "toggle display output in HTML",
@@ -1496,13 +1496,13 @@ define([
       },
       "toggle-show-output"
     );
-    var toggle_markdown = this.km.actions.register(
-      {
-        help: "toggle between markdown and code cells",
-        handler: toggle_markdown_cell
-      },
-      "toggle-markdown"
-    );
+    // var toggle_markdown = this.km.actions.register(
+    //   {
+    //     help: "toggle between markdown and code cells",
+    //     handler: toggle_markdown_cell
+    //   },
+    //   "toggle-markdown"
+    // );
     var up_arrow = this.km.actions.register(
       {
         help: "move cursor to previous line or cell",
@@ -1526,8 +1526,8 @@ define([
       // code_mirror.getSelection() line getting only blank string.
       "ctrl-shift-enter": execute_selected_in_panel,
       "ctrl-shift-o": toggle_output,
-      "ctrl-shift-v": paste_table,
-      "ctrl-shift-m": toggle_markdown,
+      // "ctrl-shift-v": paste_table,
+      // "ctrl-shift-m": toggle_markdown,
       up: up_arrow,
       down: down_arrow
     };
@@ -1667,26 +1667,26 @@ define([
     evt.notebook.focus_cell();
   };
 
-  var paste_table_as_markdown = function(evt) {
-    var cell = evt.notebook.get_selected_cell();
-    if (cell.cell_type === "markdown") {
-      send_kernel_msg({
-        "paste-table": []
-      });
-    }
-    // evt.notebook.select_next(true);
-    evt.notebook.focus_cell();
-  };
+  // var paste_table_as_markdown = function(evt) {
+  //   var cell = evt.notebook.get_selected_cell();
+  //   if (cell.cell_type === "markdown") {
+  //     send_kernel_msg({
+  //       "paste-table": []
+  //     });
+  //   }
+  //   // evt.notebook.select_next(true);
+  //   evt.notebook.focus_cell();
+  // };
 
-  var toggle_markdown_cell = function(evt) {
-    var idx = evt.notebook.get_selected_index();
-    if (evt.notebook.get_cell(idx).cell_type === "markdown") {
-      evt.notebook.to_code(idx);
-    } else {
-      evt.notebook.to_markdown(idx);
-    }
-    evt.notebook.focus_cell();
-  };
+  // var toggle_markdown_cell = function(evt) {
+  //   var idx = evt.notebook.get_selected_index();
+  //   if (evt.notebook.get_cell(idx).cell_type === "markdown") {
+  //     evt.notebook.to_code(idx);
+  //   } else {
+  //     evt.notebook.to_markdown(idx);
+  //   }
+  //   evt.notebook.focus_cell();
+  // };
 
   panel.prototype.move_cursor_up = function(evt) {
     //var cell = nb.get_selected_cell();
