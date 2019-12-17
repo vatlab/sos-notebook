@@ -1480,7 +1480,7 @@ define([
         help: "run selected text in panel cell",
         handler: execute_in_panel
       },
-      "execute-selected"
+      "run-in-console"
     );
     // var paste_table = this.km.actions.register(
     //   {
