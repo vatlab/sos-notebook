@@ -1521,6 +1521,7 @@ define([
     var command_shortcuts = {
       // "ctrl-b": toggle_action,
       "ctrl-shift-o": toggle_output_action,
+      "ctrl-shift-enter": run_in_console_action,
     };
     var edit_shortcuts = {
       "shift-enter": execute_and_select_action,
