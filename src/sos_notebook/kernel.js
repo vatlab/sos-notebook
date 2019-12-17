@@ -373,7 +373,7 @@ define([
   }
 
   function get_cell_by_id(id) {
-    if (id) {
+    if (id && id != "0") {
       return nb.get_cells().find(cell => cell.cell_id === id);
     } else {
       return window.my_console.cell;
