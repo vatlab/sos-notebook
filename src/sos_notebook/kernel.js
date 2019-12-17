@@ -1480,7 +1480,8 @@ define([
         help: "run selected text or current statement in console",
         handler: run_in_console
       },
-      "run-in-console"
+      "run-in-console",
+      "sos"
     );
     // var paste_table = this.km.actions.register(
     //   {
@@ -1503,36 +1504,37 @@ define([
     //   },
     //   "toggle-markdown"
     // );
-    var up_arrow = this.km.actions.register(
+    var up_arrow_action = this.km.actions.register(
       {
         help: "move cursor to previous line or cell",
         handler: $.proxy(this.move_cursor_up, this)
       },
       "move-cursor-up"
     );
-    var down_arrow = this.km.actions.register(
+    var down_arrow_action = this.km.actions.register(
       {
         help: "move cursor to next line or cell",
         handler: $.proxy(this.move_cursor_down, this)
       },
       "move-cursor-down"
     );
-    var shortcuts = {
+    var command_shortcuts = {
+      // "ctrl-b": toggle_action,
+      "ctrl-shift-o": toggle_output_action,
+    };
+    var edit_shortcuts = {
       "shift-enter": execute_and_select_action,
       "ctrl-enter": execute_action,
-      // "ctrl-b": toggle_action,
       // It is very strange to me that other key bindings such as
       // Ctrl-e does not work as it will somehow make the
       // code_mirror.getSelection() line getting only blank string.
       "ctrl-shift-enter": run_in_console_action,
       "ctrl-shift-o": toggle_output_action,
-      // "ctrl-shift-v": paste_table,
-      // "ctrl-shift-m": toggle_markdown,
-      up: up_arrow,
-      down: down_arrow
+      up: up_arrow_action,
+      down: down_arrow_action
     };
-    this.km.edit_shortcuts.add_shortcuts(shortcuts);
-    this.km.command_shortcuts.add_shortcuts(shortcuts);
+    this.km.edit_shortcuts.add_shortcuts(edit_shortcuts);
+    this.km.command_shortcuts.add_shortcuts(command_shortcuts);
 
     create_console_cell("").output_area.append_output({
       output_type: "display_data",
