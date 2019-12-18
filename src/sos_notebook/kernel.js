@@ -1475,12 +1475,13 @@ define([
       "panel-toggle"
     );
 
-    var execute_selected_in_panel = this.km.actions.register(
+    var run_in_console_action = this.km.actions.register(
       {
         help: "run selected text in panel cell",
-        handler: execute_in_panel
+        handler: run_in_console
       },
-      "execute-selected"
+      "run-in-console",
+      "sos"
     );
     var paste_table = this.km.actions.register(
       {
@@ -1524,7 +1525,7 @@ define([
       // It is very strange to me that other key bindings such as
       // Ctrl-e does not work as it will somehow make the
       // code_mirror.getSelection() line getting only blank string.
-      "ctrl-shift-enter": execute_selected_in_panel,
+      "ctrl-shift-enter": run_in_console_action,
       "ctrl-shift-o": toggle_output,
       "ctrl-shift-v": paste_table,
       "ctrl-shift-m": toggle_markdown,
@@ -1752,7 +1753,7 @@ define([
     }
   };
 
-  var execute_in_panel = async function(evt) {
+  var run_in_console = async function(evt) {
     //var cell = nb.get_selected_cell();
     var cell = evt.notebook.get_selected_cell();
     // if the current cell does not has focus, ignore this shortcut
