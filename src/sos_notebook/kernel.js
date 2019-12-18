@@ -34,7 +34,7 @@ define([
   window.Jupyter = require("base/js/namespace");
   window.CodeCell = require("notebook/js/codecell").CodeCell;
 
-  window.my_console = null;
+  window.my_panel = null;
 
   window.sos_comm = null;
 
@@ -332,7 +332,7 @@ define([
         return this.orig_execute(code, callbacks, options);
       }
     }
-    options.sos.cell_kernel = window.my_console.cell.metadata.kernel;
+    options.sos.cell_kernel = window.my_panel.cell.metadata.kernel;
     options.sos.cell_id = "0";
     options.silent = false;
     options.store_history = true;
@@ -373,10 +373,10 @@ define([
   }
 
   function get_cell_by_id(id) {
-    if (id && id != "0") {
+    if (id) {
       return nb.get_cells().find(cell => cell.cell_id === id);
     } else {
-      return window.my_console.cell;
+      return window.my_panel.cell;
     }
   }
 
@@ -469,9 +469,9 @@ define([
         changeStyleOnKernel(cells[i]);
       }
     }
-    if (window.my_console) {
-      add_lan_selector(window.my_console.cell);
-      changeStyleOnKernel(window.my_console.cell);
+    if (window.my_panel) {
+      add_lan_selector(window.my_panel.cell);
+      changeStyleOnKernel(window.my_panel.cell);
     }
 
     let css_text = window.KernelList.map(lan_css)
@@ -1027,8 +1027,8 @@ define([
           $(".output_wrapper", cell.element).addClass("report_output");
         }
       } else if (msg_type === "preview-kernel") {
-        window.my_console.cell.metadata.kernel = data;
-        changeStyleOnKernel(window.my_console.cell);
+        window.my_panel.cell.metadata.kernel = data;
+        changeStyleOnKernel(window.my_panel.cell);
       } else if (msg_type === "highlight-workflow") {
         let elem = document.getElementById(data[1]);
         CodeMirror.fromTextArea(elem, {
@@ -1107,14 +1107,14 @@ define([
         // right now no upgrade, just save version to notebook
         nb.metadata["sos"]["version"] = data;
       } else if (msg_type === "transient_display_data") {
-        cell = create_console_cell("");
+        cell = create_panel_cell("");
         // append the output
         data.output_type = "display_data";
         cell.output_area.append_output(data);
         scrollPanel();
       } else {
         // this is preview output
-        cell = create_console_cell("");
+        cell = create_panel_cell("");
         data.output_type = msg_type;
         last_cell.output_area.append_output(data);
         scrollPanel();
@@ -1162,7 +1162,7 @@ define([
     if (!param.action) {
       return;
     }
-    create_console_cell(
+    create_panel_cell(
       `%task ${param.action}` +
         (param.task ? ` ${param.task}` : "") +
         (param.tag ? ` -t ${param.tag}` : "") +
@@ -1359,7 +1359,7 @@ define([
     $(window).trigger("resize");
   };
 
-  function create_console_cell(text, kernel = "SoS") {
+  function create_panel_cell(text, kernel = "SoS") {
     if (!text && window.last_panel_output_cell) {
       return window.last_panel_output_cell;
     }
@@ -1460,84 +1460,81 @@ define([
       {
         handler: $.proxy(this.execute_and_select_event, this)
       },
-      "console-execute-and-select"
+      "panel-execute-and-select"
     );
     var execute_action = this.km.actions.register(
       {
         handler: $.proxy(this.execute_event, this)
       },
-      "console-execute"
+      "panel-execute"
     );
-    // var toggle_action = this.km.actions.register(
-    //   {
-    //     handler: $.proxy(toggle_panel, this)
-    //   },
-    //   "panel-toggle"
-    // );
-
-    var run_in_console_action = this.km.actions.register(
+    var toggle_action = this.km.actions.register(
       {
-        help: "run selected text or current statement in console",
-        handler: run_in_console
+        handler: $.proxy(toggle_panel, this)
       },
-      "run-in-console",
-      "sos"
+      "panel-toggle"
     );
-    // var paste_table = this.km.actions.register(
-    //   {
-    //     help: "paste table as markdown",
-    //     handler: paste_table_as_markdown
-    //   },
-    //   "paste-table"
-    // );
-    var toggle_output_action = this.km.actions.register(
+
+    var execute_selected_in_panel = this.km.actions.register(
+      {
+        help: "run selected text in panel cell",
+        handler: execute_in_panel
+      },
+      "execute-selected"
+    );
+    var paste_table = this.km.actions.register(
+      {
+        help: "paste table as markdown",
+        handler: paste_table_as_markdown
+      },
+      "paste-table"
+    );
+    var toggle_output = this.km.actions.register(
       {
         help: "toggle display output in HTML",
-        handler: toggle_output_tags
+        handler: toggle_display_output
       },
       "toggle-show-output"
     );
-    // var toggle_markdown = this.km.actions.register(
-    //   {
-    //     help: "toggle between markdown and code cells",
-    //     handler: toggle_markdown_cell
-    //   },
-    //   "toggle-markdown"
-    // );
-    var up_arrow_action = this.km.actions.register(
+    var toggle_markdown = this.km.actions.register(
+      {
+        help: "toggle between markdown and code cells",
+        handler: toggle_markdown_cell
+      },
+      "toggle-markdown"
+    );
+    var up_arrow = this.km.actions.register(
       {
         help: "move cursor to previous line or cell",
         handler: $.proxy(this.move_cursor_up, this)
       },
       "move-cursor-up"
     );
-    var down_arrow_action = this.km.actions.register(
+    var down_arrow = this.km.actions.register(
       {
         help: "move cursor to next line or cell",
         handler: $.proxy(this.move_cursor_down, this)
       },
       "move-cursor-down"
     );
-    var command_shortcuts = {
-      // "ctrl-b": toggle_action,
-      "ctrl-shift-o": toggle_output_action,
-      "ctrl-shift-enter": run_in_console_action,
-    };
-    var edit_shortcuts = {
+    var shortcuts = {
       "shift-enter": execute_and_select_action,
       "ctrl-enter": execute_action,
+      "ctrl-b": toggle_action,
       // It is very strange to me that other key bindings such as
       // Ctrl-e does not work as it will somehow make the
       // code_mirror.getSelection() line getting only blank string.
-      "ctrl-shift-enter": run_in_console_action,
-      "ctrl-shift-o": toggle_output_action,
-      up: up_arrow_action,
-      down: down_arrow_action
+      "ctrl-shift-enter": execute_selected_in_panel,
+      "ctrl-shift-o": toggle_output,
+      "ctrl-shift-v": paste_table,
+      "ctrl-shift-m": toggle_markdown,
+      up: up_arrow,
+      down: down_arrow
     };
-    this.km.edit_shortcuts.add_shortcuts(edit_shortcuts);
-    this.km.command_shortcuts.add_shortcuts(command_shortcuts);
+    this.km.edit_shortcuts.add_shortcuts(shortcuts);
+    this.km.command_shortcuts.add_shortcuts(shortcuts);
 
-    create_console_cell("").output_area.append_output({
+    create_panel_cell("").output_area.append_output({
       output_type: "display_data",
       data: {
         "text/plain":
@@ -1568,7 +1565,7 @@ define([
         return;
       }
 
-      create_console_cell(text, this.cell.metadata.kernel).execute();
+      create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
       this.history_index = 0;
@@ -1592,7 +1589,7 @@ define([
         return;
       }
 
-      create_console_cell(text, this.cell.metadata.kernel).execute();
+      create_panel_cell(text, this.cell.metadata.kernel).execute();
       scrollPanel();
       this.cell.clear_input();
       this.history_index = 0;
@@ -1641,7 +1638,7 @@ define([
     }
   };
 
-  var toggle_output_tags = function(evt) {
+  var toggle_display_output = function(evt) {
     var cell = evt.notebook.get_selected_cell();
     if (cell.cell_type === "markdown") {
       // switch between hide_output and ""
@@ -1670,26 +1667,26 @@ define([
     evt.notebook.focus_cell();
   };
 
-  // var paste_table_as_markdown = function(evt) {
-  //   var cell = evt.notebook.get_selected_cell();
-  //   if (cell.cell_type === "markdown") {
-  //     send_kernel_msg({
-  //       "paste-table": []
-  //     });
-  //   }
-  //   // evt.notebook.select_next(true);
-  //   evt.notebook.focus_cell();
-  // };
+  var paste_table_as_markdown = function(evt) {
+    var cell = evt.notebook.get_selected_cell();
+    if (cell.cell_type === "markdown") {
+      send_kernel_msg({
+        "paste-table": []
+      });
+    }
+    // evt.notebook.select_next(true);
+    evt.notebook.focus_cell();
+  };
 
-  // var toggle_markdown_cell = function(evt) {
-  //   var idx = evt.notebook.get_selected_index();
-  //   if (evt.notebook.get_cell(idx).cell_type === "markdown") {
-  //     evt.notebook.to_code(idx);
-  //   } else {
-  //     evt.notebook.to_markdown(idx);
-  //   }
-  //   evt.notebook.focus_cell();
-  // };
+  var toggle_markdown_cell = function(evt) {
+    var idx = evt.notebook.get_selected_index();
+    if (evt.notebook.get_cell(idx).cell_type === "markdown") {
+      evt.notebook.to_code(idx);
+    } else {
+      evt.notebook.to_markdown(idx);
+    }
+    evt.notebook.focus_cell();
+  };
 
   panel.prototype.move_cursor_up = function(evt) {
     //var cell = nb.get_selected_cell();
@@ -1755,7 +1752,7 @@ define([
     }
   };
 
-  var run_in_console = async function(evt) {
+  var execute_in_panel = async function(evt) {
     //var cell = nb.get_selected_cell();
     var cell = evt.notebook.get_selected_cell();
     // if the current cell does not has focus, ignore this shortcut
@@ -1865,7 +1862,7 @@ define([
     }
     if (!nb.metadata["sos"]["panel"].displayed) toggle_panel();
     //
-    window.my_console.cell.metadata.kernel = cell_kernel;
+    window.my_panel.cell.metadata.kernel = cell_kernel;
 
     if (
       KernelOptions[cell_kernel] &&
@@ -1885,7 +1882,7 @@ define([
         text = "%preview -o " + matched[1] + "\n" + text;
       }
     }
-    create_console_cell(text, cell_kernel).execute();
+    create_panel_cell(text, cell_kernel).execute();
     scrollPanel();
     return false;
   };
@@ -1894,7 +1891,7 @@ define([
   function setup_panel() {
     // lazy, hook it up to Jupyter.notebook as the handle on all the singletons
     console.log("Setting up panel");
-    window.my_console = new panel(Jupyter.notebook);
+    window.my_panel = new panel(Jupyter.notebook);
   }
 
   function toggle_panel() {
@@ -1916,7 +1913,7 @@ define([
           $("#panel-wrapper").css("display") === "flex";
         if (nb.metadata["sos"]["panel"].displayed) {
           console.log("panel open");
-          window.my_console.cell.focus_editor();
+          window.my_panel.cell.focus_editor();
           $("#panel-wrapper").css("z-index", 10);
         } else {
           $("#notebook-container").css("margin-left", "auto");
@@ -2647,12 +2644,12 @@ color: green;
 
     $("li.icon_save").on("click", function() {
       // we are letting the li bind to the event
-      create_console_cell("%sossave --to html --force").execute();
+      create_panel_cell("%sossave --to html --force").execute();
       scrollPanel();
     });
     $("li.icon_workflow").on("click", function() {
       // we are letting the li bind to the event
-      create_console_cell("%preview --workflow").execute();
+      create_panel_cell("%preview --workflow").execute();
       scrollPanel();
     });
 
