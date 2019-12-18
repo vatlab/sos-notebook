@@ -7,7 +7,6 @@
 from sos_notebook.test_utils import NotebookTest
 
 
-
 class TestWorkflow(NotebookTest):
 
     def test_no_output(self, notebook):
@@ -29,7 +28,7 @@ class TestWorkflow(NotebookTest):
         assert '4' in notebook.check_output('''\
             a=4
             a''', kernel='SoS')
-        # this step will be rerun again     
+        # this step will be rerun again
         notebook.call('''
             output: 'a.txt'
             a=2
@@ -93,3 +92,9 @@ class TestWorkflow(NotebookTest):
         output = notebook.get_cell_output(idx)
         assert 'output 4' in output
 
+    def test_warning_from_sos(self, notebook):
+        '''Test warning message sent from sos'''
+        notebook.call('''
+            sh: allow_error=True
+              eho something wrong
+        ''')
