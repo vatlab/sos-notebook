@@ -1046,11 +1046,6 @@ class Preview_Magic(SoS_Magic):
             '--workflow',
             action='store_true',
             help='''Preview notebook workflow''')
-        parser.add_argument(
-            '-o',
-            '--keep-output',
-            action='store_true',
-            help='''Do not clear the output of the side panel.''')
         # this option is currently hidden
         parser.add_argument(
             '-s',
