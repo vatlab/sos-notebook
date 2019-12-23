@@ -655,6 +655,104 @@ class Dict_Magic(SoS_Magic):
                                            allow_stdin)
 
 
+class Env_Magic(SoS_Magic):
+    name = 'env'
+
+    def __init__(self, kernel):
+        super(Env_Magic, self).__init__(kernel)
+
+    def get_parser(self):
+        parser = argparse.ArgumentParser(
+            prog='%env',
+            description='''Adjust the running environment for the cell, such as running
+                with a new dict, under a different directory, and expect an error from the
+                execution of the cell.''')
+        parser.add_parser(
+            '--new',
+            action='store_true',
+            help='''Execute workflow with a fresh SoS environment'''
+        )
+        parser.add_argument(
+            '--tempdir',
+            action='store_true',
+            help='''Execute workflow in temporary directory, which will be removed
+                after the completion of the cell. Therefore you cannot use this option
+                when running the cell content in background mode.''')
+        parser.add_argument(
+            '--expect-error',
+            action='store_true',
+            help='''If set, expect error from the excution and report
+                success if an error occurs, and report error if an error
+                does not occur.''')
+        parser.add_argument(
+            '--allow-error',
+            action='store_true',
+            help='''If set, return success even if the underlying cell reports
+                error.''')
+        parser.error = self._parse_error
+        return parser
+
+    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+        import tempfile
+        import shutil
+        options, remaining_code = self.get_magic_and_code(code, False)
+        parser = self.get_parser()
+        try:
+            args = parser.parse_args(shlex.split(options))
+        except SystemExit:
+            return
+        try:
+            old_dict = env.sos_dict
+            if args.new:
+                from sos.utils import WorkflowDict
+                from sos.eval import SoS_exec
+                env.sos_dict = WorkflowDict()
+                SoS_exec('from sos.runtime import *', None)
+                env.sos_dict.set('__interactive__', True)
+                env.sod_dict.set('CONFIG', old_dict['CONFIG'])
+            old_dir = os.getcwd()
+            new_dir = None
+            if args.tempdir:
+                new_dir = tempfile.mkdtemp()
+                env.exec_dir = os.path.abspath(new_dir)
+                os.chdir(new_dir)
+
+            ret = self.sos_kernel._do_execute(remaining_code, silent,
+                                              store_history, user_expressions,
+                                              allow_stdin)
+            if args.expect_error:
+                if ret['status'] == 'error':
+                    # self.sos_kernel.warn('\nSandbox execution failed.')
+                    return {
+                        'status': 'ok',
+                        'payload': [],
+                        'user_expressions': {},
+                        'execution_count': self.sos_kernel._execution_count
+                    }
+                else:
+                    self.sos_kernel.warn(f'No error received with option --expect error.')
+                    return {
+                        'status': 'error',
+                        'payload': [],
+                        'user_expressions': {},
+                        'execution_count': self.sos_kernel._execution_count
+                    }
+            elif args.allow_error:
+                return {
+                        'status': 'ok',
+                        'payload': [],
+                        'user_expressions': {},
+                        'execution_count': self.sos_kernel._execution_count
+                }
+            else:
+                return ret
+        finally:
+            env.sos_dict = old_dict
+            if new_dir is not None:
+                os.chdir(old_dir)
+                shutil.rmtree(new_dir)
+
+
 class Expand_Magic(SoS_Magic):
     name = 'expand'
 
@@ -3086,7 +3184,7 @@ class With_Magic(SoS_Magic):
 class SoS_Magics(object):
     magics = [
         Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic,
-        Convert_Magic, Debug_Magic, Dict_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
+        Convert_Magic, Debug_Magic, Dict_Magic, Env_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
         Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic, Put_Magic,
         Render_Magic, Run_Magic, Runfile_Magic, Revisions_Magic, Save_Magic,
         Set_Magic, SessionInfo_Magic, Shutdown_Magic, SoSRun_Magic,
