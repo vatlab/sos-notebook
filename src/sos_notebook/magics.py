@@ -1,4 +1,5 @@
 import argparse
+import copy
 import fnmatch
 import os
 import pydoc
@@ -667,10 +668,25 @@ class Env_Magic(SoS_Magic):
             description='''Adjust the running environment for the cell, such as running
                 with a new dict, under a different directory, and expect an error from the
                 execution of the cell.''')
-        parser.add_parser(
+        parser.add_argument(
             '--new',
             action='store_true',
             help='''Execute workflow with a fresh SoS environment'''
+        )
+        parser.add_argument(
+            '--set',
+            nargs='+',
+            help='''Set one more more environment variables. Parameters of this
+                option can be 'KEY=VALUE' or just 'KEY'. An empty evnironment
+                variable will be set in the latter case. Note that the environments
+                will be reset out of the cell.'''
+        )
+        parser.add_argument(
+            '--prepend-path',
+            nargs='+',
+            help='''Prepend one or more paths before "$PATH" so that commands
+                in those paths will take priority. Note that `$PATH` will be reset
+                after the completion of the cell.'''
         )
         parser.add_argument(
             '--tempdir',
@@ -703,19 +719,38 @@ class Env_Magic(SoS_Magic):
             return
         try:
             old_dict = env.sos_dict
+            new_dir = None
+            original_env = None
             if args.new:
                 from sos.utils import WorkflowDict
                 from sos.eval import SoS_exec
                 env.sos_dict = WorkflowDict()
                 SoS_exec('from sos.runtime import *', None)
                 env.sos_dict.set('__interactive__', True)
-                env.sod_dict.set('CONFIG', old_dict['CONFIG'])
+                env.sos_dict.set('CONFIG', old_dict['CONFIG'])
+
             old_dir = os.getcwd()
-            new_dir = None
             if args.tempdir:
                 new_dir = tempfile.mkdtemp()
                 env.exec_dir = os.path.abspath(new_dir)
                 os.chdir(new_dir)
+
+            if args.set or args.prepend_path:
+                original_env = copy.deepcopy(os.environ)
+
+            if args.set:
+                for item in args.set:
+                    if '=' in item:
+                        key, value = item.split('=', 1)
+                    else:
+                        key = item
+                        value = ''
+                    os.environ[key] = value
+
+            if args.prepend_path:
+                new_path = os.pathsep.join(args.prepend_path)
+                if new_path:
+                    os.environ['PATH'] = os.pathsep.join([new_path, os.environ.get('PATH', '')])
 
             ret = self.sos_kernel._do_execute(remaining_code, silent,
                                               store_history, user_expressions,
@@ -751,6 +786,9 @@ class Env_Magic(SoS_Magic):
             if new_dir is not None:
                 os.chdir(old_dir)
                 shutil.rmtree(new_dir)
+            if original_env is not None:
+                os.environ.clear()
+                os.environ.update(original_env)
 
 
 class Expand_Magic(SoS_Magic):
