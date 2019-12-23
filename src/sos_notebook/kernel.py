@@ -1733,16 +1733,15 @@ Available subkernels:\n{}'''.format(
                 self.switch_kernel(self._meta['default_kernel'])
                 # evaluate user expression
         except Exception as e:
-            self.warn(
-                f'Failed to switch to language {self._meta["default_kernel"]}: {e}\n'
-            )
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
+            self.send_response(self.iopub_socket, 'error', msg)
+            return msg
         # switch to cell kernel
         try:
             if self.subkernels.find(
@@ -1750,16 +1749,15 @@ Available subkernels:\n{}'''.format(
                         self.kernel).name:
                 self.switch_kernel(self._meta['cell_kernel'])
         except Exception as e:
-            self.warn(
-                f'Failed to switch to language {self._meta["cell_kernel"]}: {e}\n'
-            )
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
+            self.send_response(self.iopub_socket, 'error', msg)
+            return msg
         # execute with cell kernel
         try:
             ret = self._do_execute(
@@ -1769,14 +1767,15 @@ Available subkernels:\n{}'''.format(
                 user_expressions=user_expressions,
                 allow_stdin=allow_stdin)
         except Exception as e:
-            self.warn(e)
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
+            self.send_response(self.iopub_socket, 'error', msg)
+            return msg
 
         if ret is None:
             ret = {
@@ -1878,14 +1877,15 @@ Available subkernels:\n{}'''.format(
                     'execution_count': self._execution_count
                 }
             except Exception as e:
-                self.warn(str(e))
-                return {
+                msg = {
                     'status': 'error',
                     'ename': e.__class__.__name__,
                     'evalue': str(e),
                     'traceback': [],
                     'execution_count': self._execution_count,
                 }
+                self.send_response(self.iopub_socket, 'error', msg)
+                return msg
             finally:
                 # even if something goes wrong, we clear output so that the "preview"
                 # will not be viewed by a later step.
