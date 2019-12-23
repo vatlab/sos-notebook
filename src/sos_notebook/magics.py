@@ -1884,27 +1884,25 @@ class Sandbox_Magic(SoS_Magic):
     def get_parser(self):
         parser = argparse.ArgumentParser(
             prog='%sandbox',
-            description='''Execute content of a cell in a fresh SoS environment without
-                variables defined in other cells. Optionally this environment can be
-                executed in a separate directory, with a different path, or expect
-                errors from the cells.''')
+            description='''Execute content of a cell in a temporary directory
+                with fresh dictionary (by default).''')
         parser.add_argument(
-            '--tempdir',
+            '-d',
+            '--dir',
+            help='''Execute workflow in specified directory. The directory
+                will be created if does not exist, and will not be removed
+                after the completion. ''')
+        parser.add_argument(
+            '-k',
+            '--keep-dict',
             action='store_true',
-            help='''Execute workflow in temporary directory, which will be removed
-                after the completion of the cell. Therefore you cannot use this option
-                when running the cell content in background mode.''')
+            help='''Keep current sos dictionary.''')
         parser.add_argument(
+            '-e',
             '--expect-error',
             action='store_true',
             help='''If set, expect error from the excution and report
-                success if an error occurs, and report error if an error
-                does not occur.''')
-        parser.add_argument(
-            '--allow-error',
-            action='store_true',
-            help='''If set, return success even if the underlying cell reports
-                error.''')
+                success if an error occurs.''')
         parser.error = self._parse_error
         return parser
 
@@ -1917,54 +1915,43 @@ class Sandbox_Magic(SoS_Magic):
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
+        self.in_sandbox = True
         try:
-            old_dict = env.sos_dict
-            from sos.utils import WorkflowDict
-            from sos.eval import SoS_exec
-            env.sos_dict = WorkflowDict()
-            SoS_exec('from sos.runtime import *', None)
-            env.sos_dict.set('__interactive__', True)
             old_dir = os.getcwd()
-            new_dir = None
-            if args.tempdir:
+            if args.dir:
+                args.dir = os.path.expanduser(args.dir)
+                if not os.path.isdir(args.dir):
+                    os.makedirs(args.dir)
+                env.exec_dir = os.path.abspath(args.dir)
+                os.chdir(args.dir)
+            else:
                 new_dir = tempfile.mkdtemp()
                 env.exec_dir = os.path.abspath(new_dir)
                 os.chdir(new_dir)
-
+            if not args.keep_dict:
+                old_dict = env.sos_dict
+                env.sos_dict._dict.clear()
             ret = self.sos_kernel._do_execute(remaining_code, silent,
                                               store_history, user_expressions,
                                               allow_stdin)
-            if args.expect_error:
-                if ret['status'] == 'error':
-                    # self.sos_kernel.warn('\nSandbox execution failed.')
-                    return {
-                        'status': 'ok',
-                        'payload': [],
-                        'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count
-                    }
-                else:
-                    self.sos_kernel.warn(f'No error received with option --expect error.')
-                    return {
-                        'status': 'error',
-                        'payload': [],
-                        'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count
-                    }
-            elif args.allow_error:
+            if args.expect_error and ret['status'] == 'error':
+                # self.sos_kernel.warn('\nSandbox execution failed.')
                 return {
-                        'status': 'ok',
-                        'payload': [],
-                        'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count
+                    'status': 'ok',
+                    'payload': [],
+                    'user_expressions': {},
+                    'execution_count': self.sos_kernel._execution_count
                 }
             else:
                 return ret
         finally:
-            env.sos_dict = old_dict
-            if new_dir is not None:
-                os.chdir(old_dir)
+            if not args.keep_dict:
+                env.sos_dict = old_dict
+            os.chdir(old_dir)
+            if not args.dir:
                 shutil.rmtree(new_dir)
+            self.in_sandbox = False
+            # env.exec_dir = old_dir
 
 
 class Save_Magic(SoS_Magic):
