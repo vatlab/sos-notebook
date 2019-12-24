@@ -2744,32 +2744,31 @@ class Task_Magic(SoS_Magic):
             name with tasks starting with these names. If no task ID is specified,
             all tasks related to specified workflows (option -w) will be removed.'''
         )
-        purge.add_argument(
+        group = parser.add_mutually_exclusive_group(required=False)
+        group.add_argument(
             '-a',
             '--all',
             action='store_true',
             help='''Clear all task information on local or specified remote task queue,
             including tasks created by other workflows.''')
-        purge.add_argument(
+        group.add_argument(
             '--age',
-            help='''Limit to tasks that are created more than
+            help='''Remove all tasks that are created more than
             (default) or within specified age. Value of this parameter can be in units
             s (second), m (minute), h (hour), or d (day, default), or in the foramt of
             HH:MM:SS, with optional prefix + for older (default) and - for newer than
             specified age.''')
-        purge.add_argument(
+        group.add_argument(
             '-s',
             '--status',
             nargs='+',
-            help='''Only remove tasks with
-            specified status, which can be pending, submitted, running, completed, failed,
-            and aborted. One of more status can be specified.''')
-        purge.add_argument(
+            help='''Remove all tasks with specified status, which can be pending, submitted,
+                running, completed, failed, and aborted. One of more status can be specified.''')
+        group.add_argument(
             '-t',
             '--tags',
             nargs='*',
-            help='''Only remove tasks with
-            one of the specified tags.''')
+            help='''Remove all tsks with one of the specified tags.''')
         purge.add_argument(
             '-q',
             '--queue',
@@ -2930,15 +2929,9 @@ class Task_Magic(SoS_Magic):
             self.sos_kernel.warn('Invalid task queue {}: {}'.format(
                 args.queue, e))
             return
-        if args.tasks:
-            # kill specified task
-            ret = host._task_engine.purge_tasks(args.tasks)
-        elif args.tags:
-            ret = host._task_engine.purge_tasks([], tags=args.tags)
-        else:
-            self.sos_kernel.warn(
-                'Please specify either a list of task or a tag')
-            return
+        ret = host._task_engine.purge_tasks(tasks=args.tasks,
+            purge_all=not args.tasks and (args.all or args.age or args.tags or args.status),
+            age=args.age, status=args.status, tags=args.tags, verbosity=env.verbosity)
         if ret:
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
                                           'stream', {
