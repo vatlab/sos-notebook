@@ -534,14 +534,16 @@ class Convert_Magic(SoS_Magic):
             #
             return
         except Exception as e:
-            self.sos_kernel.warn(f'Failed to save workflow: {e}')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
 
 
 class Debug_Magic(SoS_Magic):
@@ -889,14 +891,16 @@ class Get_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
         self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1527,14 +1531,16 @@ class Pull_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
         self.handle_magic_pull(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1610,14 +1616,16 @@ class Push_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
         self.handle_magic_push(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1654,14 +1662,16 @@ class Put_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,
                                                store_history, user_expressions,
@@ -2179,14 +2189,16 @@ class Save_Magic(SoS_Magic):
             else:
                 return None
         except Exception as e:
-            self.sos_kernel.warn(f'Failed to save cell: {e}')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
 
 
 class SessionInfo_Magic(SoS_Magic):
@@ -2558,14 +2570,16 @@ class SoSSave_Magic(SoS_Magic):
                 self.run_shell_command(['git', 'push'])
             return
         except Exception as e:
-            self.sos_kernel.warn(f'Failed to save workflow: {e}')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
 
 
 class Task_Magic(SoS_Magic):
@@ -2609,8 +2623,7 @@ class Task_Magic(SoS_Magic):
             '-a',
             '--all',
             action='store_true',
-            help='''Check the status of all tasks on local or specified remote task queue,
-            including tasks created by workflows executed from other directories.'''
+            help=argparse.SUPPRESS
         )
         status.add_argument(
             '-v',
@@ -2794,7 +2807,7 @@ class Task_Magic(SoS_Magic):
 
         result = host._task_engine.query_tasks(
             tasks=args.tasks,
-            check_all=args.all,
+            check_all=not args.tasks,
             verbosity=2,
             html=len(args.tasks) == 1,
             numeric_times=False,
@@ -3133,16 +3146,16 @@ class Use_Magic(SoS_Magic):
                                                store_history, user_expressions,
                                                allow_stdin)
         except Exception as e:
-            self.sos_kernel.warn(
-                f'Failed to switch to subkernel {args.name} (kernel {args.kernel}, language {args.language}): {e}'
-            )
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
 
 
 class With_Magic(SoS_Magic):
@@ -3186,28 +3199,31 @@ class With_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            self.sos_kernel.warn(f'Invalid option "{options}": {e}\n')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
 
         original_kernel = self.sos_kernel.kernel
         try:
             self.sos_kernel.switch_kernel(args.name, args.in_vars)
         except Exception as e:
-            self.sos_kernel.warn(
-                f'Failed to switch to subkernel {args.name}): {e}')
-            return {
+            msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
                 'evalue': str(e),
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
+                'error', msg)
+            return msg
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,
                                                store_history, user_expressions,
