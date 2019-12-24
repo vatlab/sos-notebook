@@ -1443,10 +1443,7 @@ Available subkernels:\n{}'''.format(
                                 stderr=ferr)
                         except Exception:
                             ferr.seek(0)
-                            self.warn(
-                                f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
-                            )
-                    return
+                            raise RuntimeError(f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
             self.KM, self.KC = self.kernels[kinfo.name]
             self.kernel = kinfo.name
             if new_kernel and not kinfo.codemirror_mode:
