@@ -247,6 +247,7 @@ class Tapped_Executor(mp.Process):
                     'status': 'completed' if ret_code == 0 else 'failed'
                 }
             })
+            sys.exit(ret_code)
         except Exception as e:
             stdout_socket.send_multipart([b'ERROR', str(e).encode()])
             informer_socket.send_pyobj({
@@ -257,6 +258,7 @@ class Tapped_Executor(mp.Process):
                     'exception': str(e)
                 }
             })
+            sys.exit(1)
         finally:
             try:
                 os.remove(filename)
@@ -336,6 +338,11 @@ def run_sos_workflow(code,
         executor = Tapped_Executor(code, raw_args, env.config)
         executor.start()
         executor.join()
+        if executor.exitcode != 0:
+            if executor.exitcode < 0:
+                raise RuntimeError(f'Workflow terminated by sigmal {-executor.exitcode}')
+            else:
+                raise RuntimeError(f'Workflow exited with code {executor.exitcode}')
 
 
 def cancel_workflow(cell_id, kernel):
