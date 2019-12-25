@@ -754,6 +754,8 @@ class Env_Magic(SoS_Magic):
                 if new_path:
                     os.environ['PATH'] = os.pathsep.join([new_path, os.environ.get('PATH', '')])
 
+            if args.expect_error or args.allow_error:
+                self.sos_kernel._meta['suppress_error'] = True
             ret = self.sos_kernel._do_execute(remaining_code, silent,
                                               store_history, user_expressions,
                                               allow_stdin)
@@ -767,7 +769,14 @@ class Env_Magic(SoS_Magic):
                         'execution_count': self.sos_kernel._execution_count
                     }
                 else:
-                    self.sos_kernel.warn(f'No error received with option --expect error.')
+                    msg = {
+                        'status': 'error',
+                        'ename': 'RuntimeError',
+                        'evalue': f'No error received with option --expect error.',
+                        'traceback': [],
+                        'execution_count': self.sos_kernel._execution_count,
+                    }
+                    self.sos_kernel.notify_error(msg)
                     return {
                         'status': 'error',
                         'payload': [],
@@ -791,6 +800,7 @@ class Env_Magic(SoS_Magic):
             if original_env is not None:
                 os.environ.clear()
                 os.environ.update(original_env)
+            self.sos_kernel._meta['suppress_error'] = False
 
 
 class Expand_Magic(SoS_Magic):
@@ -898,8 +908,7 @@ class Get_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
         self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
         return self.sos_kernel._do_execute(remaining_code, silent,
@@ -1538,8 +1547,7 @@ class Pull_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
         self.handle_magic_pull(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
@@ -1623,8 +1631,7 @@ class Push_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
         self.handle_magic_push(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
@@ -1669,8 +1676,7 @@ class Put_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,
@@ -2196,8 +2202,7 @@ class Save_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
 
 
@@ -2577,8 +2582,7 @@ class SoSSave_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
 
 
@@ -3129,7 +3133,7 @@ class Use_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-        if args.restart and args.name in self.kernel.kernels:
+        if args.restart and args.name in self.sos_kernel.kernels:
             self.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
@@ -3146,8 +3150,7 @@ class Use_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
 
 
@@ -3199,8 +3202,7 @@ class With_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
 
         original_kernel = self.sos_kernel.kernel
@@ -3214,8 +3216,7 @@ class With_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.notify_error(msg)
             return msg
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,

@@ -828,6 +828,16 @@ class SoS_Kernel(IPythonKernel):
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
 
+    def notify_error(self, msg):
+        if self._meta['suppress_error']:
+            self.send_response(self.iopub_socket, 'stream',
+                {
+                    'name': 'stderr',
+                    'text': f"{msg['ename']}: {msg['evalue']}"
+                })
+        else:
+            self.send_response(self.iopub_socket, 'error', msg)
+
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
@@ -1360,7 +1370,13 @@ class SoS_Kernel(IPythonKernel):
                         if msg_type == 'execute_result' or (
                                 not silent and
                                 self._meta['render_result'] is False):
-                            self.session.send(self.iopub_socket, sub_msg)
+                            if msg_type == 'error' and self._meta['suppress_error']:
+                                self.send_response(self.iopub_socket, 'stream', {
+                                    'name': 'stderr',
+                                    'text': f"{sub_msg['content']['ename']}: {sub_msg['content']['evalue']}"
+                                })
+                            else:
+                                self.session.send(self.iopub_socket, sub_msg)
                     else:
                         # if the subkernel tried to create a customized comm
                         if msg_type == 'comm_open':
@@ -1661,7 +1677,8 @@ Available subkernels:\n{}'''.format(
                 'use_iopub': False,
                 'default_kernel': self.kernel,
                 'cell_kernel': self.kernel,
-                'batch_mode': False
+                'batch_mode': False,
+                'suppress_error': False,
             }
             return self._meta
 
@@ -1689,7 +1706,8 @@ Available subkernels:\n{}'''.format(
                 meta['cell_kernel'] if 'cell_kernel' in meta else
                 (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'batch_mode':
-                meta.get('batch_mode', False)
+                meta.get('batch_mode', False),
+            'suppress_error': False,
         }
         # remove path and extension
         self._meta['notebook_name'] = os.path.basename(
@@ -1737,7 +1755,7 @@ Available subkernels:\n{}'''.format(
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
-            self.send_response(self.iopub_socket, 'error', msg)
+            self.notify_error(msg)
             return msg
         # switch to cell kernel
         try:
@@ -1753,7 +1771,7 @@ Available subkernels:\n{}'''.format(
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
-            self.send_response(self.iopub_socket, 'error', msg)
+            self.notify_error(msg)
             return msg
         # execute with cell kernel
         try:
@@ -1771,7 +1789,7 @@ Available subkernels:\n{}'''.format(
                 'traceback': [],
                 'execution_count': self._execution_count,
             }
-            self.send_response(self.iopub_socket, 'error', msg)
+            self.notify_error(msg)
             return msg
 
         if ret is None:
@@ -1881,7 +1899,7 @@ Available subkernels:\n{}'''.format(
                     'traceback': [],
                     'execution_count': self._execution_count,
                 }
-                self.send_response(self.iopub_socket, 'error', msg)
+                self.notify_error(msg)
                 return msg
             finally:
                 # even if something goes wrong, we clear output so that the "preview"
