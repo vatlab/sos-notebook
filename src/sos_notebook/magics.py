@@ -1809,8 +1809,10 @@ class Runfile_Magic(SoS_Magic):
             if self.sos_kernel.kernel != 'SoS':
                 self.sos_kernel.switch_kernel('SoS')
 
-            self.sos_kernel._do_execute(content, silent, store_history,
+            ret = self.sos_kernel._do_execute(content, silent, store_history,
                                         user_expressions, allow_stdin)
+            if ret['status'] == 'error':
+                return ret
         except Exception as e:
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')
             raise
