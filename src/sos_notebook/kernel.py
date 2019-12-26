@@ -828,15 +828,25 @@ class SoS_Kernel(IPythonKernel):
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
 
-    def notify_error(self, msg):
+    def notify_error(self, e):
+        msg = {
+            'status': 'error',
+            'ename': e.__class__.__name__,
+            'evalue': str(e),
+            'traceback': [f'\033[91m{e}\033[0m'],
+            'execution_count': self._execution_count,
+        }
         if self._meta['suppress_error']:
-            self.send_response(self.iopub_socket, 'stream',
-                {
-                    'name': 'stderr',
-                    'text': f"{msg['ename']}: {msg['evalue']}"
+            self.send_response(
+                self.iopub_socket, 'stream', {
+                    'name':
+                        'stderr',
+                    'text':
+                        f"{msg['ename']}: {msg['evalue']}"
                 })
         else:
             self.send_response(self.iopub_socket, 'error', msg)
+        return msg
 
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
@@ -1370,11 +1380,15 @@ class SoS_Kernel(IPythonKernel):
                         if msg_type == 'execute_result' or (
                                 not silent and
                                 self._meta['render_result'] is False):
-                            if msg_type == 'error' and self._meta['suppress_error']:
-                                self.send_response(self.iopub_socket, 'stream', {
-                                    'name': 'stderr',
-                                    'text': f"{sub_msg['content']['ename']}: {sub_msg['content']['evalue']}"
-                                })
+                            if msg_type == 'error' and self._meta[
+                                    'suppress_error']:
+                                self.send_response(
+                                    self.iopub_socket, 'stream', {
+                                        'name':
+                                            'stderr',
+                                        'text':
+                                            f"{sub_msg['content']['ename']}: {sub_msg['content']['evalue']}"
+                                    })
                             else:
                                 self.session.send(self.iopub_socket, sub_msg)
                     else:
@@ -1459,7 +1473,9 @@ Available subkernels:\n{}'''.format(
                                 stderr=ferr)
                         except Exception:
                             ferr.seek(0)
-                            raise RuntimeError(f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}')
+                            raise RuntimeError(
+                                f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
+                            )
             self.KM, self.KC = self.kernels[kinfo.name]
             self.kernel = kinfo.name
             if new_kernel and not kinfo.codemirror_mode:
@@ -1707,7 +1723,8 @@ Available subkernels:\n{}'''.format(
                 (meta['default_kernel'] if 'default_kernel' in meta else 'SoS'),
             'batch_mode':
                 meta.get('batch_mode', False),
-            'suppress_error': False,
+            'suppress_error':
+                False,
         }
         # remove path and extension
         self._meta['notebook_name'] = os.path.basename(
@@ -1748,15 +1765,7 @@ Available subkernels:\n{}'''.format(
                 self.switch_kernel(self._meta['default_kernel'])
                 # evaluate user expression
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self._execution_count,
-            }
-            self.notify_error(msg)
-            return msg
+            return self.notify_error(e)
         # switch to cell kernel
         try:
             if self.subkernels.find(
@@ -1764,15 +1773,7 @@ Available subkernels:\n{}'''.format(
                         self.kernel).name:
                 self.switch_kernel(self._meta['cell_kernel'])
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self._execution_count,
-            }
-            self.notify_error(msg)
-            return msg
+            return self.notify_error(e)
         # execute with cell kernel
         try:
             ret = self._do_execute(
@@ -1782,16 +1783,7 @@ Available subkernels:\n{}'''.format(
                 user_expressions=user_expressions,
                 allow_stdin=allow_stdin)
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self._execution_count,
-            }
-            self.notify_error(msg)
-            return msg
-
+            return self.notify_error(e)
         if ret is None:
             ret = {
                 'status': 'ok',
@@ -1892,15 +1884,7 @@ Available subkernels:\n{}'''.format(
                     'execution_count': self._execution_count
                 }
             except Exception as e:
-                msg = {
-                    'status': 'error',
-                    'ename': e.__class__.__name__,
-                    'evalue': str(e),
-                    'traceback': [],
-                    'execution_count': self._execution_count,
-                }
-                self.notify_error(msg)
-                return msg
+                return self.notify_error(e)
             finally:
                 # even if something goes wrong, we clear output so that the "preview"
                 # will not be viewed by a later step.

@@ -122,7 +122,9 @@ class Capture_Magic(SoS_Magic):
             'msg_type',
             nargs='?',
             default='raw',
-            choices=['stdout', 'stderr', 'text', 'markdown', 'html', 'raw', 'error'],
+            choices=[
+                'stdout', 'stderr', 'text', 'markdown', 'html', 'raw', 'error'
+            ],
             help='''Message type to capture. In terms of Jupyter message types,
                 "stdout" refers to "stream" message with "stdout" type, "stderr"
                 refers to "stream" message with "stderr" type, "text", "markdown"
@@ -541,8 +543,8 @@ class Convert_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
-                'error', msg)
+            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'error',
+                                          msg)
             return msg
 
 
@@ -673,23 +675,20 @@ class Env_Magic(SoS_Magic):
         parser.add_argument(
             '--new',
             action='store_true',
-            help='''Execute workflow with a fresh SoS environment'''
-        )
+            help='''Execute workflow with a fresh SoS environment''')
         parser.add_argument(
             '--set',
             nargs='+',
             help='''Set one more more environment variables. Parameters of this
                 option can be 'KEY=VALUE' or just 'KEY'. An empty evnironment
                 variable will be set in the latter case. Note that the environments
-                will be reset out of the cell.'''
-        )
+                will be reset out of the cell.''')
         parser.add_argument(
             '--prepend-path',
             nargs='+',
             help='''Prepend one or more paths before "$PATH" so that commands
                 in those paths will take priority. Note that `$PATH` will be reset
-                after the completion of the cell.'''
-        )
+                after the completion of the cell.''')
         parser.add_argument(
             '--tempdir',
             action='store_true',
@@ -752,7 +751,8 @@ class Env_Magic(SoS_Magic):
             if args.prepend_path:
                 new_path = os.pathsep.join(args.prepend_path)
                 if new_path:
-                    os.environ['PATH'] = os.pathsep.join([new_path, os.environ.get('PATH', '')])
+                    os.environ['PATH'] = os.pathsep.join(
+                        [new_path, os.environ.get('PATH', '')])
 
             if args.expect_error or args.allow_error:
                 self.sos_kernel._meta['suppress_error'] = True
@@ -769,26 +769,15 @@ class Env_Magic(SoS_Magic):
                         'execution_count': self.sos_kernel._execution_count
                     }
                 else:
-                    msg = {
-                        'status': 'error',
-                        'ename': 'RuntimeError',
-                        'evalue': f'No error received with option --expect error.',
-                        'traceback': [],
-                        'execution_count': self.sos_kernel._execution_count,
-                    }
-                    self.sos_kernel.notify_error(msg)
-                    return {
-                        'status': 'error',
-                        'payload': [],
-                        'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count
-                    }
+                    return self.sos_kernel.notify_error(
+                        RuntimeError(
+                            'No error received with option --expect error.'))
             elif args.allow_error:
                 return {
-                        'status': 'ok',
-                        'payload': [],
-                        'user_expressions': {},
-                        'execution_count': self.sos_kernel._execution_count
+                    'status': 'ok',
+                    'payload': [],
+                    'user_expressions': {},
+                    'execution_count': self.sos_kernel._execution_count
                 }
             else:
                 return ret
@@ -901,15 +890,7 @@ class Get_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
         self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1540,15 +1521,7 @@ class Pull_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
         self.handle_magic_pull(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1624,15 +1597,7 @@ class Push_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
         self.handle_magic_push(args)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -1669,15 +1634,7 @@ class Put_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,
                                                store_history, user_expressions,
@@ -1810,7 +1767,7 @@ class Runfile_Magic(SoS_Magic):
                 self.sos_kernel.switch_kernel('SoS')
 
             ret = self.sos_kernel._do_execute(content, silent, store_history,
-                                        user_expressions, allow_stdin)
+                                              user_expressions, allow_stdin)
             if ret['status'] == 'error':
                 return ret
         except Exception as e:
@@ -2197,15 +2154,7 @@ class Save_Magic(SoS_Magic):
             else:
                 return None
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
 
 
 class SessionInfo_Magic(SoS_Magic):
@@ -2500,7 +2449,8 @@ class SoSSave_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        self.sos_kernel.warn('Magic %sossave is depcated. Please use %convert instead.')
+        self.sos_kernel.warn(
+            'Magic %sossave is depcated. Please use %convert instead.')
         # get the saved filename
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
@@ -2577,15 +2527,7 @@ class SoSSave_Magic(SoS_Magic):
                 self.run_shell_command(['git', 'push'])
             return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
 
 
 class Task_Magic(SoS_Magic):
@@ -2626,11 +2568,7 @@ class Task_Magic(SoS_Magic):
             definitions, in case the definitions are not defined in global sos config.yml files.'''
         )
         status.add_argument(
-            '-a',
-            '--all',
-            action='store_true',
-            help=argparse.SUPPRESS
-        )
+            '-a', '--all', action='store_true', help=argparse.SUPPRESS)
         status.add_argument(
             '-v',
             dest='verbosity',
@@ -2769,7 +2707,8 @@ class Task_Magic(SoS_Magic):
             '--status',
             nargs='+',
             help='''Remove all tasks with specified status, which can be pending, submitted,
-                running, completed, failed, and aborted. One of more status can be specified.''')
+                running, completed, failed, and aborted. One of more status can be specified.'''
+        )
         group.add_argument(
             '-t',
             '--tags',
@@ -2935,9 +2874,14 @@ class Task_Magic(SoS_Magic):
             self.sos_kernel.warn('Invalid task queue {}: {}'.format(
                 args.queue, e))
             return
-        ret = host._task_engine.purge_tasks(tasks=args.tasks,
-            purge_all=not args.tasks and (args.all or args.age or args.tags or args.status),
-            age=args.age, status=args.status, tags=args.tags, verbosity=env.verbosity)
+        ret = host._task_engine.purge_tasks(
+            tasks=args.tasks,
+            purge_all=not args.tasks and
+            (args.all or args.age or args.tags or args.status),
+            age=args.age,
+            status=args.status,
+            tags=args.tags,
+            verbosity=env.verbosity)
         if ret:
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
                                           'stream', {
@@ -3145,15 +3089,7 @@ class Use_Magic(SoS_Magic):
                                                store_history, user_expressions,
                                                allow_stdin)
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
 
 
 class With_Magic(SoS_Magic):
@@ -3197,29 +3133,13 @@ class With_Magic(SoS_Magic):
             except SystemExit:
                 return
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
 
         original_kernel = self.sos_kernel.kernel
         try:
             self.sos_kernel.switch_kernel(args.name, args.in_vars)
         except Exception as e:
-            msg = {
-                'status': 'error',
-                'ename': e.__class__.__name__,
-                'evalue': str(e),
-                'traceback': [],
-                'execution_count': self.sos_kernel._execution_count,
-            }
-            self.sos_kernel.notify_error(msg)
-            return msg
+            return self.sos_kernel.notify_error(e)
         try:
             return self.sos_kernel._do_execute(remaining_code, silent,
                                                store_history, user_expressions,
@@ -3234,12 +3154,12 @@ class With_Magic(SoS_Magic):
 class SoS_Magics(object):
     magics = [
         Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic,
-        Convert_Magic, Debug_Magic, Dict_Magic, Env_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic,
-        Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic, Put_Magic,
-        Render_Magic, Run_Magic, Runfile_Magic, Revisions_Magic, Save_Magic,
-        Set_Magic, SessionInfo_Magic, Shutdown_Magic, SoSRun_Magic,
-        SoSSave_Magic, Task_Magic, Toc_Magic, Sandbox_Magic, Use_Magic,
-        With_Magic
+        Convert_Magic, Debug_Magic, Dict_Magic, Env_Magic, Expand_Magic,
+        Get_Magic, Matplotlib_Magic, Preview_Magic, Pull_Magic, Paste_Magic,
+        Push_Magic, Put_Magic, Render_Magic, Run_Magic, Runfile_Magic,
+        Revisions_Magic, Save_Magic, Set_Magic, SessionInfo_Magic,
+        Shutdown_Magic, SoSRun_Magic, SoSSave_Magic, Task_Magic, Toc_Magic,
+        Sandbox_Magic, Use_Magic, With_Magic
     ]
     names = [x.name for x in magics if x.name != '!']
 
