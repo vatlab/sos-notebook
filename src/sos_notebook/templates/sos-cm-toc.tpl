@@ -12,12 +12,18 @@
 <body>
   <div class="row-fluid">
     <div class="col-xs-12 col-sm-4 col-md-3">
-      <div class="toc-wrapper">
+      <div class="toc-container">
         <div class="toc-header">
+        </div>
+        <div class="toc-wrapper">
+        <div class="toc-before">
         </div>
         <div id="toc" class="toc">
         </div><!--/.well -->
+        <div class="toc-after">
+        </div>
       </div>
+    </div>
     </div><!--/span-->
     <div class="col-xs-12 col-sm-8 col-md-9">
       {{ super() | replace('<body>', '') | replace('</body>', '') | replace('class="container"', 'class="notebook-container"')}}
@@ -28,7 +34,9 @@
 
 {% block footer_js %}
 {{ super() }}
-{{ toc.js(headers='h1, h2, h3') }}
+{% block toc %}
+{{ toc.js(headers='h1, h2, h3', remove_only_top_header='true') }}
+{% endblock %}
 {% endblock footer_js %}
 
 

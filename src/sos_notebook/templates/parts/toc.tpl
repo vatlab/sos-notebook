@@ -3,7 +3,7 @@
 <style>
 
 /* The Table of Contents container element */
-.toc-wrapper {
+.toc-container {
     flex-flow: column;
     display: flex;
 
@@ -19,6 +19,14 @@
 }
 
 .toc-header {
+  flex: 0 1 auto;
+}
+
+.toc-before {
+  flex: 0 1 auto;
+}
+
+.toc-after {
   flex: 0 1 auto;
 }
 
@@ -126,7 +134,7 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
 {% macro html() %}
 {% endmacro %}
 
-{% macro js(headers='h1, h2, h3, h4') %}
+{% macro js(headers='h1, h2, h3, h4', remove_only_top_header='true') %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.8.1/tocbot.min.js"></script>
 
 <script>
@@ -160,10 +168,10 @@ h1:focus, h2:focus, h3:focus, h4:focus, h5:focus, h6:focus, h7:focus {
         ++counts[parseInt(headings[i].tagName[1])-1]
       }
       // now, we remove the first 1 if it is the first tag, and if
-      // it has only one, and if it is not the only header
+      // it has only one, and if it is the only header
       let first = counts.findIndex(x => x > 0);
       if (counts[first] == 1 && counts.reduce((a, b) => a + b, 0) != counts[first]
-         && parseInt(headings[0].tagName[1]) === first + 1) {
+         && parseInt(headings[0].tagName[1]) === first + 1 && {{ remove_only_top_header }}) {
           counts[first] = 0;
       }
       //
