@@ -61,7 +61,6 @@
 #toc > .toc-list .toc-list a {
   margin: 0;
   padding-left: 25px;
-  font-size: 12px;
 }
 
 
