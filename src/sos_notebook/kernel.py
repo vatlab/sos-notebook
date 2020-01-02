@@ -1455,22 +1455,27 @@ Available subkernels:\n{}'''.format(
                     env.log_to_file('KERNEL',
                                     f'Starting subkernel {kinfo.name}')
                     self.kernels[kinfo.name] = manager.start_new_kernel(
-                        startup_timeout=60,
+                        startup_timeout=30,
                         kernel_name=kinfo.kernel,
                         cwd=os.getcwd())
                     new_kernel = True
                 except Exception as e:
+                    env.log_to_file('KERNEL',
+                                    f'Failed to start kernel {kinfo.kernel}. Trying again...')
                     # try toget error message
                     import tempfile
                     with tempfile.TemporaryFile() as ferr:
                         try:
-                            # this should fail
-                            manager.start_new_kernel(
+                            # this should fail, but sometimes the second attempt will succeed #282
+                            self.kernels[kinfo.name] = manager.start_new_kernel(
                                 startup_timeout=60,
                                 kernel_name=kinfo.kernel,
                                 cwd=os.getcwd(),
                                 stdout=subprocess.DEVNULL,
                                 stderr=ferr)
+                            new_kernel = True
+                            env.log_to_file('KERNEL',
+                                    f'Kernel {kinfo.kernel} started with the second attempt.')
                         except Exception:
                             ferr.seek(0)
                             raise RuntimeError(
