@@ -47,10 +47,6 @@
 #toc > .toc-list {
   overflow: hidden;
   position: relative;
-
-  li {
-    list-style: none;
-  }
 }
 
 #toc > .toc-list  a {
