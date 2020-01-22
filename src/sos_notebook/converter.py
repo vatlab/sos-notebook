@@ -364,14 +364,14 @@ c.TemplateExporter.template_path.extend([
             err_msg = err.read()
         if ret != 0:
             env.logger.error(err_msg)
-            env.logger.error(
+            raise RuntimeError(
                 f'Failed to convert {notebook_file} to {to_format} format')
         else:
             # identify output files
             dest_file = err_msg.rsplit()[-1]
             if not os.path.isfile(dest_file):
                 env.logger.error(err_msg)
-                env.logger.error('Failed to get converted file.')
+                raise RuntimeError('Failed to get converted file.')
             elif view:
                 import webbrowser
                 url = f'file://{os.path.abspath(dest_file)}'
@@ -393,7 +393,7 @@ c.TemplateExporter.template_path.extend([
             os.path.abspath(output_file), '--config', cfg_file
         ] + ([] if unknown_args is None else unknown_args))
         if ret != 0:
-            env.logger.error(
+            raise RuntimeError(
                 f'Failed to convert {notebook_file} to {to_format} format')
         else:
             env.logger.info(f'Output saved to {output_file}')
