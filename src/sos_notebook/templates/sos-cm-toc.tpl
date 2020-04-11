@@ -14,17 +14,17 @@
     <div class="col-xs-12 col-sm-4 col-md-3">
       <div class="toc-container">
         <div class="toc-header">
-        </div>
-        <div class="toc-wrapper">
-        <div class="toc-before">
-        </div>
-        <div id="toc" class="toc">
-        </div><!--/.well -->
-        <div class="toc-after">
+          </div>
+          <div class="toc-wrapper">
+            <div class="toc-before">
+            </div>
+            <div id="toc" class="toc">
+            </div><!--/.well -->
+            <div class="toc-after">
+            </div>
         </div>
       </div>
     </div>
-    </div><!--/span-->
     <div class="col-xs-12 col-sm-8 col-md-9">
       {{ super() | replace('<body>', '') | replace('</body>', '') | replace('class="container"', 'class="notebook-container"')}}
     </div>
