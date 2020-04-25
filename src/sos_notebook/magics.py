@@ -390,7 +390,7 @@ class Cd_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
-            args = parser.parse_args(options.split())
+            args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
         self.handle_magic_cd(args.dir)
@@ -827,7 +827,7 @@ class Expand_Magic(SoS_Magic):
         options = lines[0]
         parser = self.get_parser()
         try:
-            args = parser.parse_args(options.split()[1:])
+            args = parser.parse_args(shlex.split(options)[1:])
         except SystemExit:
             return
         if self.sos_kernel.kernel.lower() == 'sos':
@@ -886,7 +886,7 @@ class Get_Magic(SoS_Magic):
         try:
             parser = self.get_parser()
             try:
-                args = parser.parse_args(options.split())
+                args = parser.parse_args(shlex.split(options))
             except SystemExit:
                 return
         except Exception as e:
@@ -1517,7 +1517,7 @@ class Pull_Magic(SoS_Magic):
         try:
             parser = self.get_parser()
             try:
-                args = parser.parse_args(options.split())
+                args = parser.parse_args(shlex.split(options))
             except SystemExit:
                 return
         except Exception as e:
@@ -1593,7 +1593,7 @@ class Push_Magic(SoS_Magic):
         try:
             parser = self.get_parser()
             try:
-                args = parser.parse_args(options.split())
+                args = parser.parse_args(shlex.split(options))
             except SystemExit:
                 return
         except Exception as e:
@@ -1630,7 +1630,7 @@ class Put_Magic(SoS_Magic):
         try:
             parser = self.get_parser()
             try:
-                args = parser.parse_args(options.split())
+                args = parser.parse_args(shlex.split(options))
             except SystemExit:
                 return
         except Exception as e:
@@ -1974,6 +1974,7 @@ class Run_Magic(SoS_Magic):
                 env.log_to_file('MAGIC', f'Executing\n{run_code}')
                 if self.sos_kernel.kernel != 'SoS':
                     self.sos_kernel.switch_kernel('SoS')
+
                 ret = self.sos_kernel._do_execute(run_code, silent,
                                                   store_history,
                                                   user_expressions, allow_stdin)
@@ -2917,7 +2918,7 @@ class Task_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
-            args = parser.parse_args(options.split())
+            args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
         load_config_files(args.config)
@@ -2986,7 +2987,7 @@ class Tasks_Magic(SoS_Magic):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
-            args = parser.parse_args(options.split())
+            args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
         load_config_files(args.config)

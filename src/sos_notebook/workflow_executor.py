@@ -236,7 +236,7 @@ class Tapped_Executor(mp.Process):
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
-            cmd = f'sos run {filename} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
+            cmd = f'sos run {shlex.quote(filename)} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
             ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
             # status will not trigger frontend update if it was not
             # started with a pending status
@@ -263,7 +263,8 @@ class Tapped_Executor(mp.Process):
             try:
                 os.remove(filename)
             except Exception as e:
-                env.logger.warning(f'Failed to remove temp script {filename}: {e}')
+                env.logger.warning(
+                    f'Failed to remove temp script {filename}: {e}')
             stdout_socket.LINGER = 0
             stdout_socket.close()
             informer_socket.LINGER = 0
@@ -340,9 +341,11 @@ def run_sos_workflow(code,
         executor.join()
         if executor.exitcode != 0:
             if executor.exitcode < 0:
-                raise RuntimeError(f'Workflow terminated by sigmal {-executor.exitcode}')
+                raise RuntimeError(
+                    f'Workflow terminated by sigmal {-executor.exitcode}')
             else:
-                raise RuntimeError(f'Workflow exited with code {executor.exitcode}')
+                raise RuntimeError(
+                    f'Workflow exited with code {executor.exitcode}')
 
 
 def cancel_workflow(cell_id, kernel):
