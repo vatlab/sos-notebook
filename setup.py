@@ -44,9 +44,9 @@ setup(
     long_description_content_type="text/markdown",
     author='Bo Peng',
     url='https://github.com/vatlab/SOS',
-    author_email='bpeng@mdanderson.org',
+    author_email='bBo.Peng@bcm.edu',
     maintainer='Bo Peng',
-    maintainer_email='bpeng@mdanderson.org',
+    maintainer_email='bBo.Peng@bcm.edu',
     license='3-clause BSD',
     include_package_data=True,
     classifiers=[
