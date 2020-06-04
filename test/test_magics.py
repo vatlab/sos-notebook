@@ -358,7 +358,8 @@ class TestMagics(NotebookTest):
             kernel="R",
         )
         assert 'sos_a' in notebook.check_output("subs_a", kernel='SoS')
-        assert 'NameError' in notebook.check_output("subs_b", kernel='SoS', expect_error=True)
+        assert 'NameError' in notebook.check_output(
+            "subs_b", kernel='SoS', expect_error=True)
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
@@ -453,7 +454,7 @@ class TestMagics(NotebookTest):
             print(INT_LIST)
             print(infile.name)
             python: expand=True
-            print({b})
+              print({b})
             """,
             kernel="SoS",
         )
@@ -480,7 +481,7 @@ class TestMagics(NotebookTest):
             %run --var 1
             parameter: var=0
             python: expand=True
-            print({var})
+              print({var})
             """,
             kernel="SoS",
         )
