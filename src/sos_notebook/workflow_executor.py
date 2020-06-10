@@ -7,6 +7,7 @@ import multiprocessing as mp
 import os
 import re
 import shlex
+import subprocess
 import sys
 import tempfile
 from threading import Event
@@ -236,8 +237,10 @@ class Tapped_Executor(mp.Process):
             with open(filename, 'w') as script_file:
                 script_file.write(self.code)
 
-            cmd = f'sos run {shlex.quote(filename)} {self.args} -m tapping slave {self.config["slave_id"]} {self.config["sockets"]["tapping_logging"]} {self.config["sockets"]["tapping_listener"]} {self.config["sockets"]["tapping_controller"]}'
-            ret_code = pexpect_run(cmd, shell=True, stdout_socket=stdout_socket)
+            cmd = ['sos', 'run', filename] + shlex.split(self.args) + ['-m', 'tapping', 'slave',
+                self.config["slave_id"], self.config["sockets"]["tapping_logging"], 
+                self.config["sockets"]["tapping_listener"], self.config["sockets"]["tapping_controller"]]
+            ret_code = pexpect_run(subprocess.list2cmdline(cmd), shell=True, stdout_socket=stdout_socket)
             # status will not trigger frontend update if it was not
             # started with a pending status
             informer_socket.send_pyobj({
