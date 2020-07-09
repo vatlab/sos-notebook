@@ -5,7 +5,7 @@
 
 FROM jupyter/r-notebook:83ed2c63671f
 
-MAINTAINER Bo Peng <bBo.Peng@bcm.edu>
+MAINTAINER Bo Peng <Bo.Peng@bcm.edu>
 
 USER    root
 
