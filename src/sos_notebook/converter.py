@@ -429,7 +429,10 @@ class NotebookToHTMLConverter(object):
             content to standard output.''')
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None,
+    def convert(self,
+                notebook_file,
+                output_file,
+                sargs=None,
                 unknown_args=None):
         from nbconvert.exporters.html import HTMLExporter
         if unknown_args is None:
@@ -488,7 +491,10 @@ class NotebookToPDFConverter(object):
             ''')
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None,
+    def convert(self,
+                notebook_file,
+                output_file,
+                sargs=None,
                 unknown_args=None):
         from nbconvert.exporters.pdf import PDFExporter
         if unknown_args is None:
@@ -522,7 +528,10 @@ class NotebookToMarkdownConverter(object):
             available options.''')
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None,
+    def convert(self,
+                notebook_file,
+                output_file,
+                sargs=None,
                 unknown_args=None):
         from nbconvert.exporters.markdown import MarkdownExporter
         export_notebook(
@@ -571,6 +580,8 @@ class NotebookToNotebookConverter(object):
         # get the kernel of the notebook
         # this is like 'R', there is another 'display_name'
         lan_name = notebook['metadata']['kernelspec']['language']
+        if lan_name == 'python':
+            lan_name = 'Python3'
         # this is like 'ir'
         kernel_name = notebook['metadata']['kernelspec']['name']
 
@@ -676,7 +687,10 @@ class NotebookToNotebookConverter(object):
         }
         return new_notebook(cells=cells, metadata=metadata)
 
-    def convert(self, notebook_file, output_file, sargs=None,
+    def convert(self,
+                notebook_file,
+                output_file,
+                sargs=None,
                 unknown_args=None):
         notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
         kernel_name = notebook['metadata']['kernelspec']['name']
