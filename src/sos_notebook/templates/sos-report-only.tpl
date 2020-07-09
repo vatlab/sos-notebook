@@ -2,7 +2,7 @@
 
 {%- block codecell -%}
   {%- if 'scratch' in cell.metadata.tags -%}
-  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and cell.metadata.jupyter.outputs_hidden %}
+  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.outputs_hidden) -%}
   {%- else -%}
   {{ super() }}
   {%- endif -%}
@@ -14,7 +14,7 @@
 
 {%- block input -%}
   {%- if 'scratch' in cell.metadata.tags -%}
-  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden -%}
+  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.source_hidden) -%}
 	{%- else -%}
       {{ super() }}
   {%- endif -%}
@@ -35,6 +35,9 @@
   {%- endif -%}
 {% endblock output %}
 
+{# remove stderr #}
+{% block stream_stderr -%}
+{%- endblock stream_stderr %}
 
 
 {% block markdowncell %}

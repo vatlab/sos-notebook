@@ -9,7 +9,7 @@
 
 {%- block codecell -%}
   {%- if 'scratch' in cell.metadata.tags -%}
-  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and cell.metadata.jupyter.outputs_hidden %}
+  {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.outputs_hidden) %}
     <div class="hidden_content">
       {{ super() }}
     </div>
