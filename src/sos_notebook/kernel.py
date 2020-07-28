@@ -837,13 +837,10 @@ class SoS_Kernel(IPythonKernel):
             'execution_count': self._execution_count,
         }
         if self._meta['suppress_error']:
-            self.send_response(
-                self.iopub_socket, 'stream', {
-                    'name':
-                        'stderr',
-                    'text':
-                        f"{msg['ename']}: {msg['evalue']}"
-                })
+            self.send_response(self.iopub_socket, 'stream', {
+                'name': 'stderr',
+                'text': f"{msg['ename']}: {msg['evalue']}"
+            })
         else:
             self.send_response(self.iopub_socket, 'error', msg)
         return msg
@@ -851,7 +848,7 @@ class SoS_Kernel(IPythonKernel):
     def send_frontend_msg(self, msg_type, msg=None):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
-            if self._meta['use_panel'] is False:
+            if self._meta['use_panel'] is False or self._meta['cell_id'] == -1:
                 self.send_response(self.iopub_socket, msg_type,
                                    {} if msg is None else msg)
             elif self._meta['use_iopub']:
@@ -1460,8 +1457,10 @@ Available subkernels:\n{}'''.format(
                         cwd=os.getcwd())
                     new_kernel = True
                 except Exception as e:
-                    env.log_to_file('KERNEL',
-                                    f'Failed to start kernel {kinfo.kernel}. Trying again...')
+                    env.log_to_file(
+                        'KERNEL',
+                        f'Failed to start kernel {kinfo.kernel}. Trying again...'
+                    )
                     # try toget error message
                     import tempfile
                     with tempfile.TemporaryFile() as ferr:
@@ -1474,8 +1473,10 @@ Available subkernels:\n{}'''.format(
                                 stdout=subprocess.DEVNULL,
                                 stderr=ferr)
                             new_kernel = True
-                            env.log_to_file('KERNEL',
-                                    f'Kernel {kinfo.kernel} started with the second attempt.')
+                            env.log_to_file(
+                                'KERNEL',
+                                f'Kernel {kinfo.kernel} started with the second attempt.'
+                            )
                         except Exception:
                             ferr.seek(0)
                             raise RuntimeError(
