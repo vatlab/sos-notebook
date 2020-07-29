@@ -14,11 +14,16 @@ define([
   "codemirror/mode/shell/shell",
   "codemirror/mode/julia/julia",
   "codemirror/mode/markdown/markdown",
+  "codemirror/mode/htmlembedded/htmlembedded",
+  "codemirror/mode/xml/xml",
+  "codemirror/mode/yaml/yaml",
+  "codemirror/mode/javascript/javascript",
+  "codemirror/mode/stex/stex",
   "codemirror/addon/selection/active-line",
   "codemirror/addon/fold/foldcode",
   "codemirror/addon/fold/foldgutter",
   "codemirror/addon/fold/indent-fold"
-], function($) {
+], function ($) {
   "use strict";
   //variables defined as global which enable access from imported scripts.
   window.BackgroundColor = {};
@@ -124,7 +129,7 @@ define([
     }
   }
 
-  window.filterDataFrame = function(id) {
+  window.filterDataFrame = function (id) {
     var input = document.getElementById("search_" + id);
     var filter = input.value.toUpperCase();
     var table = document.getElementById("dataframe_" + id);
@@ -146,7 +151,7 @@ define([
     }
   };
 
-  window.sortDataFrame = function(id, n, dtype) {
+  window.sortDataFrame = function (id, n, dtype) {
     var table = document.getElementById("dataframe_" + id);
 
     var tb = table.tBodies[0]; // use `<tbody>` to ignore `<thead>` and `<tfoot>` rows
@@ -154,19 +159,19 @@ define([
 
     var fn =
       dtype === "numeric"
-        ? function(a, b) {
-            return parseFloat(a.cells[n].textContent) <=
-              parseFloat(b.cells[n].textContent)
-              ? -1
-              : 1;
-          }
-        : function(a, b) {
-            var c = a.cells[n].textContent
-              .trim()
-              .localeCompare(b.cells[n].textContent.trim());
-            return c > 0 ? 1 : c < 0 ? -1 : 0;
-          };
-    var isSorted = function(array, fn) {
+        ? function (a, b) {
+          return parseFloat(a.cells[n].textContent) <=
+            parseFloat(b.cells[n].textContent)
+            ? -1
+            : 1;
+        }
+        : function (a, b) {
+          var c = a.cells[n].textContent
+            .trim()
+            .localeCompare(b.cells[n].textContent.trim());
+          return c > 0 ? 1 : c < 0 ? -1 : 0;
+        };
+    var isSorted = function (array, fn) {
       if (array.length < 2) {
         return 1;
       }
@@ -210,7 +215,7 @@ define([
     }
     nb.metadata["sos"]["kernels"] = Array.from(used_kernels)
       .sort()
-      .map(function(x) {
+      .map(function (x) {
         return [
           window.DisplayName[x],
           window.KernelName[x],
@@ -229,20 +234,20 @@ define([
       console.info(`Dynamically requiring ${ks.resources["kernel.js"]}`);
       requirejs(
         [ks.resources["kernel.js"]],
-        function(kernel_mod) {
+        function (kernel_mod) {
           if (kernel_mod && kernel_mod.onload) {
             kernel_mod.onload();
           } else {
             console.warn(
               "Kernel " +
-                ks.name +
-                " has a kernel.js file that does not contain " +
-                "any asynchronous module definition. This is undefined behavior " +
-                "and not recommended."
+              ks.name +
+              " has a kernel.js file that does not contain " +
+              "any asynchronous module definition. This is undefined behavior " +
+              "and not recommended."
             );
           }
         },
-        function(err) {
+        function (err) {
           console.warn(
             "Failed to load kernel.js from ",
             ks.resources["kernel.js"],
@@ -301,7 +306,7 @@ define([
   }
 
 
-  var my_execute = function(code, callbacks, options) {
+  var my_execute = function (code, callbacks, options) {
     /* check if the code is a workflow call, which is marked by
      * %sosrun or %sossave workflowname with options
      */
@@ -361,7 +366,7 @@ define([
         }
         head.appendChild(fileref);
         // Used to call a callback function
-        fileref.onload = function() {
+        fileref.onload = function () {
           loadFile(index);
         };
         index = index + 1;
@@ -482,7 +487,7 @@ define([
 
   function update_duration() {
     if (window._duration_updater) return;
-    window._duration_updater = window.setInterval(function() {
+    window._duration_updater = window.setInterval(function () {
       document.querySelectorAll("[id^='status_duration_']").forEach(item => {
         if (item.className != "running") {
           return;
@@ -621,7 +626,7 @@ define([
     let onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-trash"'`;
     let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${
       status_class[info.status]
-    }"'`;
+      }"'`;
     let onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
 
     let data = {
@@ -635,19 +640,19 @@ define([
         <td class="workflow_icon">
           <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${
           status_class[info.status]
-        }"
+          }"
           ${onmouseover} ${onmouseleave} ${onclick}></i>
         </td>
         <td class="workflow_name">
           <pre><span id="workflow_name_${cell_id}">${
           info.workflow_name
-        }</span></pre>
+          }</span></pre>
         </td>
         <td class="workflow_id">
           <span>Workflow ID</span></br>
           <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${
           info.workflow_id
-        }</span></pre>
+          }</span></pre>
         </td>
         <td class="workflow_index">
           <span>Index</span></br>
@@ -657,7 +662,7 @@ define([
           <span id="status_text_${cell_id}">${info.status}</span></br>
           <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${
           info.status
-        }" datetime="${info.start_time}">${timer_text}</time></pre>
+          }" datetime="${info.start_time}">${timer_text}</time></pre>
         </td>
   </tr>
 </table>
@@ -794,16 +799,16 @@ define([
       `<pre>${info.task_id}` +
       `<div class="task_id_actions">` +
       `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${
-        info.task_id
+      info.task_id
       }', queue: '${info.queue}'})"></i>` +
       `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${
-        info.task_id
+      info.task_id
       }', queue: '${info.queue}'})"></i>` +
       `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${
-        info.task_id
+      info.task_id
       }', queue: '${info.queue}'})"></i>` +
       `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${
-        info.task_id
+      info.task_id
       }', queue: '${info.queue}'})"></i>` +
       `</div></pre>`;
 
@@ -818,13 +823,13 @@ define([
         `<pre class="task_tags task_tag_${tag}">${tag}` +
         `<div class="task_tag_actions">` +
         `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${
-          info.queue
+        info.queue
         }'})"></i>` +
         `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${
-          info.queue
+        info.queue
         }'})"></i>` +
         `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${
-          info.queue
+        info.queue
         }'})"></i>` +
         `</div></pre>`;
     }
@@ -840,7 +845,7 @@ define([
     <td class="task_icon">
       <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${
           status_class[info.status]
-        }"</i>
+          }"</i>
     </td>
     <td class="task_id">
       <span><pre><i class="fa fa-fw fa-sitemap"></i></pre>${id_elems}</span>
@@ -851,12 +856,12 @@ define([
     <td class="task_timer">
       <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${
           info.status
-        }" datetime="${info.start_time}">${timer_text}</time></pre>
+          }" datetime="${info.start_time}">${timer_text}</time></pre>
     </td>
     <td class="task_status">
       <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${
           info.status
-        }</span></pre>
+          }</span></pre>
     </td>
 </tr>
 </table>
@@ -872,7 +877,7 @@ define([
       "sos_comm",
       {}
     );
-    window.sos_comm.on_msg(function(msg) {
+    window.sos_comm.on_msg(function (msg) {
       // when the notebook starts it should receive a message in the format of
       // a nested array of elements such as
       //
@@ -957,12 +962,12 @@ define([
             ) {
               r = confirm(
                 "This notebook used Jupyter kernel " +
-                  nb.metadata["sos"]["kernels"][k_idx][1] +
-                  " for subkernel " +
-                  data[i][0] +
-                  ". Do you want to switch to " +
-                  data[i][1] +
-                  " instead?"
+                nb.metadata["sos"]["kernels"][k_idx][1] +
+                " for subkernel " +
+                data[i][0] +
+                ". Do you want to switch to " +
+                data[i][1] +
+                " instead?"
               );
               if (!r) {
                 window.KernelName[data[i][0]] =
@@ -976,12 +981,12 @@ define([
               if (data[i][2] !== "") {
                 r = confirm(
                   "This notebook used language definition " +
-                    nb.metadata["sos"]["kernels"][k_idx][2] +
-                    " for subkernel " +
-                    data[i][0] +
-                    ". Do you want to switch to " +
-                    data[i][2] +
-                    " instead?"
+                  nb.metadata["sos"]["kernels"][k_idx][2] +
+                  " for subkernel " +
+                  data[i][0] +
+                  ". Do you want to switch to " +
+                  data[i][2] +
+                  " instead?"
                 );
                 if (!r) {
                   window.LanguageName[data[i]][0] =
@@ -1144,34 +1149,34 @@ define([
     }
   }
 
-  window.cancel_workflow = function(cell_id) {
+  window.cancel_workflow = function (cell_id) {
     console.log("Cancel workflow " + cell_id);
     send_kernel_msg({
       "cancel-workflow": [cell_id]
     });
   };
 
-  window.execute_workflow = function(cell_ids) {
+  window.execute_workflow = function (cell_ids) {
     console.log("Run workflows " + cell_ids);
     send_kernel_msg({
       "execute-workflow": cell_ids
     });
   };
 
-  window.task_action = function(param) {
+  window.task_action = function (param) {
     if (!param.action) {
       return;
     }
     create_panel_cell(
       `%task ${param.action}` +
-        (param.task ? ` ${param.task}` : "") +
-        (param.tag ? ` -t ${param.tag}` : "") +
-        (param.queue ? ` -q ${param.queue}` : "")
+      (param.task ? ` ${param.task}` : "") +
+      (param.tag ? ` -t ${param.tag}` : "") +
+      (param.queue ? ` -q ${param.queue}` : "")
     ).execute();
     scrollPanel();
   };
 
-  window.durationFormatter = function(ms) {
+  window.durationFormatter = function (ms) {
     var res = [];
     var seconds = parseInt(ms / 1000);
     var day = Math.floor(seconds / 86400);
@@ -1241,7 +1246,7 @@ define([
   }
 
   function removeMathJaxPreview(elt) {
-    elt.find("script[type='math/tex']").each(function(i, e) {
+    elt.find("script[type='math/tex']").each(function (i, e) {
       $(e).replaceWith("$" + $(e).text() + "$");
     });
     elt.find("span.MathJax_Preview").remove();
@@ -1251,7 +1256,7 @@ define([
 
 
 
-  var create_panel_div = function() {
+  var create_panel_div = function () {
     var panel_wrapper = $("<div id='panel-wrapper'/>").append(
       $("<div/>")
         .attr("id", "panel")
@@ -1260,11 +1265,11 @@ define([
 
     $("body").append(panel_wrapper);
 
-    $([Jupyter.events]).on("resize-header.Page", function() {
+    $([Jupyter.events]).on("resize-header.Page", function () {
       $("#panel-wrapper").css("top", $("#header").height());
       $("#panel-wrapper").css("height", $("#site").height());
     });
-    $([Jupyter.events]).on("toggle-all-headers", function() {
+    $([Jupyter.events]).on("toggle-all-headers", function () {
       var headerVisibleHeight = $("#header").is(":visible")
         ? $("#header").height()
         : 0;
@@ -1272,9 +1277,9 @@ define([
       $("#panel-wrapper").css("height", $("#site").height());
     });
 
-    $(".output_scroll").on("resizeOutput", function() {
+    $(".output_scroll").on("resizeOutput", function () {
       var output = $(this);
-      setTimeout(function() {
+      setTimeout(function () {
         output.scrollTop(output.prop("scrollHeight"));
       }, 0);
     });
@@ -1283,7 +1288,7 @@ define([
     $("#panel-wrapper").draggable({ disabled: true });
 
     $("#panel-wrapper").resizable({
-      resize: function(event, ui) {
+      resize: function (event, ui) {
         $("#notebook-container").css(
           "margin-left",
           $("#panel-wrapper").width() + 25
@@ -1293,7 +1298,7 @@ define([
           $("#notebook").width() - $("#panel-wrapper").width() - 40
         );
       },
-      start: function(event, ui) {
+      start: function (event, ui) {
         $(this).width($(this).width());
         //$(this).css("position", "fixed");
       }
@@ -1307,14 +1312,14 @@ define([
     if (!$("#panel-wrapper").css("display")) {
       $("#panel-wrapper").css("display", "flex");
     }
-    $("#site").bind("siteHeight", function() {
+    $("#site").bind("siteHeight", function () {
       $("#panel-wrapper").css("height", $("#site").height());
     });
 
     $("#site").trigger("siteHeight");
 
     $("#panel-wrapper").addClass("sidebar-wrapper");
-    setTimeout(function() {
+    setTimeout(function () {
       $("#notebook-container").css(
         "width",
         $("#notebook").width() - $("#panel-wrapper").width() - 40
@@ -1324,15 +1329,15 @@ define([
         $("#panel-wrapper").width() + 25
       );
     }, 500);
-    setTimeout(function() {
+    setTimeout(function () {
       $("#panel-wrapper").css("height", $("#site").height());
     }, 500);
-    setTimeout(function() {
+    setTimeout(function () {
       $("#panel-wrapper").css("top", $("#header").height());
     }, 500); //wait a bit
     $("#panel-wrapper").css("left", 0);
 
-    $(window).resize(function() {
+    $(window).resize(function () {
       if ($("#panel-wrapper").css("display") !== "flex") {
         return;
       }
@@ -1406,7 +1411,7 @@ define([
     );
   }
 
-  var panel = function(nb) {
+  var panel = function (nb) {
     var panel = this;
     this.notebook = nb;
     this.kernel = nb.kernel;
@@ -1551,7 +1556,7 @@ define([
     console.log("display panel");
   };
 
-  panel.prototype.execute_and_select_event = function(evt) {
+  panel.prototype.execute_and_select_event = function (evt) {
     // if we execute statements before the kernel is wrapped
     // from other channels (update kernel list etc), wrap it now.
     wrap_execute();
@@ -1575,7 +1580,7 @@ define([
     }
   };
 
-  panel.prototype.execute_event = function(evt) {
+  panel.prototype.execute_event = function (evt) {
     // if we execute statements before the kernel is wrapped
     // from other channels (update kernel list etc), wrap it now.
     wrap_execute();
@@ -1599,7 +1604,7 @@ define([
     }
   };
 
-  String.prototype.truncate = function() {
+  String.prototype.truncate = function () {
     var re = this.match(/^.{0,25}[\S]*/);
     var l = re[0].length;
     var re = re[0].replace(/\s$/, "");
@@ -1607,12 +1612,12 @@ define([
     return re;
   };
 
-  var remove_tag = function(cell, tag) {
+  var remove_tag = function (cell, tag) {
     // if the toolbar exists, use the button ...
     $(".output_wrapper", cell.element).removeClass(tag);
     if ($(".tags-input", cell.element).length > 0) {
       // find the button and click
-      var tag = $(".cell-tag", cell.element).filter(function(idx, y) {
+      var tag = $(".cell-tag", cell.element).filter(function (idx, y) {
         return y.innerText === tag;
       });
       $(".remove-tag-btn", tag).click();
@@ -1623,7 +1628,7 @@ define([
     }
   };
 
-  var add_tag = function(cell, tag) {
+  var add_tag = function (cell, tag) {
     $(".output_wrapper", cell.element).addClass(tag);
     if ($(".tags-input", cell.element).length > 0) {
       var taginput = $(".tags-input", cell.element);
@@ -1639,7 +1644,7 @@ define([
     }
   };
 
-  var toggle_display_output = function(evt) {
+  var toggle_display_output = function (evt) {
     var cell = evt.notebook.get_selected_cell();
     if (cell.cell_type === "markdown") {
       // switch between hide_output and ""
@@ -1668,7 +1673,7 @@ define([
     evt.notebook.focus_cell();
   };
 
-  var paste_table_as_markdown = function(evt) {
+  var paste_table_as_markdown = function (evt) {
     var cell = evt.notebook.get_selected_cell();
     if (cell.cell_type === "markdown") {
       send_kernel_msg({
@@ -1679,7 +1684,7 @@ define([
     evt.notebook.focus_cell();
   };
 
-  var toggle_markdown_cell = function(evt) {
+  var toggle_markdown_cell = function (evt) {
     var idx = evt.notebook.get_selected_index();
     if (evt.notebook.get_cell(idx).cell_type === "markdown") {
       evt.notebook.to_code(idx);
@@ -1689,7 +1694,7 @@ define([
     evt.notebook.focus_cell();
   };
 
-  panel.prototype.move_cursor_up = function(evt) {
+  panel.prototype.move_cursor_up = function (evt) {
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
       // in panel
@@ -1726,7 +1731,7 @@ define([
     }
   };
 
-  panel.prototype.move_cursor_down = function(evt) {
+  panel.prototype.move_cursor_down = function (evt) {
     //var cell = nb.get_selected_cell();
     if (this.cell.element[0].contains(document.activeElement)) {
       if (this.cell.at_bottom() && this.history_index > 0) {
@@ -1753,7 +1758,7 @@ define([
     }
   };
 
-  var run_in_console = async function(evt) {
+  var run_in_console = async function (evt) {
     //var cell = nb.get_selected_cell();
     var cell = evt.notebook.get_selected_cell();
     // if the current cell does not has focus, ignore this shortcut
@@ -1797,9 +1802,9 @@ define([
         // search for lastLine whose indent is equal to or smaller than the first
         if (indentation_aware) {
           while (
-          lastLine < cm.lineCount() &&
-          (srcIndents[lastLine] === -1 ||
-            srcIndents[lastLine] > srcIndents[firstLine])
+            lastLine < cm.lineCount() &&
+            (srcIndents[lastLine] === -1 ||
+              srcIndents[lastLine] > srcIndents[firstLine])
           ) {
             lastLine += 1;
           }
@@ -1899,7 +1904,7 @@ define([
     // toggle draw (first because of first-click behavior)
     //$("#panel-wrapper").toggle({"complete":function(){
     $("#panel-wrapper").toggle({
-      progress: function() {
+      progress: function () {
         $("#notebook-container").css(
           "margin-left",
           $("#panel-wrapper").width() + 25
@@ -1909,7 +1914,7 @@ define([
           $("#notebook").width() - $("#panel-wrapper").width() - 40
         );
       },
-      complete: function() {
+      complete: function () {
         nb.metadata["sos"]["panel"].displayed =
           $("#panel-wrapper").css("display") === "flex";
         if (nb.metadata["sos"]["panel"].displayed) {
@@ -2484,7 +2489,7 @@ color: green;
   }
 
   function safe_css_name(name) {
-    return name.replace(/[^a-z0-9_]/g, function(s) {
+    return name.replace(/[^a-z0-9_]/g, function (s) {
       var c = s.charCodeAt(0);
       if (c == 32) return "-";
       if (c >= 65 && c <= 90) return "_" + s.toLowerCase();
@@ -2494,11 +2499,11 @@ color: green;
 
   function patch_CodeCell_get_callbacks() {
     var previous_get_callbacks = CodeCell.prototype.get_callbacks;
-    CodeCell.prototype.get_callbacks = function() {
+    CodeCell.prototype.get_callbacks = function () {
       var that = this;
       var callbacks = previous_get_callbacks.apply(this, arguments);
       var prev_reply_callback = callbacks.shell.reply;
-      callbacks.shell.reply = function(msg) {
+      callbacks.shell.reply = function (msg) {
         return prev_reply_callback(msg);
       };
       return callbacks;
@@ -2551,7 +2556,7 @@ color: green;
     }
     select.val(kernel);
 
-    select.change(function() {
+    select.change(function () {
       cell.metadata.kernel = window.DisplayName[this.value];
       send_kernel_msg({
         "set-editor-kernel": cell.metadata.kernel
@@ -2593,7 +2598,7 @@ color: green;
   }
 
   function highlight_cells(cells, i, interval) {
-    setTimeout(function() {
+    setTimeout(function () {
       if (cells[i].cell_type === "code" && cells[i].user_highlight) {
         // console.log(`set ${cells[i].user_highlight} for cell ${i}`);
         cells[i].code_mirror.setOption(
@@ -2605,7 +2610,7 @@ color: green;
     }, interval);
   }
 
-  var onload = function() {
+  var onload = function () {
     // setting up frontend using existing metadata (without executing anything)
     load_select_kernel();
     changeCellStyle();
@@ -2619,18 +2624,18 @@ color: green;
       register_sos_comm();
       wrap_execute();
     } else {
-      events.on("kernel_connected.Kernel", function() {
+      events.on("kernel_connected.Kernel", function () {
         register_sos_comm();
         wrap_execute();
       });
     }
-    events.on("create.Cell", function(evt, param) {
+    events.on("create.Cell", function (evt, param) {
       add_lan_selector(param.cell);
       changeStyleOnKernel(param.cell);
     });
     //
     // restart kernel does not clear existing side panel.
-    events.on("kernel_connected.Kernel", function() {
+    events.on("kernel_connected.Kernel", function () {
       // Issue #1: need to re-register sos_comm after kernel is restarted.
       register_sos_comm();
     });
@@ -2643,18 +2648,18 @@ color: green;
     // add_download_menu();
     patch_CodeCell_get_callbacks();
 
-    $("li.icon_save").on("click", function() {
+    $("li.icon_save").on("click", function () {
       // we are letting the li bind to the event
       create_panel_cell("%sossave --to html --force").execute();
       scrollPanel();
     });
-    $("li.icon_workflow").on("click", function() {
+    $("li.icon_workflow").on("click", function () {
       // we are letting the li bind to the event
       create_panel_cell("%preview --workflow").execute();
       scrollPanel();
     });
 
-    events.on("kernel_ready.Kernel", function() {
+    events.on("kernel_ready.Kernel", function () {
       /* #524. After kernel ready, jupyter would broad cast
        * codemirror mode to all cells, which will overwrite the
        * user mode we have just set. We have no choice but to
@@ -2665,14 +2670,14 @@ color: green;
     });
 
     // define SOS CodeMirror syntax highlighter
-    (function(mod) {
+    (function (mod) {
       //if (typeof exports === "object" && typeof module === "object") // CommonJS
       // mod(require("../../lib/codemirror"));
       //else if (typeof define === "function" && define.amd) // AMD
       //  define(["../../lib/codemirror"], mod);
       //else // Plain browser env
       mod(CodeMirror);
-    })(function(CodeMirror) {
+    })(function (CodeMirror) {
       "use strict";
 
       var sosKeywords = ["input", "output", "depends", "parameter"];
@@ -2758,7 +2763,7 @@ color: green;
           version: 3
         },
         r: "r",
-        report: "markdown",
+        report: "report",
         pandoc: "markdown",
         download: "markdown",
         markdown: "markdown",
@@ -2774,7 +2779,35 @@ color: green;
           typescript: true
         },
         octave: "octave",
-        matlab: "octave"
+        matlab: "octave",
+        html: "htmlembedded",
+        xml: "xml",
+        yaml: "yaml",
+        json: {
+          name: "javascript",
+          jsonMode: true
+        },
+        stex: "stex",
+      };
+
+      var extMap = {
+        sos: 'python3',
+        py: "python3",
+        r: "r",
+        md: "markdown",
+        rb: "ruby",
+        sas: "sas",
+        sh: "shell",
+        jl: "julia",
+        js: "javascript",
+        ts: "typecript",
+        m: "matlab",
+        html: "html",
+        xml: "xml",
+        yaml: "yaml",
+        yml: "yaml",
+        json: "json",
+        tex: "stex",
       };
 
       function findMode(mode) {
@@ -2786,9 +2819,20 @@ color: green;
         return null;
       }
 
+      function findModeFromFilename(filename) {
+        if (!filename) {
+          return 'markdown';
+        }
+        let ext = filename.split('.').pop().toLowerCase();
+        if (ext in extMap) {
+          return extMap[ext];
+        }
+        return 'markdown';
+      }
+
       function markExpr(python_mode) {
         return {
-          startState: function() {
+          startState: function () {
             return {
               in_python: false,
               sigil: null,
@@ -2797,7 +2841,7 @@ color: green;
             };
           },
 
-          copyState: function(state) {
+          copyState: function (state) {
             return {
               in_python: state.in_python,
               sigil: state.sigil,
@@ -2809,7 +2853,7 @@ color: green;
             };
           },
 
-          token: function(stream, state) {
+          token: function (stream, state) {
             if (state.in_python) {
               if (stream.match(state.sigil.right)) {
                 state.in_python = false;
@@ -2858,7 +2902,7 @@ color: green;
                 }
                 return "sos-sigil" + (state.matched ? "" : " sos-unmatched");
               }
-              while (stream.next() && !stream.match(state.sigil.left, false)) {}
+              while (stream.next() && !stream.match(state.sigil.left, false)) { }
               return null;
             }
           }
@@ -2867,7 +2911,7 @@ color: green;
 
       CodeMirror.defineMode(
         "sos",
-        function(conf, parserConf) {
+        function (conf, parserConf) {
           let sosPythonConf = {};
           for (let prop in parserConf) {
             if (parserConf.hasOwnProperty(prop)) {
@@ -2903,7 +2947,7 @@ color: green;
             );
             var overlay_mode = markExpr(python_mode);
             return {
-              startState: function() {
+              startState: function () {
                 return {
                   sos_mode: true,
                   base_state: CodeMirror.startState(base_mode),
@@ -2917,7 +2961,7 @@ color: green;
                 };
               },
 
-              copyState: function(state) {
+              copyState: function (state) {
                 return {
                   sos_mode: state.sos_mode,
                   base_state: CodeMirror.copyState(base_mode, state.base_state),
@@ -2933,7 +2977,7 @@ color: green;
                 };
               },
 
-              token: function(stream, state) {
+              token: function (stream, state) {
                 if (state.sos_mode) {
                   if (stream.sol()) {
                     let sl = stream.peek();
@@ -3007,7 +3051,7 @@ color: green;
                 }
               },
 
-              indent: function(state, textAfter) {
+              indent: function (state, textAfter) {
                 // inner indent
                 if (!state.sos_mode) {
                   if (!base_mode.indent) return CodeMirror.Pass;
@@ -3018,12 +3062,12 @@ color: green;
                 }
               },
 
-              innerMode: function(state) {
+              innerMode: function (state) {
                 return state.sos_mode
                   ? {
-                      state: state.base_state,
-                      mode: base_mode
-                    }
+                    state: state.base_state,
+                    mode: base_mode
+                  }
                   : null;
               },
 
@@ -3035,7 +3079,7 @@ color: green;
             base_mode = CodeMirror.getMode(conf, sosPythonConf);
             overlay_mode = markExpr(base_mode);
             return {
-              startState: function() {
+              startState: function () {
                 return {
                   sos_state: null,
                   base_state: CodeMirror.startState(base_mode),
@@ -3051,7 +3095,7 @@ color: green;
                 };
               },
 
-              copyState: function(state) {
+              copyState: function (state) {
                 return {
                   sos_state: state.sos_state,
                   base_state: CodeMirror.copyState(base_mode, state.base_state),
@@ -3071,7 +3115,7 @@ color: green;
                 };
               },
 
-              token: function(stream, state) {
+              token: function (stream, state) {
                 if (stream.sol()) {
                   let sl = stream.peek();
                   if (sl == "[") {
@@ -3191,7 +3235,7 @@ color: green;
                   state.sos_state.startsWith("start ")
                 ) {
                   // try to understand option expand=
-                  if (stream.match(/expand\s*=\s*True/, false)) {
+                  if (stream.match(/^.*expand\s*=\s*True/, false)) {
                     // highlight {}
                     state.overlay_state.sigil = {
                       left: "{",
@@ -3199,17 +3243,32 @@ color: green;
                     };
                   } else {
                     let found = stream.match(
-                      /expand\s*=\s*"(\S+) (\S+)"/,
+                      /^.*expand\s*=\s*"(\S+) (\S+)"/,
                       false
                     );
                     if (!found)
-                      found = stream.match(/expand\s*=\s*'(\S+) (\S+)'/, false);
+                      found = stream.match(/^.*expand\s*=\s*'(\S+) (\S+)'/, false);
                     if (found) {
                       state.overlay_state.sigil = {
                         left: found[1].match(/^.*[A-Za-z]$/) ? found[1] + ' ' : found[1],
                         right: found[2].match(/^[A-Za-z].*$/) ? ' ' + found[2] : found[2]
                       };
                     }
+                  }
+                  let mode_string = state.sos_state.slice(6).toLowerCase();
+                  // for report, we need to find "output" option
+                  if (mode_string === "report" &&
+                    stream.match(/^.*output\s*=\s*/, false)) {
+                    let found = stream.match(/^.*output\s*=\s*[rRbufF]*"""([^"]+)"""/, false);
+                    if (!found)
+                      found = stream.match(/^.*output\s*=\s*[rRbufF]*'''([^.]+)'''/, false);
+                    if (!found)
+                      found = stream.match(/^.*output\s*=\s*[rRbufF]*"([^"]+)"/, false);
+                    if (!found)
+                      found = stream.match(/^.*output\s*=\s*[rRbufF]*'([^']+)'/, false);
+
+                    // found[1] is the filename
+                    state.sos_state = 'start ' + findModeFromFilename(found ? found[1] : found);
                   }
                   let token = base_mode.token(stream, state.base_state);
                   // if it is end of line, ending the starting switch mode
@@ -3276,7 +3335,7 @@ color: green;
                 }
               },
 
-              indent: function(state, textAfter) {
+              indent: function (state, textAfter) {
                 // inner indent
                 if (state.inner_mode) {
                   if (!state.inner_mode.indent) return CodeMirror.Pass;
@@ -3288,13 +3347,13 @@ color: green;
                 }
               },
 
-              innerMode: function(state) {
+              innerMode: function (state) {
                 return state.inner_mode
                   ? null
                   : {
-                      state: state.base_state,
-                      mode: base_mode
-                    };
+                    state: state.base_state,
+                    mode: base_mode
+                  };
               },
 
               lineComment: "#",
@@ -3308,7 +3367,7 @@ color: green;
 
       CodeMirror.defineMIME("text/x-sos", "sos");
       // bug vatlab / sos - notebook #55
-      CodeMirror.autoLoadMode = function() {};
+      CodeMirror.autoLoadMode = function () { };
     });
   };
 
