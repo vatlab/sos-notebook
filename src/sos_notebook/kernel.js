@@ -1502,6 +1502,13 @@ define([
       },
       "toggle-show-output"
     );
+    var toggle_kernel = this.km.actions.register(
+      {
+        help: "toggle cell kernel",
+        handler: toggle_cell_kernel
+      },
+      "toggle-show-output"
+    );
     var toggle_markdown = this.km.actions.register(
       {
         help: "toggle between markdown and code cells",
@@ -1532,6 +1539,7 @@ define([
       // code_mirror.getSelection() line getting only blank string.
       "ctrl-shift-enter": run_in_console_action,
       "ctrl-shift-o": toggle_output,
+      "ctrl-shift-s": toggle_kernel,
       "ctrl-shift-v": paste_table,
       "ctrl-shift-m": toggle_markdown,
       up: up_arrow,
@@ -1671,6 +1679,30 @@ define([
     }
     // evt.notebook.select_next(true);
     evt.notebook.focus_cell();
+  };
+
+  var toggle_cell_kernel = function (evt) {
+
+    var cell = evt.notebook.get_selected_cell();
+    if (cell.cell_type !== "code") {
+      return;
+    }
+    // switch to the next used kernel
+    let kernels = nb.metadata["sos"]["kernels"];
+    // current kernel
+    let kernel = cell.metadata["kernel"];
+    if (kernels.length <= 1) {
+      return;
+    }
+    // index of kernel
+    for (let i = 0; i < kernels.length; ++i) {
+      if (kernels[i][0] === kernel) {
+        let next = (i + 1) % kernels.length;
+        cell.metadata['kernel'] = kernels[next][0];
+        changeStyleOnKernel(cell);
+        break;
+      }
+    }
   };
 
   var paste_table_as_markdown = function (evt) {
@@ -2787,7 +2819,7 @@ color: green;
           name: "javascript",
           jsonMode: true
         },
-        stex: "stex",
+        stex: "stex"
       };
 
       var extMap = {
@@ -2807,7 +2839,7 @@ color: green;
         yaml: "yaml",
         yml: "yaml",
         json: "json",
-        tex: "stex",
+        tex: "stex"
       };
 
       function findMode(mode) {
