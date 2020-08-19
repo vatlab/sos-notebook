@@ -103,6 +103,16 @@ report('this is action report')
         subprocess.call(
             'sos convert sample_notebook.ipynb test_wf.pdf', shell=True)
         self.assertTrue(os.path.isfile('test_wf.pdf'))
+        # PDF with execute
+        subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_notebook.pdf --execute', shell=True)
+        self.assertTrue(os.path.isfile('test_notebook.pdf'))
+        # mark down with execute
+        subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_notebook_with_param.pdf --execute cutoff=34587', shell=True)
+        self.assertTrue(os.path.isfile('test_notebook_with_param.pdf'))
+        with open('test_notebook_with_param.pdf', 'rb') as md:
+            assert b'34587' in md.read()
 
     def testConvertMD(self):
         subprocess.call(
@@ -113,6 +123,16 @@ report('this is action report')
             'sos convert sample_notebook.ipynb --to md > test_wf1.md',
             shell=True)
         self.assertTrue(os.path.isfile('test_wf1.md'))
+        # mark down with execute
+        subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_notebook.md --execute', shell=True)
+        self.assertTrue(os.path.isfile('test_notebook.md'))
+        # mark down with execute
+        subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_notebook_with_param.md --execute cutoff=54321', shell=True)
+        self.assertTrue(os.path.isfile('test_notebook_with_param.md'))
+        with open('test_notebook_with_param.md') as md:
+            assert '54321' in md.read()
 
     def testConvertNotebook(self):
         ret = subprocess.call(
@@ -130,6 +150,36 @@ report('this is action report')
             'sos convert sample_notebook.ipynb test_invalid.ipynb --kernel nonexisting',
             shell=True)
         self.assertNotEqual(ret, 0)
+
+    def testExecuteNotebook(self):
+        ret = subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_papermill_executed.ipynb --execute',
+            shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_papermill_executed.ipynb'))
+        #
+        ret = subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_papermill_executed_with_param.ipynb --execute cutoff=12345',
+            shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_papermill_executed_with_param.ipynb'))
+        with open('test_papermill_executed_with_param.ipynb') as nb:
+            assert '12345' in nb.read()
+
+    def testExecuteAndConvert(self):
+        ret = subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_papermill_executed.html --execute',
+            shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_papermill_executed.html'))
+        #
+        ret = subprocess.call(
+            'sos convert sample_papermill_notebook.ipynb test_papermill_executed_with_param.html --execute cutoff=12345',
+            shell=True)
+        self.assertEqual(ret, 0)
+        self.assertTrue(os.path.isfile('test_papermill_executed_with_param.html'))
+        with open('test_papermill_executed_with_param.html') as nb:
+            assert '12345' in nb.read()
 
     def testComments(self):
         '''Test if comments before section headers are correctly extracted'''

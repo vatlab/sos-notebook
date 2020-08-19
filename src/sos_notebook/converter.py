@@ -21,7 +21,8 @@ from sos.utils import env
 
 def execute_sos_notebook(input_notebook,
                          output_notebook=None,
-                         return_content=True):
+                         return_content=True,
+                         parameters={}):
     # execute input notebook
     # if input_notebook is a string, it will be loaded. Otherwise it should be a notebook object
     # if output_notebook is a string, it will be used as output filename. Otherwise
@@ -62,7 +63,8 @@ def execute_sos_notebook(input_notebook,
         input_path=input_file,
         output_path=output_file,
         engine_name='sos',
-        kernel_name='sos')
+        kernel_name='sos',
+        parameters=parameters)
 
     if os.path.basename(input_file).startswith('__tmp_input_nb'):
         try:
@@ -398,6 +400,46 @@ c.TemplateExporter.template_path.extend([
         else:
             env.logger.info(f'Output saved to {output_file}')
 
+def _is_int(value):
+    """Use casting to check if value can convert to an `int`."""
+    try:
+        int(value)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
+def _is_float(value):
+    """Use casting to check if value can convert to a `float`."""
+    try:
+        float(value)
+    except ValueError:
+        return False
+    else:
+        return True
+
+def parse_papermill_parameters(values):
+    parameters = {}
+    for value in values:
+        if '=' not in value:
+            parameters[value] = True
+            contineu
+        k, v = value.split('=', 1)
+        if v == "True":
+            parameters[k] = True
+        elif v == "False":
+            parameters[k] = False
+        elif value == "None":
+            parameters[k] = None
+        elif _is_int(v):
+            parameters[k] = int(v)
+        elif _is_float(v):
+            parameters[k] = float(v)
+        else:
+            parameters[k] = v
+    return parameters
+
 
 class NotebookToHTMLConverter(object):
 
@@ -417,8 +459,11 @@ class NotebookToHTMLConverter(object):
         parser.add_argument(
             '-e',
             '--execute',
-            action='store_true',
-            help='''Execute the workflow using sos-papermill before exporting to HTML format.'''
+            nargs='*',
+            help='''Execute the workflow using sos-papermill before exporting to HTML format.
+                One or more parameters are acceptable and should be specified as name=value,
+                where the type of value will be automatically guessed. An exception of this
+                rule is that `name' without `=` will be considered as value True.'''
         )
         parser.add_argument(
             '-v',
@@ -437,10 +482,6 @@ class NotebookToHTMLConverter(object):
         from nbconvert.exporters.html import HTMLExporter
         if unknown_args is None:
             unknown_args = []
-        if sargs and sargs.execute:
-            env.logger.warning(
-                'Option --execute is deprecated. Please use sos-papermill instead.'
-            )
         if sargs.template:
             unknown_args = [
                 '--template',
@@ -448,9 +489,10 @@ class NotebookToHTMLConverter(object):
                 if os.path.isfile(sargs.template) else sargs.template
             ] + unknown_args
 
-        if sargs.execute:
+        if sargs.execute is not None:
             notebook_file = execute_sos_notebook(
-                notebook_file, return_content=False)
+                notebook_file, return_content=False,
+                parameters=parse_papermill_parameters(sargs.execute))
 
         export_notebook(
             HTMLExporter,
@@ -484,6 +526,15 @@ class NotebookToPDFConverter(object):
             command "jupyter nbconvert --to pdf" so please refer to nbconvert manual for
             available options.''')
         parser.add_argument(
+            '-e',
+            '--execute',
+            nargs='*',
+            help='''Execute the workflow using sos-papermill before exporting to PDF format.
+                One or more parameters are acceptable and should be specified as name=value,
+                where the type of value will be automatically guessed. An exception of this
+                rule is that `name' without `=` will be considered as value True.'''
+        )
+        parser.add_argument(
             '--template',
             help='''Template to export Jupyter notebook with sos kernel. SoS provides a number
             of templates, with sos-report displays markdown cells and only output of cells with
@@ -497,6 +548,11 @@ class NotebookToPDFConverter(object):
                 sargs=None,
                 unknown_args=None):
         from nbconvert.exporters.pdf import PDFExporter
+        if sargs.execute is not None:
+            notebook_file = execute_sos_notebook(
+                notebook_file, return_content=False,
+                parameters=parse_papermill_parameters(sargs.execute))
+
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
@@ -526,6 +582,15 @@ class NotebookToMarkdownConverter(object):
             markdown file. Additional command line arguments are passed directly to
             command "jupyter nbconvert --to markdown" so please refer to nbconvert manual for
             available options.''')
+        parser.add_argument(
+            '-e',
+            '--execute',
+            nargs='*',
+            help='''Execute the workflow using sos-papermill before exporting to markdown format.
+                One or more parameters are acceptable and should be specified as name=value,
+                where the type of value will be automatically guessed. An exception of this
+                rule is that `name' without `=` will be considered as value True.'''
+        )
         return parser
 
     def convert(self,
@@ -534,6 +599,11 @@ class NotebookToMarkdownConverter(object):
                 sargs=None,
                 unknown_args=None):
         from nbconvert.exporters.markdown import MarkdownExporter
+        if sargs.execute is not None:
+            notebook_file = execute_sos_notebook(
+                notebook_file, return_content=False,
+                parameters=parse_papermill_parameters(sargs.execute))
+
         export_notebook(
             MarkdownExporter, 'markdown', notebook_file, output_file,
             unknown_args if '--template' in unknown_args else
@@ -566,8 +636,11 @@ class NotebookToNotebookConverter(object):
             help='''Convert python3 cells to SoS.''')
         parser.add_argument(
             '--execute',
-            action='store_true',
-            help='Execute the SoS notebook with sos-papermill',
+            nargs='*',
+            help='''Execute the workflow using sos-papermill. One or more parameters
+                 are acceptable and should be specified as name=value,
+                where the type of value will be automatically guessed. An exception of this
+                rule is that `name' without `=` will be considered as value True.'''
         )
         parser.add_argument(
             '--inplace',
@@ -700,22 +773,30 @@ class NotebookToNotebookConverter(object):
         if kernel_name == 'sos' and sargs.kernel and sargs.kernel not in (
                 'sos', 'SoS'):
             # sos => nonSoS
-            if sargs.execute:
-                notebook = execute_sos_notebook(notebook_file)
+            if sargs.execute is not None:
+                notebook = execute_sos_notebook(
+                    notebook_file,
+                    parameters=parse_papermill_parameters(sargs.execute))
             nb = self.SoS_to_nonSoS_notebook(notebook, sargs)
         elif kernel_name == 'sos' and not sargs.kernel:
-            if sargs.execute:
+            if sargs.execute is not None:
                 if output_file and notebook_file != output_file:
-                    execute_sos_notebook(notebook_file, output_file)
+                    execute_sos_notebook(
+                        notebook_file,
+                        output_file,
+                        parameters=parse_papermill_parameters(sargs.execute))
                     env.logger.info(f'Jupyter notebook saved to {output_file}')
                     return
                 else:
-                    nb = execute_sos_notebook(notebook_file)
+                    nb = execute_sos_notebook(
+                        notebook_file,
+                        parameters=parse_papermill_parameters(sargs.execute))
             # sos => sos
         elif kernel_name != 'sos' and sargs.kernel in ('sos', 'SoS', None):
             nb = self.nonSoS_to_SoS_notebook(notebook, sargs)
-            if sargs.execute:
-                nb = execute_sos_notebook(nb)
+            if sargs.execute is not None:
+                nb = execute_sos_notebook(
+                    nb, parameters=parse_papermill_parameters(sargs.execute))
 
         if nb is None:
             # nothing to do (e.g. sos -> sos) without --execute
