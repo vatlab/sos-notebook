@@ -15,6 +15,7 @@ import nbformat
 from nbconvert.exporters import Exporter
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 
+import sos
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env
 
@@ -341,13 +342,11 @@ def export_notebook(exporter_class,
         with open(cfg_file, 'w') as cfg:
             cfg.write(f'''
 import os
-import sos
-import sos_notebook
 
 c = get_config()
 c.TemplateExporter.template_path.extend([
-  os.path.join(os.path.split(os.path.abspath(sos.__file__))[0], 'templates'),
-  os.path.join(os.path.split(os.path.abspath(sos_notebook.__file__))[0], 'templates')])
+  os.path.join('{os.path.split(os.path.abspath(sos.__file__))[0]}', 'templates'),
+  os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')])
 ''')
     if not output_file:
         import tempfile
