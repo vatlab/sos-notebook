@@ -1,4 +1,4 @@
-{% extends 'sos-full.tpl' %}
+{% extends 'sos-cm.tpl' %}
 
 {%- block codecell -%}
   {%- if 'scratch' in cell.metadata.tags -%}

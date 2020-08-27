@@ -1,4 +1,4 @@
-{% extends 'sos-full.tpl' %}
+{% extends 'sos-cm.tpl' %}
 
 {% import 'parts/control_panel.tpl' as control_panel %}
 
