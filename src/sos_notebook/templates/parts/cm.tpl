@@ -49,6 +49,7 @@ textarea.sos-source {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/mode/shell/shell.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/mode/julia/julia.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/mode/markdown/markdown.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.38.0/addon/display/autorefresh.min.js"></script>
 <script>
     {% include 'parts/sos-mode.js' %}
 </script>
@@ -64,6 +65,7 @@ textarea.sos-source {
             styleActiveLine: true,
             matchBrackets: true,
             readOnly: true,
+            autoRefresh: true,
             mode: 'sos',
             base_mode: cell.name,
         });
