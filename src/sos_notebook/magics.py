@@ -516,7 +516,7 @@ class Convert_Magic(SoS_Magic):
                 else:
                     arg.template = args.template
                 arg.view = False
-                arg.execute = False
+                arg.execute = None
                 NotebookToHTMLConverter().convert(
                     self.sos_kernel._meta['notebook_name'] + '.ipynb',
                     filename,
