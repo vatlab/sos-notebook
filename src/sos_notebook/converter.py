@@ -501,12 +501,12 @@ class NotebookToHTMLConverter(object):
             unknown_args,
             view=sargs.view)
 
-        if os.path.basename(output_file).startswith('__tmp_output_nb'):
+        if os.path.basename(notebook_file).startswith('__tmp_output_nb'):
             try:
-                os.remove(output_file)
+                os.remove(notebook_file)
             except Exception as e:
                 env.logger.warning(
-                    f'Failed to remove temporary output file {output_file}: {e}'
+                    f'Failed to remove temporary output file {noteput_file}: {e}'
                 )
 
 
@@ -566,7 +566,13 @@ class NotebookToPDFConverter(object):
         export_notebook(PDFExporter, 'pdf', notebook_file, output_file,
                         unknown_args)
 
-
+        if os.path.basename(notebook_file).startswith('__tmp_output_nb'):
+            try:
+                os.remove(notebook_file)
+            except Exception as e:
+                env.logger.warning(
+                    f'Failed to remove temporary output file {notebook_file}: {e}'
+                )
 #
 # Notebook to Markdown
 #
@@ -608,7 +614,13 @@ class NotebookToMarkdownConverter(object):
             unknown_args if '--template' in unknown_args else
             ['--template', 'sos-markdown'] + unknown_args)
 
-
+        if os.path.basename(notebook_file).startswith('__tmp_output_nb'):
+            try:
+                os.remove(notebook_file)
+            except Exception as e:
+                env.logger.warning(
+                    f'Failed to remove temporary output file {notebook_file}: {e}'
+                )
 #
 # Notebook to Notebook
 #
