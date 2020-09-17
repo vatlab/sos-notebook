@@ -530,7 +530,7 @@ class Subkernels(object):
                     entrypoint.load()
             # if nothing is triggerred, kernel is not defined, return a general message
             raise ValueError(
-                f'No subkernel named {name} is found. Please make sure that you have the kernel installed (listed in the output of "jupyter kernelspec list" and usable in jupyter by itself), install appropriate language module (e.g. "pip install sos-r"), restart jupyter notebook and try again.'
+                f'No subkernel named {name} is found. Please use magic "%use" without option to see a list of available kernels and language modules.'
             )
 
     def update(self, notebook_kernel_list):
@@ -1407,6 +1407,37 @@ class SoS_Kernel(IPythonKernel):
                 self.KM.interrupt_kernel()
         return res
 
+    def get_info_of_subkernels(self):
+        from jupyter_client.kernelspec import KernelSpecManager
+        km = KernelSpecManager()
+
+        available_subkernels = '''<table>
+            <tr>
+                <th>Subkernel</th>
+                <th>Kernel Name</th>
+                <th>Language</th>
+                <th>Language Module</th>
+                <th  style="text-align:left">Interpreter</th>
+            </tr>'''
+        for subkernel in self.subkernels.kernel_list():
+            spec = km.get_kernel_spec(subkernel.kernel)
+            if subkernel.name in ('SoS', 'Markdown'):
+                lan_module = ''
+            elif subkernel.language in self.supported_languages:
+                lan_module = f"<code>{self.supported_languages[subkernel.language].__module__.split('.')[0]}</code>"
+            else:
+                lan_module = '<font style="color:red">Unavailable</font>'
+            available_subkernels += f'''\
+        <tr>
+        <td>{subkernel.name}</td>
+        <td><code>{subkernel.kernel}</code></td>
+        <td>{spec.language}</td>
+        <td>{lan_module}</td>
+        <td style="text-align:left"><code>{spec.argv[0]}</code></td>
+        </tr>'''
+        available_subkernels += '</table>'
+        return available_subkernels
+
     def switch_kernel(self,
                       kernel,
                       in_vars=None,
@@ -1417,16 +1448,12 @@ class SoS_Kernel(IPythonKernel):
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
             self.send_response(
-                self.iopub_socket, 'stream',
+                self.iopub_socket, 'display_data',
                 dict(
-                    name='stdout',
-                    text='''\
-Active subkernels: {}
-Available subkernels:\n{}'''.format(
-                        ', '.join(self.kernels.keys()), '\n'.join([
-                            '    {} ({})'.format(x.name, x.kernel)
-                            for x in self.subkernels.kernel_list()
-                        ]))))
+                    metadata={},
+                    data={
+                        'text/html': self.get_info_of_subkernels()
+                    }))
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
