@@ -3081,7 +3081,7 @@ class Use_Magic(SoS_Magic):
                 'execution_count': self.sos_kernel._execution_count,
             }
         if args.restart and args.name in self.sos_kernel.kernels:
-            self.shutdown_kernel(args.name)
+            self.sos_kernel.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
             self.sos_kernel.switch_kernel(args.name, None, args.kernel,
