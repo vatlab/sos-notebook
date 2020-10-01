@@ -344,7 +344,7 @@ def export_notebook(exporter_class,
 import os
 
 c = get_config()
-c.TemplateExporter.template_path.extend([
+c.TemplateExporter.template_paths.extend([
   os.path.join('{os.path.split(os.path.abspath(sos.__file__))[0]}', 'templates'),
   os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')])
 ''')
