@@ -76,7 +76,5 @@ notifications:
     email:
         recipients:
             - ben.bob@gmail.com
-            - junma80@gmail.com
         on_success: never
         on_failure: always
-

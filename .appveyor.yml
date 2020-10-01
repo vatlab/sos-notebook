@@ -42,7 +42,7 @@ install:
     - pip install fasteners pygments ipython ptpython networkx pydot pydotplus nose selenium
     # https://github.com/jupyter/jupyter/issues/150
     - pip install entrypoints markdown
-    - pip install jupyter wand numpy pandas
+    - pip install jupyter wand numpy pandas papermill sos-papermill
     # install github version of sos
     - pip install git+https://github.com/vatlab/sos.git
     - pip install pytest
@@ -62,5 +62,3 @@ notifications:
       to:
         - ben.bob@gmail.com
       on_build_status_changed: true
-
-
