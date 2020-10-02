@@ -325,6 +325,18 @@ class NotebookToScriptConverter(object):
 # notebook to HTML
 #
 
+def get_template_args(name):
+    if not name:
+        return []
+    for path in [
+        '',
+        os.path.join('{os.path.split(os.path.abspath(sos.__file__))[0]}', 'templates'),
+        os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')]:
+        for template in [name, name + '.tpl']:
+            template_file = os.path.join(path, template)
+            if os.path.isfile(template_file):
+                return ['--template-file', template_file]
+    return []
 
 def export_notebook(exporter_class,
                     to_format,
@@ -337,17 +349,7 @@ def export_notebook(exporter_class,
     import subprocess
     if not os.path.isfile(notebook_file):
         raise RuntimeError(f'{notebook_file} does not exist')
-    cfg_file = os.path.join(os.path.expanduser('~'), '.sos', 'nbconfig.py')
-    if not os.path.isfile(cfg_file):
-        with open(cfg_file, 'w') as cfg:
-            cfg.write(f'''
-import os
 
-c = get_config()
-c.TemplateExporter.template_paths.extend([
-  os.path.join('{os.path.split(os.path.abspath(sos.__file__))[0]}', 'templates'),
-  os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')])
-''')
     if not output_file:
         import tempfile
         tmp = tempfile.NamedTemporaryFile(
@@ -358,7 +360,7 @@ c.TemplateExporter.template_paths.extend([
             ret = subprocess.call(
                 [
                     'jupyter', 'nbconvert', notebook_file, '--to', to_format,
-                    '--output', tmp, '--config', cfg_file
+                    '--output', tmp
                 ] + ([] if unknown_args is None else unknown_args),
                 stderr=err)
         with open(tmp_stderr) as err:
@@ -391,7 +393,7 @@ c.TemplateExporter.template_paths.extend([
         ret = subprocess.call([
             'jupyter', 'nbconvert',
             os.path.abspath(notebook_file), '--to', to_format, '--output',
-            os.path.abspath(output_file), '--config', cfg_file
+            os.path.abspath(output_file)
         ] + ([] if unknown_args is None else unknown_args))
         if ret != 0:
             raise RuntimeError(
@@ -482,11 +484,7 @@ class NotebookToHTMLConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = [
-                '--template',
-                os.path.abspath(sargs.template)
-                if os.path.isfile(sargs.template) else sargs.template
-            ] + unknown_args
+            unknown_args = get_template_args(sargs.template) + unknown_args
 
         if sargs.execute is not None:
             notebook_file = execute_sos_notebook(
@@ -555,11 +553,7 @@ class NotebookToPDFConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = [
-                '--template',
-                os.path.abspath(sargs.template)
-                if os.path.isfile(sargs.template) else sargs.template
-            ] + unknown_args
+            unknown_args = get_template_args(sargs.template) + unknown_args
         # jupyter convert will add extension to output file...
         if output_file is not None and output_file.endswith('.pdf'):
             output_file = output_file[:-4]
@@ -611,7 +605,7 @@ class NotebookToMarkdownConverter(object):
 
         export_notebook(
             MarkdownExporter, 'markdown', notebook_file, output_file,
-            unknown_args if '--template' in unknown_args else
+            unknown_args if '--template-file' in unknown_args else
             ['--template', 'sos-markdown'] + unknown_args)
 
         if os.path.basename(notebook_file).startswith('__tmp_output_nb'):

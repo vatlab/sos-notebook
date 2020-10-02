@@ -20,7 +20,7 @@ RUN     python -m bash_kernel.install --user
 
 RUN     pip install  markdown wand graphviz imageio pillow nbformat coverage codacy-coverage pytest pytest-cov python-coveralls
 RUN     conda install -y feather-format -c conda-forge
-RUN 	conda install -c r r-feather
+RUN 	conda install -c r r-arrow r-dplyr
 
 ## trigger rerun for sos updates
 RUN	    DUMMY=$(git ls-remote https://github.com/vatlab/sos.git -t master)

@@ -70,7 +70,7 @@ setup(
     install_requires=[
         'sos>=0.21.3',
         'nbformat',
-        'nbconvert>=5.1.1',
+        'nbconvert>=6.0.1',
         'ipython',
         'ipykernel',
         'notebook>=5.0.0',
