@@ -547,7 +547,7 @@ class Subkernels(object):
             except Exception as e:
                 # otherwise do not worry about it.
                 env.logger.warning(
-                    f'Failed to locate subkernel {kinfo[0]} with kernerl "{kinfo[1]}" and language "{kinfo[2]}": {e}'
+                    f'Failed to locate subkernel {kinfo[0]} with kernel "{kinfo[1]}" and language "{kinfo[2]}": {e}'
                 )
 
     def notify_frontend(self):
