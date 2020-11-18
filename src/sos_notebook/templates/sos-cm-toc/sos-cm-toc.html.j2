@@ -1,5 +1,5 @@
-{% extends 'sos-report-only.tpl' %}
 
+{% extends 'sos-cm.html.j2' %}
 
 {% import 'parts/toc.tpl' as toc %}
 
@@ -34,7 +34,9 @@
 
 {% block footer_js %}
 {{ super() }}
-{{ toc.js() }}
+{% block toc %}
+{{ toc.js(headers='h1, h2, h3', remove_only_top_header='true') }}
+{% endblock %}
 {% endblock footer_js %}
 
 

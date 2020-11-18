@@ -325,18 +325,9 @@ class NotebookToScriptConverter(object):
 # notebook to HTML
 #
 
-def get_template_args(name):
-    if not name:
-        return []
-    for path in [
-        '',
-        os.path.join('{os.path.split(os.path.abspath(sos.__file__))[0]}', 'templates'),
-        os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')]:
-        for template in [name, name + '.tpl']:
-            template_file = os.path.join(path, template)
-            if os.path.isfile(template_file):
-                return ['--template-file', template_file]
-    return []
+def get_template_args():
+    return ['--TemplateExporter.extra_template_basedirs', os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')]
+
 
 def export_notebook(exporter_class,
                     to_format,
@@ -484,7 +475,7 @@ class NotebookToHTMLConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = get_template_args(sargs.template) + unknown_args
+            unknown_args = get_template_args() + unknown_args
 
         if sargs.execute is not None:
             notebook_file = execute_sos_notebook(
@@ -553,7 +544,7 @@ class NotebookToPDFConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = get_template_args(sargs.template) + unknown_args
+            unknown_args = get_template_args() + unknown_args
         # jupyter convert will add extension to output file...
         if output_file is not None and output_file.endswith('.pdf'):
             output_file = output_file[:-4]

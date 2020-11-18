@@ -1,0 +1,6 @@
+{
+  "base_template": "sos-full",
+  "mimetypes": {
+    "text/html": true
+  }
+}

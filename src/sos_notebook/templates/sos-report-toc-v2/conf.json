@@ -1,0 +1,6 @@
+{
+  "base_template": "sos-report-v2",
+  "mimetypes": {
+    "text/html": true
+  }
+}
