@@ -292,7 +292,8 @@ define([
 
   // get workflow from notebook
   function getNotebookWorkflow(cells) {
-    let workflow = "#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n";
+    let workflow = "";
+
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
       if (
@@ -300,6 +301,20 @@ define([
         (!cell.metadata["kernel"] || cell.metadata["kernel"] === "SoS")
       ) {
         workflow += getCellWorkflow(cell);
+      }
+    }
+    if (workflow != "") {
+      workflow = "#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n" + workflow;
+    }
+    return workflow;
+  }
+
+  function getNotebookContent(cells) {
+    let workflow = "";
+    for (let i = 0; i < cells.length; ++i) {
+      let cell = cells[i];
+      if (cell.cell_type === "code" ) {
+        workflow += `# cell ${i + 1}, kernel=${cell.metadata["kernel"]}\n${cell.get_text()}\n\n`
       }
     }
     return workflow;
@@ -312,14 +327,20 @@ define([
      */
     options.sos = {};
     var run_notebook = code.match(
-      /^%sosrun($|\s)|^%sossave($|\s)|^%preview\s.*(-w|--workflow).*$/m
+      /^%sosrun($|\s)|^%convert($|\s)|^%preview\s.*(-w|--workflow).*$/m
     );
 
     var cells = nb.get_cells();
     if (run_notebook) {
       // Running %sossave --to html needs to save notebook
       nb.save_notebook();
-      options.sos.workflow = getNotebookWorkflow(cells);
+      if (code.match(
+        /^%convert\s.*(-a|--all).*$/m
+      )) {
+        options.sos.workflow = getNotebookContent(cells);
+      } else {
+        options.sos.workflow = getNotebookWorkflow(cells);
+      }
     }
     options.sos.path = nb.notebook_path;
     options.sos.use_panel = nb.metadata["sos"]["panel"].displayed;

@@ -878,7 +878,7 @@ class TestMagics(NotebookTest):
     def test_magic_shell(self, notebook):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
-    @pytest.mark.skip(
+    @pytest.mark.xfail(
         reason="Cannot figure out why the file sometimes does not exist")
     def test_magic_convert(self, notebook):
         #
@@ -897,6 +897,46 @@ class TestMagics(NotebookTest):
         )
         with open(tmp_file) as tt:
             assert "kkk" in tt.read()
+
+    @pytest.mark.xfail(
+        reason="Cannot figure out why the file sometimes does not exist")
+    def test_magic_convert_sos(self, notebook):
+        #
+        notebook.save()
+
+        tmp_file = os.path.join(tempfile.gettempdir(), "test_convert.sos")
+        if os.path.isfile(tmp_file):
+            os.remove(tmp_file)
+        assert "Workflow saved to" in notebook.check_output(
+            f"""\
+            %convert {tmp_file} --force
+            [10]
+            print('kkk')
+            """,
+            kernel="SoS",
+        )
+        with open(tmp_file) as tt:
+            assert "kkk" in tt.read()
+
+    @pytest.mark.xfail(
+        reason="Cannot figure out why the file sometimes does not exist")
+    def test_magic_convert_sos_all(self, notebook):
+        #
+        notebook.save()
+
+        tmp_file = os.path.join(tempfile.gettempdir(), "test_convert.sos")
+        if os.path.isfile(tmp_file):
+            os.remove(tmp_file)
+        assert "Workflow saved to" in notebook.check_output(
+            f"""\
+            %convert {tmp_file} --all --force
+            print('kkk')
+            """,
+            kernel="SoS",
+        )
+        with open(tmp_file) as tt:
+            assert "kkk" in tt.read()
+
 
     def test_magic_use(self, notebook):
         idx = notebook.call(

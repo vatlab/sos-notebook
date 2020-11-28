@@ -457,6 +457,12 @@ class Convert_Magic(SoS_Magic):
             choices=['sos', 'html'],
             help='''Destination format, default to html.''')
         parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''Convert all cells, not only sos workflow cells, to .sos file. The result
+                might not be a valid .sos file.''')
+        parser.add_argument(
             '-f',
             '--force',
             action='store_true',
@@ -502,6 +508,9 @@ class Convert_Magic(SoS_Magic):
                     f'Cannot overwrite existing output file {filename}')
             # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
             if ftype == 'sos':
+                # --all is processed from frontend
+                if not self.sos_kernel._meta['workflow'] and not args.all:
+                    raise ValueError(f'No workflow is defined in this notebook.')
                 with open(filename, 'w') as script:
                     script.write(self.sos_kernel._meta['workflow'])
             else:
@@ -537,6 +546,7 @@ class Convert_Magic(SoS_Magic):
             #
             return
         except Exception as e:
+            self.sos_kernel.warn(str(e))
             msg = {
                 'status': 'error',
                 'ename': e.__class__.__name__,
@@ -544,8 +554,6 @@ class Convert_Magic(SoS_Magic):
                 'traceback': [],
                 'execution_count': self.sos_kernel._execution_count,
             }
-            self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'error',
-                                          msg)
             return msg
 
 

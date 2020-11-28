@@ -458,6 +458,12 @@ class NotebookToHTMLConverter(object):
                 rule is that `name' without `=` will be considered as value True.'''
         )
         parser.add_argument(
+            '-a',
+            '--all',
+            action='store_true',
+            help='''If specified, save content of all cells to .sos file.'''
+        )
+        parser.add_argument(
             '-v',
             '--view',
             action='store_true',
