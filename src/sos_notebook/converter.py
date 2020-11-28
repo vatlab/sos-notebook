@@ -343,7 +343,7 @@ class NotebookToScriptConverter(object):
 #
 
 def get_template_args():
-    return ['--TemplateExporter.extra_template_basedirs', os.path.join('{os.path.split(os.path.abspath(__file__))[0]}', 'templates')]
+    return ['--TemplateExporter.extra_template_basedirs', os.path.join(f'{os.path.split(os.path.abspath(__file__))[0]}', 'templates')]
 
 
 def export_notebook(exporter_class,
@@ -398,6 +398,11 @@ def export_notebook(exporter_class,
         except Exception:
             pass
     else:
+        print([
+            'jupyter', 'nbconvert',
+            os.path.abspath(notebook_file), '--to', to_format, '--output',
+            os.path.abspath(output_file)
+        ] + ([] if unknown_args is None else unknown_args))
         ret = subprocess.call([
             'jupyter', 'nbconvert',
             os.path.abspath(notebook_file), '--to', to_format, '--output',
@@ -566,13 +571,11 @@ class NotebookToPDFConverter(object):
 
         if unknown_args is None:
             unknown_args = []
-        if sargs.template:
-            unknown_args = get_template_args() + unknown_args
         # jupyter convert will add extension to output file...
         if output_file is not None and output_file.endswith('.pdf'):
             output_file = output_file[:-4]
         export_notebook(PDFExporter, 'pdf', notebook_file, output_file,
-                        unknown_args)
+                        get_template_args() + unknown_args)
 
         if os.path.basename(notebook_file).startswith('__tmp_output_nb'):
             try:
@@ -619,8 +622,7 @@ class NotebookToMarkdownConverter(object):
 
         export_notebook(
             MarkdownExporter, 'markdown', notebook_file, output_file,
-            unknown_args if '--template-file' in unknown_args else
-            ['--template', 'sos-markdown'] + unknown_args)
+            get_template_args() + ['--template', 'sos-markdown'] + unknown_args)
 
         if os.path.basename(notebook_file).startswith('__tmp_output_nb'):
             try:
