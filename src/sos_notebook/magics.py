@@ -19,6 +19,7 @@ from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
 from jupyter_client import find_connection_file
 from sos.eval import interpolate
 from sos.syntax import SOS_SECTION_HEADER
+from sos.targets import path
 from sos.utils import env, pretty_size, short_repr, pexpect_run, load_config_files
 from sos._version import __version__
 
@@ -346,7 +347,7 @@ class Cd_Magic(SoS_Magic):
             return
         to_dir = option.strip()
         try:
-            os.chdir(os.path.expanduser(to_dir))
+            os.chdir(path(to_dir))
             self.sos_kernel.send_response(self.sos_kernel.iopub_socket,
                                           'stream', {
                                               'name': 'stdout',
@@ -369,7 +370,7 @@ class Cd_Magic(SoS_Magic):
                 if hasattr(lan, 'cd_command'):
                     try:
                         self.sos_kernel.switch_kernel(kernel)
-                        cmd = interpolate(lan.cd_command, {'dir': to_dir})
+                        cmd = interpolate(lan.cd_command, {'dir': str(path(to_dir))})
                         self.sos_kernel.run_cell(
                             cmd,
                             True,
