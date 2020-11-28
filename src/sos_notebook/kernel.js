@@ -310,7 +310,8 @@ define([
   }
 
   function getNotebookContent(cells) {
-    let workflow = "";
+    let workflow = "#!/usr/bin/env sos-runner\n#fileformat=SOS1.0\n\n";
+
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
       if (cell.cell_type === "code" ) {

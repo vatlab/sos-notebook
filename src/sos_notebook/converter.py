@@ -96,7 +96,17 @@ class SoS_Exporter(Exporter):
         self.output_mimetype = 'text/x-sos'
         Exporter.__init__(self, config, **kwargs)
 
-    def from_notebook_cell(self, cell, fh, idx=0):
+    def content_from_notebook_cell(self, cell, fh, idx=0):
+        # in non-all mode, markdown cells are ignored because they can be mistakenly
+        # treated as markdown content of an action or script #806
+        if cell.cell_type != "code":
+            return
+        #
+        # Non-sos code cells are also ignored
+        fh.write(f'# cell {idx + 1}, kernel={cell.metadata["kernel"]}\n{cell.source}\n\n')
+        return idx
+
+    def workflow_from_notebook_cell(self, cell, fh, idx=0):
         # in non-all mode, markdown cells are ignored because they can be mistakenly
         # treated as markdown content of an action or script #806
         if cell.cell_type != "code":
@@ -133,9 +143,11 @@ class SoS_Exporter(Exporter):
         with StringIO() as fh:
             fh.write('#!/usr/bin/env sos-runner\n')
             fh.write('#fileformat=SOS1.0\n\n')
-            idx = 0
-            for cell in cells:
-                idx = self.from_notebook_cell(cell, fh, idx)
+            for idx, cell in enumerate(cells):
+                if 'all_content' in kwargs and kwargs['all_content']:
+                    self.content_from_notebook_cell(cell, fh, idx)
+                else:
+                    self.workflow_from_notebook_cell(cell, fh, idx)
             content = fh.getvalue()
         resources['output_extension'] = '.sos'
         return content, resources
@@ -300,6 +312,11 @@ class NotebookToScriptConverter(object):
             .sos file. The cells are presented in the .sos file as
             cell structure lines, which will be ignored if executed
             in batch mode ''')
+        parser.add_argument('-a',
+            '--all',
+            action='store_true',
+            help='''If set, export all cells to the output file, which
+                does not have to be a valid sos workflow.''')
         return parser
 
     def convert(self, notebook_file, sos_file, args=None, unknown_args=None):
@@ -310,7 +327,7 @@ class NotebookToScriptConverter(object):
             raise ValueError(f'Unrecognized parameter {unknown_args}')
         exporter = SoS_Exporter()
         notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
-        output, _ = exporter.from_notebook_node(notebook, {})
+        output, _ = exporter.from_notebook_node(notebook, {}, all_content=args.all if args else False)
         if not sos_file:
             sys.stdout.write(output)
         elif isinstance(sos_file, str):
