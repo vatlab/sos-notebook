@@ -498,7 +498,13 @@ class NotebookToHTMLConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = get_template_args() + ['--template', sargs.template] + unknown_args
+            template_path, template_name = os.path.split(sargs.template)
+            if template_path == '':
+                unknown_args = get_template_args() + ['--template', template_name] + unknown_args
+            else:
+                unknown_args = get_template_args() + \
+                    ['--TemplateExporter.extra_template_basedirs', template_path,
+                     '--template', template_name] + unknown_args
 
         if sargs.execute is not None:
             notebook_file = execute_sos_notebook(
@@ -567,7 +573,13 @@ class NotebookToPDFConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = get_template_args() + ['--template', sargs.template] + unknown_args
+            template_path, template_name = os.path.split(sargs.template)
+            if template_path == '':
+                unknown_args = get_template_args() + ['--template', template_name] + unknown_args
+            else:
+                unknown_args = get_template_args() + \
+                    ['--TemplateExporter.extra_template_basedirs', template_path,
+                     '--template', template_name] + unknown_args
 
         # jupyter convert will add extension to output file...
         if output_file is not None and output_file.endswith('.pdf'):
