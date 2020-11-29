@@ -398,11 +398,6 @@ def export_notebook(exporter_class,
         except Exception:
             pass
     else:
-        print([
-            'jupyter', 'nbconvert',
-            os.path.abspath(notebook_file), '--to', to_format, '--output',
-            os.path.abspath(output_file)
-        ] + ([] if unknown_args is None else unknown_args))
         ret = subprocess.call([
             'jupyter', 'nbconvert',
             os.path.abspath(notebook_file), '--to', to_format, '--output',
@@ -503,7 +498,7 @@ class NotebookToHTMLConverter(object):
         if unknown_args is None:
             unknown_args = []
         if sargs.template:
-            unknown_args = get_template_args() + unknown_args
+            unknown_args = get_template_args() + ['--template', sargs.template] + unknown_args
 
         if sargs.execute is not None:
             notebook_file = execute_sos_notebook(
@@ -571,6 +566,9 @@ class NotebookToPDFConverter(object):
 
         if unknown_args is None:
             unknown_args = []
+        if sargs.template:
+            unknown_args = get_template_args() + ['--template', sargs.template] + unknown_args
+
         # jupyter convert will add extension to output file...
         if output_file is not None and output_file.endswith('.pdf'):
             output_file = output_file[:-4]
