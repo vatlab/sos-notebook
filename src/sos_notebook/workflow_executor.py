@@ -302,6 +302,9 @@ def run_next_workflow_in_queue():
         elif not (proc.is_alive() and psutil.pid_exists(proc.pid)):
             g_workflow_queue[idx][1] = None
             continue
+        elif proc.is_alive():
+            proc.join()
+            g_workflow_queue[idx][1] = None
         else:
             # if already running, do not submit new one
             break
