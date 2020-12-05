@@ -50,8 +50,9 @@ class Interactive_Step_Executor(Base_Step_Executor):
             self.host.submit_task(task)
 
     def wait_for_tasks(self, tasks, all_submitted):
-        if not tasks:
-            return {}
+        if not tasks or not all_submitted:
+            return super(Interactive_Step_Executor, self).wait_for_tasks(tasks, all_submitted)
+
         # when we wait, the "outsiders" also need to see the tags etc
         # of the tasks so we have to write to the database. #156
         env.master_push_socket.send_pyobj(['commit_sig'])
@@ -59,27 +60,8 @@ class Interactive_Step_Executor(Base_Step_Executor):
         # actually wait for any socket.
         yield None
         # wait till the executor responde
-        if all(x == 'completed' for x in self.host.check_status(tasks)):
-            if len(tasks) > 4:
-                print('HINT: {} task{} completed: {}, {}, ..., {}'.format(
-                    len(tasks), 's' if len(tasks) > 1 else '',
-                    f"""<a onclick="task_info('{tasks[0]}', '{self.host.alias}')">{tasks[0][:4]}</a>""",
-                    f"""<a onclick="task_info('{tasks[1]}', '{self.host.alias}')">{tasks[1][:4]}</a>""",
-                    f"""<a onclick="task_info('{tasks[-1]}', '{self.host.alias}')">{tasks[-1][:4]}</a>"""
-                ))
-            else:
-                print('HINT: {} task{} completed: {}'.format(
-                    len(tasks), 's' if len(tasks) > 1 else '', ','.join([
-                        f"""<a onclick="task_info('{x}', '{self.host.alias}')">{x[:4]}</a>"""
-                        for x in tasks
-                    ])))
-            return self.host.retrieve_results(tasks)
-        while True:
-            res = self.host.check_status(tasks)
-            if all(x not in ('submitted', 'pending', 'running') for x in res):
-                # completed = [task for task, status in zip(tasks, res) if status == 'completed']
-                return self.host.retrieve_results(tasks)
-            time.sleep(0.1)
+        if any(x in ('pending', 'submitted', 'running') for x in self.host.check_status(tasks)):
+             raise ValueError(f'Running {len(tasks)} task{"s" if len(tasks) > 1 else ""} in background')
 
     def run(self):
         try:
