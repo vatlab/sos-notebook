@@ -302,9 +302,6 @@ def run_next_workflow_in_queue():
         elif not (proc.is_alive() and psutil.pid_exists(proc.pid)):
             g_workflow_queue[idx][1] = None
             continue
-        elif proc.is_alive():
-            proc.join()
-            g_workflow_queue[idx][1] = None
         else:
             # if already running, do not submit new one
             break
@@ -314,7 +311,10 @@ def execute_pending_workflow(cell_ids, kernel):
     # we are giving a list of cell_ids because some cells might be removed
     # we use this list to clear workflow queue of removed cells
     for idx, (cid, proc) in enumerate(g_workflow_queue):
-        if isinstance(proc, tuple) and cid not in cell_ids:
+        # if proc is a process
+        if cid not in cell_ids:
+            if not isinstance(proc, tuple):
+                proc.join()
             g_workflow_queue[idx][1] = None
     run_next_workflow_in_queue()
 
