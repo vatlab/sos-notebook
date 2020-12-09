@@ -4,6 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 import logging
 import multiprocessing as mp
+import copy
 import os
 import re
 import shlex
@@ -294,7 +295,6 @@ def run_next_workflow_in_queue():
             continue
         # this is ordered
         elif isinstance(proc, tuple):
-            env.config['slave_id'] = cid
             executor = Tapped_Executor(*proc)
             executor.start()
             g_workflow_queue[idx][1] = executor
@@ -337,7 +337,9 @@ def run_sos_workflow(code,
 
     if run_in_queue:
         # put to the back
-        g_workflow_queue.append([kernel.cell_id, (code, raw_args, env.config)])
+        cfg = copy.deepcopy(env.config)
+        cfg['slave_id'] = kernel.cell_id
+        g_workflow_queue.append([kernel.cell_id, (code, raw_args, cfg)])
         # in any case, we start with a pending status
         kernel.send_frontend_msg(
             'workflow_status', {
