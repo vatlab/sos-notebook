@@ -22,7 +22,7 @@ from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
 from sos.targets import RemovedTarget, UnknownTarget, textMD5, sos_targets
 
-from sos.utils import _parse_error, env, get_traceback, pexpect_run
+from sos.utils import _parse_error, env, get_traceback, pexpect_run, TerminateExecution
 
 from .step_executor import Interactive_Step_Executor
 
@@ -201,6 +201,8 @@ def execute_scratch_cell(code, raw_args, kernel):
                 f'Unknown result returned from executor {ret}: {e}')
     except (UnknownTarget, RemovedTarget) as e:
         raise RuntimeError(f'Unavailable target {e.target}')
+    except TerminateExecution as e:
+        return
     except SystemExit:
         # this happens because the executor is in resume mode but nothing
         # needs to be resumed, we simply pass

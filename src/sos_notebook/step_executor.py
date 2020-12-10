@@ -7,7 +7,7 @@ import time
 
 from sos.hosts import Host
 from sos.step_executor import Base_Step_Executor
-from sos.utils import env, short_repr
+from sos.utils import env, short_repr, TerminateExecution
 from sos.targets import sos_targets
 
 
@@ -74,12 +74,11 @@ class Interactive_Step_Executor(Base_Step_Executor):
                         for x in tasks
                     ])))
             return self.host.retrieve_results(tasks)
-        while True:
-            res = self.host.check_status(tasks)
-            if all(x not in ('submitted', 'pending', 'running') for x in res):
-                # completed = [task for task, status in zip(tasks, res) if status == 'completed']
-                return self.host.retrieve_results(tasks)
-            time.sleep(0.1)
+        res = self.host.check_status(tasks)
+        if all(x not in ('submitted', 'pending', 'running') for x in res):
+            # completed = [task for task, status in zip(tasks, res) if status == 'completed']
+            return self.host.retrieve_results(tasks)
+        raise TerminateExecution('Terminate with Running Tasks')
 
     def run(self):
         try:

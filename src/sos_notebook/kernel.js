@@ -744,14 +744,18 @@ define([
       has_status_table = document.getElementById(`task_${elem_id}_${cell_id}`);
       if (!has_status_table) {
         // if there is already a table inside, with cell_id that is different from before...
-        has_status_table = cell.element[0].querySelector(
+        has_status_table = document.querySelector(
           `[id^="task_${elem_id}"]`
         );
         if (has_status_table) {
           cell_id = has_status_table.id.split("_").slice(-1)[0];
+          cell = get_cell_by_id(cell_id);
         }
       }
       if (info.update_only && !has_status_table) {
+        console.log(
+          `Cannot find cell by cell ID ${info.cell_id} or task ID ${info.task_id} to update`
+        );
         return;
       }
     } else {
