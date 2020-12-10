@@ -2698,7 +2698,7 @@ class Task_Magic(SoS_Magic):
             name with tasks starting with these names. If no task ID is specified,
             all tasks related to specified workflows (option -w) will be removed.'''
         )
-        group = parser.add_mutually_exclusive_group(required=False)
+        group = purge.add_mutually_exclusive_group(required=False)
         group.add_argument(
             '-a',
             '--all',
@@ -2886,8 +2886,7 @@ class Task_Magic(SoS_Magic):
             return
         ret = host._task_engine.purge_tasks(
             tasks=args.tasks,
-            purge_all=not args.tasks and
-            (args.all or args.age or args.tags or args.status),
+            purge_all=args.all,
             age=args.age,
             status=args.status,
             tags=args.tags,
