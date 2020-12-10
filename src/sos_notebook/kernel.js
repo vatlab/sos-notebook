@@ -556,9 +556,13 @@ define([
       if (!id || !id[1]) {
         continue;
       }
-      let targets = cell.output_area._display_id_targets[id[1]];
+      let target_id = id[1];
+      if (target_id.match('^task_.*') ) {
+        target_id = target_id.split("_").slice(0, -1).join("_");
+      }
+      let targets = cell.output_area._display_id_targets[target_id];
       if (!targets) {
-        targets = cell.output_area._display_id_targets[id[1]] = [];
+        targets = cell.output_area._display_id_targets[target_id] = [];
       }
       targets.push({
         index: idx,
