@@ -1242,15 +1242,15 @@ define([
         changeStyleOnKernel(cells[i]);
       }
     }
-    $("[id^=status_]")
+    $("[id^=task_status_]")
       .removeAttr("onClick")
       .removeAttr("onmouseover")
       .removeAttr("onmouseleave");
-    var tasks = $("[id^=status_]");
+    var tasks = $("[id^=task_status_]");
     window.unknown_tasks = [];
     for (i = 0; i < tasks.length; ++i) {
       // status_localhost_5ea9232779ca1959
-      if (tasks[i].id.match("^task_status_icon_.+_[0-9a-f]{16,32}$")) {
+      if (tasks[i].id.match("^task_status_icon_.+$")) {
         tasks[i].className = "fa fa-fw fa-2x fa-refresh fa-spin";
         window.unknown_tasks.push(tasks[i].id.substring(17));
       }

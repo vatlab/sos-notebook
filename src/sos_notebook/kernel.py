@@ -782,13 +782,15 @@ class SoS_Kernel(IPythonKernel):
                     execute_pending_workflow(v, self)
                 elif k == 'update-task-status':
                     if not isinstance(v, list):
+                        env.log_to_file('KERNEL', f'Failed to parse message for update-task-status {v}')
                         continue
                     # split by host ...
                     host_status = defaultdict(list)
                     for name in v:
                         try:
-                            tqu, tid = name.rsplit('_', 1)
+                            tqu, tid, _ = name.rsplit('_', 2)
                         except Exception:
+                            env.log_to_file('KERNEL', f'Failed to parse task ID {name}: {e}')
                             # incorrect ID...
                             continue
                         host_status[tqu].append(tid)
@@ -797,8 +799,17 @@ class SoS_Kernel(IPythonKernel):
                     from sos.hosts import Host
                     for tqu, tids in host_status.items():
                         try:
-                            h = Host(tqu)
-                        except Exception:
+                            h = Host(tqu, start_engine=True)
+                        except Exception as e:
+                            env.log_to_file('KERNEL', f'Failed to connect to host {tqu}: {e}')
+                            for tid in tids:
+                                self.send_frontend_msg(
+                                    'task_status', {
+                                        'task_id': tid,
+                                        'queue': tqu,
+                                        'status': 'missing',
+                                        'duration': ''
+                                    })
                             continue
                         for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
                             self.send_frontend_msg(
