@@ -746,7 +746,7 @@ define([
     if (cell_id) {
       cell = get_cell_by_id(cell_id);
       has_status_table = document.getElementById(`task_${elem_id}_${cell_id}`);
-      if (!has_status_table) {
+      if (!has_status_table && info.status !== 'pending') {
         // if there is already a table inside, with cell_id that is different from before...
         has_status_table = document.querySelector(
           `[id^="task_${elem_id}"]`
@@ -763,6 +763,7 @@ define([
         return;
       }
     } else {
+      // note that there might be multiple task table that matches this task_id
       has_status_table = document.querySelector(`[id^="task_${elem_id}"]`);
       cell = get_cell_by_elem(has_status_table.closest(".code_cell"));
       cell_id = cell.cell_id;
@@ -877,7 +878,7 @@ define([
           status_class[info.status]
           }"</i>
     </td>
-    <td class="task_id">
+  <td class="task_id">
       <span><pre><i class="fa fa-fw fa-sitemap"></i></pre>${id_elems}</span>
     </td>
     <td class="task_tags">
