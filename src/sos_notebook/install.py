@@ -5,21 +5,14 @@
 
 import argparse
 import json
-import logging
 import os
 import shutil
 import sys
-from jupyter_contrib_core.notebook_compat import nbextensions
-
-from traitlets.config import Config
-from traitlets.config.manager import BaseJSONConfigManager
 
 from IPython.utils.tempdir import TemporaryDirectory
 from jupyter_client.kernelspec import KernelSpecManager
-
-logging.basicConfig(format='%(message)s')
-logger = logging.getLogger('sos_notebook')
-logger.setLevel(logging.INFO)
+from jupyter_contrib_core.notebook_compat import nbextensions
+from traitlets.config.manager import BaseJSONConfigManager
 
 _py_ver = sys.version_info
 if _py_ver.major == 2 or (_py_ver.major == 3 and
@@ -76,11 +69,10 @@ def install_sos_kernel_spec(user, prefix):
             os.path.join(os.path.split(__file__)[0], 'logo-64x64.png'),
             os.path.join(td, 'logo-64x64.png'))
 
-        KS = KernelSpecManager(logger=logger)
-        KS.log.setLevel(logging.WARNING)
+        KS = KernelSpecManager()
         KS.install_kernel_spec(td, 'sos', user=user, prefix=prefix)
         destination = KS._get_destination_dir('sos', user=user, prefix=prefix)
-        logger.info(f'sos jupyter kernel spec is installed to {destination}')
+        print(f'sos jupyter kernel spec is installed to {destination}')
 
 
 def install_config(user, prefix):
@@ -94,11 +86,11 @@ def install_config(user, prefix):
         config[keyname] = 'auto'
         # avoid warnings about unset version
         cm.set('notebook', config)
-        logger.info(
+        print(
             f'Console panel is set to "auto" in {config_dir}/nbconfig/notebook.json'
         )
     else:
-        logger.info(
+        print(
             f'Console panel setting is kept in {config_dir}/nbconfig/notebook.json'
         )
 
