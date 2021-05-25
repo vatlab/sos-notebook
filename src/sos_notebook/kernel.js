@@ -1592,7 +1592,7 @@ define([
     this.cell.element.show();
     this.cell.focus_editor();
     nb.metadata["sos"]["panel"].displayed = true;
-    console.log("display panel");
+
   };
 
   panel.prototype.execute_and_select_event = function (evt) {
@@ -1961,6 +1961,19 @@ define([
     // lazy, hook it up to Jupyter.notebook as the handle on all the singletons
     console.log("Setting up panel");
     window.my_panel = new panel(Jupyter.notebook);
+    Jupyter.notebook.config.loaded.then(
+      function () {
+        if (Jupyter.notebook.config.data &&
+          Jupyter.notebook.config.data.sos_notebook_console_panel &&
+          Jupyter.notebook.config.data.sos_notebook_console_panel == "false") {
+          toggle_panel();
+          console.log("panel not displayed. Set sos_notebook_console_panel to true or auto in notebook configure file to turn it on.");
+        } else {
+          console.log("display panel");
+        }
+      }
+    )
+
   }
 
   function toggle_panel() {

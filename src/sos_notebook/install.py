@@ -9,9 +9,17 @@ import logging
 import os
 import shutil
 import sys
+from jupyter_contrib_core.notebook_compat import nbextensions
+
+from traitlets.config import Config
+from traitlets.config.manager import BaseJSONConfigManager
 
 from IPython.utils.tempdir import TemporaryDirectory
 from jupyter_client.kernelspec import KernelSpecManager
+
+logging.basicConfig(format='%(message)s')
+logger = logging.getLogger('sos_notebook')
+logger.setLevel(logging.INFO)
 
 _py_ver = sys.version_info
 if _py_ver.major == 2 or (_py_ver.major == 3 and
@@ -54,15 +62,7 @@ def get_install_sos_kernel_spec_parser():
     return parser
 
 
-def install_sos_kernel_spec(args):
-    user = False
-    prefix = None
-    if args.sys_prefix:
-        prefix = sys.prefix
-    elif args.prefix:
-        prefix = args.prefix
-    elif args.user or not _is_root():
-        user = True
+def install_sos_kernel_spec(user, prefix):
 
     with TemporaryDirectory() as td:
         os.chmod(td, 0o755)  # Starts off as 700, not user readable
@@ -76,13 +76,44 @@ def install_sos_kernel_spec(args):
             os.path.join(os.path.split(__file__)[0], 'logo-64x64.png'),
             os.path.join(td, 'logo-64x64.png'))
 
-        KS = KernelSpecManager()
-        KS.log.setLevel(logging.ERROR)
+        KS = KernelSpecManager(logger=logger)
+        KS.log.setLevel(logging.WARNING)
         KS.install_kernel_spec(td, 'sos', user=user, prefix=prefix)
-        print('sos jupyter kernel spec is installed')
+        destination = KS._get_destination_dir('sos', user=user, prefix=prefix)
+        logger.info(f'sos jupyter kernel spec is installed to {destination}')
+
+
+def install_config(user, prefix):
+    config_dir = nbextensions._get_config_dir(user=user, sys_prefix=prefix)
+
+    # Set extra template path
+    cm = BaseJSONConfigManager(config_dir=os.path.join(config_dir, 'nbconfig'))
+    keyname = 'sos_notebook_console_panel'
+    config = cm.get('notebook')
+    if keyname not in config:
+        config[keyname] = 'auto'
+        # avoid warnings about unset version
+        cm.set('notebook', config)
+        logger.info(
+            f'Console panel is set to "auto" in {config_dir}/nbconfig/notebook.json'
+        )
+    else:
+        logger.info(
+            f'Console panel setting is kept in {config_dir}/nbconfig/notebook.json'
+        )
 
 
 if __name__ == '__main__':
     parser = get_install_sos_kernel_spec_parser()
     args = parser.parse_args()
-    install_sos_kernel_spec(args)
+    user = False
+    prefix = None
+    if args.sys_prefix:
+        prefix = sys.prefix
+    elif args.prefix:
+        prefix = args.prefix
+    elif args.user or not _is_root():
+        user = True
+
+    install_sos_kernel_spec(user, prefix)
+    install_config(user, prefix)
