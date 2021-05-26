@@ -1337,14 +1337,6 @@ define([
       }
     });
 
-    // Ensure position is fixed
-    $("#panel-wrapper").css("position", "fixed");
-
-    // if panel-wrapper is undefined (first run(?), then hide it)
-    // if ($("#panel-wrapper").css("display") === undefined) $("#panel-wrapper").css("display", "none") //block
-    if (!$("#panel-wrapper").css("display")) {
-      $("#panel-wrapper").css("display", "flex");
-    }
     $("#site").bind("siteHeight", function () {
       $("#panel-wrapper").css("height", $("#site").height());
     });
@@ -1368,7 +1360,6 @@ define([
     setTimeout(function () {
       $("#panel-wrapper").css("top", $("#header").height());
     }, 500); //wait a bit
-    $("#panel-wrapper").css("left", 0);
 
     $(window).resize(function () {
       if ($("#panel-wrapper").css("display") !== "flex") {
@@ -1982,29 +1973,27 @@ define([
     // toggle draw (first because of first-click behavior)
     //$("#panel-wrapper").toggle({"complete":function(){
     $("#panel-wrapper").toggle({
-      progress: function () {
+      complete: function () {
         $("#notebook-container").toggleClass("with_console_panel");
         $("#panel-wrapper").toggleClass("active");
 
-        $("#notebook-container").css(
-          "margin-left",
-          $("#panel-wrapper").width() + 25
-        );
-        $("#notebook-container").css(
-          "width",
-          $("#notebook").width() - $("#panel-wrapper").width() - 40
-        );
-      },
-      complete: function () {
-        nb.metadata["sos"]["panel"].displayed =
-          $("#panel-wrapper").css("display") === "flex";
         if (nb.metadata["sos"]["panel"].displayed) {
+          nb.metadata["sos"]["panel"].displayed = false;
+          console.log("panel closed");
+        } else {
+          nb.metadata["sos"]["panel"].displayed = true;
+          $("#notebook-container").css(
+            "margin-left",
+            $("#panel-wrapper").width() + 25
+          );
+          $("#notebook-container").css(
+            "width",
+            $("#notebook").width() - $("#panel-wrapper").width() - 40
+          );
+
           console.log("panel open");
           window.my_panel.cell.focus_editor();
           $("#panel-wrapper").css("z-index", 10);
-        } else {
-          $("#notebook-container").css("margin-left", "auto");
-          $("#notebook-container").css("margin-right", "auto");
         }
       }
     });
@@ -2014,6 +2003,16 @@ define([
     load_css(`
 
 #notebook-container.with_console_panel {
+
+}
+
+#panel-wrapper.active {
+  position: fixed;
+  display: flex;
+  left: 0px;
+}
+
+#panel-wrapper {
 
 }
 
