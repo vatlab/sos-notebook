@@ -1974,13 +1974,26 @@ define([
     //$("#panel-wrapper").toggle({"complete":function(){
     $("#panel-wrapper").toggle({
       complete: function () {
-        $("#notebook-container").toggleClass("with_console_panel");
         $("#panel-wrapper").toggleClass("active");
 
         if (nb.metadata["sos"]["panel"].displayed) {
+          $("#notebook-container").removeClass("with_console_panel");
+          $("#notebook-container").addClass("without_console_panel");
+
+          $("#notebook-container").css(
+            "margin-left", "auto"
+          );
+          $("#notebook-container").css(
+            "margin-right", "auto"
+          );
+
           nb.metadata["sos"]["panel"].displayed = false;
           console.log("panel closed");
+
         } else {
+          $("#notebook-container").removeClass("without_console_panel");
+          $("#notebook-container").addClass("with_console_panel");
+
           nb.metadata["sos"]["panel"].displayed = true;
           $("#notebook-container").css(
             "margin-left",
@@ -1990,10 +2003,9 @@ define([
             "width",
             $("#notebook").width() - $("#panel-wrapper").width() - 40
           );
+          window.my_panel.cell.focus_editor();
 
           console.log("panel open");
-          window.my_panel.cell.focus_editor();
-          $("#panel-wrapper").css("z-index", 10);
         }
       }
     });
@@ -2001,6 +2013,11 @@ define([
 
   function load_panel() {
     load_css(`
+
+#notebook-container.without_console_panel {
+  margin-left: auto;
+  margin-right: auto;
+}
 
 #notebook-container.with_console_panel {
 
@@ -2013,7 +2030,7 @@ define([
 }
 
 #panel-wrapper {
-
+  z-index: 10;
 }
 
 .panel {
