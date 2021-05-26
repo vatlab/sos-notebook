@@ -82,7 +82,8 @@ setup(
         # 'selenium',
         # 'requests',
         # 'pytest',
-        'psutil'
+        'psutil',
+        'jupyter_contrib_core',
     ],
     entry_points='''
 [sos_converters]
