@@ -1922,7 +1922,7 @@ define([
         }
       }
     }
-    if (!nb.metadata["sos"]["panel"].displayed) toggle_panel();
+    if (!nb.metadata["sos"]["panel"].displayed) toggle_panel("false");
     //
     window.my_panel.cell.metadata.kernel = cell_kernel;
 
@@ -1959,9 +1959,10 @@ define([
         if (Jupyter.notebook.config.data &&
           Jupyter.notebook.config.data.sos_notebook_console_panel &&
           Jupyter.notebook.config.data.sos_notebook_console_panel == "false") {
-          toggle_panel();
+          toggle_panel("false");
           console.log("panel not displayed. Set sos_notebook_console_panel to true or auto in notebook configure file to turn it on.");
         } else {
+          toggle_panel("true");
           console.log("display panel");
         }
       }
@@ -1969,10 +1970,15 @@ define([
 
   }
 
-  function toggle_panel() {
+  function toggle_panel(force="auto") {
+    let is_open = $("#notebook-container").hasClass("with_console_panel");
+
+    if ((force == "true" && is_open) || (force == "false" && !is_open)) {
+      return;
+    }
     // toggle draw (first because of first-click behavior)
     //$("#panel-wrapper").toggle({"complete":function(){
-    if ($("#notebook-container").hasClass("with_console_panel")) {
+    if (is_open) {
       $("#notebook-container").removeClass("with_console_panel");
       $("#notebook-container").addClass("without_console_panel");
       $("#panel-wrapper").removeClass("active");
