@@ -1295,8 +1295,7 @@ define([
     );
 
     $("body").append(panel_wrapper);
-    $("#notebook-container").addClass("with_console_panel");
-    $("#panel-wrapper").addClass("active");
+    $("#notebook-container").addClass("without_console_panel");
 
     $([Jupyter.events]).on("resize-header.Page", function () {
       $("#panel-wrapper").css("top", $("#header").height());
@@ -1344,22 +1343,6 @@ define([
     $("#site").trigger("siteHeight");
 
     $("#panel-wrapper").addClass("sidebar-wrapper");
-    setTimeout(function () {
-      $("#notebook-container").css(
-        "width",
-        $("#notebook").width() - $("#panel-wrapper").width() - 40
-      );
-      $("#notebook-container").css(
-        "margin-left",
-        $("#panel-wrapper").width() + 25
-      );
-    }, 500);
-    setTimeout(function () {
-      $("#panel-wrapper").css("height", $("#site").height());
-    }, 500);
-    setTimeout(function () {
-      $("#panel-wrapper").css("top", $("#header").height());
-    }, 500); //wait a bit
 
     $(window).resize(function () {
       if ($("#panel-wrapper").css("display") !== "flex") {
@@ -2005,6 +1988,10 @@ define([
         "width",
         $("#notebook").width() - $("#panel-wrapper").width() - 40
       );
+
+      $("#panel-wrapper").css("height", $("#site").height());
+      $("#panel-wrapper").css("top", $("#header").height());
+
       window.my_panel.cell.focus_editor();
 
       console.log("panel open");
