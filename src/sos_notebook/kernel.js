@@ -1296,6 +1296,7 @@ define([
 
     $("body").append(panel_wrapper);
     $("#notebook-container").addClass("with_console_panel");
+    $("#panel-wrapper").addClass("active");
 
     $([Jupyter.events]).on("resize-header.Page", function () {
       $("#panel-wrapper").css("top", $("#header").height());
@@ -1983,6 +1984,8 @@ define([
     $("#panel-wrapper").toggle({
       progress: function () {
         $("#notebook-container").toggleClass("with_console_panel");
+        $("#panel-wrapper").toggleClass("active");
+
         $("#notebook-container").css(
           "margin-left",
           $("#panel-wrapper").width() + 25
@@ -2009,6 +2012,11 @@ define([
 
   function load_panel() {
     load_css(`
+
+#notebook-container.with_console_panel {
+
+}
+
 .panel {
 padding: 0px;
 overflow-y: auto;
