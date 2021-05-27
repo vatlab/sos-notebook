@@ -1567,8 +1567,6 @@ define([
 
     this.cell.element.show();
     this.cell.focus_editor();
-    nb.metadata["sos"]["panel"].displayed = true;
-
   };
 
   panel.prototype.execute_and_select_event = function (evt) {
@@ -1941,12 +1939,14 @@ define([
       function () {
         if (Jupyter.notebook.config.data &&
           Jupyter.notebook.config.data.sos_notebook_console_panel &&
-          Jupyter.notebook.config.data.sos_notebook_console_panel == "false") {
+          Jupyter.notebook.config.data.sos_notebook_console_panel != "auto") {
+          //  true or false
+          toggle_panel(Jupyter.notebook.config.data.sos_notebook_console_panel);
+        } else if (!nb.metadata["sos"]["panel"].displayed) {
+          // auto or yes,
           toggle_panel("false");
-          console.log("panel not displayed. Set sos_notebook_console_panel to true or auto in notebook configure file to turn it on.");
         } else {
           toggle_panel("true");
-          console.log("display panel");
         }
       }
     )
@@ -1957,6 +1957,7 @@ define([
     let is_open = $("#notebook-container").hasClass("with_console_panel");
 
     if ((force == "true" && is_open) || (force == "false" && !is_open)) {
+      nb.metadata["sos"]["panel"].displayed = is_open;
       return;
     }
     // toggle draw (first because of first-click behavior)
@@ -1973,6 +1974,7 @@ define([
         "margin-right", "auto"
       );
 
+      nb.metadata["sos"]["panel"].displayed = false;
       console.log("panel closed");
 
     } else {
@@ -1992,6 +1994,7 @@ define([
       $("#panel-wrapper").css("height", $("#site").height());
       $("#panel-wrapper").css("top", $("#header").height());
 
+      nb.metadata["sos"]["panel"].displayed = true;
       window.my_panel.cell.focus_editor();
 
       console.log("panel open");

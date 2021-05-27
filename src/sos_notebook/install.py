@@ -86,13 +86,7 @@ def install_config(user, prefix):
         config[keyname] = 'auto'
         # avoid warnings about unset version
         cm.set('notebook', config)
-        print(
-            f'Console panel is set to "auto" in {config_dir}/nbconfig/notebook.json'
-        )
-    else:
-        print(
-            f'Console panel setting is kept in {config_dir}/nbconfig/notebook.json'
-        )
+    print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
 
 
 if __name__ == '__main__':
