@@ -1954,7 +1954,7 @@ define([
   }
 
   function toggle_panel(force="auto") {
-    let is_open = $("#notebook-container").hasClass("with_console_panel");
+    let is_open = ! $("#notebook-container").hasClass("without_console_panel");
 
     if ((force == "true" && is_open) || (force == "false" && !is_open)) {
       nb.metadata["sos"]["panel"].displayed = is_open;
@@ -1963,7 +1963,6 @@ define([
     // toggle draw (first because of first-click behavior)
     //$("#panel-wrapper").toggle({"complete":function(){
     if (is_open) {
-      $("#notebook-container").removeClass("with_console_panel");
       $("#notebook-container").addClass("without_console_panel");
       $("#panel-wrapper").removeClass("active");
 
@@ -1979,7 +1978,6 @@ define([
 
     } else {
       $("#notebook-container").removeClass("without_console_panel");
-      $("#notebook-container").addClass("with_console_panel");
       $("#panel-wrapper").addClass("active");
 
       $("#notebook-container").css(
@@ -2007,10 +2005,6 @@ define([
 #notebook-container.without_console_panel {
   margin-left: auto;
   margin-right: auto;
-}
-
-#notebook-container.with_console_panel {
-
 }
 
 #panel-wrapper.active {
