@@ -13,6 +13,8 @@ define([
   "codemirror/mode/javascript/javascript",
   "codemirror/mode/shell/shell",
   "codemirror/mode/julia/julia",
+  "codemirror/mode/ocaml/ocaml",
+  "codemirror/mode/clike/clike",
   "codemirror/mode/markdown/markdown",
   "codemirror/mode/htmlembedded/htmlembedded",
   "codemirror/mode/xml/xml",
@@ -2867,6 +2869,8 @@ color: green;
         },
         octave: "octave",
         matlab: "octave",
+        ocaml: "ocaml",
+        clike: "clike",
         html: "htmlembedded",
         xml: "xml",
         yaml: "yaml",
@@ -2894,7 +2898,13 @@ color: green;
         yaml: "yaml",
         yml: "yaml",
         json: "json",
-        tex: "stex"
+        tex: "stex",
+        ml: "ocaml",
+        c: "clike",
+        cxx: "clike",
+        cpp: "clike",
+        h: "clike",
+        hpp: "clike",
       };
 
       function findMode(mode) {
