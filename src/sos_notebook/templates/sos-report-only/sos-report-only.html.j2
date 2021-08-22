@@ -54,3 +54,14 @@
 
   {%- endif -%}
 {%- endblock markdowncell -%}
+
+{% block notebook_css %}
+{{ super() }}
+
+<style type="text/css">
+.sos_hint {
+  display: none;
+}
+</style>
+
+{% endblock %}

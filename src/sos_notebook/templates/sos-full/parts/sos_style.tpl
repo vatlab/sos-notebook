@@ -33,6 +33,7 @@
 	border: none;
 	margin: 0;
 	padding: 6px 13px;
+	white-space: break-spaces;
 }
 
 .rendered_html table tr td {
