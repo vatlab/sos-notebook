@@ -18,6 +18,7 @@ import pandas as pd
 import pkg_resources
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel.comm.manager import CommManager
+from ipykernel._version import version_info as ipykernel_version_info
 
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
@@ -1331,7 +1332,10 @@ class SoS_Kernel(IPythonKernel):
         # use the msg_id of the sos kernel for the subkernel to make sure that the messages sent
         # from the subkernel has the correct msg_id in parent_header so that they can be
         # displayed directly in the notebook (without using self._parent_header
-        msg['msg_id'] = self._parent_header['header']['msg_id']
+        if ipykernel_version_info[0] >= 6:
+            msg['msg_id'] = self.get_parent()['header']['msg_id']
+        else:
+            msg['msg_id'] = self._parent_header['header']['msg_id']
         msg['header']['msg_id'] = msg['msg_id']
         self.KC.shell_channel.send(msg)
 
