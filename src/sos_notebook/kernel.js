@@ -20,6 +20,7 @@ define([
   "codemirror/mode/xml/xml",
   "codemirror/mode/yaml/yaml",
   "codemirror/mode/javascript/javascript",
+  "codemirror/mode/turtle/turtle",
   "codemirror/mode/stex/stex",
   "codemirror/addon/selection/active-line",
   "codemirror/addon/fold/foldcode",
@@ -2878,7 +2879,8 @@ color: green;
           name: "javascript",
           jsonMode: true
         },
-        stex: "stex"
+        stex: "stex",
+        turtle: "turtle",
       };
 
       var extMap = {
@@ -2905,6 +2907,7 @@ color: green;
         cpp: "clike",
         h: "clike",
         hpp: "clike",
+        ttl: "turtle",
       };
 
       function findMode(mode) {
