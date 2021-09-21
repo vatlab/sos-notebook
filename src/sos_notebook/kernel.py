@@ -565,13 +565,16 @@ class CommProxyHandler(object):
         self._sos_kernel = sos_kernel
 
     def handle_msg(self, msg):
+        return asyncio.run(self._async_handle_msg(msg))
+
+    async def _async_handle_msg(self, msg):
         self._KC.shell_channel.send(msg)
         # wait for subkernel to handle
         comm_msg_started = False
         comm_msg_ended = False
         while not (comm_msg_started and comm_msg_ended):
-            while asyncio.run(self._KC.iopub_channel.msg_ready()):
-                sub_msg = asyncio.run(self._KC.iopub_channel.get_msg())
+            while await self._KC.iopub_channel.msg_ready():
+                sub_msg = await self._KC.iopub_channel.get_msg()
                 if sub_msg['header']['msg_type'] == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         comm_msg_started = True
@@ -1135,6 +1138,9 @@ class SoS_Kernel(IPythonKernel):
             self.switch_kernel(orig_kernel)
 
     def do_is_complete(self, code):
+        return asyncio.run(self._async_do_is_complete(code))
+
+    async def _async_do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
         if not code:
@@ -1200,11 +1206,11 @@ class SoS_Kernel(IPythonKernel):
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
-            while asyncio.run(KC.shell_channel.msg_ready()):
-                asyncio.run(KC.shell_channel.get_msg())
+            while await KC.shell_channel.msg_ready():
+                await KC.shell_channel.get_msg()
             code = '\n'.join(lines)
             KC.is_complete(code)
-            msg = asyncio.run(KC.shell_channel.get_msg())
+            msg = await KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'is_complete_reply':
                 env.log_to_file(
                     f'MESSAGE',
@@ -1220,6 +1226,9 @@ class SoS_Kernel(IPythonKernel):
             return {'status': 'incomplete', 'indent': ''}
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
+        return asyncio.run(self._async_do_inspect(code, cursor_pos, detail_level))
+
+    async def _async_do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
@@ -1241,8 +1250,8 @@ class SoS_Kernel(IPythonKernel):
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
-                while asyncio.run(KC.shell_channel.msg_ready()):
-                    msg = asyncio.run(KC.shell_channel.get_msg())
+                while await KC.shell_channel.msg_ready():
+                    msg = await KC.shell_channel.get_msg()
                     if msg['header']['msg_type'] == 'inspect_reply':
                         return msg['content']
                     else:
@@ -1258,6 +1267,9 @@ class SoS_Kernel(IPythonKernel):
                                 f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
+        return asyncio.run(self._async_do_complete(code, cursor_pos))
+
+    async def _async_do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {
@@ -1279,10 +1291,10 @@ class SoS_Kernel(IPythonKernel):
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
-            while asyncio.run(KC.shell_channel.msg_ready()):
-                asyncio.run(KC.shell_channel.get_msg())
+            while await KC.shell_channel.msg_ready():
+                await KC.shell_channel.get_msg()
             KC.complete(code, cursor_pos)
-            msg = asyncio.run(KC.shell_channel.get_msg())
+            msg = await KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'complete_reply':
                 return msg['content']
 
@@ -1308,6 +1320,9 @@ class SoS_Kernel(IPythonKernel):
             })
 
     def run_cell(self, code, silent, store_history, on_error=None):
+        return asyncio.run(self._async_run_cell(code, silent, store_history, on_error))
+
+    async def _async_run_cell(self, code, silent, store_history, on_error=None):
         #
         if not self.KM.is_alive():
             self.send_response(
@@ -1318,8 +1333,8 @@ class SoS_Kernel(IPythonKernel):
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats
-        while asyncio.run(self.KC.shell_channel.msg_ready()):
-            asyncio.run(self.KC.shell_channel.get_msg())
+        while await self.KC.shell_channel.msg_ready():
+            await self.KC.shell_channel.get_msg()
         # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
         content = dict(
@@ -1347,8 +1362,8 @@ class SoS_Kernel(IPythonKernel):
         while not (iopub_started and iopub_ended and shell_ended):
             try:
                 # display intermediate print statements, etc.
-                while asyncio.run(self.KC.stdin_channel.msg_ready()):
-                    sub_msg = asyncio.run(self.KC.stdin_channel.get_msg())
+                while await self.KC.stdin_channel.msg_ready():
+                    sub_msg = await self.KC.stdin_channel.get_msg()
                     env.log_to_file(
                         'MESSAGE',
                         f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
@@ -1362,8 +1377,8 @@ class SoS_Kernel(IPythonKernel):
                         else:
                             res = self.raw_input(prompt=content['prompt'])
                         self.KC.input(res)
-                while asyncio.run(self.KC.iopub_channel.msg_ready()):
-                    sub_msg = asyncio.run(self.KC.iopub_channel.get_msg())
+                while await self.KC.iopub_channel.msg_ready():
+                    sub_msg = await self.KC.iopub_channel.get_msg()
                     msg_type = sub_msg['header']['msg_type']
                     env.log_to_file(
                         'MESSAGE',
@@ -1409,7 +1424,7 @@ class SoS_Kernel(IPythonKernel):
                             self.comm_manager.register_subcomm(
                                 sub_msg['content']['comm_id'], self.KC)
                         self.session.send(self.iopub_socket, sub_msg)
-                if asyncio.run(self.KC.shell_channel.msg_ready()):
+                if await self.KC.shell_channel.msg_ready():
                     # now get the real result
                     reply = self.KC.get_shell_msg()
                     reply['content']['execution_count'] = self._execution_count
@@ -1591,11 +1606,14 @@ class SoS_Kernel(IPythonKernel):
         # stop_controller(self.controller)
 
     def get_response(self, statement, msg_types, name=None):
+        return asyncio.run(self._get_response(statement, msg_types, name))
+
+    async def _async_get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
-        while asyncio.run(self.KC.shell_channel.msg_ready()):
-            asyncio.run(self.KC.shell_channel.get_msg())
-        while asyncio.run(self.KC.iopub_channel.msg_ready()):
-            sub_msg = asyncio.run(self.KC.iopub_channel.get_msg())
+        while await self.KC.shell_channel.msg_ready():
+            await self.KC.shell_channel.get_msg()
+        while await self.KC.iopub_channel.msg_ready():
+            sub_msg = await self.KC.iopub_channel.get_msg()
             if sub_msg['header']['msg_type'] != 'status':
                 env.log_to_file(
                     'MESSAGE',
@@ -1609,8 +1627,8 @@ class SoS_Kernel(IPythonKernel):
         shell_ended = False
         while not (iopub_started and iopub_ended and shell_ended):
             # display intermediate print statements, etc.
-            while asyncio.run(self.KC.iopub_channel.msg_ready()):
-                sub_msg = asyncio.run(self.KC.iopub_channel.get_msg())
+            while await self.KC.iopub_channel.msg_ready():
+                sub_msg = await self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 env.log_to_file('MESSAGE',
                                 f'Received {msg_type} {sub_msg["content"]}')
@@ -1638,7 +1656,7 @@ class SoS_Kernel(IPythonKernel):
                     #
                     # self.send_response(
                     #    self.iopub_socket, msg_type, sub_msg['content'])
-            if asyncio.run(self.KC.shell_channel.msg_ready()):
+            if await self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
                 env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
