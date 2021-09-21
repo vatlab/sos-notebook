@@ -88,9 +88,12 @@ def stop_sos_kernel():
 
 def get_result(iopub):
     """retrieve result from an execution"""
+    return asyncio.run(_async_get_result(iopub))
+
+async def _async_get_result(iopub):
     result = None
     while True:
-        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
+        msg = await iopub.get_msg(block=True, timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -126,9 +129,12 @@ def get_display_data(iopub, data_type='text/plain'):
     because subkernel (for example irkernel) does not return
     execution_result
     """
+    return asyncio.run(_async_get_display_data(iopub, data_type))
+
+async def _async_get_display_data(iopub, data_type):
     result = None
     while True:
-        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
+        msg = await iopub.get_msg(block=True, timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -150,8 +156,11 @@ def get_display_data(iopub, data_type='text/plain'):
 
 def clear_channels(iopub):
     """assemble stdout/err from an execution"""
+    return asyncio.run(_async_clear_channels(iopub))
+
+async def _async_clear_channels(iopub):
     while True:
-        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
+        msg = await iopub.get_msg(block=True, timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
