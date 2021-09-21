@@ -6,7 +6,7 @@
 #
 # NOTE: for some namespace reason, this test can only be tested using
 # nose.
-
+import asyncio
 import atexit
 import os
 import re
@@ -90,7 +90,7 @@ def get_result(iopub):
     """retrieve result from an execution"""
     result = None
     while True:
-        msg = iopub.get_msg(block=True, timeout=1)
+        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -128,7 +128,7 @@ def get_display_data(iopub, data_type='text/plain'):
     """
     result = None
     while True:
-        msg = iopub.get_msg(block=True, timeout=1)
+        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -151,7 +151,7 @@ def get_display_data(iopub, data_type='text/plain'):
 def clear_channels(iopub):
     """assemble stdout/err from an execution"""
     while True:
-        msg = iopub.get_msg(block=True, timeout=1)
+        msg = asyncio.run(iopub.get_msg(block=True, timeout=1))
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
