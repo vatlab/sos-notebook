@@ -87,6 +87,8 @@ def install_config(user, prefix):
         # avoid warnings about unset version
         cm.set('notebook', config)
     print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
+    print('If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager')
+    print('Please see https://github.com/jupyter/notebook/issues/6164 for details.')
 
 
 if __name__ == '__main__':

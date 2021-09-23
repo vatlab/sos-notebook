@@ -76,6 +76,8 @@ setup(
         'nbconvert>=6.0.1',
         'ipython',
         'ipykernel',
+        # https://github.com/spatialaudio/nbsphinx/issues/563
+        'jinja2~=2.11',
         'notebook>=5.0.0',
         # 'jupyter_contrib_nbextensions',
         'tabulate',
@@ -87,6 +89,7 @@ setup(
         # 'pytest',
         'psutil',
         'jupyter_contrib_core',
+        'jupyter_contrib_nbextensions',
     ],
     entry_points='''
 [sos_converters]

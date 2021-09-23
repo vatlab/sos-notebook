@@ -565,16 +565,13 @@ class CommProxyHandler(object):
         self._sos_kernel = sos_kernel
 
     def handle_msg(self, msg):
-        return asyncio.run(self._async_handle_msg(msg))
-
-    async def _async_handle_msg(self, msg):
         self._KC.shell_channel.send(msg)
         # wait for subkernel to handle
         comm_msg_started = False
         comm_msg_ended = False
         while not (comm_msg_started and comm_msg_ended):
-            while await self._KC.iopub_channel.msg_ready():
-                sub_msg = await self._KC.iopub_channel.get_msg()
+            while self._KC.iopub_channel.msg_ready():
+                sub_msg = self._KC.iopub_channel.get_msg()
                 if sub_msg['header']['msg_type'] == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         comm_msg_started = True
@@ -921,6 +918,7 @@ class SoS_Kernel(IPythonKernel):
         sys.stderr = save_stderr
 
     def get_vars_from(self, items, from_kernel=None, explicit=False):
+        self.warn(f'GET VARS {items} {from_kernel}')
         if from_kernel is None or from_kernel.lower() == 'sos':
             # Feature removed #253
             # autmatically get all variables with names start with 'sos'
@@ -928,14 +926,12 @@ class SoS_Kernel(IPythonKernel):
             #     x for x in env.sos_dict.keys()
             #     if x.startswith('sos') and x not in self.original_keys
             # ]
-            if items is None:
-                items = []
+            if not items:
+                return
             for item in items:
                 if item not in env.sos_dict:
                     self.warn(f'Variable {item} does not exist')
                     return
-            if not items:
-                return
             kinfo = self.subkernels.find(self.kernel)
             if kinfo.language in self.supported_languages:
                 lan = self.supported_languages[kinfo.language]
@@ -1138,9 +1134,6 @@ class SoS_Kernel(IPythonKernel):
             self.switch_kernel(orig_kernel)
 
     def do_is_complete(self, code):
-        return asyncio.run(self._async_do_is_complete(code))
-
-    async def _async_do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
         if not code:
@@ -1206,11 +1199,11 @@ class SoS_Kernel(IPythonKernel):
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
-            while await KC.shell_channel.msg_ready():
-                await KC.shell_channel.get_msg()
+            while KC.shell_channel.msg_ready():
+                KC.shell_channel.get_msg()
             code = '\n'.join(lines)
             KC.is_complete(code)
-            msg = await KC.shell_channel.get_msg()
+            msg = KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'is_complete_reply':
                 env.log_to_file(
                     f'MESSAGE',
@@ -1226,9 +1219,6 @@ class SoS_Kernel(IPythonKernel):
             return {'status': 'incomplete', 'indent': ''}
 
     def do_inspect(self, code, cursor_pos, detail_level=0):
-        return asyncio.run(self._async_do_inspect(code, cursor_pos, detail_level))
-
-    async def _async_do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
@@ -1250,8 +1240,8 @@ class SoS_Kernel(IPythonKernel):
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
-                while await KC.shell_channel.msg_ready():
-                    msg = await KC.shell_channel.get_msg()
+                while KC.shell_channel.msg_ready():
+                    msg = KC.shell_channel.get_msg()
                     if msg['header']['msg_type'] == 'inspect_reply':
                         return msg['content']
                     else:
@@ -1267,9 +1257,6 @@ class SoS_Kernel(IPythonKernel):
                                 f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
-        return asyncio.run(self._async_do_complete(code, cursor_pos))
-
-    async def _async_do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {
@@ -1291,10 +1278,10 @@ class SoS_Kernel(IPythonKernel):
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
-            while await KC.shell_channel.msg_ready():
-                await KC.shell_channel.get_msg()
+            while KC.shell_channel.msg_ready():
+                KC.shell_channel.get_msg()
             KC.complete(code, cursor_pos)
-            msg = await KC.shell_channel.get_msg()
+            msg = KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'complete_reply':
                 return msg['content']
 
@@ -1564,7 +1551,8 @@ class SoS_Kernel(IPythonKernel):
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             # passing
-            self.get_vars_from(in_vars)
+            if in_vars:
+                self.get_vars_from(in_vars)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
