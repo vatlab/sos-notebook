@@ -918,7 +918,6 @@ class SoS_Kernel(IPythonKernel):
         sys.stderr = save_stderr
 
     def get_vars_from(self, items, from_kernel=None, explicit=False):
-        self.warn(f'GET VARS {items} {from_kernel}')
         if from_kernel is None or from_kernel.lower() == 'sos':
             # Feature removed #253
             # autmatically get all variables with names start with 'sos'
@@ -978,6 +977,8 @@ class SoS_Kernel(IPythonKernel):
                 self.switch_kernel(my_kernel)
 
     def put_vars_to(self, items, to_kernel=None, explicit=False):
+        if not items:
+            return
         if self.kernel.lower() == 'sos':
             if to_kernel is None:
                 self.warn(
@@ -996,11 +997,6 @@ class SoS_Kernel(IPythonKernel):
                 self.switch_kernel('SoS')
         else:
             # put to sos kernel or another kernel
-            #
-            # items can be None if unspecified
-            if not items:
-                # we do not simply return because we need to return default variables (with name startswith sos
-                items = []
             kinfo = self.subkernels.find(self.kernel)
             if kinfo.language not in self.supported_languages:
                 if explicit:
@@ -1018,6 +1014,7 @@ class SoS_Kernel(IPythonKernel):
                 else:
                     objects = lan(self, kinfo.kernel).put_vars(
                         items, to_kernel='SoS')
+
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
                 env.log_to_file(
@@ -1477,7 +1474,8 @@ class SoS_Kernel(IPythonKernel):
             return
         elif kinfo.name == 'SoS':
             # non-SoS to SoS
-            self.put_vars_to(in_vars)
+            if in_vars:
+                self.put_vars_to(in_vars)
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # Non-SoS to Non-SoS
@@ -1594,7 +1592,7 @@ class SoS_Kernel(IPythonKernel):
         # stop_controller(self.controller)
 
     def get_response(self, statement, msg_types, name=None):
-        return asyncio.run(self._get_response(statement, msg_types, name))
+        return asyncio.run(self._async_get_response(statement, msg_types, name))
 
     async def _async_get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
