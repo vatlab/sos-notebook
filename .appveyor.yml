@@ -24,7 +24,7 @@ shallow_clone: false
 environment:
     matrix:
         - PYTHON: "C:\\Miniconda36-x64"
-          PYTHON_VERSION: 3.6
+          PYTHON_VERSION: 3.8
 
 install:
     - set PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%
