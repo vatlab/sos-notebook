@@ -11,6 +11,7 @@ define([
   "codemirror/mode/ruby/ruby",
   "codemirror/mode/sas/sas",
   "codemirror/mode/javascript/javascript",
+  "codemirror/mode/turtle/turtle",
   "codemirror/mode/shell/shell",
   "codemirror/mode/julia/julia",
   "codemirror/mode/mllike/mllike",
@@ -413,6 +414,43 @@ define([
     return nb.get_cells().find(cell => cell.element[0] === elem);
   }
 
+  function load_codemirror_mode(mode) {
+    console.log(`Load codemirror mode ${mode}`);
+
+    // var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
+    //   lineNumbers: true
+    // });
+    // var modeInput = document.getElementById("mode");
+    // CodeMirror.on(modeInput, "keypress", function(e) {
+    //   if (e.keyCode == 13) change();
+    // });
+    function change() {
+      var val = modeInput.value, m, mode, spec;
+      if (m = /.+\.([^.]+)$/.exec(val)) {
+        var info = CodeMirror.findModeByExtension(m[1]);
+        if (info) {
+          mode = info.mode;
+          spec = info.mime;
+        }
+      } else if (/\//.test(val)) {
+        var info = CodeMirror.findModeByMIME(val);
+        if (info) {
+          mode = info.mode;
+          spec = val;
+        }
+      } else {
+        mode = spec = val;
+      }
+      if (mode) {
+        editor.setOption("mode", spec);
+        CodeMirror.autoLoadMode(editor, mode);
+        document.getElementById("modeinfo").textContent = spec;
+      } else {
+        alert("Could not find a mode corresponding to " + val);
+      }
+    }
+  }
+
   function changeStyleOnKernel(cell) {
     var type = cell.cell_type === "code" ? cell.metadata.kernel : "";
     // type should be  displayed name of kernel
@@ -454,6 +492,8 @@ define([
           type
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
+
+      load_codemirror_mode(cell.user_highlight);
       cell.code_mirror.setOption("mode", cell.user_highlight);
       return;
     }
@@ -2878,7 +2918,8 @@ color: green;
           name: "javascript",
           jsonMode: true
         },
-        stex: "stex"
+        stex: "stex",
+        turtle: "turtle",
       };
 
       var extMap = {
@@ -2905,6 +2946,7 @@ color: green;
         cpp: "clike",
         h: "clike",
         hpp: "clike",
+        ttl: "turtle",
       };
 
       function findMode(mode) {
