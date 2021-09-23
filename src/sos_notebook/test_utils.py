@@ -50,13 +50,15 @@ def sos_kernel():
 
 def flush_channels(kc=None):
     """flush any messages waiting on the queue"""
+    return asyncio.run(_async_flush_channels(kc))
 
+async def _async_flush_channels(kc):
     if kc is None:
         kc = KC
     for channel in (kc.shell_channel, kc.iopub_channel):
         while True:
             try:
-                channel.get_msg(block=True, timeout=0.1)
+                await channel.get_msg(timeout=0.1)
             except Empty:
                 break
             # do not validate message because SoS has special sos_comm
@@ -93,7 +95,7 @@ def get_result(iopub):
 async def _async_get_result(iopub):
     result = None
     while True:
-        msg = await iopub.get_msg(block=True, timeout=1)
+        msg = await iopub.get_msg(timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -134,7 +136,7 @@ def get_display_data(iopub, data_type='text/plain'):
 async def _async_get_display_data(iopub, data_type):
     result = None
     while True:
-        msg = await iopub.get_msg(block=True, timeout=1)
+        msg = await iopub.get_msg(timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -160,7 +162,7 @@ def clear_channels(iopub):
 
 async def _async_clear_channels(iopub):
     while True:
-        msg = await iopub.get_msg(block=True, timeout=1)
+        msg = await iopub.get_msg(timeout=1)
         msg_type = msg['msg_type']
         content = msg['content']
         if msg_type == 'status' and content['execution_state'] == 'idle':
@@ -410,6 +412,8 @@ class Notebook:
     # Get info
     #
     def get_kernel_list(self):
+        wait_for_selector(self.browser,
+                          '#menu-change-kernel-submenu')
         kernelMenu = self.browser.find_element_by_id(
             "menu-change-kernel-submenu")
         kernelEntries = kernelMenu.find_elements_by_tag_name("a")

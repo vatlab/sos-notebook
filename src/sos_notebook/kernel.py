@@ -1215,7 +1215,7 @@ class SoS_Kernel(IPythonKernel):
             env.logger.debug(f'Completion fail with exception: {e}')
             return {'status': 'incomplete', 'indent': ''}
 
-    def do_inspect(self, code, cursor_pos, detail_level=0):
+    async def do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
@@ -1237,8 +1237,8 @@ class SoS_Kernel(IPythonKernel):
                 KC = self.KC
             try:
                 KC.inspect(code, cursor_pos)
-                while KC.shell_channel.msg_ready():
-                    msg = KC.shell_channel.get_msg()
+                while await KC.shell_channel.msg_ready():
+                    msg = await KC.shell_channel.get_msg()
                     if msg['header']['msg_type'] == 'inspect_reply':
                         return msg['content']
                     else:

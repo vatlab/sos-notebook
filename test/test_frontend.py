@@ -226,7 +226,7 @@ class TestKernelInteraction(unittest.TestCase):
             # match magics
             ins_print = inspect(kc, "print")["data"]["text/plain"]
             self.assertTrue("print" in ins_print,
-                            "Returned: {}".format(ins_print))
+                             "Returned: {}".format(ins_print))
             wait_for_idle(kc)
             #
             # keywords
