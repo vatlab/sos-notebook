@@ -46,7 +46,7 @@ define([
 
   window.sos_comm = null;
 
-  CodeMirror.modeURL = "/static/components/codemirror/mode/%N/%N.js";
+  CodeMirror.modeURL = "codemirror/mode/%N/%N";
 
   var nb = IPython.notebook;
 
@@ -416,35 +416,6 @@ define([
     return nb.get_cells().find(cell => cell.element[0] === elem);
   }
 
-  function load_codemirror_mode(val, options = {}) {
-    console.log(`Load codemirror mode ${val}`);
-    var m, mode, spec;
-    if (m = /.+\.([^.]+)$/.exec(val)) {
-      var info = CodeMirror.findModeByExtension(m[1]);
-      if (info) {
-        mode = info.mode;
-        spec = info.mime;
-      }
-    } else if (/\//.test(val)) {
-      var info = CodeMirror.findModeByMIME(val);
-      if (info) {
-        mode = info.mode;
-        spec = val;
-      }
-    } else {
-      mode = spec = val;
-    }
-    if (mode) {
-      if (!CodeMirror.modes.hasOwnProperty(mode)) {
-        console.log(`Load codemirror mode ${val}`);
-        CodeMirror.requireMode(mode, function () { }, options);
-      } else {
-        console.log(`Codemirror mode ${val} is already loaded.`);
-      }
-    } else {
-      console.log("Could not find a mode corresponding to " + val);
-    }
-  }
 
   function changeStyleOnKernel(cell) {
     var type = cell.cell_type === "code" ? cell.metadata.kernel : "";
@@ -3028,6 +2999,8 @@ color: green;
       CodeMirror.defineMode(
         "sos",
         function (conf, parserConf) {
+          // conf appears to be used only for nested mode
+          // parserConf is an object similar to the mode option.
           let sosPythonConf = {};
           for (let prop in parserConf) {
             if (parserConf.hasOwnProperty(prop)) {
@@ -3043,9 +3016,20 @@ color: green;
           // this is the SoS flavored python mode with more identifiers
           var base_mode = null;
           if ("base_mode" in parserConf && parserConf.base_mode) {
-            let mode = findMode(parserConf.base_mode);
-            if (mode) {
-              base_mode = CodeMirror.getMode(conf, mode);
+            let spec = findMode(parserConf.base_mode);
+            if (spec) {
+              let modename = spec
+              if (typeof spec != "string") {
+                modename = spec.name
+              }
+              if (!CodeMirror.modes.hasOwnProperty(modename)) {
+                console.log(`Load codemirror mode ${modename}`);
+                CodeMirror.requireMode(modename, function () { }, {});
+              } else {
+                console.log(`Codemirror mode ${modename} is already loaded.`);
+              }
+              base_mode = CodeMirror.getMode(conf, spec);
+              // base_mode = CodeMirror.getMode(conf, mode);
             } else {
               base_mode = CodeMirror.getMode(conf, parserConf.base_mode);
             }
@@ -3063,7 +3047,6 @@ color: green;
               }
             );
 
-            load_codemirror_mode(base_mode);
             var overlay_mode = markExpr(python_mode);
             return {
               startState: function () {
