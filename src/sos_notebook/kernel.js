@@ -11,7 +11,6 @@ define([
   "codemirror/mode/ruby/ruby",
   "codemirror/mode/sas/sas",
   "codemirror/mode/javascript/javascript",
-  "codemirror/mode/turtle/turtle",
   "codemirror/mode/shell/shell",
   "codemirror/mode/julia/julia",
   "codemirror/mode/mllike/mllike",
@@ -25,7 +24,8 @@ define([
   "codemirror/addon/selection/active-line",
   "codemirror/addon/fold/foldcode",
   "codemirror/addon/fold/foldgutter",
-  "codemirror/addon/fold/indent-fold"
+  "codemirror/addon/fold/indent-fold",
+  "codemirror/addon/mode/loadmode"
 ], function ($) {
   "use strict";
   //variables defined as global which enable access from imported scripts.
@@ -45,6 +45,8 @@ define([
   window.my_panel = null;
 
   window.sos_comm = null;
+
+  CodeMirror.modeURL = "/static/components/codemirror/mode/%N/%N.js";
 
   var nb = IPython.notebook;
 
@@ -317,7 +319,7 @@ define([
 
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
-      if (cell.cell_type === "code" ) {
+      if (cell.cell_type === "code") {
         workflow += `# cell ${i + 1}, kernel=${cell.metadata["kernel"]}\n${cell.get_text()}\n\n`
       }
     }
@@ -414,40 +416,33 @@ define([
     return nb.get_cells().find(cell => cell.element[0] === elem);
   }
 
-  function load_codemirror_mode(mode) {
-    console.log(`Load codemirror mode ${mode}`);
-
-    // var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
-    //   lineNumbers: true
-    // });
-    // var modeInput = document.getElementById("mode");
-    // CodeMirror.on(modeInput, "keypress", function(e) {
-    //   if (e.keyCode == 13) change();
-    // });
-    function change() {
-      var val = modeInput.value, m, mode, spec;
-      if (m = /.+\.([^.]+)$/.exec(val)) {
-        var info = CodeMirror.findModeByExtension(m[1]);
-        if (info) {
-          mode = info.mode;
-          spec = info.mime;
-        }
-      } else if (/\//.test(val)) {
-        var info = CodeMirror.findModeByMIME(val);
-        if (info) {
-          mode = info.mode;
-          spec = val;
-        }
-      } else {
-        mode = spec = val;
+  function load_codemirror_mode(val, options = {}) {
+    console.log(`Load codemirror mode ${val}`);
+    var m, mode, spec;
+    if (m = /.+\.([^.]+)$/.exec(val)) {
+      var info = CodeMirror.findModeByExtension(m[1]);
+      if (info) {
+        mode = info.mode;
+        spec = info.mime;
       }
-      if (mode) {
-        editor.setOption("mode", spec);
-        CodeMirror.autoLoadMode(editor, mode);
-        document.getElementById("modeinfo").textContent = spec;
-      } else {
-        alert("Could not find a mode corresponding to " + val);
+    } else if (/\//.test(val)) {
+      var info = CodeMirror.findModeByMIME(val);
+      if (info) {
+        mode = info.mode;
+        spec = val;
       }
+    } else {
+      mode = spec = val;
+    }
+    if (mode) {
+      if (!CodeMirror.modes.hasOwnProperty(mode)) {
+        console.log(`Load codemirror mode ${val}`);
+        CodeMirror.requireMode(mode, function () { }, options);
+      } else {
+        console.log(`Codemirror mode ${val} is already loaded.`);
+      }
+    } else {
+      console.log("Could not find a mode corresponding to " + val);
     }
   }
 
@@ -485,15 +480,12 @@ define([
     if (cell.is_panel) {
       cell.user_highlight = {
         name: "sos",
-        base_mode:
-          window.CodeMirrorMode[type] ||
+        base_mode: window.CodeMirrorMode[type] ||
           window.LanguageName[type] ||
           window.KernelName[type] ||
           type
       };
       //console.log(`Set cell code mirror mode to ${cell.user_highlight}`)
-
-      load_codemirror_mode(cell.user_highlight);
       cell.code_mirror.setOption("mode", cell.user_highlight);
       return;
     }
@@ -599,7 +591,7 @@ define([
         continue;
       }
       let target_id = id[1];
-      if (target_id.match('^task_.*') ) {
+      if (target_id.match('^task_.*')) {
         target_id = target_id.split("_").slice(0, -1).join("_");
       }
       let targets = cell.output_area._display_id_targets[target_id];
@@ -692,8 +684,7 @@ define([
 
     // look for status etc and update them.
     let onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-trash"'`;
-    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${
-      status_class[info.status]
+    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class[info.status]
       }"'`;
     let onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
 
@@ -706,20 +697,17 @@ define([
 <table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
   <tr>
         <td class="workflow_icon">
-          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${
-          status_class[info.status]
+          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]
           }"
           ${onmouseover} ${onmouseleave} ${onclick}></i>
         </td>
         <td class="workflow_name">
-          <pre><span id="workflow_name_${cell_id}">${
-          info.workflow_name
+          <pre><span id="workflow_name_${cell_id}">${info.workflow_name
           }</span></pre>
         </td>
         <td class="workflow_id">
           <span>Workflow ID</span></br>
-          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${
-          info.workflow_id
+          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id
           }</span></pre>
         </td>
         <td class="workflow_index">
@@ -728,8 +716,7 @@ define([
         </td>
         <td class="workflow_status">
           <span id="status_text_${cell_id}">${info.status}</span></br>
-          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${
-          info.status
+          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status
           }" datetime="${info.start_time}">${timer_text}</time></pre>
         </td>
   </tr>
@@ -871,17 +858,13 @@ define([
     let id_elems =
       `<pre>${info.task_id}` +
       `<div class="task_id_actions">` +
-      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${
-      info.task_id
+      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${info.task_id
       }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${
-      info.task_id
+      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${info.task_id
       }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${
-      info.task_id
+      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${info.task_id
       }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${
-      info.task_id
+      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${info.task_id
       }', queue: '${info.queue}'})"></i>` +
       `</div></pre>`;
 
@@ -895,14 +878,11 @@ define([
       tags_elems +=
         `<pre class="task_tags task_tag_${tag}">${tag}` +
         `<div class="task_tag_actions">` +
-        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${
-        info.queue
+        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${info.queue
         }'})"></i>` +
-        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${
-        info.queue
+        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${info.queue
         }'})"></i>` +
-        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${
-        info.queue
+        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${info.queue
         }'})"></i>` +
         `</div></pre>`;
     }
@@ -916,8 +896,7 @@ define([
 <table id="task_${elem_id}_${cell_id}" class="task_table ${info.status}">
 <tr>
     <td class="task_icon">
-      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${
-          status_class[info.status]
+      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]
           }"</i>
     </td>
   <td class="task_id">
@@ -927,13 +906,11 @@ define([
       <span id="status_tags_${elem_id}_${cell_id}"><pre><i class="fa fa-fw fa-info-circle"></i></pre>${tags_elems}</span>
     </td>
     <td class="task_timer">
-      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${
-          info.status
+      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${info.status
           }" datetime="${info.start_time}">${timer_text}</time></pre>
     </td>
     <td class="task_status">
-      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${
-          info.status
+      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${info.status
           }</span></pre>
     </td>
 </tr>
@@ -1995,8 +1972,8 @@ define([
 
   }
 
-  function toggle_panel(force="auto") {
-    let is_open = ! $("#notebook-container").hasClass("without_console_panel");
+  function toggle_panel(force = "auto") {
+    let is_open = !$("#notebook-container").hasClass("without_console_panel");
 
     if ((force == "true" && is_open) || (force == "false" && !is_open)) {
       nb.metadata["sos"]["panel"].displayed = is_open;
@@ -2701,10 +2678,10 @@ color: green;
         })
         .addClass(safe_css_name(`sos_lan_${this.value}`));
       // https://github.com/vatlab/sos-notebook/issues/55
+
       cell.user_highlight = {
         name: "sos",
-        base_mode:
-          window.CodeMirrorMode[this.value] ||
+        base_mode: window.CodeMirrorMode[this.value] ||
           window.LanguageName[this.value] ||
           kernel_name ||
           this.value
@@ -3062,6 +3039,7 @@ color: green;
           sosPythonConf.extra_keywords = sosActionWords.concat(
             sosFunctionWords
           );
+
           // this is the SoS flavored python mode with more identifiers
           var base_mode = null;
           if ("base_mode" in parserConf && parserConf.base_mode) {
@@ -3084,6 +3062,8 @@ color: green;
                 version: 3
               }
             );
+
+            load_codemirror_mode(base_mode);
             var overlay_mode = markExpr(python_mode);
             return {
               startState: function () {
