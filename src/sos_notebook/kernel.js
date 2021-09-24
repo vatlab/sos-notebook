@@ -641,8 +641,7 @@ define([
 
     // look for status etc and update them.
     let onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-trash"'`;
-    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class[info.status]
-      }"'`;
+    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class[info.status]}"'`;
     let onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
 
     let data = {
@@ -654,18 +653,15 @@ define([
 <table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
   <tr>
         <td class="workflow_icon">
-          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]
-          }"
+          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
           ${onmouseover} ${onmouseleave} ${onclick}></i>
         </td>
         <td class="workflow_name">
-          <pre><span id="workflow_name_${cell_id}">${info.workflow_name
-          }</span></pre>
+          <pre><span id="workflow_name_${cell_id}">${info.workflow_name}</span></pre>
         </td>
         <td class="workflow_id">
           <span>Workflow ID</span></br>
-          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id
-          }</span></pre>
+          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id}</span></pre>
         </td>
         <td class="workflow_index">
           <span>Index</span></br>
@@ -673,8 +669,7 @@ define([
         </td>
         <td class="workflow_status">
           <span id="status_text_${cell_id}">${info.status}</span></br>
-          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status
-          }" datetime="${info.start_time}">${timer_text}</time></pre>
+          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
         </td>
   </tr>
 </table>
