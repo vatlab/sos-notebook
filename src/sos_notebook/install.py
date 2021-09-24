@@ -130,19 +130,19 @@ def install_config(user, prefix):
     if 'sos' not in config:
         config['sos'] = default_config
     else:
-        config = config['sos']
-        if 'notebook_console_panel' not in config:
-            config['notebook_console_panel'] = default_config[
+        sos_config = config['sos']
+        if 'notebook_console_panel' not in sos_config:
+            sos_config['notebook_console_panel'] = default_config[
                 'notebook_console_panel']
-        if 'kernel_codemirror_mode' not in config:
-            config['kernel_codemirror_mode'] = default_config[
+        if 'kernel_codemirror_mode' not in sos_config:
+            sos_config['kernel_codemirror_mode'] = default_config[
                 'kernel_codemirror_mode']
         else:
             for key in default_config['kernel_codemirror_mode']:
-                if key not in config['kernel_codemirror_mode']:
-                    config['kernel_codemirror_mode'][key] = default_config[
+                if key not in sos_config['kernel_codemirror_mode']:
+                    sos_config['kernel_codemirror_mode'][key] = default_config[
                         'kernel_codemirror_mode'][key]
-
+        config['sos'] = sos_config
     # avoid warnings about unset version
     cm.set('notebook', config)
     print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
