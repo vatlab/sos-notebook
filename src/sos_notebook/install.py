@@ -123,7 +123,6 @@ def install_config(user, prefix):
                 'jsonMode': True
             },
             'stex': "stex",
-            'turtle': "turtle",
         }
     }
     config = cm.get('notebook')
