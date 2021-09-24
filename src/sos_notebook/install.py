@@ -80,15 +80,64 @@ def install_config(user, prefix):
 
     # Set extra template path
     cm = BaseJSONConfigManager(config_dir=os.path.join(config_dir, 'nbconfig'))
-    keyname = 'sos_notebook_console_panel'
+    keyname = 'sos'
     config = cm.get('notebook')
     if keyname not in config:
-        config[keyname] = 'auto'
+        config[keyname] = {
+            'notebook_console_panel': 'auto',
+            'kernel_codemirror_mode': {
+                'python': {
+                    'name': "python",
+                    'version': 3
+                },
+                'python2': {
+                    'name': "python",
+                    'version': 2
+                },
+                'python3': {
+                    'name': "python",
+                    'version': 3
+                },
+                'r': "r",
+                'report': "report",
+                'pandoc': "markdown",
+                'download': "markdown",
+                'markdown': "markdown",
+                'ruby': "ruby",
+                'sas': "sas",
+                'bash': "shell",
+                'sh': "shell",
+                'julia': "julia",
+                'run': "shell",
+                'javascript': "javascript",
+                'typescript': {
+                    'name': "javascript",
+                    'typescript': True
+                },
+                'octave': "octave",
+                'matlab': "octave",
+                'mllike': "mllike",
+                'clike': "clike",
+                'html': "htmlembedded",
+                'xml': "xml",
+                'yaml': "yaml",
+                'json': {
+                    'name': "javascript",
+                    'jsonMode': True
+                },
+                'stex': "stex",
+                'turtle': "turtle",
+            }
+        }
         # avoid warnings about unset version
         cm.set('notebook', config)
     print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
-    print('If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager')
-    print('Please see https://github.com/jupyter/notebook/issues/6164 for details.')
+    print(
+        'If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager'
+    )
+    print(
+        'Please see https://github.com/jupyter/notebook/issues/6164 for details.'
+    )
 
 
 if __name__ == '__main__':

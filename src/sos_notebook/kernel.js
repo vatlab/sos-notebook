@@ -7,20 +7,7 @@ define([
   "codemirror/lib/codemirror",
   "codemirror/mode/python/python",
   "codemirror/mode/r/r",
-  "codemirror/mode/octave/octave",
-  "codemirror/mode/ruby/ruby",
-  "codemirror/mode/sas/sas",
-  "codemirror/mode/javascript/javascript",
-  "codemirror/mode/shell/shell",
-  "codemirror/mode/julia/julia",
-  "codemirror/mode/mllike/mllike",
-  "codemirror/mode/clike/clike",
   "codemirror/mode/markdown/markdown",
-  "codemirror/mode/htmlembedded/htmlembedded",
-  "codemirror/mode/xml/xml",
-  "codemirror/mode/yaml/yaml",
-  "codemirror/mode/javascript/javascript",
-  "codemirror/mode/stex/stex",
   "codemirror/addon/selection/active-line",
   "codemirror/addon/fold/foldcode",
   "codemirror/addon/fold/foldgutter",
@@ -415,7 +402,6 @@ define([
   function get_cell_by_elem(elem) {
     return nb.get_cells().find(cell => cell.element[0] === elem);
   }
-
 
   function changeStyleOnKernel(cell) {
     var type = cell.cell_type === "code" ? cell.metadata.kernel : "";
@@ -1928,10 +1914,11 @@ define([
     Jupyter.notebook.config.loaded.then(
       function () {
         if (Jupyter.notebook.config.data &&
-          Jupyter.notebook.config.data.sos_notebook_console_panel &&
-          Jupyter.notebook.config.data.sos_notebook_console_panel != "auto") {
+          Jupyter.notebook.config.data.sos &&
+          Jupyter.notebook.config.data.sos.notebook_console_panel &&
+          Jupyter.notebook.config.data.sos.notebook_console_panel != "auto") {
           //  true or false
-          toggle_panel(Jupyter.notebook.config.data.sos_notebook_console_panel);
+          toggle_panel(Jupyter.notebook.config.data.sos.notebook_console_panel);
         } else if (!nb.metadata["sos"]["panel"].displayed) {
           // auto or yes,
           toggle_panel("false");
@@ -2825,96 +2812,37 @@ color: green;
       // hint word for SoS mode
       CodeMirror.registerHelper("hintWords", "sos", hintWords);
 
-      var modeMap = {
-        sos: null,
-        python: {
-          name: "python",
-          version: 3
-        },
-        python2: {
-          name: "python",
-          version: 2
-        },
-        python3: {
-          name: "python",
-          version: 3
-        },
-        r: "r",
-        report: "report",
-        pandoc: "markdown",
-        download: "markdown",
-        markdown: "markdown",
-        ruby: "ruby",
-        sas: "sas",
-        bash: "shell",
-        sh: "shell",
-        julia: "julia",
-        run: "shell",
-        javascript: "javascript",
-        typescript: {
-          name: "javascript",
-          typescript: true
-        },
-        octave: "octave",
-        matlab: "octave",
-        mllike: "mllike",
-        clike: "clike",
-        html: "htmlembedded",
-        xml: "xml",
-        yaml: "yaml",
-        json: {
-          name: "javascript",
-          jsonMode: true
-        },
-        stex: "stex",
-        turtle: "turtle",
-      };
-
-      var extMap = {
-        sos: 'python3',
-        py: "python3",
-        r: "r",
-        md: "markdown",
-        rb: "ruby",
-        sas: "sas",
-        sh: "shell",
-        jl: "julia",
-        js: "javascript",
-        ts: "typecript",
-        m: "matlab",
-        html: "html",
-        xml: "xml",
-        yaml: "yaml",
-        yml: "yaml",
-        json: "json",
-        tex: "stex",
-        ml: "mllike",
-        c: "clike",
-        cxx: "clike",
-        cpp: "clike",
-        h: "clike",
-        hpp: "clike",
-        ttl: "turtle",
-      };
-
       function findMode(mode) {
-        if (mode in modeMap) {
-          return modeMap[mode];
-        } else if (typeof mode === 'string' && mode.toLowerCase() in modeMap) {
-          return modeMap[mode.toLowerCase()]
+        if (Jupyter.notebook.config.data &&
+          Jupyter.notebook.config.data.sos.kernel_codemirror_mode) {
+          let modeMap = Jupyter.notebook.config.data.sos.kernel_codemirror_mode;
+          if (mode in modeMap) {
+            return modeMap[mode];
+          } else if (typeof mode === 'string' && mode.toLowerCase() in modeMap) {
+            return modeMap[mode.toLowerCase()]
+          }
         }
         return null;
       }
 
       function findModeFromFilename(filename) {
-        if (!filename) {
-          return 'markdown';
+        var val = filename, m, mode, spec;
+        if (m = /.+\.([^.]+)$/.exec(val)) {
+          var info = CodeMirror.findModeByExtension(m[1]);
+          if (info) {
+            mode = info.mode;
+            spec = info.mime;
+          }
+        } else if (/\//.test(val)) {
+          var info = CodeMirror.findModeByMIME(val);
+          if (info) {
+            mode = info.mode;
+            spec = val;
+          }
+        } else {
+          mode = spec = val;
         }
-        let ext = filename.split('.').pop().toLowerCase();
-        if (ext in extMap) {
-          return extMap[ext];
-        }
-        return 'markdown';
+        return 'mode';
       }
 
       function markExpr(python_mode) {
@@ -3025,8 +2953,6 @@ color: green;
               if (!CodeMirror.modes.hasOwnProperty(modename)) {
                 console.log(`Load codemirror mode ${modename}`);
                 CodeMirror.requireMode(modename, function () { }, {});
-              } else {
-                console.log(`Codemirror mode ${modename} is already loaded.`);
               }
               base_mode = CodeMirror.getMode(conf, spec);
               // base_mode = CodeMirror.getMode(conf, mode);
