@@ -80,57 +80,71 @@ def install_config(user, prefix):
 
     # Set extra template path
     cm = BaseJSONConfigManager(config_dir=os.path.join(config_dir, 'nbconfig'))
-    keyname = 'sos'
-    config = cm.get('notebook')
-    if keyname not in config:
-        config[keyname] = {
-            'notebook_console_panel': 'auto',
-            'kernel_codemirror_mode': {
-                'python': {
-                    'name': "python",
-                    'version': 3
-                },
-                'python2': {
-                    'name': "python",
-                    'version': 2
-                },
-                'python3': {
-                    'name': "python",
-                    'version': 3
-                },
-                'r': "r",
-                'report': "report",
-                'pandoc': "markdown",
-                'download': "markdown",
-                'markdown': "markdown",
-                'ruby': "ruby",
-                'sas': "sas",
-                'bash': "shell",
-                'sh': "shell",
-                'julia': "julia",
-                'run': "shell",
-                'javascript': "javascript",
-                'typescript': {
-                    'name': "javascript",
-                    'typescript': True
-                },
-                'octave': "octave",
-                'matlab': "octave",
-                'mllike': "mllike",
-                'clike': "clike",
-                'html': "htmlembedded",
-                'xml': "xml",
-                'yaml': "yaml",
-                'json': {
-                    'name': "javascript",
-                    'jsonMode': True
-                },
-                'stex': "stex",
-                'turtle': "turtle",
-            }
+    default_config = {
+        'notebook_console_panel': 'auto',
+        'kernel_codemirror_mode': {
+            'python': {
+                'name': "python",
+                'version': 3
+            },
+            'python2': {
+                'name': "python",
+                'version': 2
+            },
+            'python3': {
+                'name': "python",
+                'version': 3
+            },
+            'r': "r",
+            'report': "report",
+            'pandoc': "markdown",
+            'download': "markdown",
+            'markdown': "markdown",
+            'ruby': "ruby",
+            'sas': "sas",
+            'bash': "shell",
+            'sh': "shell",
+            'julia': "julia",
+            'run': "shell",
+            'javascript': "javascript",
+            'typescript': {
+                'name': "javascript",
+                'typescript': True
+            },
+            'octave': "octave",
+            'matlab': "octave",
+            'mllike': "mllike",
+            'clike': "clike",
+            'html': "htmlembedded",
+            'xml': "xml",
+            'yaml': "yaml",
+            'json': {
+                'name': "javascript",
+                'jsonMode': True
+            },
+            'stex': "stex",
+            'turtle': "turtle",
         }
-        # avoid warnings about unset version
-        cm.set('notebook', config)
+    }
+    config = cm.get('notebook')
+    if 'sos' not in config:
+        config['sos'] = default_config
+    else:
+        config = config['sos']
+        if 'notebook_console_panel' not in config:
+            config['notebook_console_panel'] = default_config[
+                'notebook_console_panel']
+        if 'kernel_codemirror_mode' not in config:
+            config['kernel_codemirror_mode'] = default_config[
+                'kernel_codemirror_mode']
+        else:
+            for key in default_config['kernel_codemirror_mode']:
+                if key not in config['kernel_codemirror_mode']:
+                    config['kernel_codemirror_mode'][key] = default_config[
+                        'kernel_codemirror_mode'][key]
+
+    # avoid warnings about unset version
+    cm.set('notebook', config)
     print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
     print(
         'If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager'
