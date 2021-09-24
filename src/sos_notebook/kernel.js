@@ -7,24 +7,12 @@ define([
   "codemirror/lib/codemirror",
   "codemirror/mode/python/python",
   "codemirror/mode/r/r",
-  "codemirror/mode/octave/octave",
-  "codemirror/mode/ruby/ruby",
-  "codemirror/mode/sas/sas",
-  "codemirror/mode/javascript/javascript",
-  "codemirror/mode/shell/shell",
-  "codemirror/mode/julia/julia",
-  "codemirror/mode/mllike/mllike",
-  "codemirror/mode/clike/clike",
   "codemirror/mode/markdown/markdown",
-  "codemirror/mode/htmlembedded/htmlembedded",
-  "codemirror/mode/xml/xml",
-  "codemirror/mode/yaml/yaml",
-  "codemirror/mode/javascript/javascript",
-  "codemirror/mode/stex/stex",
   "codemirror/addon/selection/active-line",
   "codemirror/addon/fold/foldcode",
   "codemirror/addon/fold/foldgutter",
-  "codemirror/addon/fold/indent-fold"
+  "codemirror/addon/fold/indent-fold",
+  "codemirror/addon/mode/loadmode"
 ], function ($) {
   "use strict";
   //variables defined as global which enable access from imported scripts.
@@ -44,6 +32,8 @@ define([
   window.my_panel = null;
 
   window.sos_comm = null;
+
+  CodeMirror.modeURL = "codemirror/mode/%N/%N";
 
   var nb = IPython.notebook;
 
@@ -316,7 +306,7 @@ define([
 
     for (let i = 0; i < cells.length; ++i) {
       let cell = cells[i];
-      if (cell.cell_type === "code" ) {
+      if (cell.cell_type === "code") {
         workflow += `# cell ${i + 1}, kernel=${cell.metadata["kernel"]}\n${cell.get_text()}\n\n`
       }
     }
@@ -447,8 +437,7 @@ define([
     if (cell.is_panel) {
       cell.user_highlight = {
         name: "sos",
-        base_mode:
-          window.CodeMirrorMode[type] ||
+        base_mode: window.CodeMirrorMode[type] ||
           window.LanguageName[type] ||
           window.KernelName[type] ||
           type
@@ -559,7 +548,7 @@ define([
         continue;
       }
       let target_id = id[1];
-      if (target_id.match('^task_.*') ) {
+      if (target_id.match('^task_.*')) {
         target_id = target_id.split("_").slice(0, -1).join("_");
       }
       let targets = cell.output_area._display_id_targets[target_id];
@@ -652,9 +641,7 @@ define([
 
     // look for status etc and update them.
     let onmouseover = `onmouseover='this.classList="fa fa-2x fa-fw fa-trash"'`;
-    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${
-      status_class[info.status]
-      }"'`;
+    let onmouseleave = `onmouseleave='this.classList="fa fa-2x fa-fw ${status_class[info.status]}"'`;
     let onclick = `onclick="cancel_workflow(this.id.substring(21))"`;
 
     let data = {
@@ -666,21 +653,15 @@ define([
 <table id="workflow_${cell_id}" class="workflow_table  ${info.status}">
   <tr>
         <td class="workflow_icon">
-          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${
-          status_class[info.status]
-          }"
+          <i id="workflow_status_icon_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"
           ${onmouseover} ${onmouseleave} ${onclick}></i>
         </td>
         <td class="workflow_name">
-          <pre><span id="workflow_name_${cell_id}">${
-          info.workflow_name
-          }</span></pre>
+          <pre><span id="workflow_name_${cell_id}">${info.workflow_name}</span></pre>
         </td>
         <td class="workflow_id">
           <span>Workflow ID</span></br>
-          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${
-          info.workflow_id
-          }</span></pre>
+          <pre><i class="fa fa-fw fa-sitemap"></i><span id="workflow_id_${cell_id}">${info.workflow_id}</span></pre>
         </td>
         <td class="workflow_index">
           <span>Index</span></br>
@@ -688,9 +669,7 @@ define([
         </td>
         <td class="workflow_status">
           <span id="status_text_${cell_id}">${info.status}</span></br>
-          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${
-          info.status
-          }" datetime="${info.start_time}">${timer_text}</time></pre>
+          <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${cell_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
         </td>
   </tr>
 </table>
@@ -831,18 +810,10 @@ define([
     let id_elems =
       `<pre>${info.task_id}` +
       `<div class="task_id_actions">` +
-      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${
-      info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${
-      info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${
-      info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${
-      info.task_id
-      }', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
       `</div></pre>`;
 
     let tags = info.tags.split(/\s+/g);
@@ -855,15 +826,9 @@ define([
       tags_elems +=
         `<pre class="task_tags task_tag_${tag}">${tag}` +
         `<div class="task_tag_actions">` +
-        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${
-        info.queue
-        }'})"></i>` +
-        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${
-        info.queue
-        }'})"></i>` +
-        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${
-        info.queue
-        }'})"></i>` +
+        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${info.queue}'})"></i>` +
         `</div></pre>`;
     }
 
@@ -876,9 +841,7 @@ define([
 <table id="task_${elem_id}_${cell_id}" class="task_table ${info.status}">
 <tr>
     <td class="task_icon">
-      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${
-          status_class[info.status]
-          }"</i>
+      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"</i>
     </td>
   <td class="task_id">
       <span><pre><i class="fa fa-fw fa-sitemap"></i></pre>${id_elems}</span>
@@ -887,14 +850,10 @@ define([
       <span id="status_tags_${elem_id}_${cell_id}"><pre><i class="fa fa-fw fa-info-circle"></i></pre>${tags_elems}</span>
     </td>
     <td class="task_timer">
-      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${
-          info.status
-          }" datetime="${info.start_time}">${timer_text}</time></pre>
+      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
     </td>
     <td class="task_status">
-      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${
-          info.status
-          }</span></pre>
+      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${info.status}</span></pre>
     </td>
 </tr>
 </table>
@@ -1940,10 +1899,11 @@ define([
     Jupyter.notebook.config.loaded.then(
       function () {
         if (Jupyter.notebook.config.data &&
-          Jupyter.notebook.config.data.sos_notebook_console_panel &&
-          Jupyter.notebook.config.data.sos_notebook_console_panel != "auto") {
+          Jupyter.notebook.config.data.sos &&
+          Jupyter.notebook.config.data.sos.notebook_console_panel &&
+          Jupyter.notebook.config.data.sos.notebook_console_panel != "auto") {
           //  true or false
-          toggle_panel(Jupyter.notebook.config.data.sos_notebook_console_panel);
+          toggle_panel(Jupyter.notebook.config.data.sos.notebook_console_panel);
         } else if (!nb.metadata["sos"]["panel"].displayed) {
           // auto or yes,
           toggle_panel("false");
@@ -1955,8 +1915,8 @@ define([
 
   }
 
-  function toggle_panel(force="auto") {
-    let is_open = ! $("#notebook-container").hasClass("without_console_panel");
+  function toggle_panel(force = "auto") {
+    let is_open = !$("#notebook-container").hasClass("without_console_panel");
 
     if ((force == "true" && is_open) || (force == "false" && !is_open)) {
       nb.metadata["sos"]["panel"].displayed = is_open;
@@ -2661,10 +2621,10 @@ color: green;
         })
         .addClass(safe_css_name(`sos_lan_${this.value}`));
       // https://github.com/vatlab/sos-notebook/issues/55
+
       cell.user_highlight = {
         name: "sos",
-        base_mode:
-          window.CodeMirrorMode[this.value] ||
+        base_mode: window.CodeMirrorMode[this.value] ||
           window.LanguageName[this.value] ||
           kernel_name ||
           this.value
@@ -2837,94 +2797,37 @@ color: green;
       // hint word for SoS mode
       CodeMirror.registerHelper("hintWords", "sos", hintWords);
 
-      var modeMap = {
-        sos: null,
-        python: {
-          name: "python",
-          version: 3
-        },
-        python2: {
-          name: "python",
-          version: 2
-        },
-        python3: {
-          name: "python",
-          version: 3
-        },
-        r: "r",
-        report: "report",
-        pandoc: "markdown",
-        download: "markdown",
-        markdown: "markdown",
-        ruby: "ruby",
-        sas: "sas",
-        bash: "shell",
-        sh: "shell",
-        julia: "julia",
-        run: "shell",
-        javascript: "javascript",
-        typescript: {
-          name: "javascript",
-          typescript: true
-        },
-        octave: "octave",
-        matlab: "octave",
-        mllike: "mllike",
-        clike: "clike",
-        html: "htmlembedded",
-        xml: "xml",
-        yaml: "yaml",
-        json: {
-          name: "javascript",
-          jsonMode: true
-        },
-        stex: "stex"
-      };
-
-      var extMap = {
-        sos: 'python3',
-        py: "python3",
-        r: "r",
-        md: "markdown",
-        rb: "ruby",
-        sas: "sas",
-        sh: "shell",
-        jl: "julia",
-        js: "javascript",
-        ts: "typecript",
-        m: "matlab",
-        html: "html",
-        xml: "xml",
-        yaml: "yaml",
-        yml: "yaml",
-        json: "json",
-        tex: "stex",
-        ml: "mllike",
-        c: "clike",
-        cxx: "clike",
-        cpp: "clike",
-        h: "clike",
-        hpp: "clike",
-      };
-
       function findMode(mode) {
-        if (mode in modeMap) {
-          return modeMap[mode];
-        } else if (typeof mode === 'string' && mode.toLowerCase() in modeMap) {
-          return modeMap[mode.toLowerCase()]
+        if (Jupyter.notebook.config.data &&
+          Jupyter.notebook.config.data.sos.kernel_codemirror_mode) {
+          let modeMap = Jupyter.notebook.config.data.sos.kernel_codemirror_mode;
+          if (mode in modeMap) {
+            return modeMap[mode];
+          } else if (typeof mode === 'string' && mode.toLowerCase() in modeMap) {
+            return modeMap[mode.toLowerCase()]
+          }
         }
         return null;
       }
 
       function findModeFromFilename(filename) {
-        if (!filename) {
-          return 'markdown';
+        var val = filename, m, mode, spec;
+        if (m = /.+\.([^.]+)$/.exec(val)) {
+          var info = CodeMirror.findModeByExtension(m[1]);
+          if (info) {
+            mode = info.mode;
+            spec = info.mime;
+          }
+        } else if (/\//.test(val)) {
+          var info = CodeMirror.findModeByMIME(val);
+          if (info) {
+            mode = info.mode;
+            spec = val;
+          }
+        } else {
+          mode = spec = val;
         }
-        let ext = filename.split('.').pop().toLowerCase();
-        if (ext in extMap) {
-          return extMap[ext];
-        }
-        return 'markdown';
+        return 'mode';
       }
 
       function markExpr(python_mode) {
@@ -3009,6 +2912,8 @@ color: green;
       CodeMirror.defineMode(
         "sos",
         function (conf, parserConf) {
+          // conf appears to be used only for nested mode
+          // parserConf is an object similar to the mode option.
           let sosPythonConf = {};
           for (let prop in parserConf) {
             if (parserConf.hasOwnProperty(prop)) {
@@ -3020,12 +2925,22 @@ color: green;
           sosPythonConf.extra_keywords = sosActionWords.concat(
             sosFunctionWords
           );
+
           // this is the SoS flavored python mode with more identifiers
           var base_mode = null;
           if ("base_mode" in parserConf && parserConf.base_mode) {
-            let mode = findMode(parserConf.base_mode);
-            if (mode) {
-              base_mode = CodeMirror.getMode(conf, mode);
+            let spec = findMode(parserConf.base_mode);
+            if (spec) {
+              let modename = spec
+              if (typeof spec != "string") {
+                modename = spec.name
+              }
+              if (!CodeMirror.modes.hasOwnProperty(modename)) {
+                console.log(`Load codemirror mode ${modename}`);
+                CodeMirror.requireMode(modename, function () { }, {});
+              }
+              base_mode = CodeMirror.getMode(conf, spec);
+              // base_mode = CodeMirror.getMode(conf, mode);
             } else {
               base_mode = CodeMirror.getMode(conf, parserConf.base_mode);
             }
@@ -3042,6 +2957,7 @@ color: green;
                 version: 3
               }
             );
+
             var overlay_mode = markExpr(python_mode);
             return {
               startState: function () {

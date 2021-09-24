@@ -80,15 +80,78 @@ def install_config(user, prefix):
 
     # Set extra template path
     cm = BaseJSONConfigManager(config_dir=os.path.join(config_dir, 'nbconfig'))
-    keyname = 'sos_notebook_console_panel'
+    default_config = {
+        'notebook_console_panel': 'auto',
+        'kernel_codemirror_mode': {
+            'python': {
+                'name': "python",
+                'version': 3
+            },
+            'python2': {
+                'name': "python",
+                'version': 2
+            },
+            'python3': {
+                'name': "python",
+                'version': 3
+            },
+            'r': "r",
+            'report': "report",
+            'pandoc': "markdown",
+            'download': "markdown",
+            'markdown': "markdown",
+            'ruby': "ruby",
+            'sas': "sas",
+            'bash': "shell",
+            'sh': "shell",
+            'julia': "julia",
+            'run': "shell",
+            'javascript': "javascript",
+            'typescript': {
+                'name': "javascript",
+                'typescript': True
+            },
+            'octave': "octave",
+            'matlab': "octave",
+            'mllike': "mllike",
+            'clike': "clike",
+            'html': "htmlembedded",
+            'xml': "xml",
+            'yaml': "yaml",
+            'json': {
+                'name': "javascript",
+                'jsonMode': True
+            },
+            'stex': "stex",
+            'turtle': "turtle",
+        }
+    }
     config = cm.get('notebook')
-    if keyname not in config:
-        config[keyname] = 'auto'
-        # avoid warnings about unset version
-        cm.set('notebook', config)
+    if 'sos' not in config:
+        config['sos'] = default_config
+    else:
+        sos_config = config['sos']
+        if 'notebook_console_panel' not in sos_config:
+            sos_config['notebook_console_panel'] = default_config[
+                'notebook_console_panel']
+        if 'kernel_codemirror_mode' not in sos_config:
+            sos_config['kernel_codemirror_mode'] = default_config[
+                'kernel_codemirror_mode']
+        else:
+            for key in default_config['kernel_codemirror_mode']:
+                if key not in sos_config['kernel_codemirror_mode']:
+                    sos_config['kernel_codemirror_mode'][key] = default_config[
+                        'kernel_codemirror_mode'][key]
+        config['sos'] = sos_config
+    # avoid warnings about unset version
+    cm.set('notebook', config)
     print(f'Settings added or updated in {config_dir}/nbconfig/notebook.json')
-    print('If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager')
-    print('Please see https://github.com/jupyter/notebook/issues/6164 for details.')
+    print(
+        'If you notice problems with the kernel, you will need to use AsyncMappingKernelManager as kernel manager'
+    )
+    print(
+        'Please see https://github.com/jupyter/notebook/issues/6164 for details.'
+    )
 
 
 if __name__ == '__main__':
