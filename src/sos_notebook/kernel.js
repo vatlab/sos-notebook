@@ -815,14 +815,10 @@ define([
     let id_elems =
       `<pre>${info.task_id}` +
       `<div class="task_id_actions">` +
-      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${info.task_id
-      }', queue: '${info.queue}'})"></i>` +
-      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${info.task_id
-      }', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-play" onclick="task_action({action:'execute', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
+      `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', task:'${info.task_id}', queue: '${info.queue}'})"></i>` +
       `</div></pre>`;
 
     let tags = info.tags.split(/\s+/g);
@@ -835,12 +831,9 @@ define([
       tags_elems +=
         `<pre class="task_tags task_tag_${tag}">${tag}` +
         `<div class="task_tag_actions">` +
-        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${info.queue
-        }'})"></i>` +
-        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${info.queue
-        }'})"></i>` +
-        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${info.queue
-        }'})"></i>` +
+        `<i class="fa fa-fw fa-refresh" onclick="task_action({action:'status', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-stop"" onclick="task_action({action:'kill', tag:'${tag}', queue: '${info.queue}'})"></i>` +
+        `<i class="fa fa-fw fa-trash"" onclick="task_action({action:'purge', tag:'${tag}', queue: '${info.queue}'})"></i>` +
         `</div></pre>`;
     }
 
@@ -853,8 +846,7 @@ define([
 <table id="task_${elem_id}_${cell_id}" class="task_table ${info.status}">
 <tr>
     <td class="task_icon">
-      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]
-          }"</i>
+      <i id="task_status_icon_${elem_id}_${cell_id}" class="fa fa-2x fa-fw ${status_class[info.status]}"</i>
     </td>
   <td class="task_id">
       <span><pre><i class="fa fa-fw fa-sitemap"></i></pre>${id_elems}</span>
@@ -863,12 +855,10 @@ define([
       <span id="status_tags_${elem_id}_${cell_id}"><pre><i class="fa fa-fw fa-info-circle"></i></pre>${tags_elems}</span>
     </td>
     <td class="task_timer">
-      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${info.status
-          }" datetime="${info.start_time}">${timer_text}</time></pre>
+      <pre><i class="fa fa-fw fa-clock-o"></i><time id="status_duration_${elem_id}_${cell_id}" class="${info.status}" datetime="${info.start_time}">${timer_text}</time></pre>
     </td>
     <td class="task_status">
-      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${info.status
-          }</span></pre>
+      <pre><i class="fa fa-fw fa-tasks"></i><span id="status_text_${elem_id}_${cell_id}">${info.status}</span></pre>
     </td>
 </tr>
 </table>

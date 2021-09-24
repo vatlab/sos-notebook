@@ -261,7 +261,6 @@ class Subkernels(object):
     def get_background_color(self, plugin, lan):
         # if a single color is defined, it is used for all supported
         # languages
-        env.log_to_file('KERNEL', f'Getting background color for lan {lan}')
         if isinstance(plugin.background_color, str):
             # return the same background color for all inquiry
             return plugin.background_color
