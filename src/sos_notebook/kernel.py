@@ -286,10 +286,10 @@ class Subkernels(object):
             #  [Bash, some_sh, ....]
             # but the provided kernel does not match...
             if (kernel is not None and kernel != x.kernel):
-                env.logger.warning(
-                    f"Overriding kernel {x.kernel} used by subkernel {x.name} with kernel {kernel}."
-                )
-                self._kernel_list[idx].kernel = kernel
+                #env.logger.warning(
+                #    f"Overriding kernel {x.kernel} used by subkernel {x.name} with kernel {kernel}."
+                #)
+                # self._kernel_list[idx].kernel = kernel
                 if notify_frontend:
                     self.notify_frontend()
             #  similarly, identified by kernel but language names are different

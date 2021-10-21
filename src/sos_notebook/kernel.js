@@ -952,19 +952,19 @@ define([
               nb.metadata["sos"]["kernels"][k_idx][1] !== data[i][1] &&
               nb.metadata["sos"]["kernels"][k_idx][1]
             ) {
-              r = confirm(
-                "This notebook used Jupyter kernel " +
-                nb.metadata["sos"]["kernels"][k_idx][1] +
-                " for subkernel " +
-                data[i][0] +
-                ". Do you want to switch to " +
-                data[i][1] +
-                " instead?"
-              );
-              if (!r) {
-                window.KernelName[data[i][0]] =
-                  nb.metadata["sos"]["kernels"][k_idx][1];
-              }
+              // r = confirm(
+              //   "This notebook used Jupyter kernel " +
+              //   nb.metadata["sos"]["kernels"][k_idx][1] +
+              //   " for subkernel " +
+              //   data[i][0] +
+              //   ". Do you want to switch to " +
+              //   data[i][1] +
+              //   " instead?"
+              // );
+              // if (!r) {
+              window.KernelName[data[i][0]] =
+                nb.metadata["sos"]["kernels"][k_idx][1];
+              // }
             }
             if (
               nb.metadata["sos"]["kernels"][k_idx][2] !== data[i][2] &&
