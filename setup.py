@@ -75,7 +75,7 @@ setup(
         'nbformat',
         'nbconvert>=6.0.1',
         'ipython',
-        'ipykernel',
+        'ipykernel>=6.0.0',
         # https://github.com/spatialaudio/nbsphinx/issues/563
         'jinja2~=2.11',
         'notebook>=5.0.0',

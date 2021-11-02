@@ -2798,7 +2798,7 @@ color: green;
       CodeMirror.registerHelper("hintWords", "sos", hintWords);
 
       function findMode(mode) {
-        if (Jupyter.notebook.config.data &&
+        if (Jupyter.notebook.config.data && Jupyter.notebook.config.data.sos &&
           Jupyter.notebook.config.data.sos.kernel_codemirror_mode) {
           let modeMap = Jupyter.notebook.config.data.sos.kernel_codemirror_mode;
           if (mode in modeMap) {
