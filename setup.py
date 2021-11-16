@@ -77,7 +77,7 @@ setup(
         'ipython',
         'ipykernel>=6.0.0',
         # https://github.com/spatialaudio/nbsphinx/issues/563
-        'jinja2~=2.11',
+        'jinja2',
         'notebook>=5.0.0',
         # 'jupyter_contrib_nbextensions',
         'tabulate',

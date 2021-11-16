@@ -8,8 +8,8 @@
 {% endblock header %}
 
 {%- block input -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
-	{%- elif 'report_cell' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
+	{%- elif 'report_cell' in cell.metadata.get('tags', []) -%}
         {{ super() }}
   {%- else -%}
         <div class="hidden_content">
@@ -19,11 +19,11 @@
 {%- endblock input -%}
 
 {% block output %}
-  {%- if 'report_output' in cell.metadata.tags -%}
+  {%- if 'report_output' in cell.metadata.get('tags', []) -%}
       {{ super() }}
-  {%- elif 'report_cell' in cell.metadata.tags -%}
+  {%- elif 'report_cell' in cell.metadata.get('tags', []) -%}
       {{ super() }}
-  {%- elif 'scratch' in cell.metadata.tags -%}
+  {%- elif 'scratch' in cell.metadata.get('tags', []) -%}
   {%- else -%}
       <div class="hidden_content">
       {{ super() }}
@@ -32,11 +32,11 @@
 {% endblock output %}
 
 {% block markdowncell %}
-  {%- if 'hide_output' in cell.metadata.tags -%}
+  {%- if 'hide_output' in cell.metadata.get('tags', []) -%}
 	<div class="hidden_content">
       {{ super() }}
 	</div>
-  {%- elif 'scratch' in cell.metadata.tags -%}
+  {%- elif 'scratch' in cell.metadata.get('tags', []) -%}
   {%- else -%}
       {{ super() }}
   {%- endif -%}

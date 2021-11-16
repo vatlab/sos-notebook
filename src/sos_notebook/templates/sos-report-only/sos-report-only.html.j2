@@ -1,7 +1,7 @@
 {% extends 'sos-cm.html.j2' %}
 
 {%- block codecell -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.outputs_hidden) -%}
   {%- else -%}
   {{ super() }}
@@ -13,7 +13,7 @@
 {%- endblock in_prompt -%}
 
 {%- block input -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.source_hidden) -%}
 	{%- else -%}
       {{ super() }}
@@ -28,7 +28,7 @@
 {% endblock output_area_prompt %}
 
 {% block output %}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.outputs_hidden -%}
   {%- else -%}
   {{ super() }}
@@ -41,7 +41,7 @@
 
 
 {% block markdowncell %}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden -%}
   {%- else -%}
       <div class="cell border-box-sizing text_cell rendered{{ celltags(cell) }}">

@@ -8,7 +8,7 @@
 {% endblock header %}
 
 {%- block codecell -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden and (not cell.outputs or cell.metadata.jupyter.outputs_hidden) %}
     <div class="hidden_content">
       {{ super() }}
@@ -19,7 +19,7 @@
 {%- endblock codecell -%}
 
 {%- block input -%}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden -%}
       <div class="hidden_content">
       {{ super() }}
@@ -30,7 +30,7 @@
 {%- endblock input -%}
 
 {% block output %}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.outputs_hidden -%}
     <div class="hidden_content">
     {{ super() }}
@@ -41,7 +41,7 @@
 {% endblock output %}
 
 {% block markdowncell %}
-  {%- if 'scratch' in cell.metadata.tags -%}
+  {%- if 'scratch' in cell.metadata.get('tags', []) -%}
   {%- elif 'jupyter' in cell.metadata and cell.metadata.jupyter.source_hidden -%}
     <div class="hidden_content">
         {{ super() }}
