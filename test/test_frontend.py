@@ -7,8 +7,9 @@ import time
 import unittest
 
 from ipykernel.tests.utils import execute, wait_for_idle
-from sos_notebook.test_utils import flush_channels, sos_kernel, NotebookTest
 from selenium.webdriver.common.keys import Keys
+
+from sos_notebook.test_utils import NotebookTest, flush_channels, sos_kernel
 
 
 class TestFrontEnd(NotebookTest):

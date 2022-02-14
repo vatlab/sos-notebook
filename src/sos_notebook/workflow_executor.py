@@ -2,9 +2,9 @@
 #
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
+import copy
 import logging
 import multiprocessing as mp
-import copy
 import os
 import re
 import shlex
@@ -16,13 +16,14 @@ from threading import Event
 import psutil
 import zmq
 from sos.__main__ import get_run_parser
-from sos.controller import Controller, connect_controllers, disconnect_controllers
+from sos.controller import (Controller, connect_controllers,
+                            disconnect_controllers)
 from sos.parser import SoS_Script
 from sos.section_analyzer import analyze_section
 from sos.syntax import SOS_SECTION_HEADER
-from sos.targets import RemovedTarget, UnknownTarget, textMD5, sos_targets
-
-from sos.utils import _parse_error, env, get_traceback, pexpect_run, TerminateExecution
+from sos.targets import RemovedTarget, UnknownTarget, sos_targets, textMD5
+from sos.utils import (TerminateExecution, _parse_error, env, get_traceback,
+                       pexpect_run)
 
 from .step_executor import Interactive_Step_Executor
 
@@ -180,7 +181,7 @@ def execute_scratch_cell(code, raw_args, kernel):
                 SOS_SECTION_HEADER.match(line) or line.startswith('%from') or
                 line.startswith('%include') for line in code.splitlines()
         ]):
-            code = f'[cell_{str(kernel.cell_id)[:8] if kernel and kernel.cell_id else "0"}]\n' + code
+            code = f'[cell{str(kernel.cell_id)[:8] if kernel and kernel.cell_id else "0"}]\n' + code
             script = SoS_Script(content=code)
         else:
             return

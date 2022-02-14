@@ -5,16 +5,18 @@
 
 import json
 import os
-import pytest
-import requests
-from subprocess import Popen
 import sys
-from testpath.tempdir import TemporaryDirectory
 import time
+from subprocess import Popen
 from urllib.parse import urljoin
 
-from selenium.webdriver import Firefox, Remote, Chrome
+import pytest
+import requests
 from selenium import webdriver
+from selenium.webdriver import Chrome, Firefox, Remote
+from testpath.tempdir import TemporaryDirectory
+from webdriver_manager.chrome import ChromeDriverManager
+
 from sos_notebook.test_utils import Notebook
 
 pjoin = os.path.join
@@ -125,14 +127,14 @@ def selenium_driver():
     if os.environ.get("SAUCE_USERNAME"):
         driver = make_sauce_driver()
     elif os.environ.get("JUPYTER_TEST_BROWSER") == "live":
-        driver = Chrome()
+        driver = Chrome(ChromeDriverManager().install())
     elif os.environ.get("JUPYTER_TEST_BROWSER") == "chrome":
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--window-size=1420,1080")
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
-        driver = Chrome(options=chrome_options)
+        driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
     elif os.environ.get("JUPYTER_TEST_BROWSER") == "firefox":
         driver = Firefox()
     else:

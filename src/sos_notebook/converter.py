@@ -4,18 +4,17 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import argparse
-import pkg_resources
 import os
 import sys
-import time
 import tempfile
+import time
 from io import StringIO
 
 import nbformat
+import pkg_resources
+import sos
 from nbconvert.exporters import Exporter
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
-
-import sos
 from sos.syntax import SOS_SECTION_HEADER
 from sos.utils import env
 

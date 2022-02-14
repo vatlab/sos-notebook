@@ -1,15 +1,15 @@
 import argparse
+import builtins
 import copy
 import fnmatch
 import os
 import pydoc
 import re
 import shlex
-import builtins
 import subprocess
 import sys
-from collections.abc import Sized, Sequence
 from collections import OrderedDict
+from collections.abc import Sequence, Sized
 from io import StringIO
 from types import ModuleType
 
@@ -18,11 +18,12 @@ from IPython.core.error import UsageError
 from IPython.lib.clipboard import (ClipboardEmpty, osx_clipboard_get,
                                    tkinter_clipboard_get)
 from jupyter_client import find_connection_file
+from sos._version import __version__
 from sos.eval import interpolate
 from sos.syntax import SOS_SECTION_HEADER
 from sos.targets import path
-from sos.utils import env, pretty_size, short_repr, pexpect_run, load_config_files
-from sos._version import __version__
+from sos.utils import (env, load_config_files, pexpect_run, pretty_size,
+                       short_repr)
 
 
 class SoS_Magic(object):
@@ -720,8 +721,8 @@ class Env_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        import tempfile
         import shutil
+        import tempfile
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -733,8 +734,8 @@ class Env_Magic(SoS_Magic):
             new_dir = None
             original_env = None
             if args.new:
-                from sos.utils import WorkflowDict
                 from sos.eval import SoS_exec
+                from sos.utils import WorkflowDict
                 env.sos_dict = WorkflowDict()
                 SoS_exec('from sos.runtime import *', None)
                 env.sos_dict.set('__interactive__', True)
@@ -2029,8 +2030,8 @@ class Sandbox_Magic(SoS_Magic):
         return parser
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        import tempfile
         import shutil
+        import tempfile
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:

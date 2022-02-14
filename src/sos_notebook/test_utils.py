@@ -11,23 +11,21 @@ import atexit
 import os
 import re
 import time
-from textwrap import dedent
-
-from ipykernel.tests import utils as test_utils
 #
 #
 from contextlib import contextmanager
 from queue import Empty
+from textwrap import dedent
 
 import pytest
-
+from ipykernel.tests import utils as test_utils
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.remote.webelement import WebElement
-from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 pjoin = os.path.join
 
@@ -110,6 +108,7 @@ async def _async_get_result(iopub):
             pass
     # text/plain can have fronzen dict, this is ok,
     from numpy import array, matrix, uint8
+
     # suppress pyflakes warning
     array
     matrix

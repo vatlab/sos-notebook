@@ -7,6 +7,7 @@ import pydoc
 
 from sos.syntax import SOS_USAGES
 from sos.utils import env
+
 from .magics import SoS_Magics
 
 

@@ -8,6 +8,7 @@ import os
 import rlcompleter
 
 from sos.utils import env
+
 from .magics import SoS_Magics
 
 

@@ -7,33 +7,32 @@ import contextlib
 import fnmatch
 import logging
 import os
+import pprint
 import subprocess
 import sys
 import time
 from collections import defaultdict
 from textwrap import dedent
-import pprint
 
 import pandas as pd
 import pkg_resources
-from ipykernel.ipkernel import IPythonKernel
-from ipykernel.comm.manager import CommManager
 from ipykernel._version import version_info as ipykernel_version_info
-
+from ipykernel.comm.manager import CommManager
+from ipykernel.ipkernel import IPythonKernel
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
 from jupyter_client import manager
 from sos._version import __sos_version__, __version__
 from sos.eval import SoS_eval, interpolate
-from sos.syntax import SOS_SECTION_HEADER, SOS_DIRECTIVE
-from sos.utils import env, short_repr, load_config_files
 from sos.executor_utils import prepare_env
+from sos.syntax import SOS_DIRECTIVE, SOS_SECTION_HEADER
+from sos.utils import env, load_config_files, short_repr
 
 from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
-from .workflow_executor import (run_sos_workflow, execute_scratch_cell,
-                                NotebookLoggingHandler, start_controller)
 from .magics import SoS_Magics
+from .workflow_executor import (NotebookLoggingHandler, execute_scratch_cell,
+                                run_sos_workflow, start_controller)
 
 
 class FlushableStringIO:
@@ -1175,7 +1174,8 @@ class SoS_Kernel(IPythonKernel):
                             lines[i] = ''
             # check the rest if it is ok
             try:
-                from IPython.core.inputtransformer2 import TransformerManager as ipf
+                from IPython.core.inputtransformer2 import \
+                    TransformerManager as ipf
             except ImportError:
                 from IPython.core.inputsplitter import InputSplitter as ipf
             code = '\n'.join(lines) + '\n\n'

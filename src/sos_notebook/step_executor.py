@@ -7,8 +7,8 @@ import time
 
 from sos.hosts import Host
 from sos.step_executor import Base_Step_Executor
-from sos.utils import env, short_repr, TerminateExecution
 from sos.targets import sos_targets
+from sos.utils import TerminateExecution, env, short_repr
 
 
 class Interactive_Step_Executor(Base_Step_Executor):
