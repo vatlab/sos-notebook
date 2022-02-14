@@ -3310,6 +3310,10 @@ color: green;
                   if (!state.overlay_state.sigil) {
                     let st = state.inner_mode.token(stream, state.inner_state);
                     return st ? it + st : null;
+                  } else if (stream.indentation() < state.inner_state.indent) {
+                    state.inner_mode = null;
+                    state.sos_state = null;
+                    return "existing mode";
                   } else {
                     // overlay mode, more complicated
                     if (
