@@ -8,7 +8,8 @@ import shlex
 import builtins
 import subprocess
 import sys
-from collections import Sized, OrderedDict, Sequence
+from collections.abc import Sized, Sequence
+from collections import OrderedDict
 from io import StringIO
 from types import ModuleType
 
