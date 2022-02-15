@@ -3160,11 +3160,23 @@ color: green;
                   ) {
                     // the second parameter is starting column
                     let mode = findMode(state.sos_state.slice(9).toLowerCase());
-                    state.inner_mode = CodeMirror.getMode({}, mode);
-                    state.inner_state = CodeMirror.startState(
-                      state.inner_mode,
-                      stream.indentation()
-                    );
+                    if (mode) {
+                      state.inner_mode = CodeMirror.getMode(conf, mode);
+                      state.inner_state = CodeMirror.startState(
+                        state.inner_mode,
+                        stream.indentation()
+                      );
+                      state.sos_state = null;
+                    } else {
+                      state.sos_state = 'unknown_language';
+                    }
+                    state.sos_indent = stream.indentation();
+                  }
+                  if (stream.indentation() === 0 &&
+                    ((state.inner_mode &&
+                      stream.indentation() < state.sos_indent
+                    ) || state.sos_state == 'unknown_language')) {
+                    state.inner_mode = null;
                     state.sos_state = null;
                   }
                   for (var i = 0; i < sosDirectives.length; i++) {
@@ -3189,7 +3201,7 @@ color: green;
                           state.sos_state =
                             "entering " + stream.current().slice(0, -1);
                         } else {
-                          state.sos_state = "unknown_language";
+                          state.sos_state = "entering unknown_language";
                         }
                       } else {
                         state.sos_state =
@@ -3291,7 +3303,7 @@ color: green;
                     if (mode) {
                       state.sos_state = "entering " + state.sos_state.slice(6);
                     } else {
-                      state.sos_state = "unknown_language";
+                      state.sos_state = "entering unknown_language";
                     }
                   }
                   return token + " sos-option";
@@ -3310,10 +3322,6 @@ color: green;
                   if (!state.overlay_state.sigil) {
                     let st = state.inner_mode.token(stream, state.inner_state);
                     return st ? it + st : null;
-                  } else if (stream.indentation() < state.inner_state.indent) {
-                    state.inner_mode = null;
-                    state.sos_state = null;
-                    return "existing mode";
                   } else {
                     // overlay mode, more complicated
                     if (
