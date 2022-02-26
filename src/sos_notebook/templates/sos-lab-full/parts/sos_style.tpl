@@ -9,8 +9,8 @@
 * as relative will prevent the select from going out of the
 * input cell */
 
-div.input_area {
-	position: relative;
+div.sos-inputArea {
+	/* position: relative; */
 }
 
 .jp-CodeCell .cell_kernel_selector {
