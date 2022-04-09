@@ -79,7 +79,6 @@ setup(
         # https://github.com/spatialaudio/nbsphinx/issues/563
         'jinja2',
         'notebook>=5.0.0',
-        # 'jupyter_contrib_nbextensions',
         'tabulate',
         # 'markdown',
         'pandas',
@@ -88,8 +87,6 @@ setup(
         # 'requests',
         # 'pytest',
         'psutil',
-        'jupyter_contrib_core',
-        'jupyter_contrib_nbextensions',
     ],
     entry_points='''
 [sos_converters]
