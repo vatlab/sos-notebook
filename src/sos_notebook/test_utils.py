@@ -112,14 +112,12 @@ async def _async_get_result(iopub):
     uint8
 
     # it can also have dict_keys, we will have to redefine it
-
     def dict_keys(args):
         return args
 
     if result is None:
         return None
-    else:
-        return eval(result['text/plain'])
+    return eval(result['text/plain'])
 
 
 def get_display_data(iopub, data_type='text/plain'):
@@ -138,7 +136,7 @@ async def _async_get_display_data(iopub, data_type):
         if msg_type == 'status' and content['execution_state'] == 'idle':
             # idle message signals end of output
             break
-        elif msg['msg_type'] == 'display_data':
+        if msg['msg_type'] == 'display_data':
             if isinstance(data_type, str):
                 if data_type in content['data']:
                     result = content['data'][data_type]
@@ -427,7 +425,7 @@ class Notebook:
             rgba = self.current_cell.find_element_by_class_name(
                 "input_prompt").value_of_css_property("background-color")
 
-        r, g, b, a = map(
+        r, g, b, _ = map(
             int,
             re.search(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
         return [r, g, b]
@@ -436,7 +434,7 @@ class Notebook:
 
         rgba = self.current_cell.find_element_by_class_name(
             "out_prompt_overlay").value_of_css_property("background-color")
-        r, g, b, a = map(
+        r, g, b, _ = map(
             int,
             re.search(r'rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)', rgba).groups())
         return [r, g, b]
@@ -628,8 +626,7 @@ class Notebook:
                     '.input_prompt').text
             if '*' not in prompt:
                 break
-            else:
-                time.sleep(0.1)
+            time.sleep(0.1)
         # check if there is output
         try:
             # no output? OK.

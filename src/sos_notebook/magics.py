@@ -372,7 +372,8 @@ class Cd_Magic(SoS_Magic):
                 if hasattr(lan, 'cd_command'):
                     try:
                         self.sos_kernel.switch_kernel(kernel)
-                        cmd = interpolate(lan.cd_command, {'dir': str(path(to_dir))})
+                        cmd = interpolate(lan.cd_command,
+                                          {'dir': str(path(to_dir))})
                         self.sos_kernel.run_cell(
                             cmd,
                             True,
@@ -566,7 +567,7 @@ class Debug_Magic(SoS_Magic):
         super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        options, remaining_code = self.get_magic_and_code(code, False)
+        _, remaining_code = self.get_magic_and_code(code, False)
         self.sos_kernel.warn(
             'Magic %debug is deprecated. Please set environment variable SOS_DEBUG to ALL or a comma '
             'separated topics such as KERNEL, MESSAGE, and MAGIC, and check log messages in ~/.sos/sos_debug.log.'
@@ -978,7 +979,7 @@ class Paste_Magic(SoS_Magic):
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         if self.sos_kernel._meta.get('batch_mode', False):
             return
-        options, remaining_code = self.get_magic_and_code(code, True)
+        options, _ = self.get_magic_and_code(code, True)
         try:
             self.sos_kernel.options = options
             try:
@@ -989,8 +990,8 @@ class Paste_Magic(SoS_Magic):
                         code = tkinter_clipboard_get()
                 else:
                     code = tkinter_clipboard_get()
-            except ClipboardEmpty:
-                raise UsageError("The clipboard appears to be empty")
+            except ClipboardEmpty as e:
+                raise UsageError("The clipboard appears to be empty") from e
             except Exception as e:
                 env.logger.warn(f'Failed to get text from the clipboard: {e}')
                 return
@@ -1251,14 +1252,13 @@ class Preview_Magic(SoS_Magic):
                             }
                         })
                     continue
-                else:
-                    import glob
-                    files = glob.glob(item)
-                    if files:
-                        for pfile in files:
-                            self.preview_file(pfile, style)
-                        handled[idx] = True
-                        continue
+                import glob
+                files = glob.glob(item)
+                if files:
+                    for pfile in files:
+                        self.preview_file(pfile, style)
+                    handled[idx] = True
+                    continue
             except Exception as e:
                 self.sos_kernel.warn(f'\n> Failed to preview file {item}: {e}')
                 continue
@@ -1826,7 +1826,7 @@ class Revisions_Magic(SoS_Magic):
 
     def handle_magic_revisions(self, args, unknown_args):
         filename = self.sos_kernel._meta['notebook_name'] + '.ipynb'
-        path = self.sos_kernel._meta['notebook_path']
+        nbpath = self.sos_kernel._meta['notebook_path']
         revisions = subprocess.check_output(
             ['git', 'log'] + unknown_args +
             ['--date=short', '--pretty=%H!%cN!%cd!%s', '--', filename])
@@ -1846,7 +1846,7 @@ class Revisions_Magic(SoS_Magic):
                 env.log_to_file('MAGIC', f'Failed to get repo URL: {e}')
             if args.source is None:
                 if 'github.com' in repo:
-                    args.source = '{repo}/blob/{revision}/{path}'
+                    args.source = '{repo}/blob/{revision}/{nbpath}'
                     env.log_to_file(
                         'MAGIC',
                         f"source is set to {args.source} with repo={repo}")
@@ -1875,7 +1875,7 @@ class Revisions_Magic(SoS_Magic):
                         'revision': revision,
                         'repo': repo,
                         'filename': filename,
-                        'path': path
+                        'path': nbpath
                     })
                 fields[0] = f'<a target="_blank" href="{URL}">{fields[0]}</a>'
             links = []
@@ -1889,7 +1889,7 @@ class Revisions_Magic(SoS_Magic):
                             'revision': revision,
                             'repo': repo,
                             'filename': filename,
-                            'path': path
+                            'path': nbpath
                         })
                     links.append(f'<a target="_blank" href="{URL}">{name}</a>')
             if links:
@@ -1951,8 +1951,7 @@ class Run_Magic(SoS_Magic):
         if not run_code.strip():
             parser = self.get_parser()
             try:
-                args, unknown_args = parser.parse_known_args(
-                    shlex.split(options))
+                parser.parse_known_args(shlex.split(options))
             except SystemExit:
                 return
 
@@ -2158,8 +2157,7 @@ class Save_Magic(SoS_Magic):
                                                    store_history,
                                                    user_expressions,
                                                    allow_stdin)
-            else:
-                return None
+            return None
         except Exception as e:
             return self.sos_kernel.notify_error(e)
 
@@ -2295,9 +2293,9 @@ class Set_Magic(SoS_Magic):
         super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        options, remaining_code = self.get_magic_and_code(code, False)
+        _, remaining_code = self.get_magic_and_code(code, False)
         self.sos_kernel.warn(
-            f'Magic %set is deprecated (vatlab/sos-notebook#231)')
+            'Magic %set is deprecated (vatlab/sos-notebook#231)')
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
@@ -2915,7 +2913,7 @@ class Task_Magic(SoS_Magic):
                     'task_status', {
                         'update_only': True,
                         'queue': args.queue,
-                        'tag': args.tags,
+                        'tag': tag,
                         'status': 'purged'
                     })
 
@@ -2978,7 +2976,7 @@ class Tasks_Magic(SoS_Magic):
             self.sos_kernel.warn('Invalid task queue {}: {}'.format(queue, e))
             return
         # get all tasks
-        for tid, tst, tdt in host._task_engine.monitor_tasks(
+        for tid, tst, _ in host._task_engine.monitor_tasks(
                 tasks, status=status, age=age):
             self.sos_kernel.send_frontend_msg(
                 'task_status', {
@@ -3011,7 +3009,7 @@ class Toc_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %toc is deprecated.')
-        options, remaining_code = self.get_magic_and_code(code, False)
+        _, remaining_code = self.get_magic_and_code(code, False)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)

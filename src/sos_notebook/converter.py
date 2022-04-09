@@ -246,19 +246,18 @@ class ScriptToNotebookConverter():
                     if cell_type == 'markdown':
                         content.append(line)
                         continue
-                    else:
-                        # get ride of empty content
-                        if not any(x.strip() for x in content):
-                            content = []
+                    # get ride of empty content
+                    if not any(x.strip() for x in content):
+                        content = []
 
-                        if content:
-                            add_cell(cells, content, cell_type, cell_count,
-                                     metainfo)
+                    if content:
+                        add_cell(cells, content, cell_type, cell_count,
+                                    metainfo)
 
-                        cell_type = 'markdown'
-                        cell_count += 1
-                        content = [line]
-                        continue
+                    cell_type = 'markdown'
+                    cell_count += 1
+                    content = [line]
+                    continue
 
                 # other cases
                 content.append(line)
@@ -291,7 +290,7 @@ class ScriptToNotebookConverter():
         else:
             with open(notebook_file, 'w') as notebook:
                 nbformat.write(nb, notebook, 4)
-           env.logger.info(f'Jupyter notebook saved to {notebook_file}')
+            env.logger.info(f'Jupyter notebook saved to {notebook_file}')
         # if err:
         #    raise RuntimeError(repr(err))
 
@@ -329,8 +328,8 @@ class NotebookToScriptConverter(object):
         if not sos_file:
             sys.stdout.write(output)
         elif isinstance(sos_file, str):
-            with open(sos_file, 'w') as sos:
-                sos.write(output)
+            with open(sos_file, 'w') as sosfile:
+                sosfile.write(output)
             env.logger.info(f'SoS script saved to {sos_file}')
         else:
             sos_file.write(output)
@@ -351,13 +350,11 @@ def export_notebook(exporter_class,
                     unknown_args=None,
                     view=False):
 
-    import os
     import subprocess
     if not os.path.isfile(notebook_file):
         raise RuntimeError(f'{notebook_file} does not exist')
 
     if not output_file:
-        import tempfile
         tmp = tempfile.NamedTemporaryFile(
             delete=False, suffix='.' + to_format).name
         tmp_stderr = tempfile.NamedTemporaryFile(

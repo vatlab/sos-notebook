@@ -360,66 +360,67 @@ class Subkernels(object):
                 if notify_frontend:
                     self.notify_frontend()
                 return new_def
+
+            # if language is defined,
+            if ':' in language:
+                # if this is a new module, let us create an entry point and load
+                from pkg_resources import EntryPoint
+                mn, attr = language.split(':', 1)
+                ep = EntryPoint(
+                    name=kernel,
+                    module_name=mn,
+                    attrs=tuple(attr.split('.')))
+                try:
+                    plugin = ep.resolve()
+                    self.language_info[name] = plugin
+                    # for convenience, we create two entries for, e.g. R and ir
+                    # but only if there is no existing definition
+                    for supported_lan, supported_kernels in plugin.supported_kernels.items(
+                    ):
+                        for supported_kernel in supported_kernels:
+                            if name != supported_kernel and supported_kernel not in self.language_info:
+                                self.language_info[
+                                    supported_kernel] = plugin
+                        if supported_lan not in self.language_info:
+                            self.language_info[supported_lan] = plugin
+                except Exception as e:
+                    raise RuntimeError(
+                        f'Failed to load language {language}: {e}') from e
+                #
+                if color == 'default':
+                    color = self.get_background_color(plugin, kernel)
+                new_def = self.add_or_replace(
+                    subkernel(
+                        name,
+                        kdef.kernel,
+                        kernel,
+                        kdef.color if color is None else color,
+                        getattr(plugin, 'options', {}),
+                        codemirror_mode=codemirror_mode))
             else:
-                # if language is defined,
-                if ':' in language:
-                    # if this is a new module, let us create an entry point and load
-                    from pkg_resources import EntryPoint
-                    mn, attr = language.split(':', 1)
-                    ep = EntryPoint(
-                        name=kernel,
-                        module_name=mn,
-                        attrs=tuple(attr.split('.')))
-                    try:
-                        plugin = ep.resolve()
-                        self.language_info[name] = plugin
-                        # for convenience, we create two entries for, e.g. R and ir
-                        # but only if there is no existing definition
-                        for supported_lan, supported_kernels in plugin.supported_kernels.items(
-                        ):
-                            for supported_kernel in supported_kernels:
-                                if name != supported_kernel and supported_kernel not in self.language_info:
-                                    self.language_info[
-                                        supported_kernel] = plugin
-                            if supported_lan not in self.language_info:
-                                self.language_info[supported_lan] = plugin
-                    except Exception as e:
-                        raise RuntimeError(
-                            f'Failed to load language {language}: {e}') from e
-                    #
-                    if color == 'default':
-                        color = self.get_background_color(plugin, kernel)
-                    new_def = self.add_or_replace(
-                        subkernel(
-                            name,
-                            kdef.kernel,
-                            kernel,
-                            kdef.color if color is None else color,
-                            getattr(plugin, 'options', {}),
-                            codemirror_mode=codemirror_mode))
-                else:
-                    # if should be defined ...
-                    if language not in self.language_info:
-                        raise RuntimeError(
-                            f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class'
-                        )
-                    #
-                    self.language_info[name] = self.language_info[language]
-                    if color == 'default':
-                        color = self.get_background_color(
-                            self.language_info[name], language)
-                    new_def = self.add_or_replace(
-                        subkernel(
-                            name,
-                            kdef.kernel,
-                            language,
-                            kdef.color if color is None else color,
-                            getattr(self.language_info[name], 'options', {}),
-                            codemirror_mode=codemirror_mode))
-                if notify_frontend:
-                    self.notify_frontend()
-                return new_def
-        elif language is not None:
+                # if should be defined ...
+                if language not in self.language_info:
+                    raise RuntimeError(
+                        f'Unrecognized language definition {language}, which should be a known language name or a class in the format of package.module:class'
+                    )
+                #
+                self.language_info[name] = self.language_info[language]
+                if color == 'default':
+                    color = self.get_background_color(
+                        self.language_info[name], language)
+                new_def = self.add_or_replace(
+                    subkernel(
+                        name,
+                        kdef.kernel,
+                        language,
+                        kdef.color if color is None else color,
+                        getattr(self.language_info[name], 'options', {}),
+                        codemirror_mode=codemirror_mode))
+            if notify_frontend:
+                self.notify_frontend()
+            return new_def
+
+        if language is not None:
             # kernel is not defined and we only have language
             if ':' in language:
                 # if this is a new module, let us create an entry point and load
@@ -515,17 +516,17 @@ class Subkernels(object):
 
             self.notify_frontend()
             return new_def
-        else:
-            # let us check if there is something wrong with the pre-defined language
-            for entrypoint in pkg_resources.iter_entry_points(
-                    group='sos_languages'):
-                if entrypoint.name == name:
-                    # there must be something wrong, let us trigger the exception here
-                    entrypoint.load()
-            # if nothing is triggerred, kernel is not defined, return a general message
-            raise ValueError(
-                f'No subkernel named {name} is found. Please use magic "%use" without option to see a list of available kernels and language modules.'
-            )
+
+        # let us check if there is something wrong with the pre-defined language
+        for entrypoint in pkg_resources.iter_entry_points(
+                group='sos_languages'):
+            if entrypoint.name == name:
+                # there must be something wrong, let us trigger the exception here
+                entrypoint.load()
+        # if nothing is triggerred, kernel is not defined, return a general message
+        raise ValueError(
+            f'No subkernel named {name} is found. Please use magic "%use" without option to see a list of available kernels and language modules.'
+        )
 
     def update(self, notebook_kernel_list):
         for kinfo in notebook_kernel_list:
@@ -733,7 +734,7 @@ class SoS_Kernel(IPythonKernel):
         }
         env.logger.handlers = [
             x for x in env.logger.handlers
-            if type(x) is not logging.StreamHandler
+            if not isinstance(x, logging.StreamHandler)
         ]
         env.logger.addHandler(
             NotebookLoggingHandler(
@@ -1174,7 +1175,7 @@ class SoS_Kernel(IPythonKernel):
                 from IPython.core.inputsplitter import InputSplitter as ipf
             code = '\n'.join(lines) + '\n\n'
             res = ipf().check_complete(code)
-            env.log_to_file(f'MESSAGE',
+            env.log_to_file('MESSAGE',
                             f'SoS kernel returns {res} for code {code}')
             return {'status': res[0], 'indent': res[1]}
         # non-SoS kernels
@@ -1197,7 +1198,7 @@ class SoS_Kernel(IPythonKernel):
             msg = KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'is_complete_reply':
                 env.log_to_file(
-                    f'MESSAGE',
+                    'MESSAGE',
                     f'{self.kernel} kernel returns {msg["content"]} for code {code}'
                 )
                 return msg['content']
@@ -1220,32 +1221,30 @@ class SoS_Kernel(IPythonKernel):
                 'found': True if data else False,
                 'data': data
             }
-        else:
-            cell_kernel = self.subkernels.find(self.editor_kernel)
-            try:
-                _, KC = self.kernels[cell_kernel.name]
-            except Exception as e:
+        cell_kernel = self.subkernels.find(self.editor_kernel)
+        try:
+            _, KC = self.kernels[cell_kernel.name]
+        except Exception as e:
+            env.log_to_file(
+                'KERNEL',
+                f'Failed to get subkernels {cell_kernel.name}: {e}')
+            KC = self.KC
+        try:
+            KC.inspect(code, cursor_pos)
+            while await KC.shell_channel.msg_ready():
+                msg = await KC.shell_channel.get_msg()
+                if msg['header']['msg_type'] == 'inspect_reply':
+                    return msg['content']
+                # other messages, do not know what is going on but
+                # we should not wait forever and cause a deadloop here
                 env.log_to_file(
-                    'KERNEL',
-                    f'Failed to get subkernels {cell_kernel.name}: {e}')
-                KC = self.KC
-            try:
-                KC.inspect(code, cursor_pos)
-                while await KC.shell_channel.msg_ready():
-                    msg = await KC.shell_channel.get_msg()
-                    if msg['header']['msg_type'] == 'inspect_reply':
-                        return msg['content']
-                    else:
-                        # other messages, do not know what is going on but
-                        # we should not wait forever and cause a deadloop here
-                        env.log_to_file(
-                            'MESSAGE',
-                            f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-                        )
-                        break
-            except Exception as e:
-                env.log_to_file('KERNEL',
-                                f'Completion fail with exception: {e}')
+                    'MESSAGE',
+                    f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
+                )
+                break
+        except Exception as e:
+            env.log_to_file('KERNEL',
+                            f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
@@ -1427,18 +1426,18 @@ class SoS_Kernel(IPythonKernel):
                 <th>Language Module</th>
                 <th  style="text-align:left">Interpreter</th>
             </tr>'''
-        for subkernel in self.subkernels.kernel_list():
-            spec = km.get_kernel_spec(subkernel.kernel)
-            if subkernel.name in ('SoS', 'Markdown'):
+        for sk in self.subkernels.kernel_list():
+            spec = km.get_kernel_spec(sk.kernel)
+            if sk.name in ('SoS', 'Markdown'):
                 lan_module = ''
-            elif subkernel.language in self.supported_languages:
-                lan_module = f"<code>{self.supported_languages[subkernel.language].__module__.split('.')[0]}</code>"
+            elif sk.language in self.supported_languages:
+                lan_module = f"<code>{self.supported_languages[sk.language].__module__.split('.')[0]}</code>"
             else:
                 lan_module = '<font style="color:red">Unavailable</font>'
             available_subkernels += f'''\
         <tr>
-        <td>{subkernel.name}</td>
-        <td><code>{subkernel.kernel}</code></td>
+        <td>{sk.name}</td>
+        <td><code>{sk.kernel}</code></td>
         <td>{spec.language}</td>
         <td>{lan_module}</td>
         <td style="text-align:left"><code>{spec.argv[0]}</code></td>
@@ -1466,7 +1465,7 @@ class SoS_Kernel(IPythonKernel):
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
             return
-        elif kinfo.name == 'SoS':
+        if kinfo.name == 'SoS':
             # non-SoS to SoS
             if in_vars:
                 self.put_vars_to(in_vars)
@@ -1513,11 +1512,11 @@ class SoS_Kernel(IPythonKernel):
                                 'KERNEL',
                                 f'Kernel {kinfo.kernel} started with the second attempt.'
                             )
-                        except Exception:
+                        except Exception as e:
                             ferr.seek(0)
                             raise RuntimeError(
                                 f'Failed to start kernel "{kernel}". {e}\nError Message:\n{ferr.read().decode()}'
-                            )
+                            ) from e
             self.KM, self.KC = self.kernels[kinfo.name]
             self.kernel = kinfo.name
             if new_kernel and not kinfo.codemirror_mode:
