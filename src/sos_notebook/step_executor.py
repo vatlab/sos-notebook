@@ -14,7 +14,7 @@ from sos.utils import TerminateExecution, env, short_repr
 class Interactive_Step_Executor(Base_Step_Executor):
 
     def __init__(self, step, mode='interactive'):
-        super(Interactive_Step_Executor, self).__init__(step)
+        super().__init__(step)
         self.run_mode = mode
         self.host = None
 

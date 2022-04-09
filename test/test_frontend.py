@@ -5,7 +5,7 @@
 
 import time
 import unittest
-
+import asyncio
 from ipykernel.tests.utils import execute, wait_for_idle
 from selenium.webdriver.common.keys import Keys
 

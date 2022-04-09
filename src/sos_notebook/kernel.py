@@ -590,7 +590,7 @@ class SoSCommManager(CommManager):
     '''
 
     def __init__(self, parent=None, kernel=None):
-        super(SoSCommManager, self).__init__(parent=parent, kernel=kernel)
+        super().__init__(parent=parent, kernel=kernel)
         self._forwarders = {}
         self._sos_kernel = kernel
 
@@ -670,7 +670,7 @@ class SoS_Kernel(IPythonKernel):
     inspector = property(lambda self: self.get_inspector())
 
     def __init__(self, **kwargs):
-        super(SoS_Kernel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.options = ''
         self.kernel = 'SoS'
         # a dictionary of started kernels, with the format of
@@ -1721,7 +1721,7 @@ class SoS_Kernel(IPythonKernel):
                 })
 
     def init_metadata(self, metadata):
-        super(SoS_Kernel, self).init_metadata(metadata)
+        super().init_metadata(metadata)
         env.log_to_file('KERNEL', f'GOT METADATA {metadata}')
         if 'sos' in metadata['metadata']:
             # jupyterlab-sos sends meta data through metadata

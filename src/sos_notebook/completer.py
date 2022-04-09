@@ -36,12 +36,11 @@ class SoS_MagicsCompleter:
                     x for x in env.sos_dict.keys() if
                     x not in self.kernel.original_keys and not x.startswith('_')
                 ]
-            elif any(
+            if any(
                     line.startswith(x) for x in ('%use', '%with', '%shutdown')):
                 return text, ['SoS'] + list(
                     self.kernel.supported_languages.keys())
-            else:
-                return None
+            return None
         elif text.startswith('%') and line.startswith(text):
             return text, [
                 '%' + x + ' '
@@ -80,8 +79,7 @@ class SoS_PathCompleter:
             if len(matches) == 1 and matches[0] == os.path.expanduser(text) \
                     and os.path.isdir(os.path.expanduser(text)):
                 return text, glob.glob(os.path.expanduser(text) + '/*')
-            else:
-                return text, matches
+            return text, matches
 
 
 class PythonCompleter:
@@ -116,7 +114,7 @@ class SoS_Completer(object):
             matched = c.get_completions(doc)
             if matched is None:
                 continue
-            elif isinstance(matched, tuple):
+            if isinstance(matched, tuple):
                 if matched[1]:
                     return matched
             else:

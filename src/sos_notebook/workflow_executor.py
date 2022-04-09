@@ -31,7 +31,7 @@ from .step_executor import Interactive_Step_Executor
 class NotebookLoggingHandler(logging.Handler):
 
     def __init__(self, level, kernel=None, title="Log Messages"):
-        super(NotebookLoggingHandler, self).__init__(level)
+        super().__init__(level)
         self.kernel = kernel
         self.title = title
 
@@ -217,7 +217,7 @@ class Tapped_Executor(mp.Process):
 
     def __init__(self, code, args, config):
         # the worker process knows configuration file, command line argument etc
-        super(Tapped_Executor, self).__init__()
+        super().__init__()
         self.code = code
         self.args = args
         self.config = config

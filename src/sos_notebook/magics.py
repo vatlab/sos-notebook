@@ -114,7 +114,7 @@ class Capture_Magic(SoS_Magic):
     name = 'capture'
 
     def __init__(self, kernel):
-        super(Capture_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -334,7 +334,7 @@ class Cd_Magic(SoS_Magic):
     name = 'cd'
 
     def __init__(self, kernel):
-        super(Cd_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -406,7 +406,7 @@ class Clear_Magic(SoS_Magic):
     name = 'clear'
 
     def __init__(self, kernel):
-        super(Clear_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %clear is deprecated.')
@@ -420,7 +420,7 @@ class ConnectInfo_Magic(SoS_Magic):
     name = 'connectinfo'
 
     def __init__(self, kernel):
-        super(ConnectInfo_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -441,7 +441,7 @@ class Convert_Magic(SoS_Magic):
     name = 'convert'
 
     def __init__(self, kernel):
-        super(Convert_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -563,7 +563,7 @@ class Debug_Magic(SoS_Magic):
     name = 'debug'
 
     def __init__(self, kernel):
-        super(Debug_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -580,7 +580,7 @@ class Dict_Magic(SoS_Magic):
     name = 'dict'
 
     def __init__(self, kernel):
-        super(Dict_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -675,7 +675,7 @@ class Env_Magic(SoS_Magic):
     name = 'env'
 
     def __init__(self, kernel):
-        super(Env_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -807,7 +807,7 @@ class Expand_Magic(SoS_Magic):
     name = 'expand'
 
     def __init__(self, kernel):
-        super(Expand_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -875,7 +875,7 @@ class Get_Magic(SoS_Magic):
     name = 'get'
 
     def __init__(self, kernel):
-        super(Get_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -912,7 +912,7 @@ class Matplotlib_Magic(SoS_Magic):
     name = 'matplotlib'
 
     def __init__(self, kernel):
-        super(Matplotlib_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -975,7 +975,7 @@ class Paste_Magic(SoS_Magic):
     name = 'paste'
 
     def __init__(self, kernel):
-        super(Paste_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         if self.sos_kernel._meta.get('batch_mode', False):
@@ -1012,7 +1012,7 @@ class Preview_Magic(SoS_Magic):
     name = 'preview'
 
     def __init__(self, kernel):
-        super(Preview_Magic, self).__init__(kernel)
+        super().__init__(kernel)
         self.previewers = None
 
     def preview_var(self, item, style=None):
@@ -1463,7 +1463,7 @@ class Pull_Magic(SoS_Magic):
     name = 'pull'
 
     def __init__(self, kernel):
-        super(Pull_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1543,7 +1543,7 @@ class Push_Magic(SoS_Magic):
     name = 'push'
 
     def __init__(self, kernel):
-        super(Push_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1619,7 +1619,7 @@ class Put_Magic(SoS_Magic):
     name = 'put'
 
     def __init__(self, kernel):
-        super(Put_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1658,7 +1658,7 @@ class Render_Magic(SoS_Magic):
     name = 'render'
 
     def __init__(self, kernel):
-        super(Render_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1726,7 +1726,7 @@ class Runfile_Magic(SoS_Magic):
     name = 'runfile'
 
     def __init__(self, kernel):
-        super(Runfile_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1796,7 +1796,7 @@ class Revisions_Magic(SoS_Magic):
     name = 'revisions'
 
     def __init__(self, kernel):
-        super(Revisions_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -1930,7 +1930,7 @@ class Run_Magic(SoS_Magic):
     name = 'run'
 
     def __init__(self, kernel):
-        super(Run_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2002,7 +2002,7 @@ class Sandbox_Magic(SoS_Magic):
     name = 'sandbox'
 
     def __init__(self, kernel):
-        super(Sandbox_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2081,7 +2081,7 @@ class Save_Magic(SoS_Magic):
     name = 'save'
 
     def __init__(self, kernel):
-        super(Save_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2173,7 +2173,7 @@ class SessionInfo_Magic(SoS_Magic):
     name = 'sessioninfo'
 
     def __init__(self, kernel):
-        super(SessionInfo_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2297,7 +2297,7 @@ class Set_Magic(SoS_Magic):
     name = 'set'
 
     def __init__(self, kernel):
-        super(Set_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -2313,7 +2313,7 @@ class Shutdown_Magic(SoS_Magic):
     name = 'shutdown'
 
     def __init__(self, kernel):
-        super(Shutdown_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2351,7 +2351,7 @@ class SoSRun_Magic(SoS_Magic):
     name = 'sosrun'
 
     def __init__(self, kernel):
-        super(SoSRun_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2406,7 +2406,7 @@ class SoSSave_Magic(SoS_Magic):
     name = 'sossave'
 
     def __init__(self, kernel):
-        super(SoSSave_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2546,7 +2546,7 @@ class Task_Magic(SoS_Magic):
     name = 'task'
 
     def __init__(self, kernel):
-        super(Task_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -2943,7 +2943,7 @@ class Tasks_Magic(SoS_Magic):
     name = 'tasks'
 
     def __init__(self, kernel):
-        super(Tasks_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -3012,7 +3012,7 @@ class Toc_Magic(SoS_Magic):
     name = 'toc'
 
     def __init__(self, kernel):
-        super(Toc_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %toc is deprecated.')
@@ -3026,7 +3026,7 @@ class Use_Magic(SoS_Magic):
     name = 'use'
 
     def __init__(self, kernel):
-        super(Use_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -3107,7 +3107,7 @@ class With_Magic(SoS_Magic):
     name = 'with'
 
     def __init__(self, kernel):
-        super(With_Magic, self).__init__(kernel)
+        super().__init__(kernel)
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
