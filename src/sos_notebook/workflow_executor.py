@@ -293,7 +293,7 @@ def run_next_workflow_in_queue():
     # execute the first available item
     global g_workflow_queue
 
-    for idx, (cid, proc) in enumerate(g_workflow_queue):
+    for idx, (_, proc) in enumerate(g_workflow_queue):
         if proc is None:
             continue
         # this is ordered
@@ -358,14 +358,13 @@ def run_sos_workflow(code,
             if executor.exitcode < 0:
                 raise RuntimeError(
                     f'Workflow terminated by sigmal {-executor.exitcode}')
-            else:
-                raise RuntimeError(
-                    f'Workflow exited with code {executor.exitcode}')
+            raise RuntimeError(
+                f'Workflow exited with code {executor.exitcode}')
 
 
 def cancel_workflow(cell_id, kernel):
     global g_workflow_queue
-    env.logger.info(f'A queued or running workflow in this cell is canceled')
+    env.logger.info('A queued or running workflow in this cell is canceled')
     kernel.send_frontend_msg('workflow_status', {
         'cell_id': cell_id,
         'status': 'purged'

@@ -152,7 +152,7 @@ def install_config(user, prefix):
     )
 
 
-if __name__ == '__main__':
+def main():
     parser = get_install_sos_kernel_spec_parser()
     args = parser.parse_args()
     user = False
@@ -166,3 +166,6 @@ if __name__ == '__main__':
 
     install_sos_kernel_spec(user, prefix)
     install_config(user, prefix)
+
+if __name__ == '__main__':
+    main()
