@@ -73,12 +73,11 @@ class SoS_PathCompleter:
 
         if not text.strip():
             return text, glob.glob('*')
-        else:
-            matches = glob.glob(os.path.expanduser(text) + '*')
-            if len(matches) == 1 and matches[0] == os.path.expanduser(text) \
-                    and os.path.isdir(os.path.expanduser(text)):
-                return text, glob.glob(os.path.expanduser(text) + '/*')
-            return text, matches
+        matches = glob.glob(os.path.expanduser(text) + '*')
+        if len(matches) == 1 and matches[0] == os.path.expanduser(text) \
+                and os.path.isdir(os.path.expanduser(text)):
+            return text, glob.glob(os.path.expanduser(text) + '/*')
+        return text, matches
 
 
 class PythonCompleter:

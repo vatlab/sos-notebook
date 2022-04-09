@@ -22,7 +22,7 @@ class SoS_VariableInspector(object):
             obj_desc, preview = self.preview_magic.preview_var(name, style=None)
             if preview is None:
                 return {}
-            format_dict, md_dict = preview
+            format_dict, _ = preview
             if 'text/plain' in format_dict:
                 return format_dict
             return {
@@ -47,13 +47,13 @@ class SoS_SyntaxInspector(object):
                 return {'text/plain': parser.format_help()}
             except Exception as e:
                 return {'text/plain': f'Magic %{name}: {e}'}
-        elif line.startswith(name + ':') and pos <= len(name):
+        if line.startswith(name + ':') and pos <= len(name):
             if self.kernel.original_keys is None:
                 self.kernel._reset_dict()
             # input: etc
             if name in SOS_USAGES:
                 return {'text/plain': SOS_USAGES[name]}
-            elif name in env.sos_dict:
+            if name in env.sos_dict:
                 # action?
                 return {
                     'text/plain':
@@ -65,10 +65,7 @@ class SoS_SyntaxInspector(object):
                         pydoc.render_doc(
                             env.sos_dict[name], title='%s', renderer=pydoc.html)
                 }
-            else:
-                return {}
-        else:
-            return {}
+        return {}
 
 
 class SoS_Inspector(object):

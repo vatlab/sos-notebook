@@ -318,7 +318,7 @@ class Capture_Magic(SoS_Magic):
                         'metadata': {},
                         'data': {
                             'text/html':
-                                f'<div class="sos_hint">Cell output captured to variable __captured with content</div>'
+                                '<div class="sos_hint">Cell output captured to variable __captured with content</div>'
                         }
                     })
                 self.sos_kernel.send_frontend_msg('display_data', {
@@ -410,7 +410,7 @@ class Clear_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %clear is deprecated.')
-        options, remaining_code = self.get_magic_and_code(code, False)
+        _, remaining_code = self.get_magic_and_code(code, False)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)
@@ -423,7 +423,7 @@ class ConnectInfo_Magic(SoS_Magic):
         super().__init__(kernel)
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
-        options, remaining_code = self.get_magic_and_code(code, False)
+        _, remaining_code = self.get_magic_and_code(code, False)
         cfile = find_connection_file()
         with open(cfile) as conn:
             conn_info = conn.read()
@@ -480,7 +480,7 @@ class Convert_Magic(SoS_Magic):
 
     def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         # get the saved filename
-        options, remaining_code = self.get_magic_and_code(code, False)
+        options, _ = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
             try:
@@ -512,7 +512,7 @@ class Convert_Magic(SoS_Magic):
             if ftype == 'sos':
                 # --all is processed from frontend
                 if not self.sos_kernel._meta['workflow'] and not args.all:
-                    raise ValueError(f'No workflow is defined in this notebook.')
+                    raise ValueError('No workflow is defined in this notebook.')
                 with open(filename, 'w') as script:
                     script.write(self.sos_kernel._meta['workflow'])
             else:
@@ -779,19 +779,17 @@ class Env_Magic(SoS_Magic):
                         'user_expressions': {},
                         'execution_count': self.sos_kernel._execution_count
                     }
-                else:
-                    return self.sos_kernel.notify_error(
-                        RuntimeError(
-                            'No error received with option --expect error.'))
-            elif args.allow_error:
+                return self.sos_kernel.notify_error(
+                    RuntimeError(
+                        'No error received with option --expect error.'))
+            if args.allow_error:
                 return {
                     'status': 'ok',
                     'payload': [],
                     'user_expressions': {},
                     'execution_count': self.sos_kernel._execution_count
                 }
-            else:
-                return ret
+            return ret
         finally:
             env.sos_dict = old_dict
             if new_dir is not None:
@@ -2461,7 +2459,7 @@ class SoSSave_Magic(SoS_Magic):
         self.sos_kernel.warn(
             'Magic %sossave is depcated. Please use %convert instead.')
         # get the saved filename
-        options, remaining_code = self.get_magic_and_code(code, False)
+        options, _ = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
             try:

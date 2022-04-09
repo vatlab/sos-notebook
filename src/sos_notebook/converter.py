@@ -291,7 +291,7 @@ class ScriptToNotebookConverter():
         else:
             with open(notebook_file, 'w') as notebook:
                 nbformat.write(nb, notebook, 4)
-            env.logger.info(f'Jupyter notebook saved to {notebook_file}')
+           env.logger.info(f'Jupyter notebook saved to {notebook_file}')
         # if err:
         #    raise RuntimeError(repr(err))
 
@@ -375,22 +375,21 @@ def export_notebook(exporter_class,
             env.logger.error(err_msg)
             raise RuntimeError(
                 f'Failed to convert {notebook_file} to {to_format} format')
+        # identify output files
+        dest_file = err_msg.rsplit()[-1]
+        if not os.path.isfile(dest_file):
+            env.logger.error(err_msg)
+            raise RuntimeError('Failed to get converted file.')
+        if view:
+            import webbrowser
+            url = f'file://{os.path.abspath(dest_file)}'
+            env.logger.info(f'Viewing {url} in a browser')
+            webbrowser.open(url, new=2)
+            # allow browser some time to process the file before this process removes it
+            time.sleep(2)
         else:
-            # identify output files
-            dest_file = err_msg.rsplit()[-1]
-            if not os.path.isfile(dest_file):
-                env.logger.error(err_msg)
-                raise RuntimeError('Failed to get converted file.')
-            elif view:
-                import webbrowser
-                url = f'file://{os.path.abspath(dest_file)}'
-                env.logger.info(f'Viewing {url} in a browser')
-                webbrowser.open(url, new=2)
-                # allow browser some time to process the file before this process removes it
-                time.sleep(2)
-            else:
-                with open(dest_file, 'rb') as tfile:
-                    sys.stdout.buffer.write(tfile.read())
+            with open(dest_file, 'rb') as tfile:
+                sys.stdout.buffer.write(tfile.read())
         try:
             os.remove(tmp)
         except Exception:
@@ -691,7 +690,7 @@ class NotebookToNotebookConverter(object):
             if args.inplace:
                 return
             env.logger.warning(
-                f'Notebook is already using the sos kernel. No conversion is needed.'
+                'Notebook is already using the sos kernel. No conversion is needed.'
             )
             return notebook
 
@@ -815,10 +814,9 @@ class NotebookToNotebookConverter(object):
                         parameters=parse_papermill_parameters(sargs.execute))
                     env.logger.info(f'Jupyter notebook saved to {output_file}')
                     return
-                else:
-                    nb = execute_sos_notebook(
-                        notebook_file,
-                        parameters=parse_papermill_parameters(sargs.execute))
+                nb = execute_sos_notebook(
+                    notebook_file,
+                    parameters=parse_papermill_parameters(sargs.execute))
             # sos => sos
         elif kernel_name != 'sos' and sargs.kernel in ('sos', 'SoS', None):
             nb = self.nonSoS_to_SoS_notebook(notebook, sargs)

@@ -251,9 +251,8 @@ class Subkernels(object):
             if x.name == kdef.name:
                 self._kernel_list[idx] = kdef
                 return self._kernel_list[idx]
-            else:
-                self._kernel_list.append(kdef)
-                return self._kernel_list[-1]
+            self._kernel_list.append(kdef)
+            return self._kernel_list[-1]
 
     def get_background_color(self, plugin, lan):
         # if a single color is defined, it is used for all supported
@@ -386,7 +385,7 @@ class Subkernels(object):
                                 self.language_info[supported_lan] = plugin
                     except Exception as e:
                         raise RuntimeError(
-                            f'Failed to load language {language}: {e}')
+                            f'Failed to load language {language}: {e}') from e
                     #
                     if color == 'default':
                         color = self.get_background_color(plugin, kernel)
@@ -435,7 +434,7 @@ class Subkernels(object):
                     self.language_info[name] = plugin
                 except Exception as e:
                     raise RuntimeError(
-                        f'Failed to load language {language}: {e}')
+                        f'Failed to load language {language}: {e}') from e
 
                 avail_kernels = [
                     y.kernel
@@ -1535,7 +1534,7 @@ class SoS_Kernel(IPythonKernel):
                 if hasattr(lan_module, '__version__'):
                     module_version = f' (version {lan_module.__version__})'
                 else:
-                    module_version = f' (version unavailable)'
+                    module_version = ' (version unavailable)'
 
                 env.log_to_file(
                     'KERNEL',
@@ -1911,14 +1910,13 @@ class SoS_Kernel(IPythonKernel):
                     'user_expressions': {},
                     'execution_count': self._execution_count
                 }
-            else:
-                idx = empties.index(False)
-                if idx != 0 and (lines[idx].startswith('%') or
-                                 lines[idx].startswith('!')):
-                    # not start from empty, but might have magic etc
-                    return self._do_execute('\n'.join(lines[idx:]) + '\n',
-                                            silent, store_history,
-                                            user_expressions, allow_stdin)
+            idx = empties.index(False)
+            if idx != 0 and (lines[idx].startswith('%') or
+                                lines[idx].startswith('!')):
+                # not start from empty, but might have magic etc
+                return self._do_execute('\n'.join(lines[idx:]) + '\n',
+                                        silent, store_history,
+                                        user_expressions, allow_stdin)
 
             # if there is no more empty, magic etc, enter workflow mode
             # run sos
