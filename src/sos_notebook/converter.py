@@ -29,9 +29,9 @@ def execute_sos_notebook(input_notebook,
     # the notebook will be returned.
     try:
         from papermill.execute import execute_notebook
-    except ImportError:
+    except ImportError as e:
         raise RuntimeError(
-            'Please install papermill for the use of option --execute.')
+            'Please install papermill for the use of option --execute.') from e
 
     if not any(entrypoint.name == 'sos'
                for entrypoint in pkg_resources.iter_entry_points(
@@ -82,8 +82,7 @@ def execute_sos_notebook(input_notebook,
             env.logger.warning(
                 f'Failed to remove temporary output file {output_file}: {e}')
         return new_nb
-    else:
-        return output_file
+    return output_file
 
 
 # This class cannot be defined in .kernel because it would cause some
@@ -405,8 +404,7 @@ def export_notebook(exporter_class,
         if ret != 0:
             raise RuntimeError(
                 f'Failed to convert {notebook_file} to {to_format} format')
-        else:
-            env.logger.info(f'Output saved to {output_file}')
+        env.logger.info(f'Output saved to {output_file}')
 
 def _is_int(value):
     """Use casting to check if value can convert to an `int`."""

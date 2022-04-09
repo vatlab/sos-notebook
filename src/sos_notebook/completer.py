@@ -41,24 +41,23 @@ class SoS_MagicsCompleter:
                 return text, ['SoS'] + list(
                     self.kernel.supported_languages.keys())
             return None
-        elif text.startswith('%') and line.startswith(text):
+        if text.startswith('%') and line.startswith(text):
             return text, [
                 '%' + x + ' '
                 for x in SoS_Magics.names
                 if x.startswith(text[1:])
             ]
-        elif any(line.startswith(x) for x in ('%use', '%with', '%shutdown')):
+        if any(line.startswith(x) for x in ('%use', '%with', '%shutdown')):
             return text, [
                 x for x in self.kernel.supported_languages.keys()
                 if x.startswith(text)
             ]
-        elif line.startswith('%get '):
+        if line.startswith('%get '):
             return text, [
                 x for x in env.sos_dict.keys() if x.startswith(text) and
                 x not in self.kernel.original_keys and not x.startswith('_')
             ]
-        else:
-            return None
+        return None
 
 
 class SoS_PathCompleter:

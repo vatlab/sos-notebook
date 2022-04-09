@@ -101,7 +101,7 @@ def make_transient_msg(msg_type, content):
             'data': content.get('data', {}),
             'metadata': content.get('metadata', {})
         }
-    elif msg_type == 'stream':
+    if msg_type == 'stream':
         if content['name'] == 'stdout':
             return {
                 'data': {
@@ -110,18 +110,16 @@ def make_transient_msg(msg_type, content):
                 },
                 'metadata': {}
             }
-        else:
-            return {
-                'data': {
-                    'text/plain': content['text'],
-                    'application/vnd.jupyter.stderr': content['text']
-                },
-                'metadata': {}
-            }
-    else:
-        raise ValueError(
-            f"failed to translate message {msg_type} to transient_display_data message"
-        )
+        return {
+            'data': {
+                'text/plain': content['text'],
+                'application/vnd.jupyter.stderr': content['text']
+            },
+            'metadata': {}
+        }
+    raise ValueError(
+        f"failed to translate message {msg_type} to transient_display_data message"
+    )
 
 
 class Subkernels(object):
@@ -263,10 +261,9 @@ class Subkernels(object):
         if isinstance(plugin.background_color, str):
             # return the same background color for all inquiry
             return plugin.background_color
-        else:
-            # return color for specified, or any color if unknown inquiry is made
-            return plugin.background_color.get(
-                lan, next(iter(plugin.background_color.values())))
+        # return color for specified, or any color if unknown inquiry is made
+        return plugin.background_color.get(
+            lan, next(iter(plugin.background_color.values())))
 
     def find(self,
              name,
@@ -323,10 +320,9 @@ class Subkernels(object):
                 if x.name == 'SoS' or x.language or language is None:
                     update_existing(idx)
                     return x
-                else:
-                    if not kernel:
-                        kernel = name
-                    break
+                if not kernel:
+                    kernel = name
+                break
         # find from kernel name
         for idx, x in enumerate(self._kernel_list):
             if x.kernel == name:
@@ -334,10 +330,9 @@ class Subkernels(object):
                 if x.language or language is None:
                     update_existing(idx)
                     return x
-                else:
-                    # otherwise, try to use the new language
-                    kernel = name
-                    break
+                # otherwise, try to use the new language
+                kernel = name
+                break
 
         if kernel is not None:
             # in this case kernel should have been defined in kernel list

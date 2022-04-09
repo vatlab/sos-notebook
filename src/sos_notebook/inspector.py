@@ -22,15 +22,13 @@ class SoS_VariableInspector(object):
             obj_desc, preview = self.preview_magic.preview_var(name, style=None)
             if preview is None:
                 return {}
-            else:
-                format_dict, md_dict = preview
-                if 'text/plain' in format_dict:
-                    return format_dict
-                else:
-                    return {
-                        'text/plain':
-                            f'{repr(env.sos_dict["name"])} ({obj_desc})'
-                    }
+            format_dict, md_dict = preview
+            if 'text/plain' in format_dict:
+                return format_dict
+            return {
+                'text/plain':
+                    f'{repr(env.sos_dict["name"])} ({obj_desc})'
+            }
         except Exception:
             return {}
 

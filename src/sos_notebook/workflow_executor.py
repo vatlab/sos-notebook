@@ -108,7 +108,7 @@ def execute_scratch_cell(code, raw_args, kernel):
             isinstance(x, NotebookLoggingHandler) for x in env.logger.handlers):
         env.logger.handlers = [
             x for x in env.logger.handlers
-            if type(x) is not logging.StreamHandler
+            if not isinstance(x, logging.StreamHandler)
         ]
         levels = {
             0: logging.ERROR,
@@ -199,9 +199,9 @@ def execute_scratch_cell(code, raw_args, kernel):
             return ret['__last_res__']
         except Exception as e:
             raise RuntimeError(
-                f'Unknown result returned from executor {ret}: {e}')
+                f'Unknown result returned from executor {ret}: {e}') from e
     except (UnknownTarget, RemovedTarget) as e:
-        raise RuntimeError(f'Unavailable target {e.target}')
+        raise RuntimeError(f'Unavailable target {e.target}') from e
     except TerminateExecution as e:
         return
     except SystemExit:
@@ -297,17 +297,15 @@ def run_next_workflow_in_queue():
         if proc is None:
             continue
         # this is ordered
-        elif isinstance(proc, tuple):
+        if isinstance(proc, tuple):
             executor = Tapped_Executor(*proc)
             executor.start()
             g_workflow_queue[idx][1] = executor
             break
-        elif not (proc.is_alive() and psutil.pid_exists(proc.pid)):
+        if not (proc.is_alive() and psutil.pid_exists(proc.pid)):
             g_workflow_queue[idx][1] = None
             continue
-        else:
-            # if already running, do not submit new one
-            break
+        break
 
 
 def execute_pending_workflow(cell_ids, kernel):

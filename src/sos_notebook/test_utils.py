@@ -99,13 +99,10 @@ async def _async_get_result(iopub):
         if msg_type == 'status' and content['execution_state'] == 'idle':
             # idle message signals end of output
             break
-        elif msg['msg_type'] == 'execute_result':
+        if msg['msg_type'] == 'execute_result':
             result = content['data']
         elif msg['msg_type'] == 'display_data':
             result = content['data']
-        else:
-            # other output, ignored
-            pass
     # text/plain can have fronzen dict, this is ok,
     from numpy import array, matrix, uint8
 
@@ -350,7 +347,7 @@ class Notebook:
     def save(self, name=''):
         if name:
             self.browser.execute_script(
-                f"Jupyter.notebook.set_notebook_name(arguments[0])", name)
+                "Jupyter.notebook.set_notebook_name(arguments[0])", name)
         time.sleep(5)
         return execute_promise('Jupyter.notebook.save_notebook()', self.browser)
 
@@ -359,7 +356,7 @@ class Notebook:
     #
 
     def append_cell(self, *values, cell_type="code"):
-        for i, value in enumerate(values):
+        for _, value in enumerate(values):
             if isinstance(value, str):
                 self.add_cell(cell_type=cell_type, content=value)
             else:

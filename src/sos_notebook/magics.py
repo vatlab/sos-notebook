@@ -1034,29 +1034,27 @@ class Preview_Magic(SoS_Magic):
             return txt, ({
                 'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
             }, {})
-        elif callable(obj):
+        if callable(obj):
             return txt, ({
                 'text/plain': pydoc.render_doc(obj, renderer=pydoc.plaintext)
             }, {})
-        elif hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
+        if hasattr(obj, 'to_html') and getattr(obj, 'to_html') is not None:
             try:
                 from sos.visualize import Visualizer
                 result = Visualizer(self.sos_kernel, style).preview(obj)
                 if isinstance(result, (list, tuple)) and len(result) == 2:
                     return txt, result
-                elif isinstance(result, dict):
+                if isinstance(result, dict):
                     return txt, (result, {})
-                elif result is None:
+                if result is None:
                     return txt, None
-                else:
-                    raise ValueError(
-                        f'Unrecognized return value from visualizer: {short_repr(result)}.'
-                    )
+                raise ValueError(
+                    f'Unrecognized return value from visualizer: {short_repr(result)}.'
+                )
             except Exception as e:
                 self.sos_kernel.warn(f'Failed to preview variable: {e}')
                 return txt, self.sos_kernel.format_obj(obj)
-        else:
-            return txt, self.sos_kernel.format_obj(obj)
+        return txt, self.sos_kernel.format_obj(obj)
 
     def show_preview_result(self, result):
         if not result:
@@ -2065,8 +2063,7 @@ class Sandbox_Magic(SoS_Magic):
                     'user_expressions': {},
                     'execution_count': self.sos_kernel._execution_count
                 }
-            else:
-                return ret
+            return ret
         finally:
             if not args.keep_dict:
                 env.sos_dict = old_dict
