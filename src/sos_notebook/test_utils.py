@@ -50,6 +50,7 @@ def flush_channels(kc=None):
     """flush any messages waiting on the queue"""
     return asyncio.run(_async_flush_channels(kc))
 
+
 async def _async_flush_channels(kc):
     if kc is None:
         kc = KC
@@ -90,6 +91,7 @@ def get_result(iopub):
     """retrieve result from an execution"""
     return asyncio.run(_async_get_result(iopub))
 
+
 async def _async_get_result(iopub):
     result = None
     while True:
@@ -127,6 +129,7 @@ def get_display_data(iopub, data_type='text/plain'):
     """
     return asyncio.run(_async_get_display_data(iopub, data_type))
 
+
 async def _async_get_display_data(iopub, data_type):
     result = None
     while True:
@@ -153,6 +156,7 @@ async def _async_get_display_data(iopub, data_type):
 def clear_channels(iopub):
     """assemble stdout/err from an execution"""
     return asyncio.run(_async_clear_channels(iopub))
+
 
 async def _async_clear_channels(iopub):
     while True:
@@ -296,7 +300,7 @@ class Notebook:
             browser, "#panel", timeout=10, visible=False, single=True)
         self.prompt_cell = list(
             self.browser.find_elements(By.XPATH,
-                "//*[@id='panel-wrapper']/div"))[-1]
+                                       "//*[@id='panel-wrapper']/div"))[-1]
 
     def __len__(self):
         return len(self.cells)
@@ -320,7 +324,7 @@ class Notebook:
 
     @property
     def body(self):
-        return self.browser.find_element_by_tag_name("body")
+        return self.browser.find_element(By.TAG_NAME, "body")
 
     @property
     def cells(self):
@@ -329,11 +333,12 @@ class Notebook:
         # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(
             self.browser.find_elements(By.XPATH,
-                "//*[@id='notebook-container']/div"))
+                                       "//*[@id='notebook-container']/div"))
 
     @property
     def panel_cells(self):
-        return list(self.browser.find_elements(By.XPATH,"//*[@id='panel']/div"))
+        return list(
+            self.browser.find_elements(By.XPATH, "//*[@id='panel']/div"))
 
     @property
     def current_index(self):
@@ -372,7 +377,7 @@ class Notebook:
     def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
         self._focus_cell(index)
         kernel_selector = "option[value='{}']".format(kernel_name)
-        kernelList = self.current_cell.find_element_by_tag_name("select")
+        kernelList = self.current_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
             kernel.click()
@@ -406,11 +411,10 @@ class Notebook:
     # Get info
     #
     def get_kernel_list(self):
-        wait_for_selector(self.browser,
-                          '#menu-change-kernel-submenu')
-        kernelMenu = self.browser.find_element_by_id(
-            "menu-change-kernel-submenu")
-        kernelEntries = kernelMenu.find_elements_by_tag_name("a")
+        wait_for_selector(self.browser, '#menu-change-kernel-submenu')
+        kernelMenu = self.browser.find_element(By.ID,
+                                               "menu-change-kernel-submenu")
+        kernelEntries = kernelMenu.find_elements(By.TAG_NAME, "a")
         kernels = []
         for kernelEntry in kernelEntries:
             kernels.append(kernelEntry.get_attribute('innerHTML'))
@@ -418,11 +422,13 @@ class Notebook:
 
     def get_input_backgroundColor(self, index=0, in_console=False):
         if in_console:
-            rgba = self.current_cell.find_element_by_class_name(
+            rgba = self.current_cell.find_element(
+                By.CLASS_NAME,
                 "input_prompt").value_of_css_property("background-color")
         else:
             self._focus_cell(index)
-            rgba = self.current_cell.find_element_by_class_name(
+            rgba = self.current_cell.find_element(
+                By.CLASS_NAME,
                 "input_prompt").value_of_css_property("background-color")
 
         r, g, b, _ = map(
@@ -432,7 +438,8 @@ class Notebook:
 
     def get_output_backgroundColor(self, index=0):
 
-        rgba = self.current_cell.find_element_by_class_name(
+        rgba = self.current_cell.find_element(
+            By.CLASS_NAME,
             "out_prompt_overlay").value_of_css_property("background-color")
         r, g, b, _ = map(
             int,
@@ -503,17 +510,17 @@ class Notebook:
                         attribute='src'):
         outputs = ""
         if in_console:
-            outputs = self.panel_cells[index].find_elements_by_css_selector(
-                "div .output_subarea")
+            outputs = self.panel_cells[index].find_elements(
+                By.CSS_SELECTOR, "div .output_subarea")
         else:
-            outputs = self.cells[index].find_elements_by_css_selector(
-                "div .output_subarea")
+            outputs = self.cells[index].find_elements(By.CSS_SELECTOR,
+                                                      "div .output_subarea")
         output_text = ""
         for output in outputs:
             if selector:
                 try:
                     # some div might not have img
-                    elem = output.find_element_by_css_selector(selector)
+                    elem = output.find_element(By.CSS_SELECTOR, selector)
                     output_text += elem.get_attribute(attribute) + '\n'
                 except NoSuchElementException:
                     pass
@@ -528,10 +535,10 @@ class Notebook:
     # For console panel
     #
     def is_console_panel_open(self):
-        return bool(self.browser.find_element_by_id("panel").is_displayed())
+        return bool(self.browser.find_element(By.ID, "panel").is_displayed())
 
     def toggle_console_panel(self):
-        panelButton = self.browser.find_element_by_id("panel_button")
+        panelButton = self.browser.find_element(By.ID, "panel_button")
         panelButton.click()
 
     def edit_prompt_cell(self,
@@ -546,7 +553,7 @@ class Notebook:
         # the div is not clickable so I use send_key to get around it
         self.prompt_cell.send_keys('\n')
         self.select_console_kernel(kernel)
-        #   self.prompt_cell.find_element_by_css_selector('.CodeMirror').click()
+        #   self.prompt_cell.find_element(By.CSS_SELECTOR, '.CodeMirror').click()
         if execute:
             self.prompt_cell.send_keys(Keys.CONTROL, Keys.ENTER)
             self._wait_for_done(-1, expect_error=expect_error)
@@ -557,7 +564,7 @@ class Notebook:
 
     def select_console_kernel(self, kernel_name="SoS"):
         kernel_selector = "option[value='{}']".format(kernel_name)
-        kernelList = self.prompt_cell.find_element_by_tag_name("select")
+        kernelList = self.prompt_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         kernel.click()
 
@@ -619,19 +626,19 @@ class Notebook:
         while True:
             # main notebook
             if index >= 0:
-                prompt = self.cells[index].find_element_by_css_selector(
-                    '.input_prompt').text
+                prompt = self.cells[index].find_element(By.CSS_SELECTOR,
+                                                        '.input_prompt').text
             else:
-                prompt = self.panel_cells[-1].find_element_by_css_selector(
-                    '.input_prompt').text
+                prompt = self.panel_cells[-1].find_element(
+                    By.CSS_SELECTOR, '.input_prompt').text
             if '*' not in prompt:
                 break
             time.sleep(0.1)
         # check if there is output
         try:
             # no output? OK.
-            outputs = self.cells[index].find_elements_by_css_selector(
-                "div .output_area")
+            outputs = self.cells[index].find_elements(By.CSS_SELECTOR,
+                                                      "div .output_area")
         except NoSuchElementException:
             return
         #
@@ -639,11 +646,12 @@ class Notebook:
         errors = []
         for output in outputs:
             try:
-                errors = output.find_element_by_css_selector('.output_stderr')
+                errors = output.find_element(By.CSS_SELECTOR, '.output_stderr')
             except NoSuchElementException:
                 # if no error, ok
                 try:
-                    errors = output.find_element_by_css_selector('.output_error')
+                    errors = output.find_element(By.CSS_SELECTOR,
+                                                 '.output_error')
                 except NoSuchElementException:
                     pass
         if errors:
@@ -716,12 +724,12 @@ class Notebook:
     #     self._to_command_mode()
     #     self.body.send_keys('f')
     #     wait_for_selector(self.browser, "#find-and-replace", single=True)
-    #     self.browser.find_element_by_id("findreplace_allcells_btn").click()
-    #     self.browser.find_element_by_id(
+    #     self.browser.find_element(By.ID,"findreplace_allcells_btn").click()
+    #     self.browser.find_element(By.ID,
     #         "findreplace_find_inp").send_keys(find_txt)
-    #     self.browser.find_element_by_id(
+    #     self.browser.find_element(By.ID,
     #         "findreplace_replace_inp").send_keys(replace_txt)
-    #     self.browser.find_element_by_id("findreplace_replaceall_btn").click()
+    #     self.browser.find_element(By.ID,"findreplace_replaceall_btn").click()
 
     # def wait_for_stale_cell(self, cell):
     #     """ This is needed to switch a cell's mode and refocus it, or to render it.
@@ -737,7 +745,7 @@ class Notebook:
     #     return self.browser.execute_script(JS)
 
     # def get_cell_contents(self, index=0, selector='div .CodeMirror-code'):
-    #     return self.cells[index].find_element_by_css_selector(selector).text
+    #     return self.cells[index].find_element(By.CSS_SELECTOR, selector).text
 
 
 def select_kernel(browser, kernel_name='kernel-sos'):
