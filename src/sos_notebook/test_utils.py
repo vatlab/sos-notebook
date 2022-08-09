@@ -295,7 +295,7 @@ class Notebook:
         wait_for_selector(
             browser, "#panel", timeout=10, visible=False, single=True)
         self.prompt_cell = list(
-            self.browser.find_elements_by_xpath(
+            self.browser.find_element(By.XPATH,
                 "//*[@id='panel-wrapper']/div"))[-1]
 
     def __len__(self):
@@ -328,12 +328,12 @@ class Notebook:
         """
         # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(
-            self.browser.find_elements_by_xpath(
+            self.browser.find_element(By.XPATH,
                 "//*[@id='notebook-container']/div"))
 
     @property
     def panel_cells(self):
-        return list(self.browser.find_elements_by_xpath("//*[@id='panel']/div"))
+        return list(self.browser.find_element(By.XPATH,"//*[@id='panel']/div"))
 
     @property
     def current_index(self):
