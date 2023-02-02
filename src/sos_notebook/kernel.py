@@ -32,8 +32,7 @@ from ._version import __version__ as __notebook_version__
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .magics import SoS_Magics
-from .workflow_executor import (NotebookLoggingHandler, execute_scratch_cell,
-                                run_sos_workflow, start_controller)
+from .workflow_executor import (NotebookLoggingHandler, execute_scratch_cell, run_sos_workflow, start_controller)
 
 
 class FlushableStringIO:
@@ -804,6 +803,13 @@ class SoS_Kernel(IPythonKernel):
         sys.stderr = save_stderr
 
     def get_vars_from(self, items, from_kernel=None, explicit=False, as_var=None):
+        if as_var is not None:
+            if not isinstance(as_var, str):
+                self.warn('Option --as should be a string.')
+                return
+            if len(items) > 1:
+                self.warn('Only one expression is allowed when option --as is used')
+                return
         if from_kernel is None or from_kernel.lower() == 'sos':
             # Feature removed #253
             # autmatically get all variables with names start with 'sos'
@@ -868,6 +874,13 @@ class SoS_Kernel(IPythonKernel):
     def put_vars_to(self, items, to_kernel=None, explicit=False, as_var=None):
         if not items:
             return
+        if as_var is not None:
+            if not isinstance(as_var, str):
+                self.warn('Option --as should be a string.')
+                return
+            if len(items) > 1:
+                self.warn('Only one expression is allowed when option --as is used')
+                return
         if self.kernel.lower() == 'sos':
             if to_kernel is None:
                 self.warn('Magic %put without option --kernel can only be executed by subkernels')
