@@ -828,7 +828,7 @@ class SoS_Kernel(IPythonKernel):
                 lan = self.supported_languages[kinfo.language]
                 try:
                     get_vars_func = lan(self, kinfo.kernel).get_vars
-                    args = inspect.getargspec(get_vars_func)[0]
+                    args = inspect.getfullargspec(get_vars_func).args
                     if 'as_var' in args:
                         get_vars_func(items, as_var=as_var)
                     else:
@@ -906,12 +906,12 @@ class SoS_Kernel(IPythonKernel):
             # pass language name to to_kernel
             try:
                 put_vars_func = lan(self, kinfo.kernel).put_vars
-                args = inspect.getargspec(put_vars_func)[0]
-                to_kernel = self.subkernels.find(to_kernel).language if to_kernel else 'SoS'
+                args = inspect.getfullargspec(put_vars_func).args
+                to_kernel_name = self.subkernels.find(to_kernel).language if to_kernel else 'SoS'
                 if 'as_var' in args:
-                    objects = put_vars_func(items, to_kernel=to_kernel, as_var=as_var)
+                    objects = put_vars_func(items, to_kernel=to_kernel_name, as_var=as_var)
                 else:
-                    objects = put_vars_func(items, to_kernel=to_kernel)
+                    objects = put_vars_func(items, to_kernel=to_kernel_name)
 
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
