@@ -887,7 +887,13 @@ class Get_Magic(SoS_Magic):
             help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
         parser.add_argument(
-            'vars', nargs='*', help='''Names of SoS variables''')
+            '--as',
+            dest='__as__',
+            help='''Name of the variable that will be saved in the destination
+                kernel, default to the name of the original variable.''')
+        parser.add_argument(
+            'vars', nargs='*', help='''Names of SoS variables, or one name or expression
+                if option --as is used (e.g. var.attribute --as another_name).''')
         parser.error = self._parse_error
         return parser
 
@@ -901,7 +907,7 @@ class Get_Magic(SoS_Magic):
                 return
         except Exception as e:
             return self.sos_kernel.notify_error(e)
-        self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True)
+        self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True, as_var=args.__as__)
         return self.sos_kernel._do_execute(remaining_code, silent,
                                            store_history, user_expressions,
                                            allow_stdin)
@@ -1628,7 +1634,13 @@ class Put_Magic(SoS_Magic):
             help='''Name of kernel from which the variables will be obtained.
                 Default to the SoS kernel.''')
         parser.add_argument(
-            'vars', nargs='*', help='''Names of SoS variables''')
+            '--as',
+            dest='__as__',
+            help='''Name of the variable that will be saved in the destination
+                kernel, default to the name of the original variable.''')
+        parser.add_argument(
+            'vars', nargs='*', help='''Names of SoS variables, or one name or expression
+                if option --as is used (e.g. var.attribute --as another_name).''')
         parser.error = self._parse_error
         return parser
 
@@ -1647,7 +1659,7 @@ class Put_Magic(SoS_Magic):
                                                store_history, user_expressions,
                                                allow_stdin)
         finally:
-            self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True)
+            self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True, as_var=args.__as__)
 
 
 class Render_Magic(SoS_Magic):

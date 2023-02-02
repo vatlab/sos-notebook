@@ -5,6 +5,7 @@
 import asyncio
 import contextlib
 import fnmatch
+import inspect
 import logging
 import os
 import pprint
@@ -911,7 +912,7 @@ class SoS_Kernel(IPythonKernel):
         sys.stdout = save_stdout
         sys.stderr = save_stderr
 
-    def get_vars_from(self, items, from_kernel=None, explicit=False):
+    def get_vars_from(self, items, from_kernel=None, explicit=False, as_var=None):
         if from_kernel is None or from_kernel.lower() == 'sos':
             # Feature removed #253
             # autmatically get all variables with names start with 'sos'
@@ -929,7 +930,14 @@ class SoS_Kernel(IPythonKernel):
             if kinfo.language in self.supported_languages:
                 lan = self.supported_languages[kinfo.language]
                 try:
-                    lan(self, kinfo.kernel).get_vars(items)
+                    get_vars_func = lan(self, kinfo.kernel).get_vars
+                    args = inspect.getargspec(get_vars_func)[0]
+                    if 'as_var' in args:
+                        get_vars_func(items, as_var=as_var)
+                    else:
+                        if as_var is not None:
+                            self.warn(f'Subkernel {kinfo.language} does not support option --as')
+                        get_vars_func(items)
                 except Exception as e:
                     self.warn(f'Failed to get variable: {e}\n')
                     return
@@ -949,7 +957,7 @@ class SoS_Kernel(IPythonKernel):
             # we get from subkernel
             try:
                 self.switch_kernel(from_kernel)
-                self.put_vars_to(items)
+                self.put_vars_to(items, as_var=as_var)
             except Exception as e:
                 self.warn(
                     f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
@@ -962,7 +970,7 @@ class SoS_Kernel(IPythonKernel):
                 my_kernel = self.kernel
                 self.switch_kernel(from_kernel)
                 # put stuff to sos or my_kernel directly
-                self.put_vars_to(items, to_kernel=my_kernel, explicit=explicit)
+                self.put_vars_to(items, to_kernel=my_kernel, explicit=explicit, as_var=as_var)
             except Exception as e:
                 self.warn(
                     f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
@@ -970,7 +978,7 @@ class SoS_Kernel(IPythonKernel):
                 # then switch back
                 self.switch_kernel(my_kernel)
 
-    def put_vars_to(self, items, to_kernel=None, explicit=False):
+    def put_vars_to(self, items, to_kernel=None, explicit=False, as_var=None):
         if not items:
             return
         if self.kernel.lower() == 'sos':
@@ -982,7 +990,7 @@ class SoS_Kernel(IPythonKernel):
             # if another kernel is specified and the current kernel is sos
             try:
                 # switch to kernel and bring in items
-                self.switch_kernel(to_kernel, in_vars=items)
+                self.switch_kernel(to_kernel, in_vars=items, as_var=as_var)
             except Exception as e:
                 self.warn(
                     f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
@@ -1001,13 +1009,16 @@ class SoS_Kernel(IPythonKernel):
             lan = self.supported_languages[kinfo.language]
             # pass language name to to_kernel
             try:
-                if to_kernel:
-                    objects = lan(self, kinfo.kernel).put_vars(
-                        items,
-                        to_kernel=self.subkernels.find(to_kernel).language)
+                put_vars_func = lan(self, kinfo.kernel).put_vars
+                args = inspect.getargspec(put_vars_func)[0]
+                to_kernel = self.subkernels.find(to_kernel).language if to_kernel else 'SoS'
+                if 'as_var' in args:
+                    objects = put_vars_func(
+                            items,
+                            to_kernel=to_kernel, as_var=as_var)
                 else:
-                    objects = lan(self, kinfo.kernel).put_vars(
-                        items, to_kernel='SoS')
+                    objects = put_vars_func(
+                            items, to_kernel=to_kernel)
 
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
@@ -1450,7 +1461,8 @@ class SoS_Kernel(IPythonKernel):
                       in_vars=None,
                       kernel_name=None,
                       language=None,
-                      color=None):
+                      color=None,
+                      as_var=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
@@ -1468,7 +1480,7 @@ class SoS_Kernel(IPythonKernel):
         if kinfo.name == 'SoS':
             # non-SoS to SoS
             if in_vars:
-                self.put_vars_to(in_vars)
+                self.put_vars_to(in_vars, as_var=as_var)
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # Non-SoS to Non-SoS
@@ -1543,7 +1555,7 @@ class SoS_Kernel(IPythonKernel):
                     self.run_cell(init_stmts, True, False)
             # passing
             if in_vars:
-                self.get_vars_from(in_vars)
+                self.get_vars_from(in_vars, as_var=as_var)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
