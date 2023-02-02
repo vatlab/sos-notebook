@@ -47,24 +47,17 @@ class FlushableStringIO:
             content = content.splitlines()
             hint_line = content[0][6:].strip()
             content = '\n'.join(content[1:])
-            self.kernel.send_response(
-                self.kernel.iopub_socket, 'display_data', {
-                    'metadata': {},
-                    'data': {
-                        'text/html': f'<div class="sos_hint">{hint_line}</div>'
-                    }
-                })
+            self.kernel.send_response(self.kernel.iopub_socket, 'display_data', {
+                'metadata': {},
+                'data': {
+                    'text/html': f'<div class="sos_hint">{hint_line}</div>'
+                }
+            })
         if content:
             if self.kernel._meta['capture_result'] is not None:
-                self.kernel._meta['capture_result'].append(('stream', {
-                    'name': self.name,
-                    'text': content
-                }))
+                self.kernel._meta['capture_result'].append(('stream', {'name': self.name, 'text': content}))
             if self.kernel._meta['render_result'] is False:
-                self.kernel.send_response(self.kernel.iopub_socket, 'stream', {
-                    'name': self.name,
-                    'text': content
-                })
+                self.kernel.send_response(self.kernel.iopub_socket, 'stream', {'name': self.name, 'text': content})
 
     def flush(self):
         pass
@@ -75,13 +68,7 @@ __all__ = ['SoS_Kernel']
 
 class subkernel(object):
     # a class to information on subkernel
-    def __init__(self,
-                 name=None,
-                 kernel=None,
-                 language='',
-                 color='',
-                 options={},
-                 codemirror_mode=''):
+    def __init__(self, name=None, kernel=None, language='', color='', options={}, codemirror_mode=''):
         self.name = name
         self.kernel = kernel
         self.language = language
@@ -98,10 +85,7 @@ class subkernel(object):
 
 def make_transient_msg(msg_type, content):
     if msg_type == 'display_data':
-        return {
-            'data': content.get('data', {}),
-            'metadata': content.get('metadata', {})
-        }
+        return {'data': content.get('data', {}), 'metadata': content.get('metadata', {})}
     if msg_type == 'stream':
         if content['name'] == 'stdout':
             return {
@@ -118,9 +102,7 @@ def make_transient_msg(msg_type, content):
             },
             'metadata': {}
         }
-    raise ValueError(
-        f"failed to translate message {msg_type} to transient_display_data message"
-    )
+    raise ValueError(f"failed to translate message {msg_type} to transient_display_data message")
 
 
 class Subkernels(object):
@@ -136,15 +118,11 @@ class Subkernels(object):
         self._kernel_list = []
         lan_map = {}
         for x in self.language_info.keys():
-            for lname, knames in kernel.supported_languages[
-                    x].supported_kernels.items():
+            for lname, knames in kernel.supported_languages[x].supported_kernels.items():
                 for kname in knames:
                     if x != kname:
-                        lan_map[kname] = (lname,
-                                          self.get_background_color(
-                                              self.language_info[x], lname),
-                                          getattr(self.language_info[x],
-                                                  'options', {}), '')
+                        lan_map[kname] = (lname, self.get_background_color(self.language_info[x], lname),
+                                          getattr(self.language_info[x], 'options', {}), '')
         # kernel_list has the following items
         #
         # 1. displayed name
@@ -159,10 +137,8 @@ class Subkernels(object):
                         name='SoS',
                         kernel='sos',
                         options={
-                            'variable_pattern':
-                                r'^\s*[_A-Za-z][_A-Za-z0-9\.]*\s*$',
-                            'assignment_pattern':
-                                r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'
+                            'variable_pattern': r'^\s*[_A-Za-z][_A-Za-z0-9\.]*\s*$',
+                            'assignment_pattern': r'^\s*([_A-Za-z0-9\.]+)\s*=.*$'
                         },
                         codemirror_mode='sos'))
             elif spec in lan_map:
@@ -175,23 +151,14 @@ class Subkernels(object):
                         color=lan_map[spec][1],
                         options=lan_map[spec][2]))
             elif any(fnmatch.fnmatch(spec, x) for x in lan_map.keys()):
-                matched = [
-                    y for x, y in lan_map.items() if fnmatch.fnmatch(spec, x)
-                ][0]
+                matched = [y for x, y in lan_map.items() if fnmatch.fnmatch(spec, x)][0]
                 self._kernel_list.append(
-                    subkernel(
-                        name=matched[0],
-                        kernel=spec,
-                        language=matched[0],
-                        color=matched[1],
-                        options=matched[2]))
+                    subkernel(name=matched[0], kernel=spec, language=matched[0], color=matched[1], options=matched[2]))
             else:
                 lan_name = km.get_kernel_spec(spec).language
                 if lan_name == 'python':
                     lan_name = 'python3'
-                avail_names = [
-                    x for x in lan_map.keys() if x.lower() == lan_name.lower()
-                ]
+                avail_names = [x for x in lan_map.keys() if x.lower() == lan_name.lower()]
                 if avail_names:
                     self._kernel_list.append(
                         subkernel(
@@ -203,10 +170,7 @@ class Subkernels(object):
                 else:
                     # undefined language also use default theme color
                     self._kernel_list.append(
-                        subkernel(
-                            name=km.get_kernel_spec(spec).display_name,
-                            kernel=spec,
-                            language=lan_name))
+                        subkernel(name=km.get_kernel_spec(spec).display_name, kernel=spec, language=lan_name))
 
     def kernel_list(self):
         return self._kernel_list
@@ -262,16 +226,9 @@ class Subkernels(object):
             # return the same background color for all inquiry
             return plugin.background_color
         # return color for specified, or any color if unknown inquiry is made
-        return plugin.background_color.get(
-            lan, next(iter(plugin.background_color.values())))
+        return plugin.background_color.get(lan, next(iter(plugin.background_color.values())))
 
-    def find(self,
-             name,
-             kernel=None,
-             language=None,
-             color=None,
-             codemirror_mode='',
-             notify_frontend=True):
+    def find(self, name, kernel=None, language=None, color=None, codemirror_mode='', notify_frontend=True):
         codemirror_mode = codemirror_mode if codemirror_mode else self.default_cm_mode.get(
             'codemirror_mode', codemirror_mode)
 
@@ -291,8 +248,7 @@ class Subkernels(object):
             #  similarly, identified by kernel but language names are different
             if language not in (None, '', 'None') and language != x.language:
                 env.logger.warning(
-                    f"Overriding language {x.language} used by subkernel {x.name} with language {language}."
-                )
+                    f"Overriding language {x.language} used by subkernel {x.name} with language {language}.")
                 self._kernel_list[idx].language = language
                 if notify_frontend:
                     self.notify_frontend()
@@ -302,8 +258,7 @@ class Subkernels(object):
                 if color == 'default':
                     if self._kernel_list[idx].language:
                         self._kernel_list[idx].color = self.get_background_color(
-                            self.language_info[self._kernel_list[idx].language],
-                            self._kernel_list[idx].language)
+                            self.language_info[self._kernel_list[idx].language], self._kernel_list[idx].language)
                     else:
                         self._kernel_list[idx].color = ''
                 else:
@@ -345,8 +300,7 @@ class Subkernels(object):
             if not language:
                 if color == 'default':
                     if kdef.language:
-                        color = self.get_background_color(
-                            self.language_info[kdef.language], kdef.language)
+                        color = self.get_background_color(self.language_info[kdef.language], kdef.language)
                     else:
                         color = kdef.color
                 new_def = self.add_or_replace(
@@ -355,8 +309,7 @@ class Subkernels(object):
                         kdef.kernel,
                         kdef.language,
                         kdef.color if color is None else color,
-                        getattr(self.language_info[kdef.language], 'options',
-                                {}) if kdef.language else {},
+                        getattr(self.language_info[kdef.language], 'options', {}) if kdef.language else {},
                         codemirror_mode=codemirror_mode))
                 if notify_frontend:
                     self.notify_frontend()
@@ -367,26 +320,20 @@ class Subkernels(object):
                 # if this is a new module, let us create an entry point and load
                 from pkg_resources import EntryPoint
                 mn, attr = language.split(':', 1)
-                ep = EntryPoint(
-                    name=kernel,
-                    module_name=mn,
-                    attrs=tuple(attr.split('.')))
+                ep = EntryPoint(name=kernel, module_name=mn, attrs=tuple(attr.split('.')))
                 try:
                     plugin = ep.resolve()
                     self.language_info[name] = plugin
                     # for convenience, we create two entries for, e.g. R and ir
                     # but only if there is no existing definition
-                    for supported_lan, supported_kernels in plugin.supported_kernels.items(
-                    ):
+                    for supported_lan, supported_kernels in plugin.supported_kernels.items():
                         for supported_kernel in supported_kernels:
                             if name != supported_kernel and supported_kernel not in self.language_info:
-                                self.language_info[
-                                    supported_kernel] = plugin
+                                self.language_info[supported_kernel] = plugin
                         if supported_lan not in self.language_info:
                             self.language_info[supported_lan] = plugin
                 except Exception as e:
-                    raise RuntimeError(
-                        f'Failed to load language {language}: {e}') from e
+                    raise RuntimeError(f'Failed to load language {language}: {e}') from e
                 #
                 if color == 'default':
                     color = self.get_background_color(plugin, kernel)
@@ -407,8 +354,7 @@ class Subkernels(object):
                 #
                 self.language_info[name] = self.language_info[language]
                 if color == 'default':
-                    color = self.get_background_color(
-                        self.language_info[name], language)
+                    color = self.get_background_color(self.language_info[name], language)
                 new_def = self.add_or_replace(
                     subkernel(
                         name,
@@ -427,40 +373,30 @@ class Subkernels(object):
                 # if this is a new module, let us create an entry point and load
                 from pkg_resources import EntryPoint
                 mn, attr = language.split(':', 1)
-                ep = EntryPoint(
-                    name='__unknown__',
-                    module_name=mn,
-                    attrs=tuple(attr.split('.')))
+                ep = EntryPoint(name='__unknown__', module_name=mn, attrs=tuple(attr.split('.')))
                 try:
                     plugin = ep.resolve()
                     self.language_info[name] = plugin
                 except Exception as e:
-                    raise RuntimeError(
-                        f'Failed to load language {language}: {e}') from e
+                    raise RuntimeError(f'Failed to load language {language}: {e}') from e
 
                 avail_kernels = [
                     y.kernel
                     for y in self._kernel_list
-                    if y.kernel in sum(plugin.supported_kernels.values(), []) or
-                    any(
-                        fnmatch.fnmatch(y.kernel, x)
-                        for x in sum(plugin.supported_kernels.values(), []))
+                    if y.kernel in sum(plugin.supported_kernels.values(), []) or any(
+                        fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), []))
                 ]
 
                 if not avail_kernels:
                     raise ValueError(
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'
-                        .format(
-                            ', '.join(
-                                sum(plugin.supported_kernels.values(), [])),
-                            language))
+                        .format(', '.join(sum(plugin.supported_kernels.values(), [])), language))
                 # use the first available kernel
                 # find the language that has the kernel
                 lan_name = list({
                     x: y
                     for x, y in plugin.supported_kernels.items()
-                    if avail_kernels[0] in y or any(
-                        fnmatch.fnmatch(avail_kernels[0], z) for z in y)
+                    if avail_kernels[0] in y or any(fnmatch.fnmatch(avail_kernels[0], z) for z in y)
                 }.keys())[0]
                 if color == 'default':
                     color = self.get_background_color(plugin, lan_name)
@@ -469,48 +405,38 @@ class Subkernels(object):
                         name,
                         avail_kernels[0],
                         lan_name,
-                        self.get_background_color(plugin, lan_name)
-                        if color is None else color,
+                        self.get_background_color(plugin, lan_name) if color is None else color,
                         getattr(plugin, 'options', {}),
                         codemirror_mode=codemirror_mode))
             else:
                 # if a language name is specified (not a path to module), if should be defined in setup.py
                 if language not in self.language_info:
-                    raise RuntimeError(
-                        f'Unrecognized language definition {language}')
+                    raise RuntimeError(f'Unrecognized language definition {language}')
                 #
                 plugin = self.language_info[language]
                 if language in plugin.supported_kernels:
                     avail_kernels = [
-                        y.kernel for y in self._kernel_list if
-                        y.kernel in plugin.supported_kernels[language] or any(
-                            fnmatch.fnmatch(y.kernel, x)
-                            for x in plugin.supported_kernels[language])
+                        y.kernel for y in self._kernel_list if y.kernel in plugin.supported_kernels[language] or any(
+                            fnmatch.fnmatch(y.kernel, x) for x in plugin.supported_kernels[language])
                     ]
                 else:
                     avail_kernels = [
-                        y.kernel for y in self._kernel_list if y.kernel in
-                        sum(plugin.supported_kernels.values(), []) or any(
-                            fnmatch.fnmatch(y.kernel, x)
-                            for x in sum(plugin.supported_kernels.values(), []))
+                        y.kernel
+                        for y in self._kernel_list
+                        if y.kernel in sum(plugin.supported_kernels.values(), []) or any(
+                            fnmatch.fnmatch(y.kernel, x) for x in sum(plugin.supported_kernels.values(), []))
                     ]
                 if not avail_kernels:
                     raise ValueError(
                         'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'
-                        .format(
-                            ', '.join(
-                                sum(
-                                    self.language_info[language]
-                                    .supported_kernels.values(), [])),
-                            language))
+                        .format(', '.join(sum(self.language_info[language].supported_kernels.values(), [])), language))
 
                 new_def = self.add_or_replace(
                     subkernel(
                         name,
                         avail_kernels[0],
                         language,
-                        self.get_background_color(self.language_info[language],
-                                                  language)
+                        self.get_background_color(self.language_info[language], language)
                         if color is None or color == 'default' else color,
                         getattr(self.language_info[language], 'options', {}),
                         codemirror_mode=codemirror_mode))
@@ -519,8 +445,7 @@ class Subkernels(object):
             return new_def
 
         # let us check if there is something wrong with the pre-defined language
-        for entrypoint in pkg_resources.iter_entry_points(
-                group='sos_languages'):
+        for entrypoint in pkg_resources.iter_entry_points(group='sos_languages'):
             if entrypoint.name == name:
                 # there must be something wrong, let us trigger the exception here
                 entrypoint.load()
@@ -543,14 +468,13 @@ class Subkernels(object):
             except Exception as e:
                 # otherwise do not worry about it.
                 env.logger.warning(
-                    f'Failed to locate subkernel {kinfo[0]} with kernel "{kinfo[1]}" and language "{kinfo[2]}": {e}'
-                )
+                    f'Failed to locate subkernel {kinfo[0]} with kernel "{kinfo[1]}" and language "{kinfo[2]}": {e}')
 
     def notify_frontend(self):
         self._kernel_list.sort(key=lambda x: x.name)
-        self.sos_kernel.send_frontend_msg('kernel-list', [[
-            x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options
-        ] for x in self._kernel_list])
+        self.sos_kernel.send_frontend_msg(
+            'kernel-list',
+            [[x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options] for x in self._kernel_list])
 
 
 class CommProxyHandler(object):
@@ -570,12 +494,10 @@ class CommProxyHandler(object):
                 if sub_msg['header']['msg_type'] == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         comm_msg_started = True
-                    elif comm_msg_started and sub_msg["content"][
-                            "execution_state"] == 'idle':
+                    elif comm_msg_started and sub_msg["content"]["execution_state"] == 'idle':
                         comm_msg_ended = True
                     continue
-                self._sos_kernel.session.send(self._sos_kernel.iopub_socket,
-                                              sub_msg)
+                self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
             time.sleep(0.001)
 
 
@@ -635,8 +557,7 @@ class SoS_Kernel(IPythonKernel):
                 plugin = entrypoint.load()
                 self._supported_languages[name] = plugin
             except Exception as e:
-                env.log_to_file(
-                    'KERNEL', f'Failed to load registered language {name}: {e}')
+                env.log_to_file('KERNEL', f'Failed to load registered language {name}: {e}')
                 self._failed_languages[name] = e
         return self._supported_languages
 
@@ -680,10 +601,7 @@ class SoS_Kernel(IPythonKernel):
         # 'sos.R.sos_R' is the language module.
         # '#FFEEAABB' is the background color
         #
-        env.log_to_file(
-            'KERNEL',
-            f'Starting SoS Kernel version {__notebook_version__} with SoS {__version__}'
-        )
+        env.log_to_file('KERNEL', f'Starting SoS Kernel version {__notebook_version__} with SoS {__version__}')
 
         self.kernels = {}
         # self.shell = InteractiveShell.instance()
@@ -730,13 +648,9 @@ class SoS_Kernel(IPythonKernel):
         # initialize env
         prepare_env('')
         self.original_keys = set(env.sos_dict._dict.keys()) | {
-            'SOS_VERSION', 'CONFIG', 'step_name', '__builtins__', 'input',
-            'output', 'depends'
+            'SOS_VERSION', 'CONFIG', 'step_name', '__builtins__', 'input', 'output', 'depends'
         }
-        env.logger.handlers = [
-            x for x in env.logger.handlers
-            if not isinstance(x, logging.StreamHandler)
-        ]
+        env.logger.handlers = [x for x in env.logger.handlers if not isinstance(x, logging.StreamHandler)]
         env.logger.addHandler(
             NotebookLoggingHandler(
                 {
@@ -799,22 +713,20 @@ class SoS_Kernel(IPythonKernel):
                         except Exception as e:
                             env.log_to_file('KERNEL', f'Failed to connect to host {tqu}: {e}')
                             for tid in tids:
-                                self.send_frontend_msg(
-                                    'task_status', {
-                                        'task_id': tid,
-                                        'queue': tqu,
-                                        'status': 'missing',
-                                        'duration': ''
-                                    })
-                            continue
-                        for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
-                            self.send_frontend_msg(
-                                'task_status', {
+                                self.send_frontend_msg('task_status', {
                                     'task_id': tid,
                                     'queue': tqu,
-                                    'status': tst,
-                                    'duration': tdt
+                                    'status': 'missing',
+                                    'duration': ''
                                 })
+                            continue
+                        for tid, tst, tdt in h._task_engine.monitor_tasks(tids):
+                            self.send_frontend_msg('task_status', {
+                                'task_id': tid,
+                                'queue': tqu,
+                                'status': tst,
+                                'duration': tdt
+                            })
 
                     self.send_frontend_msg('update-duration', {})
                 elif k == 'paste-table':
@@ -824,13 +736,11 @@ class SoS_Kernel(IPythonKernel):
                         tbl = tabulate(df, headers='keys', tablefmt='pipe')
                         self.send_frontend_msg('paste-table', tbl)
                     except Exception as e:
-                        self.send_frontend_msg(
-                            'alert', f'Failed to paste clipboard as table: {e}')
+                        self.send_frontend_msg('alert', f'Failed to paste clipboard as table: {e}')
                 elif k == 'notebook-version':
                     # send the version of notebook, right now we will not do anything to it, but
                     # we will send the version of sos-notebook there
-                    self.send_frontend_msg('notebook-version',
-                                           __notebook_version__)
+                    self.send_frontend_msg('notebook-version', __notebook_version__)
                 else:
                     # this somehow does not work
                     self.warn(f'Unknown message {k}: {v}')
@@ -856,51 +766,32 @@ class SoS_Kernel(IPythonKernel):
         # if comm is never created by frontend, the kernel is in test mode without frontend
         if msg_type in ('display_data', 'stream'):
             if self._meta['use_panel'] is False or self._meta['cell_id'] == -1:
-                self.send_response(self.iopub_socket, msg_type,
-                                   {} if msg is None else msg)
+                self.send_response(self.iopub_socket, msg_type, {} if msg is None else msg)
             elif self._meta['use_iopub']:
-                self.send_response(self.iopub_socket, 'transient_display_data',
-                                   make_transient_msg(msg_type, msg))
+                self.send_response(self.iopub_socket, 'transient_display_data', make_transient_msg(msg_type, msg))
             elif self.frontend_comm:
                 if self.frontend_comm_cache:
                     for mt, mg in self.frontend_comm_cache:
-                        self.frontend_comm.send(
-                            make_transient_msg(mt, mg),
-                            {'msg_type': 'transient_display_data'})
+                        self.frontend_comm.send(make_transient_msg(mt, mg), {'msg_type': 'transient_display_data'})
                     self.frontend_comm_cache = []
-                self.frontend_comm.send(
-                    make_transient_msg(msg_type, msg),
-                    {'msg_type': 'transient_display_data'})
+                self.frontend_comm.send(make_transient_msg(msg_type, msg), {'msg_type': 'transient_display_data'})
             elif self._meta['batch_mode']:
-                env.log_to_file(
-                    'MESSAGE',
-                    f'frontend message of type {msg_type} is sent in batch mode.'
-                )
+                env.log_to_file('MESSAGE', f'frontend message of type {msg_type} is sent in batch mode.')
             else:
                 self.frontend_comm_cache.append([msg_type, msg])
-                env.log_to_file(
-                    'MESSAGE',
-                    f'fronten not ready or broken. Message of type {msg_type} is cached'
-                )
+                env.log_to_file('MESSAGE', f'fronten not ready or broken. Message of type {msg_type} is cached')
         elif self.frontend_comm:
             if self.frontend_comm_cache:
                 for mt, mg in self.frontend_comm_cache:
-                    self.frontend_comm.send({} if mg is None else mg,
-                                            {'msg_type': mt})
+                    self.frontend_comm.send({} if mg is None else mg, {'msg_type': mt})
                 self.frontend_comm_cache = []
-            self.frontend_comm.send({} if msg is None else msg,
-                                    {'msg_type': msg_type})
+            self.frontend_comm.send({} if msg is None else msg, {'msg_type': msg_type})
         elif self._meta['batch_mode']:
-            env.log_to_file(
-                'MESSAGE',
-                f'frontend message of type {msg_type} is sent in batch mode.')
+            env.log_to_file('MESSAGE', f'frontend message of type {msg_type} is sent in batch mode.')
         else:
             # frontend_comm is not ready
             self.frontend_comm_cache.append([msg_type, msg])
-            env.log_to_file(
-                'MESSAGE',
-                f'fronten not ready or broken. Message of type {msg_type} is cached'
-            )
+            env.log_to_file('MESSAGE', f'fronten not ready or broken. Message of type {msg_type} is cached')
 
     @contextlib.contextmanager
     def redirect_sos_io(self):
@@ -942,9 +833,7 @@ class SoS_Kernel(IPythonKernel):
                     self.warn(f'Failed to get variable: {e}\n')
                     return
             elif self.kernel == 'SoS':
-                self.warn(
-                    'Magic %get without option --kernel can only be executed by subkernels'
-                )
+                self.warn('Magic %get without option --kernel can only be executed by subkernels')
                 return
             else:
                 if explicit:
@@ -959,8 +848,7 @@ class SoS_Kernel(IPythonKernel):
                 self.switch_kernel(from_kernel)
                 self.put_vars_to(items, as_var=as_var)
             except Exception as e:
-                self.warn(
-                    f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
+                self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
                 self.switch_kernel('SoS')
         else:
@@ -972,8 +860,7 @@ class SoS_Kernel(IPythonKernel):
                 # put stuff to sos or my_kernel directly
                 self.put_vars_to(items, to_kernel=my_kernel, explicit=explicit, as_var=as_var)
             except Exception as e:
-                self.warn(
-                    f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
+                self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
                 # then switch back
                 self.switch_kernel(my_kernel)
@@ -983,17 +870,14 @@ class SoS_Kernel(IPythonKernel):
             return
         if self.kernel.lower() == 'sos':
             if to_kernel is None:
-                self.warn(
-                    'Magic %put without option --kernel can only be executed by subkernels'
-                )
+                self.warn('Magic %put without option --kernel can only be executed by subkernels')
                 return
             # if another kernel is specified and the current kernel is sos
             try:
                 # switch to kernel and bring in items
                 self.switch_kernel(to_kernel, in_vars=items, as_var=as_var)
             except Exception as e:
-                self.warn(
-                    f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
             finally:
                 # switch back
                 self.switch_kernel('SoS')
@@ -1002,8 +886,7 @@ class SoS_Kernel(IPythonKernel):
             kinfo = self.subkernels.find(self.kernel)
             if kinfo.language not in self.supported_languages:
                 if explicit:
-                    self.warn(
-                        f'Subkernel {self.kernel} does not support magic %put.')
+                    self.warn(f'Subkernel {self.kernel} does not support magic %put.')
                 return
             #
             lan = self.supported_languages[kinfo.language]
@@ -1013,36 +896,24 @@ class SoS_Kernel(IPythonKernel):
                 args = inspect.getargspec(put_vars_func)[0]
                 to_kernel = self.subkernels.find(to_kernel).language if to_kernel else 'SoS'
                 if 'as_var' in args:
-                    objects = put_vars_func(
-                            items,
-                            to_kernel=to_kernel, as_var=as_var)
+                    objects = put_vars_func(items, to_kernel=to_kernel, as_var=as_var)
                 else:
-                    objects = put_vars_func(
-                            items, to_kernel=to_kernel)
+                    objects = put_vars_func(items, to_kernel=to_kernel)
 
             except Exception as e:
                 # if somethign goes wrong in the subkernel does not matter
-                env.log_to_file(
-                    'MAGIC',
-                    f'Failed to call put_var({items}) from {kinfo.kernel}: {e}')
+                env.log_to_file('MAGIC', f'Failed to call put_var({items}) from {kinfo.kernel}: {e}')
                 objects = {}
             if isinstance(objects, dict):
                 # returns a SOS dictionary
                 try:
                     # if the variable is passing through SoS, let us try to restore variables in SoS
                     if to_kernel is not None:
-                        missing_vars = [
-                            x for x in objects.keys() if x not in env.sos_dict
-                        ]
-                        existing_vars = {
-                            x: env.sos_dict[x]
-                            for x in objects.keys()
-                            if x in env.sos_dict
-                        }
+                        missing_vars = [x for x in objects.keys() if x not in env.sos_dict]
+                        existing_vars = {x: env.sos_dict[x] for x in objects.keys() if x in env.sos_dict}
                     env.sos_dict.update(objects)
                 except Exception as e:
-                    self.warn(
-                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                     return
 
                 if to_kernel is None:
@@ -1054,8 +925,7 @@ class SoS_Kernel(IPythonKernel):
                     # switch to the destination kernel and bring in vars
                     self.switch_kernel(to_kernel, in_vars=items)
                 except Exception as e:
-                    self.warn(
-                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
                     self.switch_kernel(my_kernel)
@@ -1071,9 +941,7 @@ class SoS_Kernel(IPythonKernel):
                     try:
                         exec(objects, env.sos_dict._dict)
                     except Exception as e:
-                        self.warn(
-                            f'Failed to put variables {items} to SoS kernel: {e}'
-                        )
+                        self.warn(f'Failed to put variables {items} to SoS kernel: {e}')
                         return
                 try:
                     my_kernel = self.kernel
@@ -1082,15 +950,12 @@ class SoS_Kernel(IPythonKernel):
                     # execute the statement to pass variables directly to destination kernel
                     self.run_cell(objects, True, False)
                 except Exception as e:
-                    self.warn(
-                        f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
+                    self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
                     self.switch_kernel(my_kernel)
             else:
-                self.warn(
-                    f'Unrecognized return value of type {object.__class__.__name__} for action %put'
-                )
+                self.warn(f'Unrecognized return value of type {object.__class__.__name__} for action %put')
                 return
 
     def expand_text_in(self, text, sigil=None, kernel='SoS'):
@@ -1103,9 +968,7 @@ class SoS_Kernel(IPythonKernel):
         if sigil is None:
             sigil = '{ }'
         if sigil.count(' ') != 1:
-            raise ValueError(
-                f'Invalid interpolation delimiter "{sigil}": should be in the format of "L R"'
-            )
+            raise ValueError(f'Invalid interpolation delimiter "{sigil}": should be in the format of "L R"')
         if sigil.split(' ')[0] not in text:
             return text
 
@@ -1128,9 +991,7 @@ class SoS_Kernel(IPythonKernel):
             self.switch_kernel(kernel)
             return lan.expand(text, sigil)
         except Exception as e:
-            self.warn(
-                f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}'
-            )
+            self.warn(f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}')
             return text
         finally:
             self.switch_kernel(orig_kernel)
@@ -1144,8 +1005,7 @@ class SoS_Kernel(IPythonKernel):
         env.log_to_file('MESSAGE', f'Checking is_complete of "{code}"')
         lines = code.split('\n')
         # first let us remove "valid" magics
-        while any(
-                line.startswith('%') or line.startswith('!') for line in lines):
+        while any(line.startswith('%') or line.startswith('!') for line in lines):
             for idx, line in enumerate(lines):
                 if line.startswith('%') or line.startswith('!'):
                     # if the last line ending with \, incomplete
@@ -1165,10 +1025,7 @@ class SoS_Kernel(IPythonKernel):
                     lines[idx] = ''
                 # remove input stuff?
                 if SOS_DIRECTIVE.match(line):
-                    if any(
-                            line.startswith(x)
-                            for x in ('input:', 'output:', 'depends:',
-                                      'parameter:')):
+                    if any(line.startswith(x) for x in ('input:', 'output:', 'depends:', 'parameter:')):
                         # directive, remvoe them
                         lines[idx] = lines[idx].split(':', 1)[-1]
                     elif idx == len(lines) - 1:
@@ -1186,8 +1043,7 @@ class SoS_Kernel(IPythonKernel):
                 from IPython.core.inputsplitter import InputSplitter as ipf
             code = '\n'.join(lines) + '\n\n'
             res = ipf().check_complete(code)
-            env.log_to_file('MESSAGE',
-                            f'SoS kernel returns {res} for code {code}')
+            env.log_to_file('MESSAGE', f'SoS kernel returns {res} for code {code}')
             return {'status': res[0], 'indent': res[1]}
         # non-SoS kernels
         try:
@@ -1208,15 +1064,11 @@ class SoS_Kernel(IPythonKernel):
             KC.is_complete(code)
             msg = KC.shell_channel.get_msg()
             if msg['header']['msg_type'] == 'is_complete_reply':
-                env.log_to_file(
-                    'MESSAGE',
-                    f'{self.kernel} kernel returns {msg["content"]} for code {code}'
-                )
+                env.log_to_file('MESSAGE', f'{self.kernel} kernel returns {msg["content"]} for code {code}')
                 return msg['content']
 
             raise RuntimeError(
-                f"is_complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-            )
+                f"is_complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
         except Exception as e:
             env.logger.debug(f'Completion fail with exception: {e}')
             return {'status': 'incomplete', 'indent': ''}
@@ -1226,19 +1078,12 @@ class SoS_Kernel(IPythonKernel):
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
             data = self.inspector.inspect(name, line, cursor_pos - offset)
-            return {
-                'status': 'ok',
-                'metadata': {},
-                'found': True if data else False,
-                'data': data
-            }
+            return {'status': 'ok', 'metadata': {}, 'found': True if data else False, 'data': data}
         cell_kernel = self.subkernels.find(self.editor_kernel)
         try:
             _, KC = self.kernels[cell_kernel.name]
         except Exception as e:
-            env.log_to_file(
-                'KERNEL',
-                f'Failed to get subkernels {cell_kernel.name}: {e}')
+            env.log_to_file('KERNEL', f'Failed to get subkernels {cell_kernel.name}: {e}')
             KC = self.KC
         try:
             KC.inspect(code, cursor_pos)
@@ -1250,12 +1095,10 @@ class SoS_Kernel(IPythonKernel):
                 # we should not wait forever and cause a deadloop here
                 env.log_to_file(
                     'MESSAGE',
-                    f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-                )
+                    f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
                 break
         except Exception as e:
-            env.log_to_file('KERNEL',
-                            f'Completion fail with exception: {e}')
+            env.log_to_file('KERNEL', f'Completion fail with exception: {e}')
 
     def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
@@ -1287,8 +1130,7 @@ class SoS_Kernel(IPythonKernel):
                 return msg['content']
 
             raise RuntimeError(
-                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead"
-            )
+                f"complete_reply not obtained: {msg['header']['msg_type']} {msg['content']} returned instead")
         except Exception as e:
             env.logger.debug(f'Completion fail with exception: {e}')
             return {
@@ -1302,10 +1144,7 @@ class SoS_Kernel(IPythonKernel):
     def warn(self, message):
         message = str(message).rstrip() + '\n'
         if message.strip():
-            self.send_response(self.iopub_socket, 'stream', {
-                'name': 'stderr',
-                'text': message
-            })
+            self.send_response(self.iopub_socket, 'stream', {'name': 'stderr', 'text': message})
 
     def run_cell(self, code, silent, store_history, on_error=None):
         return asyncio.run(self._async_run_cell(code, silent, store_history, on_error))
@@ -1313,11 +1152,8 @@ class SoS_Kernel(IPythonKernel):
     async def _async_run_cell(self, code, silent, store_history, on_error=None):
         #
         if not self.KM.is_alive():
-            self.send_response(
-                self.iopub_socket, 'stream',
-                dict(
-                    name='stdout',
-                    text='Restarting kernel "{}"\n'.format(self.kernel)))
+            self.send_response(self.iopub_socket, 'stream',
+                               dict(name='stdout', text='Restarting kernel "{}"\n'.format(self.kernel)))
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats
@@ -1325,12 +1161,7 @@ class SoS_Kernel(IPythonKernel):
             await self.KC.shell_channel.get_msg()
         # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
-        content = dict(
-            code=code,
-            silent=silent,
-            store_history=store_history,
-            user_expressions={},
-            allow_stdin=False)
+        content = dict(code=code, silent=silent, store_history=store_history, user_expressions={}, allow_stdin=False)
         msg = self.KC.session.msg('execute_request', content)
         # use the msg_id of the sos kernel for the subkernel to make sure that the messages sent
         # from the subkernel has the correct msg_id in parent_header so that they can be
@@ -1352,10 +1183,8 @@ class SoS_Kernel(IPythonKernel):
                 # display intermediate print statements, etc.
                 while await self.KC.stdin_channel.msg_ready():
                     sub_msg = await self.KC.stdin_channel.get_msg()
-                    env.log_to_file(
-                        'MESSAGE',
-                        f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}"
-                    )
+                    env.log_to_file('MESSAGE',
+                                    f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}")
                     if sub_msg['header']['msg_type'] != 'input_request':
                         self.session.send(self.stdin_socket, sub_msg)
                     else:
@@ -1370,54 +1199,40 @@ class SoS_Kernel(IPythonKernel):
                     msg_type = sub_msg['header']['msg_type']
                     env.log_to_file(
                         'MESSAGE',
-                        f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  \n {pprint.pformat(sub_msg)}"
-                    )
+                        f"IOPUB MSG TYPE {sub_msg['header']['msg_type']} CONTENT  \n {pprint.pformat(sub_msg)}")
                     if msg_type == 'status':
                         if sub_msg["content"]["execution_state"] == 'busy':
                             iopub_started = True
-                        elif iopub_started and sub_msg["content"][
-                                "execution_state"] == 'idle':
+                        elif iopub_started and sub_msg["content"]["execution_state"] == 'idle':
                             iopub_ended = True
                         continue
                     if msg_type in ('execute_input', 'execute_result'):
                         # override execution count with the master count,
                         # not sure if it is needed
-                        sub_msg['content'][
-                            'execution_count'] = self._execution_count
+                        sub_msg['content']['execution_count'] = self._execution_count
                     #
-                    if msg_type in [
-                            'display_data', 'stream', 'execute_result',
-                            'update_display_data', 'error'
-                    ]:
+                    if msg_type in ['display_data', 'stream', 'execute_result', 'update_display_data', 'error']:
                         if self._meta['capture_result'] is not None:
-                            self._meta['capture_result'].append(
-                                (msg_type, sub_msg['content']))
-                        if msg_type == 'execute_result' or (
-                                not silent and
-                                self._meta['render_result'] is False):
-                            if msg_type == 'error' and self._meta[
-                                    'suppress_error']:
+                            self._meta['capture_result'].append((msg_type, sub_msg['content']))
+                        if msg_type == 'execute_result' or (not silent and self._meta['render_result'] is False):
+                            if msg_type == 'error' and self._meta['suppress_error']:
                                 self.send_response(
                                     self.iopub_socket, 'stream', {
-                                        'name':
-                                            'stderr',
-                                        'text':
-                                            f"{sub_msg['content']['ename']}: {sub_msg['content']['evalue']}"
+                                        'name': 'stderr',
+                                        'text': f"{sub_msg['content']['ename']}: {sub_msg['content']['evalue']}"
                                     })
                             else:
                                 self.session.send(self.iopub_socket, sub_msg)
                     else:
                         # if the subkernel tried to create a customized comm
                         if msg_type == 'comm_open':
-                            self.comm_manager.register_subcomm(
-                                sub_msg['content']['comm_id'], self.KC)
+                            self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
                         self.session.send(self.iopub_socket, sub_msg)
                 if await self.KC.shell_channel.msg_ready():
                     # now get the real result
                     reply = self.KC.get_shell_msg()
                     reply['content']['execution_count'] = self._execution_count
-                    env.log_to_file('MESSAGE',
-                                    f'GET SHELL MSG {pprint.pformat(reply)}')
+                    env.log_to_file('MESSAGE', f'GET SHELL MSG {pprint.pformat(reply)}')
                     res = reply['content']
                     shell_ended = True
                 time.sleep(0.001)
@@ -1456,23 +1271,12 @@ class SoS_Kernel(IPythonKernel):
         available_subkernels += '</table>'
         return available_subkernels
 
-    def switch_kernel(self,
-                      kernel,
-                      in_vars=None,
-                      kernel_name=None,
-                      language=None,
-                      color=None,
-                      as_var=None):
+    def switch_kernel(self, kernel, in_vars=None, kernel_name=None, language=None, color=None, as_var=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
-            self.send_response(
-                self.iopub_socket, 'display_data',
-                dict(
-                    metadata={},
-                    data={
-                        'text/html': self.get_info_of_subkernels()
-                    }))
+            self.send_response(self.iopub_socket, 'display_data',
+                               dict(metadata={}, data={'text/html': self.get_info_of_subkernels()}))
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
         if kinfo.name == self.kernel:
@@ -1488,26 +1292,19 @@ class SoS_Kernel(IPythonKernel):
             self.switch_kernel(kinfo.name, in_vars)
         else:
             # SoS to non-SoS
-            env.log_to_file('KERNEL',
-                            f'Switch from {self.kernel} to {kinfo.name}')
+            env.log_to_file('KERNEL', f'Switch from {self.kernel} to {kinfo.name}')
             # case when self.kernel == 'sos', kernel != 'sos'
             # to a subkernel
             new_kernel = False
             if kinfo.name not in self.kernels:
                 # start a new kernel
                 try:
-                    env.log_to_file('KERNEL',
-                                    f'Starting subkernel {kinfo.name}')
+                    env.log_to_file('KERNEL', f'Starting subkernel {kinfo.name}')
                     self.kernels[kinfo.name] = manager.start_new_kernel(
-                        startup_timeout=30,
-                        kernel_name=kinfo.kernel,
-                        cwd=os.getcwd())
+                        startup_timeout=30, kernel_name=kinfo.kernel, cwd=os.getcwd())
                     new_kernel = True
                 except Exception as e:
-                    env.log_to_file(
-                        'KERNEL',
-                        f'Failed to start kernel {kinfo.kernel}. Trying again...'
-                    )
+                    env.log_to_file('KERNEL', f'Failed to start kernel {kinfo.kernel}. Trying again...')
                     # try toget error message
                     import tempfile
                     with tempfile.TemporaryFile() as ferr:
@@ -1520,10 +1317,7 @@ class SoS_Kernel(IPythonKernel):
                                 stdout=subprocess.DEVNULL,
                                 stderr=ferr)
                             new_kernel = True
-                            env.log_to_file(
-                                'KERNEL',
-                                f'Kernel {kinfo.kernel} started with the second attempt.'
-                            )
+                            env.log_to_file('KERNEL', f'Kernel {kinfo.kernel} started with the second attempt.')
                         except Exception as e:
                             ferr.seek(0)
                             raise RuntimeError(
@@ -1533,13 +1327,11 @@ class SoS_Kernel(IPythonKernel):
             self.kernel = kinfo.name
             if new_kernel and not kinfo.codemirror_mode:
                 self.KC.kernel_info()
-                kinfo.codemirror_mode = self.KC.get_shell_msg(
-                    timeout=10)['content']['language_info'].get(
-                        'codemirror_mode', '')
+                kinfo.codemirror_mode = self.KC.get_shell_msg(timeout=10)['content']['language_info'].get(
+                    'codemirror_mode', '')
                 self.subkernels.notify_frontend()
             if new_kernel and kinfo.language in self.supported_languages:
-                lan_module = self.supported_languages[kinfo.language](
-                    self, kinfo.kernel)
+                lan_module = self.supported_languages[kinfo.language](self, kinfo.kernel)
                 init_stmts = lan_module.init_statements
 
                 if hasattr(lan_module, '__version__'):
@@ -1547,10 +1339,7 @@ class SoS_Kernel(IPythonKernel):
                 else:
                     module_version = ' (version unavailable)'
 
-                env.log_to_file(
-                    'KERNEL',
-                    f'Loading language module for kernel {kinfo.name}{module_version}'
-                )
+                env.log_to_file('KERNEL', f'Loading language module for kernel {kinfo.name}{module_version}')
                 if init_stmts:
                     self.run_cell(init_stmts, True, False)
             # passing
@@ -1564,9 +1353,7 @@ class SoS_Kernel(IPythonKernel):
             self.warn('Cannot restart SoS kernel from within SoS.')
         elif kernel:
             if kernel not in self.kernels:
-                self.send_response(
-                    self.iopub_socket, 'stream',
-                    dict(name='stdout', text=f'{kernel} is not running'))
+                self.send_response(self.iopub_socket, 'stream', dict(name='stdout', text=f'{kernel} is not running'))
             elif restart:
                 orig_kernel = self.kernel
                 try:
@@ -1592,8 +1379,8 @@ class SoS_Kernel(IPythonKernel):
                 self.iopub_socket, 'stream',
                 dict(
                     name='stdout',
-                    text='Specify one of the kernels to shutdown: SoS{}\n'
-                    .format(''.join(f', {x}' for x in self.kernels))))
+                    text='Specify one of the kernels to shutdown: SoS{}\n'.format(''.join(
+                        f', {x}' for x in self.kernels))))
         # stop_controller(self.controller)
 
     def get_response(self, statement, msg_types, name=None):
@@ -1606,10 +1393,8 @@ class SoS_Kernel(IPythonKernel):
         while await self.KC.iopub_channel.msg_ready():
             sub_msg = await self.KC.iopub_channel.get_msg()
             if sub_msg['header']['msg_type'] != 'status':
-                env.log_to_file(
-                    'MESSAGE',
-                    f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}"
-                )
+                env.log_to_file('MESSAGE',
+                                f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}")
         responses = []
         self.KC.execute(statement, silent=False, store_history=False)
         # first thing is wait for any side effects (output, stdin, etc.)
@@ -1621,27 +1406,19 @@ class SoS_Kernel(IPythonKernel):
             while await self.KC.iopub_channel.msg_ready():
                 sub_msg = await self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
-                env.log_to_file('MESSAGE',
-                                f'Received {msg_type} {sub_msg["content"]}')
+                env.log_to_file('MESSAGE', f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
                     if sub_msg["content"]["execution_state"] == 'busy':
                         iopub_started = True
-                    elif iopub_started and sub_msg["content"][
-                            "execution_state"] == 'idle':
+                    elif iopub_started and sub_msg["content"]["execution_state"] == 'idle':
                         iopub_ended = True
                     continue
-                if msg_type in msg_types and (
-                        name is None or
-                        sub_msg['content'].get('name', None) in name or
-                        any(x in name for x in sub_msg['content'].keys())):
-                    env.log_to_file(
-                        'MESSAGE',
-                        f'Capture response: {msg_type}: {sub_msg["content"]}')
+                if msg_type in msg_types and (name is None or sub_msg['content'].get('name', None) in name or
+                                              any(x in name for x in sub_msg['content'].keys())):
+                    env.log_to_file('MESSAGE', f'Capture response: {msg_type}: {sub_msg["content"]}')
                     responses.append([msg_type, sub_msg['content']])
                 else:
-                    env.log_to_file(
-                        'MESSAGE',
-                        f'Non-response: {msg_type}: {sub_msg["content"]}')
+                    env.log_to_file('MESSAGE', f'Non-response: {msg_type}: {sub_msg["content"]}')
                     #
                     # we ignore the messages we are not interested.
                     #
@@ -1655,10 +1432,8 @@ class SoS_Kernel(IPythonKernel):
             time.sleep(0.001)
 
         if not responses:
-            env.log_to_file(
-                'MESSAGE',
-                f'Failed to get a response from message type {msg_types} for the execution of {statement}'
-            )
+            env.log_to_file('MESSAGE',
+                            f'Failed to get a response from message type {msg_types} for the execution of {statement}')
         return responses
 
     def run_sos_code(self, code, silent):
@@ -1670,11 +1445,9 @@ class SoS_Kernel(IPythonKernel):
                         code=code,
                         raw_args=self.options,
                         kernel=self,
-                        run_in_queue=self._workflow_mode == 'nowait' and
-                        not self._meta['batch_mode'])
+                        run_in_queue=self._workflow_mode == 'nowait' and not self._meta['batch_mode'])
                 else:
-                    res = execute_scratch_cell(
-                        code=code, raw_args=self.options, kernel=self)
+                    res = execute_scratch_cell(code=code, raw_args=self.options, kernel=self)
                 self.send_result(res, silent)
             except Exception as e:
                 sys.stderr.flush()
@@ -1683,10 +1456,7 @@ class SoS_Kernel(IPythonKernel):
             except KeyboardInterrupt:
                 # this only occurs when the executor does not capture the signal.
                 self.warn('KeyboardInterrupt\n')
-                return {
-                    'status': 'abort',
-                    'execution_count': self._execution_count
-                }
+                return {'status': 'abort', 'execution_count': self._execution_count}
             finally:
                 sys.stderr.flush()
                 sys.stdout.flush()
@@ -1702,8 +1472,7 @@ class SoS_Kernel(IPythonKernel):
             # import the object from IPython.display
             mod = __import__('IPython.display')
             if not hasattr(mod.display, self._meta['render_result']):
-                self.warn(
-                    f'Unrecognized render format {self._meta["render_result"]}')
+                self.warn(f'Unrecognized render format {self._meta["render_result"]}')
             else:
                 func = getattr(mod.display, self._meta['render_result'])
                 res = func(res)
@@ -1714,16 +1483,13 @@ class SoS_Kernel(IPythonKernel):
         if not silent and res is not None:
             format_dict, md_dict = self.format_obj(self.render_result(res))
             if self._meta['capture_result'] is not None:
-                self._meta['capture_result'].append(
-                    ('execute_result', format_dict))
-            env.log_to_file('MESSAGE',
-                            f'IOPUB execute_result with content {format_dict}')
-            self.send_response(
-                self.iopub_socket, 'execute_result', {
-                    'execution_count': self._execution_count,
-                    'data': format_dict,
-                    'metadata': md_dict
-                })
+                self._meta['capture_result'].append(('execute_result', format_dict))
+            env.log_to_file('MESSAGE', f'IOPUB execute_result with content {format_dict}')
+            self.send_response(self.iopub_socket, 'execute_result', {
+                'execution_count': self._execution_count,
+                'data': format_dict,
+                'metadata': md_dict
+            })
 
     def init_metadata(self, metadata):
         super().init_metadata(metadata)
@@ -1784,8 +1550,7 @@ class SoS_Kernel(IPythonKernel):
                 False,
         }
         # remove path and extension
-        self._meta['notebook_name'] = os.path.basename(
-            self._meta['notebook_path']).rsplit('.', 1)[0]
+        self._meta['notebook_name'] = os.path.basename(self._meta['notebook_path']).rsplit('.', 1)[0]
         if 'list_kernel' in meta and meta['list_kernel']:
             # https://github.com/jupyter/help/issues/153#issuecomment-289026056
             #
@@ -1796,12 +1561,7 @@ class SoS_Kernel(IPythonKernel):
             self.comm_manager.register_target('sos_comm', self.sos_comm)
         return self._meta
 
-    def do_execute(self,
-                   code,
-                   silent,
-                   store_history=True,
-                   user_expressions=None,
-                   allow_stdin=True):
+    def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
         env.log_to_file('KERNEL', f'execute: {code}')
         if not self.controller:
             self.controller = start_controller(self)
@@ -1816,18 +1576,14 @@ class SoS_Kernel(IPythonKernel):
         self._forward_input(allow_stdin)
         # switch to global default kernel
         try:
-            if self.subkernels.find(
-                    self._meta['default_kernel']).name != self.subkernels.find(
-                        self.kernel).name:
+            if self.subkernels.find(self._meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
                 self.switch_kernel(self._meta['default_kernel'])
                 # evaluate user expression
         except Exception as e:
             return self.notify_error(e)
         # switch to cell kernel
         try:
-            if self.subkernels.find(
-                    self._meta['cell_kernel']).name != self.subkernels.find(
-                        self.kernel).name:
+            if self.subkernels.find(self._meta['cell_kernel']).name != self.subkernels.find(self.kernel).name:
                 self.switch_kernel(self._meta['cell_kernel'])
         except Exception as e:
             return self.notify_error(e)
@@ -1842,12 +1598,7 @@ class SoS_Kernel(IPythonKernel):
         except Exception as e:
             return self.notify_error(e)
         if ret is None:
-            ret = {
-                'status': 'ok',
-                'payload': [],
-                'user_expressions': {},
-                'execution_count': self._execution_count
-            }
+            ret = {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
 
         out = {}
         for key, expr in (user_expressions or {}).items():
@@ -1871,12 +1622,7 @@ class SoS_Kernel(IPythonKernel):
         # tell the frontend the kernel for the "next" cell
         return ret
 
-    def _do_execute(self,
-                    code,
-                    silent,
-                    store_history=True,
-                    user_expressions=None,
-                    allow_stdin=True):
+    def _do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
         # handles windows/unix newline
         code = '\n'.join(code.splitlines()) + '\n'
         if code == 'import os\n_pid = os.getpid()':
@@ -1885,13 +1631,11 @@ class SoS_Kernel(IPythonKernel):
             return
         for magic in self.magics.values():
             if magic.match(code):
-                return magic.apply(code, silent, store_history,
-                                   user_expressions, allow_stdin)
+                return magic.apply(code, silent, store_history, user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
             if self._meta['cell_id'] != '0' and not self._meta['batch_mode']:
-                self.send_frontend_msg('cell-kernel',
-                                       [self._meta['cell_id'], self.kernel])
+                self.send_frontend_msg('cell-kernel', [self._meta['cell_id'], self.kernel])
             if code is None or not code.strip():
                 return
             try:
@@ -1901,44 +1645,27 @@ class SoS_Kernel(IPythonKernel):
                 return self.run_cell(code.lstrip(), silent, store_history)
             except KeyboardInterrupt:
                 self.warn(
-                    'KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n'
-                )
-                return {
-                    'status': 'abort',
-                    'execution_count': self._execution_count
-                }
+                    'KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n')
+                return {'status': 'abort', 'execution_count': self._execution_count}
         else:
             # if the cell starts with comment, and newline, remove it
             lines = code.splitlines()
             empties = [x.startswith('#') or not x.strip() for x in lines]
             if not self._meta['batch_mode']:
-                self.send_frontend_msg('cell-kernel',
-                                       [self._meta['cell_id'], 'SoS'])
+                self.send_frontend_msg('cell-kernel', [self._meta['cell_id'], 'SoS'])
             if all(empties):
-                return {
-                    'status': 'ok',
-                    'payload': [],
-                    'user_expressions': {},
-                    'execution_count': self._execution_count
-                }
+                return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             idx = empties.index(False)
-            if idx != 0 and (lines[idx].startswith('%') or
-                                lines[idx].startswith('!')):
+            if idx != 0 and (lines[idx].startswith('%') or lines[idx].startswith('!')):
                 # not start from empty, but might have magic etc
-                return self._do_execute('\n'.join(lines[idx:]) + '\n',
-                                        silent, store_history,
-                                        user_expressions, allow_stdin)
+                return self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions,
+                                        allow_stdin)
 
             # if there is no more empty, magic etc, enter workflow mode
             # run sos
             try:
                 self.run_sos_code(code, silent)
-                return {
-                    'status': 'ok',
-                    'payload': [],
-                    'user_expressions': {},
-                    'execution_count': self._execution_count
-                }
+                return {'status': 'ok', 'payload': [], 'user_expressions': {}, 'execution_count': self._execution_count}
             except Exception as e:
                 return self.notify_error(e)
             finally:
