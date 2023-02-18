@@ -1395,7 +1395,7 @@ class SoS_Kernel(IPythonKernel):
     # def get_response(self, statement, msg_types, name=None):
     #     return asyncio.run(self._async_get_response(statement, msg_types, name))
 
-    async def get_response(self, statement, msg_types, name=None):
+    def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
         while self.KC.shell_channel.msg_ready():
             self.KC.shell_channel.get_msg()
@@ -1640,7 +1640,7 @@ class SoS_Kernel(IPythonKernel):
             return
         for magic in self.magics.values():
             if magic.match(code):
-                return magic.apply(code, silent, store_history, user_expressions, allow_stdin)
+                return await magic.apply(code, silent, store_history, user_expressions, allow_stdin)
         if self.kernel != 'SoS':
             # handle string interpolation before sending to the underlying kernel
             if self._meta['cell_id'] != '0' and not self._meta['batch_mode']:

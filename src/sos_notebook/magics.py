@@ -328,7 +328,7 @@ class Cd_Magic(SoS_Magic):
                 lan = self.sos_kernel.supported_languages[kernel]
                 if hasattr(lan, 'cd_command'):
                     try:
-                        self.sos_kernel.switch_kernel(kernel)
+                        await self.sos_kernel.switch_kernel(kernel)
                         cmd = interpolate(lan.cd_command, {'dir': str(path(to_dir))})
                         await self.sos_kernel.run_cell(cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
                     except Exception as e:
@@ -336,7 +336,7 @@ class Cd_Magic(SoS_Magic):
                 else:
                     self.sos_kernel.warn(f'Current directory of kernel {kernel} is not changed: cd_command not defined')
         finally:
-            self.sos_kernel.switch_kernel(cur_kernel)
+            await self.sos_kernel.switch_kernel(cur_kernel)
 
     async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1123,7 +1123,7 @@ class Preview_Magic(SoS_Magic):
         use_sos = kernel in ('sos', 'SoS') or (kernel is None and self.sos_kernel.kernel == 'SoS')
         orig_kernel = self.sos_kernel.kernel
         if kernel is not None and self.sos_kernel.kernel != self.sos_kernel.subkernels.find(kernel).name:
-            self.sos_kernel.switch_kernel(kernel)
+            await self.sos_kernel.switch_kernel(kernel)
         if self.sos_kernel._meta['use_panel']:
             self.sos_kernel.send_frontend_msg('preview-kernel', self.sos_kernel.kernel)
         try:
@@ -1200,7 +1200,7 @@ class Preview_Magic(SoS_Magic):
                             'stream', dict(name='stderr', text='> Failed to preview file or expression {item}'))
                         env.log_to_file('MAGIC', str(e))
         finally:
-            self.sos_kernel.switch_kernel(orig_kernel)
+            await self.sos_kernel.switch_kernel(orig_kernel)
 
     async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1945,7 +1945,7 @@ class SessionInfo_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_sessioninfo(self, args):
+    async def handle_sessioninfo(self, args):
         #
         from sos.utils import loaded_modules
         result = OrderedDict()
@@ -1957,7 +1957,7 @@ class SessionInfo_Magic(SoS_Magic):
         try:
             for kernel in self.sos_kernel.kernels.keys():
                 kinfo = self.sos_kernel.subkernels.find(kernel)
-                self.sos_kernel.switch_kernel(kernel)
+                await self.sos_kernel.switch_kernel(kernel)
                 result[kernel] = [('Kernel', kinfo.kernel), ('Language', kinfo.language)]
                 if kernel not in self.sos_kernel.supported_languages:
                     continue
@@ -1976,7 +1976,7 @@ class SessionInfo_Magic(SoS_Magic):
                     except Exception as e:
                         self.sos_kernel.warn(f'Failed to obtain sessioninfo of kernel {kernel}: {e}')
         finally:
-            self.sos_kernel.switch_kernel(cur_kernel)
+            await self.sos_kernel.switch_kernel(cur_kernel)
         #
         if args.__with__:
             if args.__with__ not in env.sos_dict:
@@ -2031,7 +2031,7 @@ class SessionInfo_Magic(SoS_Magic):
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
-        self.handle_sessioninfo(args)
+        await self.handle_sessioninfo(args)
         return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
@@ -2111,7 +2111,7 @@ class SoSRun_Magic(SoS_Magic):
         self.sos_kernel.options = options
         try:
             if self.sos_kernel.kernel != 'SoS':
-                self.sos_kernel.switch_kernel('SoS')
+                await self.sos_kernel.switch_kernel('SoS')
             # self.sos_kernel.send_frontend_msg('preview-workflow', self.sos_kernel._meta['workflow'])
             if not self.sos_kernel._meta['workflow']:
                 self.sos_kernel.warn('Nothing to execute (notebook workflow is empty).')
@@ -2716,7 +2716,7 @@ class Use_Magic(SoS_Magic):
             self.sos_kernel.shutdown_kernel(args.name)
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
-            self.sos_kernel.switch_kernel(args.name, None, args.kernel, args.language, args.color)
+            await self.sos_kernel.switch_kernel(args.name, None, args.kernel, args.language, args.color)
             return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
             return self.sos_kernel.notify_error(e)
@@ -2759,13 +2759,13 @@ class With_Magic(SoS_Magic):
 
         original_kernel = self.sos_kernel.kernel
         try:
-            self.sos_kernel.switch_kernel(args.name, args.in_vars)
+            await self.sos_kernel.switch_kernel(args.name, args.in_vars)
         except Exception as e:
             return self.sos_kernel.notify_error(e)
         try:
             return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
-            self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
+            await self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
             self.sos_kernel.send_frontend_msg('cell-kernel', [self.sos_kernel._meta['cell_id'], original_kernel])
 
 
