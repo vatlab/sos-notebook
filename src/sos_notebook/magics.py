@@ -798,7 +798,7 @@ class Get_Magic(SoS_Magic):
                 return
         except Exception as e:
             return self.sos_kernel.notify_error(e)
-        self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True, as_var=args.__as__)
+        await self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True, as_var=args.__as__)
         return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
@@ -1464,7 +1464,7 @@ class Put_Magic(SoS_Magic):
         try:
             return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
-            self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True, as_var=args.__as__)
+            await self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True, as_var=args.__as__)
 
 
 class Render_Magic(SoS_Magic):

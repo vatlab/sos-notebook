@@ -1008,7 +1008,7 @@ class SoS_Kernel(IPythonKernel):
         finally:
             await self.switch_kernel(orig_kernel)
 
-    async def do_is_complete(self, code):
+    def do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
         if not code:
@@ -1064,9 +1064,9 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     orig_kernel = self.kernel
                     # switch to start the new kernel
-                    await self.switch_kernel(cell_kernel.name)
+                    asyncio.run(self.switch_kernel(cell_kernel.name))
                 finally:
-                    await self.switch_kernel(orig_kernel)
+                    asyncio.run(self.switch_kernel(orig_kernel))
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
@@ -1085,7 +1085,7 @@ class SoS_Kernel(IPythonKernel):
             env.logger.debug(f'Completion fail with exception: {e}')
             return {'status': 'incomplete', 'indent': ''}
 
-    async def do_inspect(self, code, cursor_pos, detail_level=0):
+    def do_inspect(self, code, cursor_pos, detail_level=0):
         if self.editor_kernel.lower() == 'sos':
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
@@ -1293,7 +1293,7 @@ class SoS_Kernel(IPythonKernel):
         if kinfo.name == 'SoS':
             # non-SoS to SoS
             if in_vars:
-                self.put_vars_to(in_vars, as_var=as_var)
+                await self.put_vars_to(in_vars, as_var=as_var)
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # Non-SoS to Non-SoS
@@ -1353,7 +1353,7 @@ class SoS_Kernel(IPythonKernel):
                     await self.run_cell(init_stmts, True, False)
             # passing
             if in_vars:
-                self.get_vars_from(in_vars, as_var=as_var)
+                await self.get_vars_from(in_vars, as_var=as_var)
 
     def shutdown_kernel(self, kernel, restart=False):
         kernel = self.subkernels.find(kernel).name
