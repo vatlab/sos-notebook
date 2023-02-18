@@ -80,7 +80,7 @@ class SoS_Magic(object):
         except Exception as e:
             self.sos_kernel.warn(e)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         raise RuntimeError(f'Unimplemented magic {self.name}')
 
     def _parse_error(self, msg):
@@ -93,10 +93,10 @@ class Command_Magic(SoS_Magic):
     def match(self, code):
         return code.startswith('!')
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         self.run_shell_command(code.split(' ')[0][1:] + ' ' + options)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Capture_Magic(SoS_Magic):
@@ -156,7 +156,7 @@ class Capture_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -165,7 +165,7 @@ class Capture_Magic(SoS_Magic):
             return
         try:
             self.sos_kernel._meta['capture_result'] = []
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
             # parse capture_result
             content = ''
@@ -305,7 +305,7 @@ class Cd_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_cd(self, option):
+    async def handle_magic_cd(self, option):
         if not option:
             return
         to_dir = option.strip()
@@ -330,7 +330,7 @@ class Cd_Magic(SoS_Magic):
                     try:
                         self.sos_kernel.switch_kernel(kernel)
                         cmd = interpolate(lan.cd_command, {'dir': str(path(to_dir))})
-                        self.sos_kernel.run_cell(cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
+                        await self.sos_kernel.run_cell(cmd, True, False, on_error=f'Failed to execute {cmd} in {kernel}')
                     except Exception as e:
                         self.sos_kernel.warn(f'Current directory of kernel {kernel} is not changed: {e}')
                 else:
@@ -338,15 +338,15 @@ class Cd_Magic(SoS_Magic):
         finally:
             self.sos_kernel.switch_kernel(cur_kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
             args = parser.parse_args(shlex.split(options))
         except SystemExit:
             return
-        self.handle_magic_cd(args.dir)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        await self.handle_magic_cd(args.dir)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Clear_Magic(SoS_Magic):
@@ -355,10 +355,10 @@ class Clear_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %clear is deprecated.')
         _, remaining_code = self.get_magic_and_code(code, False)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class ConnectInfo_Magic(SoS_Magic):
@@ -367,7 +367,7 @@ class ConnectInfo_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         _, remaining_code = self.get_magic_and_code(code, False)
         cfile = find_connection_file()
         with open(cfile) as conn:
@@ -376,7 +376,7 @@ class ConnectInfo_Magic(SoS_Magic):
             'name': 'stdout',
             'text': 'Connection file: {}\n{}'.format(cfile, conn_info)
         })
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Convert_Magic(SoS_Magic):
@@ -412,7 +412,7 @@ class Convert_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         # get the saved filename
         options, _ = self.get_magic_and_code(code, False)
         try:
@@ -493,12 +493,12 @@ class Debug_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         _, remaining_code = self.get_magic_and_code(code, False)
         self.sos_kernel.warn(
             'Magic %debug is deprecated. Please set environment variable SOS_DEBUG to ALL or a comma '
             'separated topics such as KERNEL, MESSAGE, and MAGIC, and check log messages in ~/.sos/sos_debug.log.')
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Dict_Magic(SoS_Magic):
@@ -524,7 +524,7 @@ class Dict_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_dict(self, line):
+    async def handle_magic_dict(self, line):
         'Magic that displays content of the dictionary'
         # do not return __builtins__ beacuse it is too long...
         parser = self.get_parser()
@@ -569,11 +569,11 @@ class Dict_Magic(SoS_Magic):
                     if x not in self.sos_kernel.original_keys and not x.startswith('__')
                 })
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         # %dict should be the last magic
         options, remaining_code = self.get_magic_and_code(code, False)
-        self.handle_magic_dict(options)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        await self.handle_magic_dict(options)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Env_Magic(SoS_Magic):
@@ -622,7 +622,7 @@ class Env_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         import shutil
         import tempfile
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -726,7 +726,7 @@ class Expand_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         lines = code.splitlines()
         options = lines[0]
         parser = self.get_parser()
@@ -753,7 +753,7 @@ class Expand_Magic(SoS_Magic):
             expanded = self.sos_kernel.expand_text_in(text, args.sigil, kernel=args.kernel)
             remaining_code = '\n'.join(lines[:start_line] + [expanded]) + '\n'
             # self.sos_kernel.options will be set to inflence the execution of remaing_code
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(e)
             return
@@ -788,7 +788,7 @@ class Get_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
@@ -799,7 +799,7 @@ class Get_Magic(SoS_Magic):
         except Exception as e:
             return self.sos_kernel.notify_error(e)
         self.sos_kernel.get_vars_from(args.vars, args.__from__, explicit=True, as_var=args.__as__)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Matplotlib_Magic(SoS_Magic):
@@ -822,7 +822,7 @@ class Matplotlib_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -850,7 +850,7 @@ class Matplotlib_Magic(SoS_Magic):
                 })
         except Exception as e:
             self.sos_kernel.warn('Failed to set matplotlib backnd {}: {}'.format(options, e))
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Paste_Magic(SoS_Magic):
@@ -859,7 +859,7 @@ class Paste_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         if self.sos_kernel._meta.get('batch_mode', False):
             return
         options, _ = self.get_magic_and_code(code, True)
@@ -883,7 +883,7 @@ class Paste_Magic(SoS_Magic):
                 'name': 'stdout',
                 'text': code.strip() + '\n## -- End pasted text --\n'
             })
-            return self.sos_kernel._do_execute(code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(code, silent, store_history, user_expressions, allow_stdin)
         finally:
             self.sos_kernel.options = ''
 
@@ -1078,7 +1078,7 @@ class Preview_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_preview(self, items, kernel=None, style=None):
+    async def handle_magic_preview(self, items, kernel=None, style=None):
         handled = [False for x in items]
         for idx, item in enumerate(items):
             try:
@@ -1202,7 +1202,7 @@ class Preview_Magic(SoS_Magic):
         finally:
             self.sos_kernel.switch_kernel(orig_kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         options = shlex.split(options, posix=False)
@@ -1228,7 +1228,7 @@ class Preview_Magic(SoS_Magic):
             # inside a %preview magic, auto preview will be disabled
             self.sos_kernel._no_auto_preview = True
             self.sos_kernel._meta['auto_preview'] = False
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
             self.sos_kernel._no_auto_preview = False
             # preview workflow
@@ -1260,7 +1260,7 @@ class Preview_Magic(SoS_Magic):
             if not args.items:
                 return
             if args.host is None:
-                self.handle_magic_preview(args.items, args.kernel, style)
+                await self.handle_magic_preview(args.items, args.kernel, style)
             elif args.workflow:
                 self.sos_kernel.warn('Invalid option --kernel with -r (--host)')
             elif args.kernel:
@@ -1317,7 +1317,7 @@ class Pull_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_pull(self, args):
+    async def handle_magic_pull(self, args):
         from sos.hosts import Host
         load_config_files(args.config)
         try:
@@ -1337,7 +1337,7 @@ class Pull_Magic(SoS_Magic):
         except Exception as e:
             self.sos_kernel.warn(f'Failed to retrieve {", ".join(args.items)}: {e}')
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
@@ -1347,8 +1347,8 @@ class Pull_Magic(SoS_Magic):
                 return
         except Exception as e:
             return self.sos_kernel.notify_error(e)
-        self.handle_magic_pull(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        await self.handle_magic_pull(args)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Push_Magic(SoS_Magic):
@@ -1388,7 +1388,7 @@ class Push_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_push(self, args):
+    async def handle_magic_push(self, args):
         from sos.hosts import Host
         load_config_files(args.config)
         try:
@@ -1408,7 +1408,7 @@ class Push_Magic(SoS_Magic):
         except Exception as e:
             self.sos_kernel.warn(f'Failed to send {", ".join(args.items)}: {e}')
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
@@ -1418,8 +1418,8 @@ class Push_Magic(SoS_Magic):
                 return
         except Exception as e:
             return self.sos_kernel.notify_error(e)
-        self.handle_magic_push(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        await self.handle_magic_push(args)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Put_Magic(SoS_Magic):
@@ -1451,7 +1451,7 @@ class Put_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
@@ -1462,7 +1462,7 @@ class Put_Magic(SoS_Magic):
         except Exception as e:
             return self.sos_kernel.notify_error(e)
         try:
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
             self.sos_kernel.put_vars_to(args.vars, args.__to__, explicit=True, as_var=args.__as__)
 
@@ -1495,7 +1495,7 @@ class Render_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -1505,7 +1505,7 @@ class Render_Magic(SoS_Magic):
         try:
             self.sos_kernel._meta['capture_result'] = []
             self.sos_kernel._meta['render_result'] = args.as_type
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
             content = ''
             if args.msg_type == 'stdout':
@@ -1544,7 +1544,7 @@ class Runfile_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         if options.strip().endswith('&'):
             self.sos_kernel._meta['workflow_mode'] = 'nowait'
@@ -1588,7 +1588,7 @@ class Runfile_Magic(SoS_Magic):
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = ''
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Revisions_Magic(SoS_Magic):
@@ -1624,7 +1624,7 @@ class Revisions_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def handle_magic_revisions(self, args, unknown_args):
+    async def handle_magic_revisions(self, args, unknown_args):
         filename = self.sos_kernel._meta['notebook_name'] + '.ipynb'
         nbpath = self.sos_kernel._meta['notebook_path']
         revisions = subprocess.check_output(['git', 'log'] + unknown_args +
@@ -1695,7 +1695,7 @@ class Revisions_Magic(SoS_Magic):
             }
         })
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, True)
         parser = self.get_parser()
         try:
@@ -1703,10 +1703,10 @@ class Revisions_Magic(SoS_Magic):
         except SystemExit:
             return
         try:
-            self.handle_magic_revisions(args, unknown_args)
+            await self.handle_magic_revisions(args, unknown_args)
         except Exception as e:
             self.sos_kernel.warn(f'Failed to retrieve revisions of notebook: {e}')
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Run_Magic(SoS_Magic):
@@ -1724,7 +1724,7 @@ class Run_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         # there can be multiple %run magic, but there should not be any other magics
         run_code = code
         run_options = []
@@ -1801,7 +1801,7 @@ class Sandbox_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         import shutil
         import tempfile
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1874,7 +1874,7 @@ class Save_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
 
         # if sos kernel ...
         options, remaining_code = self.get_magic_and_code(code, False)
@@ -1916,7 +1916,7 @@ class Save_Magic(SoS_Magic):
                     }
                 })
             if args.run:
-                return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+                return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             return None
         except Exception as e:
             return self.sos_kernel.notify_error(e)
@@ -2024,7 +2024,7 @@ class SessionInfo_Magic(SoS_Magic):
                 return str(item)
         return item.strip()
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -2032,7 +2032,7 @@ class SessionInfo_Magic(SoS_Magic):
         except SystemExit:
             return
         self.handle_sessioninfo(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Set_Magic(SoS_Magic):
@@ -2041,11 +2041,11 @@ class Set_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         _, remaining_code = self.get_magic_and_code(code, False)
         self.sos_kernel.warn('Magic %set is deprecated (vatlab/sos-notebook#231)')
         # self.sos_kernel.options will be set to inflence the execution of remaing_code
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Shutdown_Magic(SoS_Magic):
@@ -2065,7 +2065,7 @@ class Shutdown_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -2073,7 +2073,7 @@ class Shutdown_Magic(SoS_Magic):
         except SystemExit:
             return
         self.sos_kernel.shutdown_kernel(args.kernel if args.kernel else self.sos_kernel.kernel, args.restart)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class SoSRun_Magic(SoS_Magic):
@@ -2093,7 +2093,7 @@ class SoSRun_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -2124,7 +2124,7 @@ class SoSRun_Magic(SoS_Magic):
         finally:
             self.sos_kernel._meta['workflow_mode'] = False
             self.sos_kernel.options = ''
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class SoSSave_Magic(SoS_Magic):
@@ -2171,7 +2171,7 @@ class SoSSave_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %sossave is depcated. Please use %convert instead.')
         # get the saved filename
         options, _ = self.get_magic_and_code(code, False)
@@ -2570,7 +2570,7 @@ class Task_Magic(SoS_Magic):
                     'status': 'purged'
                 })
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -2580,7 +2580,7 @@ class Task_Magic(SoS_Magic):
         load_config_files(args.config)
 
         args.func(args)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Tasks_Magic(SoS_Magic):
@@ -2625,7 +2625,7 @@ class Tasks_Magic(SoS_Magic):
                 'status': tst
             })
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         parser = self.get_parser()
         try:
@@ -2634,7 +2634,7 @@ class Tasks_Magic(SoS_Magic):
             return
         load_config_files(args.config)
         self.handle_tasks(args.tasks, args.queue if args.queue else 'localhost', args.status, args.age)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Toc_Magic(SoS_Magic):
@@ -2643,10 +2643,10 @@ class Toc_Magic(SoS_Magic):
     def __init__(self, kernel):
         super().__init__(kernel)
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         self.sos_kernel.warn('Magic %toc is deprecated.')
         _, remaining_code = self.get_magic_and_code(code, False)
-        return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+        return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
 class Use_Magic(SoS_Magic):
@@ -2694,7 +2694,7 @@ class Use_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
 
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
@@ -2717,7 +2717,7 @@ class Use_Magic(SoS_Magic):
             self.sos_kernel.warn(f'{args.name} is shutdown')
         try:
             self.sos_kernel.switch_kernel(args.name, None, args.kernel, args.language, args.color)
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         except Exception as e:
             return self.sos_kernel.notify_error(e)
 
@@ -2746,7 +2746,7 @@ class With_Magic(SoS_Magic):
         parser.error = self._parse_error
         return parser
 
-    def apply(self, code, silent, store_history, user_expressions, allow_stdin):
+    async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         options, remaining_code = self.get_magic_and_code(code, False)
         try:
             parser = self.get_parser()
@@ -2763,7 +2763,7 @@ class With_Magic(SoS_Magic):
         except Exception as e:
             return self.sos_kernel.notify_error(e)
         try:
-            return self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
         finally:
             self.sos_kernel.switch_kernel(original_kernel, args.out_vars)
             self.sos_kernel.send_frontend_msg('cell-kernel', [self.sos_kernel._meta['cell_id'], original_kernel])

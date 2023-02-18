@@ -802,7 +802,7 @@ class SoS_Kernel(IPythonKernel):
         sys.stdout = save_stdout
         sys.stderr = save_stderr
 
-    def get_vars_from(self, items, from_kernel=None, explicit=False, as_var=None):
+    async def get_vars_from(self, items, from_kernel=None, explicit=False, as_var=None):
         if as_var is not None:
             if not isinstance(as_var, str):
                 self.warn('Option --as should be a string.')
@@ -851,27 +851,27 @@ class SoS_Kernel(IPythonKernel):
             # if another kernel is specified and the current kernel is sos
             # we get from subkernel
             try:
-                self.switch_kernel(from_kernel)
-                self.put_vars_to(items, as_var=as_var)
+                await self.switch_kernel(from_kernel)
+                await self.put_vars_to(items, as_var=as_var)
             except Exception as e:
                 self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
-                self.switch_kernel('SoS')
+                await self.switch_kernel('SoS')
         else:
             # if another kernel is specified, we should try to let that kernel pass
             # the variables to this one directly
             try:
                 my_kernel = self.kernel
-                self.switch_kernel(from_kernel)
+                await self.switch_kernel(from_kernel)
                 # put stuff to sos or my_kernel directly
-                self.put_vars_to(items, to_kernel=my_kernel, explicit=explicit, as_var=as_var)
+                await self.put_vars_to(items, to_kernel=my_kernel, explicit=explicit, as_var=as_var)
             except Exception as e:
                 self.warn(f'Failed to get {", ".join(items)} from {from_kernel}: {e}')
             finally:
                 # then switch back
-                self.switch_kernel(my_kernel)
+                await self.switch_kernel(my_kernel)
 
-    def put_vars_to(self, items, to_kernel=None, explicit=False, as_var=None):
+    async def put_vars_to(self, items, to_kernel=None, explicit=False, as_var=None):
         if not items:
             return
         if as_var is not None:
@@ -888,12 +888,12 @@ class SoS_Kernel(IPythonKernel):
             # if another kernel is specified and the current kernel is sos
             try:
                 # switch to kernel and bring in items
-                self.switch_kernel(to_kernel, in_vars=items, as_var=as_var)
+                await self.switch_kernel(to_kernel, in_vars=items, as_var=as_var)
             except Exception as e:
                 self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
             finally:
                 # switch back
-                self.switch_kernel('SoS')
+                await self.switch_kernel('SoS')
         else:
             # put to sos kernel or another kernel
             kinfo = self.subkernels.find(self.kernel)
@@ -936,12 +936,12 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     my_kernel = self.kernel
                     # switch to the destination kernel and bring in vars
-                    self.switch_kernel(to_kernel, in_vars=items)
+                    await self.switch_kernel(to_kernel, in_vars=items)
                 except Exception as e:
                     self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
-                    self.switch_kernel(my_kernel)
+                    await self.switch_kernel(my_kernel)
                     # restore sos_dict to avoid bypassing effect #252
                     for missing_var in missing_vars:
                         env.sos_dict.pop(missing_var)
@@ -959,19 +959,18 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     my_kernel = self.kernel
                     # switch to the destination kernel
-                    self.switch_kernel(to_kernel)
+                    await self.switch_kernel(to_kernel)
                     # execute the statement to pass variables directly to destination kernel
-                    self.run_cell(objects, True, False)
+                    await self.run_cell(objects, True, False)
                 except Exception as e:
                     self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
                     # switch back to the original kernel
-                    self.switch_kernel(my_kernel)
+                    await self.switch_kernel(my_kernel)
             else:
                 self.warn(f'Unrecognized return value of type {object.__class__.__name__} for action %put')
-                return
 
-    def expand_text_in(self, text, sigil=None, kernel='SoS'):
+    async def expand_text_in(self, text, sigil=None, kernel='SoS'):
         '''
         Expand a piece of (markdown) text in specified kernel, used by
         magic %expand
@@ -1001,15 +1000,15 @@ class SoS_Kernel(IPythonKernel):
             return text
         try:
             orig_kernel = self.kernel
-            self.switch_kernel(kernel)
+            await self.switch_kernel(kernel)
             return lan.expand(text, sigil)
         except Exception as e:
             self.warn(f'Failed to expand {text} with sigin {sigil} in kernel {kernel}: {e}')
             return text
         finally:
-            self.switch_kernel(orig_kernel)
+            await self.switch_kernel(orig_kernel)
 
-    def do_is_complete(self, code):
+    async def do_is_complete(self, code):
         '''check if new line is in order'''
         code = code.strip()
         if not code:
@@ -1065,9 +1064,9 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     orig_kernel = self.kernel
                     # switch to start the new kernel
-                    self.switch_kernel(cell_kernel.name)
+                    await self.switch_kernel(cell_kernel.name)
                 finally:
-                    self.switch_kernel(orig_kernel)
+                    await self.switch_kernel(orig_kernel)
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
@@ -1100,8 +1099,8 @@ class SoS_Kernel(IPythonKernel):
             KC = self.KC
         try:
             KC.inspect(code, cursor_pos)
-            while await KC.shell_channel.msg_ready():
-                msg = await KC.shell_channel.get_msg()
+            while KC.shell_channel.msg_ready():
+                msg = KC.shell_channel.get_msg()
                 if msg['header']['msg_type'] == 'inspect_reply':
                     return msg['content']
                 # other messages, do not know what is going on but
@@ -1113,7 +1112,7 @@ class SoS_Kernel(IPythonKernel):
         except Exception as e:
             env.log_to_file('KERNEL', f'Completion fail with exception: {e}')
 
-    def do_complete(self, code, cursor_pos):
+    async def do_complete(self, code, cursor_pos):
         if self.editor_kernel.lower() == 'sos':
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {
@@ -1129,9 +1128,9 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     orig_kernel = self.kernel
                     # switch to start the new kernel
-                    self.switch_kernel(cell_kernel.name)
+                    await self.switch_kernel(cell_kernel.name)
                 finally:
-                    self.switch_kernel(orig_kernel)
+                    await self.switch_kernel(orig_kernel)
 
             KC = self.kernels[cell_kernel.name][1]
             # clear the shell channel
@@ -1159,10 +1158,7 @@ class SoS_Kernel(IPythonKernel):
         if message.strip():
             self.send_response(self.iopub_socket, 'stream', {'name': 'stderr', 'text': message})
 
-    def run_cell(self, code, silent, store_history, on_error=None):
-        return asyncio.run(self._async_run_cell(code, silent, store_history, on_error))
-
-    async def _async_run_cell(self, code, silent, store_history, on_error=None):
+    async def run_cell(self, code, silent, store_history, on_error=None):
         #
         if not self.KM.is_alive():
             self.send_response(self.iopub_socket, 'stream',
@@ -1170,8 +1166,8 @@ class SoS_Kernel(IPythonKernel):
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats
-        while await self.KC.shell_channel.msg_ready():
-            await self.KC.shell_channel.get_msg()
+        while self.KC.shell_channel.msg_ready():
+            self.KC.shell_channel.get_msg()
         # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
         content = dict(code=code, silent=silent, store_history=store_history, user_expressions={}, allow_stdin=False)
@@ -1194,8 +1190,8 @@ class SoS_Kernel(IPythonKernel):
         while not (iopub_started and iopub_ended and shell_ended):
             try:
                 # display intermediate print statements, etc.
-                while await self.KC.stdin_channel.msg_ready():
-                    sub_msg = await self.KC.stdin_channel.get_msg()
+                while self.KC.stdin_channel.msg_ready():
+                    sub_msg = self.KC.stdin_channel.get_msg()
                     env.log_to_file('MESSAGE',
                                     f"MSG TYPE {sub_msg['header']['msg_type']} CONTENT\n  {pprint.pformat(sub_msg)}")
                     if sub_msg['header']['msg_type'] != 'input_request':
@@ -1207,8 +1203,8 @@ class SoS_Kernel(IPythonKernel):
                         else:
                             res = self.raw_input(prompt=content['prompt'])
                         self.KC.input(res)
-                while await self.KC.iopub_channel.msg_ready():
-                    sub_msg = await self.KC.iopub_channel.get_msg()
+                while self.KC.iopub_channel.msg_ready():
+                    sub_msg = self.KC.iopub_channel.get_msg()
                     msg_type = sub_msg['header']['msg_type']
                     env.log_to_file(
                         'MESSAGE',
@@ -1241,7 +1237,7 @@ class SoS_Kernel(IPythonKernel):
                         if msg_type == 'comm_open':
                             self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
                         self.session.send(self.iopub_socket, sub_msg)
-                if await self.KC.shell_channel.msg_ready():
+                if self.KC.shell_channel.msg_ready():
                     # now get the real result
                     reply = self.KC.get_shell_msg()
                     reply['content']['execution_count'] = self._execution_count
@@ -1284,7 +1280,7 @@ class SoS_Kernel(IPythonKernel):
         available_subkernels += '</table>'
         return available_subkernels
 
-    def switch_kernel(self, kernel, in_vars=None, kernel_name=None, language=None, color=None, as_var=None):
+    async def switch_kernel(self, kernel, in_vars=None, kernel_name=None, language=None, color=None, as_var=None):
         # switching to a non-sos kernel
         if not kernel:
             kinfo = self.subkernels.find(self.kernel)
@@ -1301,8 +1297,8 @@ class SoS_Kernel(IPythonKernel):
             self.kernel = 'SoS'
         elif self.kernel != 'SoS':
             # Non-SoS to Non-SoS
-            self.switch_kernel('SoS', in_vars)
-            self.switch_kernel(kinfo.name, in_vars)
+            await self.switch_kernel('SoS', in_vars)
+            await self.switch_kernel(kinfo.name, in_vars)
         else:
             # SoS to non-SoS
             env.log_to_file('KERNEL', f'Switch from {self.kernel} to {kinfo.name}')
@@ -1354,7 +1350,7 @@ class SoS_Kernel(IPythonKernel):
 
                 env.log_to_file('KERNEL', f'Loading language module for kernel {kinfo.name}{module_version}')
                 if init_stmts:
-                    self.run_cell(init_stmts, True, False)
+                    await self.run_cell(init_stmts, True, False)
             # passing
             if in_vars:
                 self.get_vars_from(in_vars, as_var=as_var)
@@ -1373,14 +1369,14 @@ class SoS_Kernel(IPythonKernel):
                     # shutdown
                     self.shutdown_kernel(kernel)
                     # switch back to kernel (start a new one)
-                    self.switch_kernel(kernel)
+                    asyncio.run(self.switch_kernel(kernel))
                 finally:
                     # finally switch to starting kernel
-                    self.switch_kernel(orig_kernel)
+                    asyncio.run(self.switch_kernel(orig_kernel))
             else:
                 # shutdown
                 if self.kernel == kernel:
-                    self.switch_kernel('SoS')
+                    asyncio.run(self.switch_kernel('SoS'))
                 try:
                     self.kernels[kernel][0].shutdown_kernel(restart=False)
                 except Exception as e:
@@ -1396,15 +1392,15 @@ class SoS_Kernel(IPythonKernel):
                         f', {x}' for x in self.kernels))))
         # stop_controller(self.controller)
 
-    def get_response(self, statement, msg_types, name=None):
-        return asyncio.run(self._async_get_response(statement, msg_types, name))
+    # def get_response(self, statement, msg_types, name=None):
+    #     return asyncio.run(self._async_get_response(statement, msg_types, name))
 
-    async def _async_get_response(self, statement, msg_types, name=None):
+    async def get_response(self, statement, msg_types, name=None):
         # get response of statement of specific msg types.
-        while await self.KC.shell_channel.msg_ready():
-            await self.KC.shell_channel.get_msg()
-        while await self.KC.iopub_channel.msg_ready():
-            sub_msg = await self.KC.iopub_channel.get_msg()
+        while self.KC.shell_channel.msg_ready():
+            self.KC.shell_channel.get_msg()
+        while self.KC.iopub_channel.msg_ready():
+            sub_msg = self.KC.iopub_channel.get_msg()
             if sub_msg['header']['msg_type'] != 'status':
                 env.log_to_file('MESSAGE',
                                 f"Overflow message in iopub {sub_msg['header']['msg_type']} {sub_msg['content']}")
@@ -1416,8 +1412,8 @@ class SoS_Kernel(IPythonKernel):
         shell_ended = False
         while not (iopub_started and iopub_ended and shell_ended):
             # display intermediate print statements, etc.
-            while await self.KC.iopub_channel.msg_ready():
-                sub_msg = await self.KC.iopub_channel.get_msg()
+            while self.KC.iopub_channel.msg_ready():
+                sub_msg = self.KC.iopub_channel.get_msg()
                 msg_type = sub_msg['header']['msg_type']
                 env.log_to_file('MESSAGE', f'Received {msg_type} {sub_msg["content"]}')
                 if msg_type == 'status':
@@ -1437,7 +1433,7 @@ class SoS_Kernel(IPythonKernel):
                     #
                     # self.send_response(
                     #    self.iopub_socket, msg_type, sub_msg['content'])
-            if await self.KC.shell_channel.msg_ready():
+            if self.KC.shell_channel.msg_ready():
                 # now get the real result
                 reply = self.KC.get_shell_msg()
                 env.log_to_file('MESSAGE', f'GET SHELL MSG {reply}')
@@ -1574,7 +1570,7 @@ class SoS_Kernel(IPythonKernel):
             self.comm_manager.register_target('sos_comm', self.sos_comm)
         return self._meta
 
-    def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
+    async def do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
         env.log_to_file('KERNEL', f'execute: {code}')
         if not self.controller:
             self.controller = start_controller(self)
@@ -1590,19 +1586,19 @@ class SoS_Kernel(IPythonKernel):
         # switch to global default kernel
         try:
             if self.subkernels.find(self._meta['default_kernel']).name != self.subkernels.find(self.kernel).name:
-                self.switch_kernel(self._meta['default_kernel'])
+                await self.switch_kernel(self._meta['default_kernel'])
                 # evaluate user expression
         except Exception as e:
             return self.notify_error(e)
         # switch to cell kernel
         try:
             if self.subkernels.find(self._meta['cell_kernel']).name != self.subkernels.find(self.kernel).name:
-                self.switch_kernel(self._meta['cell_kernel'])
+                await self.switch_kernel(self._meta['cell_kernel'])
         except Exception as e:
             return self.notify_error(e)
         # execute with cell kernel
         try:
-            ret = self._do_execute(
+            ret = await self._do_execute(
                 code=code,
                 silent=silent,
                 store_history=store_history,
@@ -1635,7 +1631,7 @@ class SoS_Kernel(IPythonKernel):
         # tell the frontend the kernel for the "next" cell
         return ret
 
-    def _do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
+    async def _do_execute(self, code, silent, store_history=True, user_expressions=None, allow_stdin=True):
         # handles windows/unix newline
         code = '\n'.join(code.splitlines()) + '\n'
         if code == 'import os\n_pid = os.getpid()':
@@ -1655,7 +1651,7 @@ class SoS_Kernel(IPythonKernel):
                 # We remove leading new line in case that users have a SoS
                 # magic and a cell magic, separated by newline.
                 # issue #58 and #33
-                return self.run_cell(code.lstrip(), silent, store_history)
+                return await self.run_cell(code.lstrip(), silent, store_history)
             except KeyboardInterrupt:
                 self.warn(
                     'KeyboardInterrupt. This will only be captured if the subkernel failed to process the signal.\n')
@@ -1671,7 +1667,7 @@ class SoS_Kernel(IPythonKernel):
             idx = empties.index(False)
             if idx != 0 and (lines[idx].startswith('%') or lines[idx].startswith('!')):
                 # not start from empty, but might have magic etc
-                return self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions,
+                return await self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions,
                                         allow_stdin)
 
             # if there is no more empty, magic etc, enter workflow mode
