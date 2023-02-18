@@ -936,7 +936,7 @@ class SoS_Kernel(IPythonKernel):
                 try:
                     my_kernel = self.kernel
                     # switch to the destination kernel and bring in vars
-                    await self.switch_kernel(to_kernel, in_vars=items)
+                    await self.switch_kernel(to_kernel, in_vars=[as_var] if as_var else items)
                 except Exception as e:
                     self.warn(f'Failed to put {", ".join(items)} to {to_kernel}: {e}')
                 finally:
