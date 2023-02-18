@@ -668,7 +668,7 @@ class Env_Magic(SoS_Magic):
 
             if args.expect_error or args.allow_error:
                 self.sos_kernel._meta['suppress_error'] = True
-            ret = self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            ret = await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error:
                 if ret['status'] == 'error':
                     # self.sos_kernel.warn('\nSandbox execution failed.')
@@ -750,7 +750,7 @@ class Expand_Magic(SoS_Magic):
                 break
         text = '\n'.join(lines[start_line:])
         try:
-            expanded = self.sos_kernel.expand_text_in(text, args.sigil, kernel=args.kernel)
+            expanded = await self.sos_kernel.expand_text_in(text, args.sigil, kernel=args.kernel)
             remaining_code = '\n'.join(lines[:start_line] + [expanded]) + '\n'
             # self.sos_kernel.options will be set to inflence the execution of remaing_code
             return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
@@ -1579,7 +1579,7 @@ class Runfile_Magic(SoS_Magic):
             if self.sos_kernel.kernel != 'SoS':
                 self.sos_kernel.switch_kernel('SoS')
 
-            ret = self.sos_kernel._do_execute(content, silent, store_history, user_expressions, allow_stdin)
+            ret = await self.sos_kernel._do_execute(content, silent, store_history, user_expressions, allow_stdin)
             if ret['status'] == 'error':
                 return ret
         except Exception as e:
@@ -1764,7 +1764,7 @@ class Run_Magic(SoS_Magic):
                 if self.sos_kernel.kernel != 'SoS':
                     self.sos_kernel.switch_kernel('SoS')
 
-                ret = self.sos_kernel._do_execute(run_code, silent, store_history, user_expressions, allow_stdin)
+                ret = await self.sos_kernel._do_execute(run_code, silent, store_history, user_expressions, allow_stdin)
             except Exception as e:
                 self.sos_kernel.warn(f'Failed to execute workflow: {e}')
                 raise
@@ -1826,7 +1826,7 @@ class Sandbox_Magic(SoS_Magic):
             if not args.keep_dict:
                 old_dict = env.sos_dict
                 env.sos_dict._dict.clear()
-            ret = self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
+            ret = await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
             if args.expect_error and ret['status'] == 'error':
                 # self.sos_kernel.warn('\nSandbox execution failed.')
                 return {
@@ -2116,7 +2116,7 @@ class SoSRun_Magic(SoS_Magic):
             if not self.sos_kernel._meta['workflow']:
                 self.sos_kernel.warn('Nothing to execute (notebook workflow is empty).')
             else:
-                self.sos_kernel._do_execute(self.sos_kernel._meta['workflow'], silent, store_history, user_expressions,
+                await self.sos_kernel._do_execute(self.sos_kernel._meta['workflow'], silent, store_history, user_expressions,
                                             allow_stdin)
         except Exception as e:
             self.sos_kernel.warn(f'Failed to execute workflow: {e}')

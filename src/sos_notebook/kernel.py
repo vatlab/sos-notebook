@@ -830,7 +830,7 @@ class SoS_Kernel(IPythonKernel):
                     get_vars_func = lan(self, kinfo.kernel).get_vars
                     args = inspect.getfullargspec(get_vars_func).args
                     if 'as_var' in args:
-                        get_vars_func(items, as_var=as_var)
+                        await get_vars_func(items, as_var=as_var)
                     else:
                         if as_var is not None:
                             self.warn(f'Subkernel {kinfo.language} does not support option --as')

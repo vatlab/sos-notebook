@@ -70,7 +70,7 @@ setup(
     package_dir={'': 'src'},
     python_requires='>=3.7',
     install_requires=[
-        'jupyter_client>=7.0.2',
+        'jupyter_client>=8.0.0',
         'sos>=0.22.0',
         'nbformat',
         'nbconvert>=6.0.1',
