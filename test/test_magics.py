@@ -284,6 +284,13 @@ class TestMagics(NotebookTest):
             """,
             kernel="Python3",
         )
+        assert "[1, 2, 3]" == notebook.check_output(
+            """\
+            %get a --as aa
+            aa
+            """,
+            kernel="Python3",
+        )
         assert "List of 3" in notebook.check_output(
             """\
             %get b
@@ -361,6 +368,14 @@ class TestMagics(NotebookTest):
         assert 'sos_a' in notebook.check_output("subs_a", kernel='SoS')
         assert 'NameError' in notebook.check_output(
             "subs_b", kernel='SoS', expect_error=True)
+        #
+        notebook.call(
+            """\
+            %get subs_b --from Python3 --as subr
+            """,
+            kernel="R",
+        )
+        assert 'python_b' in notebook.check_output("subr", kernel='R')
 
     def test_magic_matplotlib(self, notebook):
         # test %capture

@@ -2593,7 +2593,6 @@ color: green;
     }
     // add a new one
     var select = $("<select/>")
-      .attr("id", "cell_kernel_selector")
       .css("margin-left", "0.75em")
       .attr("class", "select-xs cell_kernel_selector");
     for (var i = 0; i < window.KernelList.length; i++) {
