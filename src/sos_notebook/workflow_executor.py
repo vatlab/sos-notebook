@@ -235,7 +235,7 @@ class Tapped_Executor(mp.Process):
         try:
             filename = tempfile.NamedTemporaryFile(
                 prefix='.tmp_script_',
-                dir=os.getcwd(),
+                dir=os.path.expanduser('~/.sos'),
                 suffix='.sos',
                 delete=False).name
             with open(filename, 'w') as script_file:
@@ -273,11 +273,14 @@ class Tapped_Executor(mp.Process):
             })
             sys.exit(1)
         finally:
-            try:
-                os.remove(filename)
-            except Exception as e:
-                env.logger.warning(
-                    f'Failed to remove temp script {filename}: {e}')
+            # when the script is execute on a remote host, we do not know when the
+            # remote job is started or ended and if they still need access to the script file.
+            if '-r' not in self.args:
+                try:
+                    os.remove(filename)
+                except Exception as e:
+                    env.logger.warning(
+                        f'Failed to remove temp script {filename}: {e}')
             stdout_socket.LINGER = 0
             stdout_socket.close()
             informer_socket.LINGER = 0
