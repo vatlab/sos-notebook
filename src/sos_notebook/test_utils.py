@@ -343,13 +343,13 @@ class Notebook:
 
     def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
         self._focus_cell(index)
-        kernel_selector = "option[value='{}']".format(kernel_name)
+        kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.current_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
             kernel.click()
         else:
-            self.edit_cell(index=0, content="%use {}".format(kernel_name), render=True)
+            self.edit_cell(index=0, content=f"%use {kernel_name}", render=True)
 
     def edit_cell(self, cell=None, index=0, content="", render=False):
         """Set the contents of a cell to *content*, by cell object or by index
@@ -498,7 +498,7 @@ class Notebook:
         return self.browser.execute_script(JS)
 
     def select_console_kernel(self, kernel_name="SoS"):
-        kernel_selector = "option[value='{}']".format(kernel_name)
+        kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.prompt_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         kernel.click()
@@ -685,7 +685,7 @@ def create_new_sos_notebook(browser, kernel_name='kernel-sos'):
     wait = WebDriverWait(browser, 10)
     new_button = wait.until(EC.element_to_be_clickable((By.ID, "new-dropdown-button")))
     new_button.click()
-    kernel_selector = '#{} a'.format(kernel_name)
+    kernel_selector = f'#{kernel_name} a'
     kernel = wait_for_selector(browser, kernel_selector, single=True)
     kernel.click()
 

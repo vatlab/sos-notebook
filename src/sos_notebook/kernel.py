@@ -65,7 +65,7 @@ class FlushableStringIO:
 __all__ = ['SoS_Kernel']
 
 
-class subkernel(object):
+class subkernel:
     # a class to information on subkernel
     def __init__(self, name=None, kernel=None, language='', color='', options={}, codemirror_mode=''):
         self.name = name
@@ -104,7 +104,7 @@ def make_transient_msg(msg_type, content):
     raise ValueError(f"failed to translate message {msg_type} to transient_display_data message")
 
 
-class Subkernels(object):
+class Subkernels:
     # a collection of subkernels
     def __init__(self, kernel):
         self.sos_kernel = kernel
@@ -476,7 +476,7 @@ class Subkernels(object):
             [[x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options] for x in self._kernel_list])
 
 
-class CommProxyHandler(object):
+class CommProxyHandler:
 
     def __init__(self, KC, sos_kernel):
         self._KC = KC
@@ -1162,7 +1162,7 @@ class SoS_Kernel(IPythonKernel):
         #
         if not self.KM.is_alive():
             self.send_response(self.iopub_socket, 'stream',
-                               dict(name='stdout', text='Restarting kernel "{}"\n'.format(self.kernel)))
+                               dict(name='stdout', text=f'Restarting kernel "{self.kernel}"\n'))
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats

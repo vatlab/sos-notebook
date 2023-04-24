@@ -11,7 +11,7 @@ from sos.utils import env
 from .magics import SoS_Magics
 
 
-class SoS_VariableInspector(object):
+class SoS_VariableInspector:
 
     def __init__(self, kernel):
         self.kernel = kernel
@@ -33,7 +33,7 @@ class SoS_VariableInspector(object):
             return {}
 
 
-class SoS_SyntaxInspector(object):
+class SoS_SyntaxInspector:
 
     def __init__(self, kernel):
         self.kernel = kernel
@@ -68,7 +68,7 @@ class SoS_SyntaxInspector(object):
         return {}
 
 
-class SoS_Inspector(object):
+class SoS_Inspector:
 
     def __init__(self, kernel):
         self.inspectors = [

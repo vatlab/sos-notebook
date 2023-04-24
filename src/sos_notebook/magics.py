@@ -26,7 +26,7 @@ from sos.utils import (env, load_config_files, pexpect_run, pretty_size,
                        short_repr)
 
 
-class SoS_Magic(object):
+class SoS_Magic:
     name = 'BaseMagic'
 
     def __init__(self, kernel):
@@ -64,7 +64,7 @@ class SoS_Magic(object):
             command_line = ''
         remaining_code = lines[1] if len(lines) > 1 else ''
         if warn_remaining and remaining_code.strip():
-            self.sos_kernel.warn('Statement {} ignored'.format(short_repr(remaining_code)))
+            self.sos_kernel.warn(f'Statement {short_repr(remaining_code)} ignored')
         return command_line, remaining_code
 
     def match(self, code):
@@ -374,7 +374,7 @@ class ConnectInfo_Magic(SoS_Magic):
             conn_info = conn.read()
         self.sos_kernel.send_response(self.sos_kernel.iopub_socket, 'stream', {
             'name': 'stdout',
-            'text': 'Connection file: {}\n{}'.format(cfile, conn_info)
+            'text': f'Connection file: {cfile}\n{conn_info}'
         })
         return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
@@ -535,7 +535,7 @@ class Dict_Magic(SoS_Magic):
 
         for x in args.vars:
             if x not in env.sos_dict:
-                self.sos_kernel.warn('Unrecognized sosdict option or variable name {}'.format(x))
+                self.sos_kernel.warn(f'Unrecognized sosdict option or variable name {x}')
                 return
 
         if args.reset:
@@ -849,7 +849,7 @@ class Matplotlib_Magic(SoS_Magic):
                     'text': f'Using matplotlib backend {backend}'
                 })
         except Exception as e:
-            self.sos_kernel.warn('Failed to set matplotlib backnd {}: {}'.format(options, e))
+            self.sos_kernel.warn(f'Failed to set matplotlib backnd {options}: {e}')
         return await self.sos_kernel._do_execute(remaining_code, silent, store_history, user_expressions, allow_stdin)
 
 
@@ -1244,7 +1244,7 @@ class Preview_Magic(SoS_Magic):
                     })
                 else:
                     import random
-                    ta_id = 'preview_wf_{}'.format(random.randint(1, 1000000))
+                    ta_id = f'preview_wf_{random.randint(1, 1000000)}'
                     self.sos_kernel.send_response(
                         self.sos_kernel.iopub_socket, 'display_data', {
                             'data': {
@@ -1565,10 +1565,10 @@ class Runfile_Magic(SoS_Magic):
                     from sos.converter import extract_workflow
                     content = extract_workflow(os.path.expanduser(args.script))
                 else:
-                    with open(os.path.expanduser(args.script), 'r') as script:
+                    with open(os.path.expanduser(args.script)) as script:
                         content = script.read()
             elif os.path.isfile(os.path.expanduser(args.script + '.sos')):
-                with open(os.path.expanduser(args.script + '.sos'), 'r') as script:
+                with open(os.path.expanduser(args.script + '.sos')) as script:
                     content = script.read()
             elif os.path.isfile(os.path.expanduser(args.script + '.ipynb')):
                 from sos.converter import extract_workflow
@@ -2431,7 +2431,7 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn(f'Invalid task queue {args.queue}: {e}')
             return
 
         result = host._task_engine.query_tasks(
@@ -2488,7 +2488,7 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn(f'Invalid task queue {args.queue}: {e}')
             return
         for task in args.tasks:
             host._task_engine.submit_task(task)
@@ -2505,7 +2505,7 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn(f'Invalid task queue {args.queue}: {e}')
             return
         if args.tasks:
             # kill specified task
@@ -2537,7 +2537,7 @@ class Task_Magic(SoS_Magic):
         try:
             host = Host(args.queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(args.queue, e))
+            self.sos_kernel.warn(f'Invalid task queue {args.queue}: {e}')
             return
         ret = host._task_engine.purge_tasks(
             tasks=args.tasks,
@@ -2614,7 +2614,7 @@ class Tasks_Magic(SoS_Magic):
         try:
             host = Host(queue)
         except Exception as e:
-            self.sos_kernel.warn('Invalid task queue {}: {}'.format(queue, e))
+            self.sos_kernel.warn(f'Invalid task queue {queue}: {e}')
             return
         # get all tasks
         for tid, tst, _ in host._task_engine.monitor_tasks(tasks, status=status, age=age):
@@ -2769,7 +2769,7 @@ class With_Magic(SoS_Magic):
             self.sos_kernel.send_frontend_msg('cell-kernel', [self.sos_kernel._meta['cell_id'], original_kernel])
 
 
-class SoS_Magics(object):
+class SoS_Magics:
     magics = [
         Command_Magic, Capture_Magic, Cd_Magic, Clear_Magic, ConnectInfo_Magic, Convert_Magic, Debug_Magic, Dict_Magic,
         Env_Magic, Expand_Magic, Get_Magic, Matplotlib_Magic, Preview_Magic, Pull_Magic, Paste_Magic, Push_Magic,
