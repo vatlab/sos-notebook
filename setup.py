@@ -80,6 +80,7 @@ setup(
         'jinja2',
         'notebook>=5.0.0',
         'tabulate',
+        'jupyter_contrib_core',
         # 'markdown',
         'pandas',
         'numpy',
