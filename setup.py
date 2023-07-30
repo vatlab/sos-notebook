@@ -71,6 +71,7 @@ setup(
     python_requires='>=3.7',
     install_requires=[
         'jupyter_client>=8.0.0',
+        'jupyter_core',
         'sos>=0.22.0',
         'nbformat',
         'nbconvert>=6.0.1',
