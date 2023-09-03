@@ -110,6 +110,7 @@ async def _async_get_result(iopub):
     uint8
 
     # it can also have dict_keys, we will have to redefine it
+    # pylint: --disable=unused-variable
     def dict_keys(args):
         return args
 
@@ -262,7 +263,7 @@ def execute_promise(js, browser):
     state, data = browser.execute_async_script(promise_js % js)
     if state == 'success':
         return data
-    raise Exception(data)
+    raise RuntimeError(data)
 
 
 class Notebook:
@@ -330,7 +331,7 @@ class Notebook:
             if isinstance(value, str):
                 self.add_cell(cell_type=cell_type, content=value)
             else:
-                raise TypeError("Don't know how to add cell from %r" % value)
+                raise TypeError(f"Don't know how to add cell from {value}")
 
     def add_cell(self, index=-1, cell_type="code", content=""):
         self._focus_cell(index)
@@ -343,13 +344,13 @@ class Notebook:
 
     def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
         self._focus_cell(index)
-        kernel_selector = "option[value='{}']".format(kernel_name)
+        kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.current_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         if by_click:
             kernel.click()
         else:
-            self.edit_cell(index=0, content="%use {}".format(kernel_name), render=True)
+            self.edit_cell(index=0, content=f"%use {kernel_name}", render=True)
 
     def edit_cell(self, cell=None, index=0, content="", render=False):
         """Set the contents of a cell to *content*, by cell object or by index
@@ -498,7 +499,7 @@ class Notebook:
         return self.browser.execute_script(JS)
 
     def select_console_kernel(self, kernel_name="SoS"):
-        kernel_selector = "option[value='{}']".format(kernel_name)
+        kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.prompt_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         kernel.click()
@@ -550,7 +551,7 @@ class Notebook:
         elif cell_type == "code":
             self.current_cell.send_keys("y")
         else:
-            raise CellTypeError(("{} is not a valid cell type," "use 'code', 'markdown', or 'raw'").format(cell_type))
+            raise CellTypeError(f"{cell_type} is not a valid cell type," "use 'code', 'markdown', or 'raw'")
 
         # self.wait_for_stale_cell(cell)
         self._focus_cell(index)
@@ -685,7 +686,7 @@ def create_new_sos_notebook(browser, kernel_name='kernel-sos'):
     wait = WebDriverWait(browser, 10)
     new_button = wait.until(EC.element_to_be_clickable((By.ID, "new-dropdown-button")))
     new_button.click()
-    kernel_selector = '#{} a'.format(kernel_name)
+    kernel_selector = f'#{kernel_name} a'
     kernel = wait_for_selector(browser, kernel_selector, single=True)
     kernel.click()
 
@@ -721,16 +722,16 @@ def new_window(browser, selector=None):
 
 def shift(browser, k):
     """Send key combination Shift+(k)"""
-    trigger_keystrokes(browser, "shift-%s" % k)
+    trigger_keystrokes(browser, f"shift-{k}")
 
 
 def ctrl(browser, k):
     """Send key combination Ctrl+(k)"""
-    trigger_keystrokes(browser, "control-%s" % k)
+    trigger_keystrokes(browser, f"control-{k}")
 
 
 def command(browser, k):
-    trigger_keystrokes(browser, "command-%s" % k)
+    trigger_keystrokes(browser, f"command-{k}")
 
 
 def trigger_keystrokes(browser, *keys):

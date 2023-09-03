@@ -92,7 +92,7 @@ class PythonCompleter:
         return text, completer.global_matches(text)
 
 
-class SoS_Completer(object):
+class SoS_Completer:
 
     def __init__(self, kernel):
         self.completers = [

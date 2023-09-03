@@ -300,7 +300,7 @@ class ScriptToNotebookConverter():
 #
 
 
-class NotebookToScriptConverter(object):
+class NotebookToScriptConverter:
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -443,7 +443,7 @@ def parse_papermill_parameters(values):
     return parameters
 
 
-class NotebookToHTMLConverter(object):
+class NotebookToHTMLConverter:
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -526,7 +526,7 @@ class NotebookToHTMLConverter(object):
 #
 
 
-class NotebookToPDFConverter(object):
+class NotebookToPDFConverter:
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -592,7 +592,7 @@ class NotebookToPDFConverter(object):
 #
 
 
-class NotebookToMarkdownConverter(object):
+class NotebookToMarkdownConverter:
 
     def get_parser(self):
         parser = argparse.ArgumentParser(
@@ -639,7 +639,7 @@ class NotebookToMarkdownConverter(object):
 #
 
 
-class NotebookToNotebookConverter(object):
+class NotebookToNotebookConverter:
 
     def get_parser(self):
         parser = argparse.ArgumentParser(

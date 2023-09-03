@@ -65,7 +65,7 @@ class FlushableStringIO:
 __all__ = ['SoS_Kernel']
 
 
-class subkernel(object):
+class subkernel:
     # a class to information on subkernel
     def __init__(self, name=None, kernel=None, language='', color='', options={}, codemirror_mode=''):
         self.name = name
@@ -104,7 +104,7 @@ def make_transient_msg(msg_type, content):
     raise ValueError(f"failed to translate message {msg_type} to transient_display_data message")
 
 
-class Subkernels(object):
+class Subkernels:
     # a collection of subkernels
     def __init__(self, kernel):
         self.sos_kernel = kernel
@@ -387,9 +387,10 @@ class Subkernels(object):
                 ]
 
                 if not avail_kernels:
+                    supported_kernels_list = ', '.join(sum(plugin.supported_kernels.values(), []))
                     raise ValueError(
-                        'Failed to find any of the kernels {} supported by language {}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'
-                        .format(', '.join(sum(plugin.supported_kernels.values(), [])), language))
+                        f'Failed to find any of the kernels {supported_kernels_list} supported by language {language}. Please make sure it is properly installed and appear in the output of command "jupyter kenelspec list"'
+                    )
                 # use the first available kernel
                 # find the language that has the kernel
                 lan_name = list({
@@ -414,6 +415,7 @@ class Subkernels(object):
                 #
                 plugin = self.language_info[language]
                 if language in plugin.supported_kernels:
+
                     avail_kernels = [
                         y.kernel for y in self._kernel_list if y.kernel in plugin.supported_kernels[language] or any(
                             fnmatch.fnmatch(y.kernel, x) for x in plugin.supported_kernels[language])
@@ -476,7 +478,7 @@ class Subkernels(object):
             [[x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options] for x in self._kernel_list])
 
 
-class CommProxyHandler(object):
+class CommProxyHandler:
 
     def __init__(self, KC, sos_kernel):
         self._KC = KC
@@ -998,8 +1000,8 @@ class SoS_Kernel(IPythonKernel):
         if not hasattr(lan, 'expand'):
             self.warn(f'Subkernel {kernel} does not support magic %expand --in')
             return text
+        orig_kernel = self.kernel
         try:
-            orig_kernel = self.kernel
             await self.switch_kernel(kernel)
             return lan.expand(text, sigil)
         except Exception as e:
@@ -1061,8 +1063,8 @@ class SoS_Kernel(IPythonKernel):
         try:
             cell_kernel = self.subkernels.find(self.editor_kernel)
             if cell_kernel.name not in self.kernels:
+                orig_kernel = self.kernel
                 try:
-                    orig_kernel = self.kernel
                     # switch to start the new kernel
                     asyncio.run(self.switch_kernel(cell_kernel.name))
                 finally:
@@ -1161,8 +1163,10 @@ class SoS_Kernel(IPythonKernel):
     async def run_cell(self, code, silent, store_history, on_error=None):
         #
         if not self.KM.is_alive():
-            self.send_response(self.iopub_socket, 'stream',
-                               dict(name='stdout', text='Restarting kernel "{}"\n'.format(self.kernel)))
+            self.send_response(self.iopub_socket, 'stream', {
+                "name": 'stdout',
+                "text": f'Restarting kernel "{self.kernel}"\n'
+            })
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
         # flush stale replies, which could have been ignored, due to missed heartbeats
@@ -1668,7 +1672,7 @@ class SoS_Kernel(IPythonKernel):
             if idx != 0 and (lines[idx].startswith('%') or lines[idx].startswith('!')):
                 # not start from empty, but might have magic etc
                 return await self._do_execute('\n'.join(lines[idx:]) + '\n', silent, store_history, user_expressions,
-                                        allow_stdin)
+                                              allow_stdin)
 
             # if there is no more empty, magic etc, enter workflow mode
             # run sos
