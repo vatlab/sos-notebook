@@ -834,7 +834,7 @@ class SoS_Kernel(IPythonKernel):
                     else:
                         if as_var is not None:
                             self.warn(f'Subkernel {kinfo.language} does not support option --as')
-                        get_vars_func(items)
+                        await get_vars_func(items)
                 except Exception as e:
                     self.warn(f'Failed to get variable: {e}\n')
                     return
