@@ -76,7 +76,8 @@ setup(
         'nbformat',
         'nbconvert>=6.0.1',
         'ipython',
-        'ipykernel>=6.0.0',
+        # 6.18.0 and newer has a new comm manager interface
+        'ipykernel>=6.18.0',
         # https://github.com/spatialaudio/nbsphinx/issues/563
         'jinja2',
         'notebook>=5.0.0',

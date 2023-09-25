@@ -11,10 +11,12 @@ import os
 import pprint
 import subprocess
 import sys
+import threading
 import time
 from collections import defaultdict
 from textwrap import dedent
 
+import comm
 import pandas as pd
 import pkg_resources
 from ipykernel._version import version_info as ipykernel_version_info
@@ -29,10 +31,12 @@ from sos.syntax import SOS_DIRECTIVE, SOS_SECTION_HEADER
 from sos.utils import env, load_config_files, short_repr
 
 from ._version import __version__ as __notebook_version__
+from .comm_manager import SoSCommManager
 from .completer import SoS_Completer
 from .inspector import SoS_Inspector
 from .magics import SoS_Magics
-from .workflow_executor import (NotebookLoggingHandler, execute_scratch_cell, run_sos_workflow, start_controller)
+from .workflow_executor import (NotebookLoggingHandler, execute_scratch_cell,
+                                run_sos_workflow, start_controller)
 
 
 class FlushableStringIO:
@@ -476,56 +480,6 @@ class Subkernels(object):
             [[x.name, x.kernel, x.language, x.color, x.codemirror_mode, x.options] for x in self._kernel_list])
 
 
-class CommProxyHandler(object):
-
-    def __init__(self, KC, sos_kernel):
-        self._KC = KC
-        self._sos_kernel = sos_kernel
-
-    def handle_msg(self, msg):
-        self._KC.shell_channel.send(msg)
-        # wait for subkernel to handle
-        comm_msg_started = False
-        comm_msg_ended = False
-        while not (comm_msg_started and comm_msg_ended):
-            while self._KC.iopub_channel.msg_ready():
-                sub_msg = self._KC.iopub_channel.get_msg()
-                if sub_msg['header']['msg_type'] == 'status':
-                    if sub_msg["content"]["execution_state"] == 'busy':
-                        comm_msg_started = True
-                    elif comm_msg_started and sub_msg["content"]["execution_state"] == 'idle':
-                        comm_msg_ended = True
-                    continue
-                self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
-            time.sleep(0.001)
-
-
-class SoSCommManager(CommManager):
-    '''This comm manager will replace the system default comm manager.
-    When a comm is requested, it will return a `CommProxyHandler` instead
-    of a real comm if the comm is created by the subkerel.
-    '''
-
-    def __init__(self, parent=None, kernel=None):
-        super().__init__(parent=parent, kernel=kernel)
-        self._forwarders = {}
-        self._sos_kernel = kernel
-
-    def register_subcomm(self, comm_id, KC):
-        self._forwarders[comm_id] = CommProxyHandler(KC, self._sos_kernel)
-
-    def get_comm(self, comm_id):
-        try:
-            return self.comms[comm_id]
-        except Exception:
-            if comm_id in self._forwarders:
-                # self._sos_kernel.start_forwarding_ioPub()
-                return self._forwarders[comm_id]
-            self.log.warning("No such comm: %s", comm_id)
-            if self.log.isEnabledFor(logging.DEBUG):
-                # don't create the list of keys if debug messages aren't enabled
-                self.log.debug("Current comms: %s", list(self.comms.keys()))
-
 
 class SoS_Kernel(IPythonKernel):
     implementation = 'SOS'
@@ -630,7 +584,7 @@ class SoS_Kernel(IPythonKernel):
         self.frontend_comm_cache = []
 
         #
-        self.comm_manager = SoSCommManager(parent=self, kernel=self)
+        self.comm_manager = comm.get_comm_manager()
         # remove the old comm_manager
         self.shell.configurables.pop()
         self.shell.configurables.append(self.comm_manager)
@@ -1235,7 +1189,7 @@ class SoS_Kernel(IPythonKernel):
                     else:
                         # if the subkernel tried to create a customized comm
                         if msg_type == 'comm_open':
-                            self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC)
+                            self.comm_manager.register_subcomm(sub_msg['content']['comm_id'], self.KC, self)
                         self.session.send(self.iopub_socket, sub_msg)
                 if self.KC.shell_channel.msg_ready():
                     # now get the real result
@@ -1697,6 +1651,21 @@ class SoS_Kernel(IPythonKernel):
         # but they are not.
         self.do_shutdown(False)
 
+
+# there can only be one comm manager in a ipykernel process
+_comm_lock = threading.Lock()
+_comm_manager = None
+
+def _get_comm_manager(*args, **kwargs):
+    """Create a new CommManager."""
+    global _comm_manager  # noqa
+    if _comm_manager is None:
+        with _comm_lock:
+            if _comm_manager is None:
+                _comm_manager = SoSCommManager(*args, **kwargs)
+    return _comm_manager
+
+comm.get_comm_manager = _get_comm_manager
 
 if __name__ == '__main__':
     from ipykernel.kernelapp import IPKernelApp
