@@ -363,6 +363,7 @@ def run_sos_workflow(code,
                     f'Workflow terminated by sigmal {-executor.exitcode}')
             raise RuntimeError(
                 f'Workflow exited with code {executor.exitcode}')
+    return None
 
 
 def cancel_workflow(cell_id, kernel):
