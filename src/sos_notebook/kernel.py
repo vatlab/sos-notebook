@@ -17,7 +17,7 @@ from textwrap import dedent
 
 import comm
 import pandas as pd
-import pkg_resources
+from importlib import metadata
 from ipykernel._version import version_info as ipykernel_version_info
 from ipykernel.ipkernel import IPythonKernel
 from IPython.utils.tokenutil import line_at_cursor, token_at_cursor
@@ -111,7 +111,7 @@ class SoS_Kernel(IPythonKernel):
         group = 'sos_languages'
         self._supported_languages = {}
 
-        for entrypoint in pkg_resources.iter_entry_points(group=group):
+        for entrypoint in metadata.entry_points(group=group):
             # Grab the function that is the actual plugin.
             name = entrypoint.name
             env.log_to_file('KERNEL', f'Found registered language {name}')

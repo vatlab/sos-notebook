@@ -11,7 +11,7 @@ import time
 from io import StringIO
 
 import nbformat
-import pkg_resources
+from importlib import metadata
 import sos
 from nbconvert.exporters import Exporter
 from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
@@ -34,7 +34,7 @@ def execute_sos_notebook(input_notebook,
             'Please install papermill for the use of option --execute.') from e
 
     if not any(entrypoint.name == 'sos'
-               for entrypoint in pkg_resources.iter_entry_points(
+               for entrypoint in metadata.entry_points(
                    group='papermill.engine')):
         raise RuntimeError(
             'Please install sos-papermill for the use of option --execute.')
