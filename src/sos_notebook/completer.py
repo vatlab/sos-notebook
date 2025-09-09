@@ -14,16 +14,15 @@ from .magics import SoS_Magics
 
 def last_valid(line):
     text = line
-    for char in (' ', '\t', '"', "'", '=', '('):
+    for char in (" ", "\t", '"', "'", "=", "("):
         if text.endswith(char):
-            text = ''
+            text = ""
         elif char in text:
             text = text.rsplit(char, 1)[-1]
     return text
 
 
 class SoS_MagicsCompleter:
-
     def __init__(self, kernel):
         self.kernel = kernel
 
@@ -31,39 +30,38 @@ class SoS_MagicsCompleter:
         text = last_valid(line)
 
         if not text.strip():
-            if line.startswith('%get'):
+            if line.startswith("%get"):
                 return text, [
-                    x for x in env.sos_dict.keys() if
-                    x not in self.kernel.original_keys and not x.startswith('_')
+                    x
+                    for x in env.sos_dict.keys()
+                    if x not in self.kernel.original_keys and not x.startswith("_")
                 ]
-            if any(
-                    line.startswith(x) for x in ('%use', '%with', '%shutdown')):
-                return text, ['SoS'] + list(
-                    self.kernel.supported_languages.keys())
+            if any(line.startswith(x) for x in ("%use", "%with", "%shutdown")):
+                return text, ["SoS"] + list(self.kernel.supported_languages.keys())
             return None
-        if text.startswith('%') and line.startswith(text):
+        if text.startswith("%") and line.startswith(text):
             return text, [
-                '%' + x + ' '
-                for x in SoS_Magics.names
-                if x.startswith(text[1:])
+                "%" + x + " " for x in SoS_Magics.names if x.startswith(text[1:])
             ]
-        if any(line.startswith(x) for x in ('%use', '%with', '%shutdown')):
+        if any(line.startswith(x) for x in ("%use", "%with", "%shutdown")):
             return text, [
-                x for x in self.kernel.supported_languages.keys()
+                x for x in self.kernel.supported_languages.keys() if x.startswith(text)
+            ]
+        if line.startswith("%get "):
+            return text, [
+                x
+                for x in env.sos_dict.keys()
                 if x.startswith(text)
-            ]
-        if line.startswith('%get '):
-            return text, [
-                x for x in env.sos_dict.keys() if x.startswith(text) and
-                x not in self.kernel.original_keys and not x.startswith('_')
+                and x not in self.kernel.original_keys
+                and not x.startswith("_")
             ]
         return None
 
 
 class SoS_PathCompleter:
-    '''PathCompleter.. The problem with ptpython's path completor is that
+    """PathCompleter.. The problem with ptpython's path completor is that
     it only matched 'text_before_cursor', which would not match cases such
-    as %cd ~/, which we will need.'''
+    as %cd ~/, which we will need."""
 
     def __init__(self):
         pass
@@ -72,16 +70,18 @@ class SoS_PathCompleter:
         text = last_valid(line)
 
         if not text.strip():
-            return text, glob.glob('*')
-        matches = glob.glob(os.path.expanduser(text) + '*')
-        if len(matches) == 1 and matches[0] == os.path.expanduser(text) \
-                and os.path.isdir(os.path.expanduser(text)):
-            return text, glob.glob(os.path.expanduser(text) + '/*')
+            return text, glob.glob("*")
+        matches = glob.glob(os.path.expanduser(text) + "*")
+        if (
+            len(matches) == 1
+            and matches[0] == os.path.expanduser(text)
+            and os.path.isdir(os.path.expanduser(text))
+        ):
+            return text, glob.glob(os.path.expanduser(text) + "/*")
         return text, matches
 
 
 class PythonCompleter:
-
     def __init__(self):
         pass
 
@@ -92,8 +92,7 @@ class PythonCompleter:
         return text, completer.global_matches(text)
 
 
-class SoS_Completer(object):
-
+class SoS_Completer:
     def __init__(self, kernel):
         self.completers = [
             SoS_MagicsCompleter(kernel),
@@ -106,7 +105,7 @@ class SoS_Completer(object):
             cursor_pos = len(code)
 
         # get current line before cursor
-        doc = code[:cursor_pos].rpartition('\n')[2]
+        doc = code[:cursor_pos].rpartition("\n")[2]
 
         for c in self.completers:
             matched = c.get_completions(doc)
@@ -116,7 +115,6 @@ class SoS_Completer(object):
                 if matched[1]:
                     return matched
             else:
-                raise RuntimeError(
-                    f'Unrecognized completer return type {matched}')
+                raise RuntimeError(f"Unrecognized completer return type {matched}")
         # No match
-        return '', []
+        return "", []

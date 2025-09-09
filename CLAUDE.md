@@ -4,14 +4,48 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-**Testing:**
+**Invoke Tasks (Recommended):**
+- `invoke --list` - Show all available development tasks
+- `invoke dev-setup` - Set up complete development environment with uv
+- `invoke venv-create` - Create virtual environment with uv
+- `invoke uv-sync` - Sync dependencies using uv
+- `invoke uv-lock` - Update uv.lock file
+- `invoke check` - Run all quality checks (format, lint, test)
+- `invoke format` - Format code with ruff
+- `invoke format --check` - Check code formatting without changes
+- `invoke lint` - Run linting with ruff
+- `invoke lint --fix` - Run linting with auto-fix
+- `invoke test` - Run tests with pytest
+- `invoke test --verbose` - Run tests with verbose output
+- `invoke test --coverage` - Run tests with coverage report
+- `invoke build` - Build source and wheel distributions
+- `invoke build --clean` - Clean build artifacts and rebuild
+- `invoke clean` - Clean build artifacts and caches
+- `invoke install` - Install package in development mode
+- `invoke release-check` - Run comprehensive pre-release checks
+- `invoke test-docker` - Run full test suite in Docker (CI environment)
+
+**uv Virtual Environment Management:**
+- `uv venv` - Create virtual environment
+- `uv sync` - Install dependencies from pyproject.toml
+- `uv sync --dev` - Install with development dependencies
+- `uv add <package>` - Add runtime dependency
+- `uv add --dev <package>` - Add development dependency
+- `uv remove <package>` - Remove dependency
+- `uv lock` - Update dependency lock file
+- `uv pip install -e .` - Install package in development mode
+- `source .venv/bin/activate` - Activate virtual environment
+
+**Direct Commands:**
 - `pytest -v` - Run all tests (executed in Docker container)
 - `docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'` - Full test run in CI environment
 
 **Code Quality:**
-- `pre-commit run --all-files` - Run code formatting and linting (yapf, flake8)
-- `flake8 --ignore=E501,W504` - Manual linting (ignores line length and binary operator positioning)
-- `yapf --style="{based_on_style:chromium,indent_width:4}"` - Code formatting
+- `pre-commit run --all-files` - Run code formatting and linting (ruff)
+- `ruff check` - Run linting
+- `ruff check --fix` - Run linting with auto-fix
+- `ruff format` - Format code
+- `ruff format --check` - Check code formatting
 
 **Development Environment:**
 - Uses Docker for testing - see `development/docker-compose.yml`

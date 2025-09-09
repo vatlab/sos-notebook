@@ -47,8 +47,8 @@ def notebook_server():
     # do not use context manager because of https://github.com/vatlab/sos-notebook/issues/214
     if True:
         nbdir = info["nbdir"] = pjoin(td, "notebooks")
-        os.makedirs(pjoin(nbdir, u"sub ∂ir1", u"sub ∂ir 1a"))
-        os.makedirs(pjoin(nbdir, u"sub ∂ir2", u"sub ∂ir 1b"))
+        os.makedirs(pjoin(nbdir, "sub ∂ir1", "sub ∂ir 1a"))
+        os.makedirs(pjoin(nbdir, "sub ∂ir2", "sub ∂ir 1b"))
         # print(nbdir)
         info["extra_env"] = {
             "JUPYTER_CONFIG_DIR": pjoin(td, "jupyter_config"),
@@ -120,7 +120,6 @@ def make_sauce_driver():
 
 @pytest.fixture(scope="session")
 def selenium_driver():
-
     if "JUPYTER_TEST_BROWSER" not in os.environ:
         os.environ["JUPYTER_TEST_BROWSER"] = "chrome"
 
@@ -162,19 +161,19 @@ def notebook(authenticated_browser):
 
 @pytest.fixture()
 def sample_scripts():
-    if not os.path.isdir('temp'):
-        os.mkdir('temp')
-    with open('temp/script1.sos', 'w') as script:
-        script.write('''
+    if not os.path.isdir("temp"):
+        os.mkdir("temp")
+    with open("temp/script1.sos", "w") as script:
+        script.write("""
 [0]
 seq = range(3)
 input: for_each='seq'
 output: 'test${_seq}.txt'
 print(output)
-''')
-    with open('temp/script2.sos', 'w') as script:
+""")
+    with open("temp/script2.sos", "w") as script:
         # with tab after run:
-        script.write('''
+        script.write("""
 #! This is supposed to be a markdown
 #! cell
 
@@ -186,8 +185,8 @@ run:			concurrent=True
 echo 'this is test script'
 [10]
 report('this is action report')
-''')
-    return ['temp/script1.sos', 'temp/script2.sos']
+""")
+    return ["temp/script1.sos", "temp/script2.sos"]
 
 
 @pytest.fixture()
@@ -331,13 +330,13 @@ def sample_notebook():
  "nbformat_minor": 2
 }
 """)
-    return 'sample_notebook.ipynb'
+    return "sample_notebook.ipynb"
 
 
 @pytest.fixture()
 def sample_papermill_notebook():
     with open("sample_mill_notebook.ipynb", "w") as sn:
-        sn.write(r'''{
+        sn.write(r"""{
  "cells": [
   {
    "cell_type": "markdown",
@@ -465,5 +464,5 @@ def sample_papermill_notebook():
  "nbformat": 4,
  "nbformat_minor": 4
 }
-''')
-    return 'sample_mill_notebook.ipynb'
+""")
+    return "sample_mill_notebook.ipynb"
