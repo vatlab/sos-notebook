@@ -1,5 +1,6 @@
 import fnmatch
 
+from importlib import metadata
 from sos.utils import env
 
 
@@ -229,12 +230,14 @@ class Subkernels(object):
 
             # if language is defined,
             if ':' in language:
-                # if this is a new module, let us create an entry point and load
-                from pkg_resources import EntryPoint
+                # if this is a new module, load it directly
                 mn, attr = language.split(':', 1)
-                ep = EntryPoint(name=kernel, module_name=mn, attrs=tuple(attr.split('.')))
                 try:
-                    plugin = ep.resolve()
+                    import importlib
+                    module = importlib.import_module(mn)
+                    plugin = module
+                    for a in attr.split('.'):
+                        plugin = getattr(plugin, a)
                     self.language_info[name] = plugin
                     # for convenience, we create two entries for, e.g. R and ir
                     # but only if there is no existing definition
@@ -282,12 +285,14 @@ class Subkernels(object):
         if language is not None:
             # kernel is not defined and we only have language
             if ':' in language:
-                # if this is a new module, let us create an entry point and load
-                from pkg_resources import EntryPoint
+                # if this is a new module, load it directly
                 mn, attr = language.split(':', 1)
-                ep = EntryPoint(name='__unknown__', module_name=mn, attrs=tuple(attr.split('.')))
                 try:
-                    plugin = ep.resolve()
+                    import importlib
+                    module = importlib.import_module(mn)
+                    plugin = module
+                    for a in attr.split('.'):
+                        plugin = getattr(plugin, a)
                     self.language_info[name] = plugin
                 except Exception as e:
                     raise RuntimeError(f'Failed to load language {language}: {e}') from e
@@ -357,7 +362,7 @@ class Subkernels(object):
             return new_def
 
         # let us check if there is something wrong with the pre-defined language
-        for entrypoint in pkg_resources.entry_points(group='sos_languages'):
+        for entrypoint in metadata.entry_points(group='sos_languages'):
             if entrypoint.name == name:
                 # there must be something wrong, let us trigger the exception here
                 entrypoint.load()
