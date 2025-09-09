@@ -10,6 +10,7 @@ import tempfile
 import time
 from importlib import metadata
 from io import StringIO
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import nbformat
 from nbconvert.exporters import Exporter
@@ -19,8 +20,11 @@ from sos.utils import env
 
 
 def execute_sos_notebook(
-    input_notebook, output_notebook=None, return_content=True, parameters=None
-):
+    input_notebook: Union[str, Any],
+    output_notebook: Optional[str] = None,
+    return_content: bool = True,
+    parameters: Optional[Dict[str, Any]] = None,
+) -> Union[str, Any]:
     # execute input notebook
     # if input_notebook is a string, it will be loaded. Otherwise it should be a notebook object
     # if output_notebook is a string, it will be used as output filename. Otherwise
@@ -89,12 +93,14 @@ def execute_sos_notebook(
 # This class cannot be defined in .kernel because it would cause some
 # weird problem with unittesting not able to resolve __main__
 class SoS_Exporter(Exporter):
-    def __init__(self, config=None, **kwargs):
-        self.output_extension = ".sos"
-        self.output_mimetype = "text/x-sos"
+    def __init__(self, config: Optional[Any] = None, **kwargs: Any) -> None:
+        self.output_extension: str = ".sos"
+        self.output_mimetype: str = "text/x-sos"
         Exporter.__init__(self, config, **kwargs)
 
-    def content_from_notebook_cell(self, cell, fh, idx=0):
+    def content_from_notebook_cell(
+        self, cell: Any, fh: StringIO, idx: int = 0
+    ) -> Optional[int]:
         # in non-all mode, markdown cells are ignored because they can be mistakenly
         # treated as markdown content of an action or script #806
         if cell.cell_type != "code":
@@ -106,7 +112,9 @@ class SoS_Exporter(Exporter):
         )
         return idx
 
-    def workflow_from_notebook_cell(self, cell, fh, idx=0):
+    def workflow_from_notebook_cell(
+        self, cell: Any, fh: StringIO, idx: int = 0
+    ) -> Optional[int]:
         # in non-all mode, markdown cells are ignored because they can be mistakenly
         # treated as markdown content of an action or script #806
         if cell.cell_type != "code":
@@ -138,7 +146,9 @@ class SoS_Exporter(Exporter):
             fh.write("\n")
         return idx
 
-    def from_notebook_node(self, nb, resources, **kwargs):
+    def from_notebook_node(
+        self, nb: Any, resources: Dict[str, Any], **kwargs: Any
+    ) -> Tuple[str, Dict[str, Any]]:
         #
         cells = nb.cells
         with StringIO() as fh:
@@ -160,7 +170,7 @@ class SoS_Exporter(Exporter):
 
 
 class ScriptToNotebookConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.sos FILE._ipynb (or --to ipynb)",
             description="""Convert a sos script to Jupyter notebook (.ipynb)
@@ -168,7 +178,13 @@ class ScriptToNotebookConverter:
         )
         return parser
 
-    def convert(self, script_file, notebook_file, args=None, unknown_args=None):
+    def convert(
+        self,
+        script_file: str,
+        notebook_file: Optional[str],
+        args: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         """
         Convert a sos script to iPython notebook (.ipynb) so that it can be opened
         by Jupyter notebook.
@@ -304,7 +320,7 @@ class ScriptToNotebookConverter:
 
 
 class NotebookToScriptConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.ipynb FILE.sos (or --to sos)",
             description="""Export Jupyter notebook with a SoS kernel to a
@@ -321,7 +337,13 @@ class NotebookToScriptConverter:
         )
         return parser
 
-    def convert(self, notebook_file, sos_file, args=None, unknown_args=None):
+    def convert(
+        self,
+        notebook_file: str,
+        sos_file: Optional[Union[str, Any]],
+        args: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         """
         Convert a ipython notebook to sos format.
         """
@@ -347,7 +369,7 @@ class NotebookToScriptConverter:
 #
 
 
-def get_template_args():
+def get_template_args() -> List[str]:
     return [
         "--TemplateExporter.extra_template_basedirs",
         os.path.join(f"{os.path.split(os.path.abspath(__file__))[0]}", "templates"),
@@ -355,8 +377,13 @@ def get_template_args():
 
 
 def export_notebook(
-    exporter_class, to_format, notebook_file, output_file, unknown_args=None, view=False
-):
+    exporter_class: Any,
+    to_format: str,
+    notebook_file: str,
+    output_file: Optional[str],
+    unknown_args: Optional[List[str]] = None,
+    view: bool = False,
+) -> None:
     import subprocess
 
     if not os.path.isfile(notebook_file):
@@ -428,7 +455,7 @@ def export_notebook(
         env.logger.info(f"Output saved to {output_file}")
 
 
-def _is_int(value):
+def _is_int(value: str) -> bool:
     """Use casting to check if value can convert to an `int`."""
     try:
         int(value)
@@ -438,7 +465,7 @@ def _is_int(value):
         return True
 
 
-def _is_float(value):
+def _is_float(value: str) -> bool:
     """Use casting to check if value can convert to a `float`."""
     try:
         float(value)
@@ -448,7 +475,7 @@ def _is_float(value):
         return True
 
 
-def parse_papermill_parameters(values):
+def parse_papermill_parameters(values: List[str]) -> Dict[str, Any]:
     parameters = {}
     for value in values:
         if "=" not in value:
@@ -471,7 +498,7 @@ def parse_papermill_parameters(values):
 
 
 class NotebookToHTMLConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.ipynb FILE.html (or --to html)",
             description="""Export Jupyter notebook with a SoS kernel to a
@@ -511,7 +538,13 @@ class NotebookToHTMLConverter:
         )
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None, unknown_args=None):
+    def convert(
+        self,
+        notebook_file: str,
+        output_file: Optional[str],
+        sargs: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         from nbconvert.exporters.html import HTMLExporter
 
         if unknown_args is None:
@@ -565,7 +598,7 @@ class NotebookToHTMLConverter:
 
 
 class NotebookToPDFConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.ipynb FILE.pdf (or --to pdf)",
             description="""Export Jupyter notebook with a SoS kernel to a
@@ -591,7 +624,13 @@ class NotebookToPDFConverter:
         )
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None, unknown_args=None):
+    def convert(
+        self,
+        notebook_file: str,
+        output_file: Optional[str],
+        sargs: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         from nbconvert.exporters.pdf import PDFExporter
 
         if sargs.execute is not None:
@@ -647,7 +686,7 @@ class NotebookToPDFConverter:
 
 
 class NotebookToMarkdownConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.ipynb FILE.md (or --to md)",
             description="""Export Jupyter notebook with a SoS kernel to a
@@ -666,7 +705,13 @@ class NotebookToMarkdownConverter:
         )
         return parser
 
-    def convert(self, notebook_file, output_file, sargs=None, unknown_args=None):
+    def convert(
+        self,
+        notebook_file: str,
+        output_file: Optional[str],
+        sargs: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         from nbconvert.exporters.markdown import MarkdownExporter
 
         if sargs.execute is not None:
@@ -699,7 +744,7 @@ class NotebookToMarkdownConverter:
 
 
 class NotebookToNotebookConverter:
-    def get_parser(self):
+    def get_parser(self) -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser(
             "sos convert FILE.ipynb FILE.ipynb (or --to ipynb)",
             description="""Export a Jupyter notebook with a non-SoS kernel to a SoS notebook
@@ -734,7 +779,7 @@ class NotebookToNotebookConverter:
         )
         return parser
 
-    def nonSoS_to_SoS_notebook(self, notebook, args):
+    def nonSoS_to_SoS_notebook(self, notebook: Any, args: Any) -> Optional[Any]:
         """Converting a nonSoS notebook to SoS notebook by adding kernel metadata"""
         # get the kernel of the notebook
         # this is like 'R', there is another 'display_name'
@@ -784,7 +829,7 @@ class NotebookToNotebookConverter:
         }
         return new_notebook(cells=cells, metadata=metadata)
 
-    def SoS_to_nonSoS_notebook(self, notebook, args):
+    def SoS_to_nonSoS_notebook(self, notebook: Any, args: Any) -> Any:
         kernel_name = notebook["metadata"]["kernelspec"]["name"]
 
         if kernel_name != "sos":
@@ -840,7 +885,13 @@ class NotebookToNotebookConverter:
         }
         return new_notebook(cells=cells, metadata=metadata)
 
-    def convert(self, notebook_file, output_file, sargs=None, unknown_args=None):
+    def convert(
+        self,
+        notebook_file: str,
+        output_file: Optional[str],
+        sargs: Optional[Any] = None,
+        unknown_args: Optional[List[str]] = None,
+    ) -> None:
         notebook = nbformat.read(notebook_file, nbformat.NO_CONVERT)
         kernel_name = notebook["metadata"]["kernelspec"]["name"]
 

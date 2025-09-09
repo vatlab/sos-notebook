@@ -3,6 +3,7 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
+from typing import Any, Dict, Generator, List, Optional
 
 from sos.hosts import Host
 from sos.step_executor import Base_Step_Executor
@@ -11,12 +12,12 @@ from sos.utils import TerminateExecution, env, short_repr
 
 
 class Interactive_Step_Executor(Base_Step_Executor):
-    def __init__(self, step, mode="interactive"):
+    def __init__(self, step: Any, mode: str = "interactive") -> None:
         super().__init__(step)
-        self.run_mode = mode
-        self.host = None
+        self.run_mode: str = mode
+        self.host: Optional[Host] = None
 
-    def init_input_output_vars(self):
+    def init_input_output_vars(self) -> None:
         # we keep these variables (which can be result of stepping through previous statements)
         # if no input and/or output statement is defined
         for key in (
@@ -38,7 +39,7 @@ class Interactive_Step_Executor(Base_Step_Executor):
             env.sos_dict.set("_output", sos_targets([]))
         env.sos_dict.pop("__default_output__", None)
 
-    def submit_tasks(self, tasks):
+    def submit_tasks(self, tasks: List[str]) -> None:
         if not tasks:
             return
         if self.host is None:
@@ -52,7 +53,9 @@ class Interactive_Step_Executor(Base_Step_Executor):
         for task in tasks:
             self.host.submit_task(task)
 
-    def wait_for_tasks(self, tasks, all_submitted):
+    def wait_for_tasks(
+        self, tasks: List[str], all_submitted: bool
+    ) -> Generator[None, None, Dict[str, Any]]:
         if not tasks:
             return {}
         # when we wait, the "outsiders" also need to see the tags etc
@@ -93,7 +96,7 @@ class Interactive_Step_Executor(Base_Step_Executor):
             return self.host.retrieve_results(tasks)
         raise TerminateExecution("Terminate with Running Tasks")
 
-    def run(self):
+    def run(self) -> Any:
         try:
             runner = Base_Step_Executor.run(self)
             yreq = next(runner)
@@ -102,7 +105,7 @@ class Interactive_Step_Executor(Base_Step_Executor):
         except StopIteration as e:
             return e.value
 
-    def log(self, stage=None, msg=None):
+    def log(self, stage: Optional[str] = None, msg: Optional[str] = None) -> None:
         if stage == "start":
             env.logger.debug(
                 "{} ``{}``: {}".format(
@@ -122,14 +125,14 @@ class Interactive_Step_Executor(Base_Step_Executor):
                     "output:   ``{}``".format(short_repr(env.sos_dict["step_output"]))
                 )
 
-    def wait_for_subworkflows(self, workflow_results):
+    def wait_for_subworkflows(self, workflow_results: Any) -> None:
         """Wait for results from subworkflows"""
         raise RuntimeError("Nested workflow is not supported in interactive mode")
 
-    def handle_unknown_target(self, e):
+    def handle_unknown_target(self, e: Exception) -> Generator[None, None, None]:
         # wait for the clearnce of unknown target
         yield None
         raise e
 
-    def verify_dynamic_targets(self, targets):
+    def verify_dynamic_targets(self, targets: Any) -> None:
         raise RuntimeError("Dynamic targets are not supported in interative mode")

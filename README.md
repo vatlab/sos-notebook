@@ -47,6 +47,7 @@ source .venv/bin/activate
 This project uses modern Python development tools:
 - **[uv](https://github.com/astral-sh/uv)** for fast dependency management and virtual environments
 - **[ruff](https://github.com/astral-sh/ruff)** for linting and code formatting
+- **[mypy](https://mypy-lang.org/)** for static type checking
 - **[invoke](http://www.pyinvoke.org/)** for task automation
 - **[pytest](https://pytest.org/)** for testing
 - **Modern build system** with `pyproject.toml` (PEP 517/518)
@@ -58,9 +59,10 @@ This project uses modern Python development tools:
 invoke dev-setup
 
 # Run quality checks
-invoke check          # Run all checks (format, lint, test)
+invoke check          # Run all checks (format, lint, typecheck, test)
 invoke format         # Format code with ruff
 invoke lint --fix     # Lint and auto-fix issues
+invoke typecheck      # Type checking with mypy
 invoke test           # Run tests
 
 # Build and release

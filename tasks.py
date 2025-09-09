@@ -75,6 +75,28 @@ def lint(ctx, fix=False):
 
 
 @task
+def typecheck(ctx, strict=False):
+    """Run type checking with mypy."""
+    if not check_tool(ctx, "mypy"):
+        print("❌ mypy not found. Install with: uv add --dev mypy")
+        sys.exit(1)
+
+    print("🔍 Running type checking...")
+    result = ctx.run("mypy src/", warn=True)
+
+    if result.ok:
+        print("✅ Type checking passed!")
+    elif strict:
+        print("❌ Type checking issues found.")
+        sys.exit(1)
+    else:
+        print(
+            "⚠️  Type checking found issues, but continuing (run with --strict to fail on errors)"
+        )
+        print("💡 Type annotations are present for IDE support and documentation")
+
+
+@task
 def precommit(ctx, install=False):
     """Run pre-commit hooks."""
     if install:
@@ -233,7 +255,7 @@ def install(ctx, dev=True, force=False):
 
 @task
 def check(ctx):
-    """Run all quality checks (format, lint, test)."""
+    """Run all quality checks (format, lint, typecheck, test)."""
     print("🔍 Running comprehensive quality checks...")
     print("\n" + "=" * 50)
     print("1. Code Formatting Check")
@@ -246,7 +268,12 @@ def check(ctx):
     lint(ctx)
 
     print("\n" + "=" * 50)
-    print("3. Running Tests")
+    print("3. Type Checking")
+    print("=" * 50)
+    typecheck(ctx)
+
+    print("\n" + "=" * 50)
+    print("4. Running Tests")
     print("=" * 50)
     test(ctx)
 

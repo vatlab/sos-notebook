@@ -5,6 +5,7 @@
 
 import logging
 import time
+from typing import Any, Dict, Optional, Union
 
 import traitlets
 import traitlets.config
@@ -14,11 +15,11 @@ logger = logging.getLogger("soskernel.comm")
 
 
 class CommProxyHandler:
-    def __init__(self, KC, sos_kernel):
+    def __init__(self, KC, sos_kernel) -> None:
         self._KC = KC
         self._sos_kernel = sos_kernel
 
-    def handle_msg(self, msg):
+    def handle_msg(self, msg: Dict[str, Any]) -> None:
         self._KC.shell_channel.send(msg)
         # wait for subkernel to handle
         comm_msg_started = False
@@ -47,14 +48,14 @@ class SoSCommManager(CommManager):
 
     kernel = traitlets.Instance("sos_notebook.kernel.SoS_Kernel")
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
-        self._forwarders = {}
+        self._forwarders: Dict[str, CommProxyHandler] = {}
 
-    def register_subcomm(self, comm_id, KC, sos_kernel):
+    def register_subcomm(self, comm_id: str, KC, sos_kernel) -> None:
         self._forwarders[comm_id] = CommProxyHandler(KC, sos_kernel)
 
-    def get_comm(self, comm_id):
+    def get_comm(self, comm_id: str) -> Optional[Union[CommProxyHandler, Any]]:
         try:
             return self.comms[comm_id]
         except Exception:

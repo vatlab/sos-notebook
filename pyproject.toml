@@ -50,11 +50,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "invoke>=2.0",
-    "pre-commit",
+    "pre-commit", 
     "pytest>=6.0",
     "pytest-cov",
     "ruff",
     "build",
+    "mypy>=1.0",
+    "types-requests",
 ]
 
 [project.urls]
@@ -89,6 +91,8 @@ dev-dependencies = [
     "pytest-cov",
     "ruff",
     "build",
+    "mypy>=1.0",
+    "types-requests",
 ]
 
 [tool.ruff]
@@ -122,3 +126,33 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = false
+warn_redundant_casts = false
+warn_unused_ignores = false
+warn_no_return = false
+warn_unreachable = false
+strict_equality = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sos.*",
+    "jupyter_client.*", 
+    "ipykernel.*",
+    "nbformat.*",
+    "nbconvert.*",
+    "traitlets.*",
+    "selenium.*",
+    "pandas.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
