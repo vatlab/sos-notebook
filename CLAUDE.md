@@ -1,0 +1,68 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Development Commands
+
+**Testing:**
+- `pytest -v` - Run all tests (executed in Docker container)
+- `docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'` - Full test run in CI environment
+
+**Code Quality:**
+- `pre-commit run --all-files` - Run code formatting and linting (yapf, flake8)
+- `flake8 --ignore=E501,W504` - Manual linting (ignores line length and binary operator positioning)
+- `yapf --style="{based_on_style:chromium,indent_width:4}"` - Code formatting
+
+**Development Environment:**
+- Uses Docker for testing - see `development/docker-compose.yml`
+- `docker-compose build --no-cache` - Rebuild test images
+- `docker network create sosnet` - Create Docker network for testing
+
+**Build System:**
+- Uses modern `pyproject.toml` configuration (PEP 517/518)
+- `python -m build` - Build source and wheel distributions
+- `python -m build --sdist` - Build source distribution only
+- `python -m build --wheel` - Build wheel distribution only
+- `pip install -e .` - Install in development mode
+- Package entry points defined in pyproject.toml for SoS converters
+- Old `setup.py` kept as `setup.py.old` for reference
+
+## Architecture Overview
+
+SoS Notebook is a Jupyter kernel that enables multi-language workflows within a single notebook. The architecture consists of several key components:
+
+**Core Kernel System:**
+- `kernel.py` - Main `SoS_Kernel` class extending `IPythonKernel`, handles cell execution and communication
+- `subkernel.py` - `Subkernels` class manages multiple language kernels (R, Bash, Python, etc.)
+- `comm_manager.py` - `SoSCommManager` handles inter-kernel communication and data exchange
+
+**Language Integration:**
+- Language modules (sos-bash, sos-r, etc.) provide language-specific data type understanding
+- `magics.py` - SoS-specific Jupyter magic commands for workflow control
+- `completer.py` - Tab completion for SoS syntax and cross-language variables
+
+**Workflow Execution:**
+- `step_executor.py` - Executes individual workflow steps
+- `workflow_executor.py` - Orchestrates complete workflows, includes `NotebookLoggingHandler`
+- Supports both interactive execution and batch workflow processing
+
+**Conversion System:**
+- `converter.py` - Multiple converters for different formats:
+  - `ScriptToNotebookConverter` (sos-ipynb)
+  - `NotebookToScriptConverter` (ipynb-sos)
+  - `NotebookToHTMLConverter` (ipynb-html)
+  - `NotebookToPDFConverter` (ipynb-pdf)
+  - `NotebookToMarkdownConverter` (ipynb-md)
+
+**Testing Strategy:**
+- Integration tests in Docker containers simulate real Jupyter environment
+- Tests cover frontend interaction, magic commands, conversions, and workflows
+- Sample notebooks in `test/` directory provide test scenarios
+
+**Key Dependencies:**
+- Requires Python ≥3.7, built on jupyter ecosystem (jupyter_client, ipykernel, nbformat)
+- Core SoS package (sos>=0.22.0) provides workflow engine
+- pandas/numpy for data handling, psutil for system monitoring
+
+**Data Exchange:**
+The system enables seamless data transfer between kernels through SoS variable system, supporting dataframes, matrices, and other structured data types across R, Python, Bash, and other supported languages.
