@@ -57,6 +57,7 @@ jobs:
         cd ..
         # Docker Compose V2 uses hyphens instead of underscores
         docker cp . sosnotebook-sos-notebook-1:/home/jovyan
+        # Install sos-notebook and test dependencies
         docker exec -u root sosnotebook-sos-notebook-1 sh ./development/install_sos_notebook.sh
 
     - name: Prepare test environment
