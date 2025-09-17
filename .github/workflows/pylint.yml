@@ -1,23 +1,52 @@
-name: Pylint
+name: Code Quality
 
 on: [push, pull_request]
 
 jobs:
-  pylint:
-
+  lint-and-type-check:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v1
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
       with:
-        python-version: 3.8
-    - name: Install dependencies
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
       run: |
-        python -m pip install --upgrade pip
-        pip install pylint
-        if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
-    - name: Analysing the code with pylint
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Create virtual environment and install dependencies
       run: |
-        python -m pylint --rcfile .github/linters/.python-lint src
+        uv venv
+        source .venv/bin/activate
+        uv sync --dev
+        uv pip install -e .
+
+    - name: Run ruff linting
+      run: |
+        source .venv/bin/activate
+        invoke lint
+
+    - name: Run ruff formatting check
+      run: |
+        source .venv/bin/activate
+        invoke format --check
+
+    - name: Run mypy type checking
+      run: |
+        source .venv/bin/activate
+        invoke typecheck
+      continue-on-error: true  # Allow warnings but show them
+
+    - name: Run mypy strict type checking
+      run: |
+        source .venv/bin/activate
+        invoke typecheck --strict || echo "Strict type checking has issues (expected during migration)"
+      continue-on-error: true
