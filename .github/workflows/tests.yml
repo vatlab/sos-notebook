@@ -55,20 +55,21 @@ jobs:
         export COMPOSE_PROJECT_NAME=sosnotebook
         docker-compose up -d
         cd ..
-        docker cp . sosnotebook_sos-notebook_1:/home/jovyan
-        docker exec -u root sosnotebook_sos-notebook_1 sh ./development/install_sos_notebook.sh
+        # Docker Compose V2 uses hyphens instead of underscores
+        docker cp . sosnotebook-sos-notebook-1:/home/jovyan
+        docker exec -u root sosnotebook-sos-notebook-1 sh ./development/install_sos_notebook.sh
 
     - name: Prepare test environment
       run: |
-        docker exec -u root sosnotebook_sos-notebook_1 mkdir -p /home/jovyan/.sos
-        docker exec -u root sosnotebook_sos-notebook_1 mkdir -p /home/jovyan/.local
-        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
-        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
-        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/test/
+        docker exec -u root sosnotebook-sos-notebook-1 mkdir -p /home/jovyan/.sos
+        docker exec -u root sosnotebook-sos-notebook-1 mkdir -p /home/jovyan/.local
+        docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/.sos/
+        docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/.local/
+        docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/test/
 
     - name: Run tests in Docker
       run: |
-        docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'
+        docker exec sosnotebook-sos-notebook-1 bash -c 'cd test && pytest -v'
 
     - name: Upload coverage reports
       if: matrix.python-version == '3.10'
