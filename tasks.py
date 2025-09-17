@@ -167,17 +167,19 @@ def test_docker(ctx):
     with ctx.cd("development"):
         print("🔧 Setting up Docker environment...")
         ctx.run("docker network create sosnet", warn=True)
+        # Set project name for consistent container naming
+        os.environ["COMPOSE_PROJECT_NAME"] = "sosnotebook"
         ctx.run("docker-compose up -d")
 
-        # Copy project and run tests
-        ctx.run("docker cp .. sosnotebook_sos-notebook_1:/home/jovyan")
+        # Copy project and run tests (Docker Compose V2 uses hyphens)
+        ctx.run("docker cp .. sosnotebook-sos-notebook-1:/home/jovyan")
         ctx.run(
-            "docker exec -u root sosnotebook_sos-notebook_1 sh ./development/install_sos_notebook.sh"
+            "docker exec -u root sosnotebook-sos-notebook-1 sh ./development/install_sos_notebook.sh"
         )
 
         print("🧪 Running tests in container...")
         result = ctx.run(
-            "docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'",
+            "docker exec sosnotebook-sos-notebook-1 bash -c 'cd test && pytest -v'",
             warn=True,
         )
 
