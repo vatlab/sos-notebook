@@ -174,7 +174,7 @@ def test_docker(ctx):
         # Copy project and run tests (Docker Compose V2 uses hyphens)
         ctx.run("docker cp .. sosnotebook-sos-notebook-1:/home/jovyan")
         ctx.run(
-            "docker exec -u root sosnotebook-sos-notebook-1 sh ./development/install_sos_notebook.sh"
+            "docker exec -u root sosnotebook-sos-notebook-1 sh /home/jovyan/development/install_sos_notebook.sh"
         )
 
         print("🧪 Running tests in container...")
