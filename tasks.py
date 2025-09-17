@@ -177,9 +177,13 @@ def test_docker(ctx):
             "docker exec -u root sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook && sh development/install_sos_notebook.sh'"
         )
 
+        # Fix permissions for test directory
+        ctx.run("docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/sos-notebook/")
+        ctx.run("docker exec -u root sosnotebook-sos-notebook-1 chmod -R 777 /home/jovyan/sos-notebook/test/")
+
         print("🧪 Running tests in container...")
         result = ctx.run(
-            "docker exec sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook/test && pytest -v'",
+            "docker exec -u jovyan sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook/test && pytest -v -x --tb=short'",
             warn=True,
         )
 

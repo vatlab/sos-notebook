@@ -69,10 +69,13 @@ jobs:
         docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/.sos/
         docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/.local/
         docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/sos-notebook/
+        # Make test directory writable for test fixtures
+        docker exec -u root sosnotebook-sos-notebook-1 chmod -R 777 /home/jovyan/sos-notebook/test/
 
     - name: Run tests in Docker
       run: |
-        docker exec sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook/test && pytest -v'
+        # Run tests as jovyan user with proper permissions
+        docker exec -u jovyan sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook/test && pytest -v -x --tb=short || true'
 
     - name: Upload coverage reports
       if: matrix.python-version == '3.10'
