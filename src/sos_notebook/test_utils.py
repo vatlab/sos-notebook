@@ -20,18 +20,32 @@ from textwrap import dedent
 from typing import Any, Generator, List, Optional, Tuple, Union
 
 import pytest
-from ipykernel.tests import utils as test_utils
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from jupyter_client import KernelManager
+from jupyter_client.manager import start_new_kernel
+
+# Import Playwright compatibility layer
+from .playwright_wrapper import (
+    PlaywrightBrowserWrapper,
+    PlaywrightWebElement,
+    By,
+    Keys,
+    NoSuchElementException,
+    wait_for_selector,
+    wait_for_tag,
+    new_window,
+    create_new_sos_notebook,
+    trigger_keystrokes,
+    shift,
+    ctrl,
+    command,
+)
+
+# Type aliases for compatibility
+WebElement = PlaywrightWebElement
 
 pjoin = os.path.join
 
-test_utils.TIMEOUT = 60
+TIMEOUT = 60
 
 KM: Optional[Any] = None
 KC: Optional[Any] = None
@@ -67,7 +81,7 @@ def start_sos_kernel() -> Any:
     """start the global kernel (if it isn't running) and return its client"""
     global KM, KC
     if KM is None:
-        KM, KC = test_utils.start_new_kernel(kernel_name="sos")
+        KM, KC = start_new_kernel(kernel_name="sos")
         atexit.register(stop_sos_kernel)
     else:
         flush_channels(KC)
@@ -164,10 +178,34 @@ async def _async_clear_channels(iopub: Any) -> None:
             break
 
 
+def assemble_output(iopub: Any) -> Tuple[str, str]:
+    """Simple replacement for ipykernel.tests.utils.assemble_output"""
+    stdout_parts = []
+    stderr_parts = []
+
+    while True:
+        try:
+            msg = iopub.get_msg(timeout=1)
+            msg_type = msg["msg_type"]
+            content = msg["content"]
+
+            if msg_type == "status" and content["execution_state"] == "idle":
+                break
+            elif msg_type == "stream":
+                if content["name"] == "stdout":
+                    stdout_parts.append(content["text"])
+                elif content["name"] == "stderr":
+                    stderr_parts.append(content["text"])
+        except:
+            break
+
+    return "".join(stdout_parts), "".join(stderr_parts)
+
+
 def get_std_output(iopub: Any) -> Tuple[str, str]:
     """Obtain stderr and remove some unnecessary warning from
     https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710"""
-    stdout, stderr = test_utils.assemble_output(iopub)
+    stdout, stderr = assemble_output(iopub)
     return stdout, "\n".join(
         [
             x
@@ -179,104 +217,8 @@ def get_std_output(iopub: Any) -> Tuple[str, str]:
     )
 
 
-def wait_for_selector(
-    browser: Any,
-    selector: str,
-    timeout: int = 10,
-    visible: bool = False,
-    single: bool = False,
-) -> Union[WebElement, List[WebElement]]:
-    wait = WebDriverWait(browser, timeout)
-    if single:
-        if visible:
-            conditional = EC.visibility_of_element_located
-        else:
-            conditional = EC.presence_of_element_located
-    else:
-        if visible:
-            conditional = EC.visibility_of_all_elements_located
-        else:
-            conditional = EC.presence_of_all_elements_located
-    return wait.until(conditional((By.CSS_SELECTOR, selector)))
-
-
-def wait_for_tag(
-    driver: Any,
-    tag: str,
-    timeout: int = 10,
-    visible: bool = False,
-    single: bool = False,
-    wait_for_n: int = 1,
-) -> Union[WebElement, List[WebElement]]:
-    if wait_for_n > 1:
-        return _wait_for_multiple(
-            driver, By.TAG_NAME, tag, timeout, wait_for_n, visible
-        )
-    return _wait_for(driver, By.TAG_NAME, tag, timeout, visible, single)
-
-
-def _wait_for(
-    driver: Any,
-    locator_type: Any,
-    locator: str,
-    timeout: int = 10,
-    visible: bool = False,
-    single: bool = False,
-) -> Union[WebElement, List[WebElement]]:
-    """Waits `timeout` seconds for the specified condition to be met. Condition is
-    met if any matching element is found. Returns located element(s) when found.
-    Args:
-        driver: Selenium web driver instance
-        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
-        locator: name of tag, class, etc. to wait for
-        timeout: how long to wait for presence/visibility of element
-        visible: if True, require that element is not only present, but visible
-        single: if True, return a single element, otherwise return a list of matching
-        elements
-    """
-    wait = WebDriverWait(driver, timeout)
-    if single:
-        if visible:
-            conditional = EC.visibility_of_element_located
-        else:
-            conditional = EC.presence_of_element_located
-    else:
-        if visible:
-            conditional = EC.visibility_of_all_elements_located
-        else:
-            conditional = EC.presence_of_all_elements_located
-    return wait.until(conditional((locator_type, locator)))
-
-
-def _wait_for_multiple(
-    driver: Any,
-    locator_type: Any,
-    locator: str,
-    timeout: int,
-    wait_for_n: int,
-    visible: bool = False,
-) -> List[WebElement]:
-    """Waits until `wait_for_n` matching elements to be present (or visible).
-    Returns located elements when found.
-    Args:
-        driver: Selenium web driver instance
-        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
-        locator: name of tag, class, etc. to wait for
-        timeout: how long to wait for presence/visibility of element
-        wait_for_n: wait until this number of matching elements are present/visible
-        visible: if True, require that elements are not only present, but visible
-    """
-    wait = WebDriverWait(driver, timeout)
-
-    def multiple_found(driver):
-        elements = driver.find_elements(locator_type, locator)
-        if visible:
-            elements = [e for e in elements if e.is_displayed()]
-        if len(elements) < wait_for_n:
-            return False
-        return elements
-
-    return wait.until(multiple_found)
+# Old Selenium functions replaced by Playwright wrapper
+# wait_for_selector, wait_for_tag, etc. are now imported from playwright_wrapper
 
 
 class CellTypeError(ValueError):
