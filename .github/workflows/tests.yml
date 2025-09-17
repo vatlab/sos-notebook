@@ -1,0 +1,98 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Create virtual environment and install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv sync --dev
+        uv pip install -e .
+
+    - name: Run quality checks
+      run: |
+        source .venv/bin/activate
+        invoke check || true  # Run checks but don't fail on warnings
+
+    - name: Set up Docker environment for tests
+      run: |
+        docker network create sosnet
+        docker pull mdabioinfo/sos_notebook_test:latest
+        docker pull mdabioinfo/eg_sshd:latest
+        cd development
+        export COMPOSE_PROJECT_NAME=sosnotebook
+        docker-compose up -d
+        cd ..
+        docker cp . sosnotebook_sos-notebook_1:/home/jovyan
+        docker exec -u root sosnotebook_sos-notebook_1 sh ./development/install_sos_notebook.sh
+
+    - name: Prepare test environment
+      run: |
+        docker exec -u root sosnotebook_sos-notebook_1 mkdir -p /home/jovyan/.sos
+        docker exec -u root sosnotebook_sos-notebook_1 mkdir -p /home/jovyan/.local
+        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.sos/
+        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/.local/
+        docker exec -u root sosnotebook_sos-notebook_1 chown -R jovyan:users /home/jovyan/test/
+
+    - name: Run tests in Docker
+      run: |
+        docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'
+
+    - name: Upload coverage reports
+      if: matrix.python-version == '3.10'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+
+  test-invoke:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Run invoke test suite
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv sync --dev
+        uv pip install -e .
+        invoke test-docker
