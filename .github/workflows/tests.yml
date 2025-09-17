@@ -39,6 +39,13 @@ jobs:
         source .venv/bin/activate
         invoke check || true  # Run checks but don't fail on warnings
 
+    - name: Set up Docker Compose
+      run: |
+        # Install docker-compose standalone
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+        docker-compose version
+
     - name: Set up Docker environment for tests
       run: |
         docker network create sosnet
@@ -85,10 +92,21 @@ jobs:
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-    - name: Install docker-compose
+    - name: Set up Docker Compose
       run: |
-        sudo apt-get update
-        sudo apt-get install -y docker-compose
+        # GitHub Actions Ubuntu runners have Docker pre-installed
+        # We just need to ensure docker compose (v2) is available
+        docker compose version || echo "Docker Compose V2 not found, installing..."
+
+        # Create alias for docker-compose to use Docker Compose V2
+        sudo ln -sf /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose || true
+
+        # Alternative: install docker-compose standalone
+        sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        sudo chmod +x /usr/local/bin/docker-compose
+
+        # Verify installation
+        docker-compose version
 
     - name: Run invoke test suite
       run: |
