@@ -298,7 +298,7 @@ class Tapped_Executor(mp.Process):
 
 
 # workflow queue that holds all workflow
-g_workflow_queue = []
+g_workflow_queue: list = []
 
 
 def run_next_workflow_in_queue():

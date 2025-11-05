@@ -89,6 +89,10 @@ dev-dependencies = [
     "pytest-cov",
     "ruff",
     "build",
+    "mypy>=1.14.1",
+    "types-psutil>=6.1.0.20241221",
+    "pandas-stubs>=2.0.2.230605",
+    "types-tabulate>=0.9.0.20241207",
 ]
 
 [tool.ruff]
@@ -122,3 +126,27 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+check_untyped_defs = false
+
+# Ignore specific modules that don't have type hints
+[[tool.mypy.overrides]]
+module = [
+    "sos.*",
+    "selenium.*",
+    "ipykernel.*",
+    "papermill.*",
+    "IPython.*",
+]
+ignore_missing_imports = true
+ignore_errors = true
