@@ -11,11 +11,10 @@ from sos.utils import env
 from .magics import SoS_Magics
 
 
-class SoS_VariableInspector(object):
-
+class SoS_VariableInspector:
     def __init__(self, kernel):
         self.kernel = kernel
-        self.preview_magic = kernel.magics.get('preview')
+        self.preview_magic = kernel.magics.get("preview")
 
     def inspect(self, name, line, pos):
         try:
@@ -23,53 +22,45 @@ class SoS_VariableInspector(object):
             if preview is None:
                 return {}
             format_dict, _ = preview
-            if 'text/plain' in format_dict:
+            if "text/plain" in format_dict:
                 return format_dict
-            return {
-                'text/plain':
-                    f'{repr(env.sos_dict["name"])} ({obj_desc})'
-            }
+            return {"text/plain": f"{repr(env.sos_dict['name'])} ({obj_desc})"}
         except Exception:
             return {}
 
 
-class SoS_SyntaxInspector(object):
-
+class SoS_SyntaxInspector:
     def __init__(self, kernel):
         self.kernel = kernel
 
     def inspect(self, name, line, pos):
-        if line.startswith(
-                '%') and name in SoS_Magics.names and pos <= len(name) + 1:
+        if line.startswith("%") and name in SoS_Magics.names and pos <= len(name) + 1:
             try:
                 magic = SoS_Magics(self.kernel).get(name)
                 parser = magic.get_parser()
-                return {'text/plain': parser.format_help()}
+                return {"text/plain": parser.format_help()}
             except Exception as e:
-                return {'text/plain': f'Magic %{name}: {e}'}
-        if line.startswith(name + ':') and pos <= len(name):
+                return {"text/plain": f"Magic %{name}: {e}"}
+        if line.startswith(name + ":") and pos <= len(name):
             if self.kernel.original_keys is None:
                 self.kernel._reset_dict()
             # input: etc
             if name in SOS_USAGES:
-                return {'text/plain': SOS_USAGES[name]}
+                return {"text/plain": SOS_USAGES[name]}
             if name in env.sos_dict:
                 # action?
                 return {
-                    'text/plain':
-                        pydoc.render_doc(
-                            env.sos_dict[name],
-                            title='%s',
-                            renderer=pydoc.plaintext),
-                    'text/html':
-                        pydoc.render_doc(
-                            env.sos_dict[name], title='%s', renderer=pydoc.html)
+                    "text/plain": pydoc.render_doc(
+                        env.sos_dict[name], title="%s", renderer=pydoc.plaintext
+                    ),
+                    "text/html": pydoc.render_doc(
+                        env.sos_dict[name], title="%s", renderer=pydoc.html
+                    ),
                 }
         return {}
 
 
-class SoS_Inspector(object):
-
+class SoS_Inspector:
     def __init__(self, kernel):
         self.inspectors = [
             SoS_SyntaxInspector(kernel),

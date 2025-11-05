@@ -5,7 +5,7 @@
 
 import time
 import unittest
-import asyncio
+
 from ipykernel.tests.utils import execute, wait_for_idle
 from selenium.webdriver.common.keys import Keys
 
@@ -13,7 +13,6 @@ from sos_notebook.test_utils import NotebookTest, flush_channels, sos_kernel
 
 
 class TestFrontEnd(NotebookTest):
-
     def test_toggle_console(self, notebook):
         time.sleep(2)
         assert notebook.is_console_panel_open()
@@ -42,7 +41,7 @@ class TestFrontEnd(NotebookTest):
         assert "12345" == notebook.get_cell_output(-1, in_console=True)
 
     def test_run_directly_in_console(self, notebook):
-        notebook.edit_prompt_cell('print("haha")', kernel='SoS', execute=True)
+        notebook.edit_prompt_cell('print("haha")', kernel="SoS", execute=True)
         assert "haha" == notebook.get_cell_output(-1, in_console=True)
 
         notebook.edit_prompt_cell('cat("haha2")', kernel="R", execute=True)
@@ -119,12 +118,10 @@ class TestFrontEnd(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(
-            idx)
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
 
         notebook.append_cell("")
-        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(
-            idx)
+        assert backgroundColor["python3"] == notebook.get_input_backgroundColor(idx)
 
     # def testInterrupt(self, notebook):
     #     # switch to python3 kernel
@@ -176,7 +173,6 @@ def is_complete(kc, code):
 
 
 class TestKernelInteraction(unittest.TestCase):
-
     def testInspector(self):
         with sos_kernel() as kc:
             # match magics
@@ -185,8 +181,7 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertTrue("%with " in get_completions(kc, "%w")["matches"])
             # path complete
             self.assertGreater(len(get_completions(kc, "!ls ")["matches"]), 0)
-            self.assertEqual(
-                len(get_completions(kc, "!ls SOMETHING")["matches"]), 0)
+            self.assertEqual(len(get_completions(kc, "!ls SOMETHING")["matches"]), 0)
             #
             wait_for_idle(kc)
             # variable complete
@@ -197,26 +192,18 @@ class TestKernelInteraction(unittest.TestCase):
             self.assertTrue("alpha" in get_completions(kc, "al")["matches"])
             self.assertTrue("all(" in get_completions(kc, "al")["matches"])
             # for no match
-            self.assertEqual(
-                len(get_completions(kc, "alphabetatheta")["matches"]), 0)
+            self.assertEqual(len(get_completions(kc, "alphabetatheta")["matches"]), 0)
             # get with all variables in
             self.assertTrue("alpha" in get_completions(kc, "%get ")["matches"])
-            self.assertTrue(
-                "alpha" in get_completions(kc, "%get al")["matches"])
+            self.assertTrue("alpha" in get_completions(kc, "%get al")["matches"])
             # with use and restart has kernel name
-            self.assertTrue(
-                "Python3" in get_completions(kc, "%with ")["matches"])
-            self.assertTrue(
-                "Python3" in get_completions(kc, "%use ")["matches"])
-            self.assertTrue(
-                "Python3" in get_completions(kc, "%shutdown ")["matches"])
-            self.assertTrue(
-                "Python3" in get_completions(kc, "%shutdown ")["matches"])
-            self.assertTrue(
-                "Python3" in get_completions(kc, "%use Py")["matches"])
+            self.assertTrue("Python3" in get_completions(kc, "%with ")["matches"])
+            self.assertTrue("Python3" in get_completions(kc, "%use ")["matches"])
+            self.assertTrue("Python3" in get_completions(kc, "%shutdown ")["matches"])
+            self.assertTrue("Python3" in get_completions(kc, "%shutdown ")["matches"])
+            self.assertTrue("Python3" in get_completions(kc, "%use Py")["matches"])
             #
-            self.assertEqual(
-                len(get_completions(kc, "%use SOME")["matches"]), 0)
+            self.assertEqual(len(get_completions(kc, "%use SOME")["matches"]), 0)
             #
             wait_for_idle(kc)
             execute(kc=kc, code="%use SoS")
@@ -226,14 +213,14 @@ class TestKernelInteraction(unittest.TestCase):
         with sos_kernel() as kc:
             # match magics
             ins_print = inspect(kc, "print")["data"]["text/plain"]
-            self.assertTrue("print" in ins_print,
-                             "Returned: {}".format(ins_print))
+            self.assertTrue("print" in ins_print, f"Returned: {ins_print}")
             wait_for_idle(kc)
             #
             # keywords
             ins_depends = inspect(kc, "depends:")["data"]["text/plain"]
-            self.assertTrue("dependent targets" in ins_depends,
-                            "Returned: {}".format(ins_depends))
+            self.assertTrue(
+                "dependent targets" in ins_depends, f"Returned: {ins_depends}"
+            )
             wait_for_idle(kc)
             #
             execute(kc=kc, code="alpha=5")
@@ -242,17 +229,17 @@ class TestKernelInteraction(unittest.TestCase):
             wait_for_idle(kc)
             # action
             ins_run = inspect(kc, "run:")["data"]["text/plain"]
-            self.assertTrue("sos.actions" in ins_run,
-                            "Returned: {}".format(ins_run))
+            self.assertTrue("sos.actions" in ins_run, f"Returned: {ins_run}")
             wait_for_idle(kc)
             #
             ins_alpha = inspect(kc, "alpha")["data"]["text/plain"]
-            self.assertTrue("5" in ins_alpha, "Returned: {}".format(ins_alpha))
+            self.assertTrue("5" in ins_alpha, f"Returned: {ins_alpha}")
             wait_for_idle(kc)
             for magic in ("get", "run", "sosrun"):
                 ins_magic = inspect(kc, "%" + magic, 2)["data"]["text/plain"]
-                self.assertTrue("usage: %" + magic in ins_magic,
-                                "Returned: {}".format(ins_magic))
+                self.assertTrue(
+                    "usage: %" + magic in ins_magic, f"Returned: {ins_magic}"
+                )
             wait_for_idle(kc)
             execute(kc=kc, code="%use SoS")
             wait_for_idle(kc)
@@ -269,16 +256,17 @@ class TestKernelInteraction(unittest.TestCase):
             status = is_complete(kc, "")
             self.assertEqual(status["status"], "complete")
             # the status seems to be version dependent on ipython
-            #status = is_complete(kc, "input:\n a=1,")
-            #self.assertEqual(status["status"], "complete")
+            # status = is_complete(kc, "input:\n a=1,")
+            # self.assertEqual(status["status"], "complete")
             #
-            #status = is_complete(kc, "parameter: a=1,")
-            #self.assertEqual(status["status"], "complete")
+            # status = is_complete(kc, "parameter: a=1,")
+            # self.assertEqual(status["status"], "complete")
             #
             status = is_complete(kc, "%dict -r")
             self.assertEqual(status["status"], "complete")
 
             wait_for_idle(kc)
+
 
 if __name__ == "__main__":
     unittest.main()

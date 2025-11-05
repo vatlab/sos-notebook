@@ -13,7 +13,6 @@ from sos_notebook.test_utils import NotebookTest
 
 
 class TestMagics(NotebookTest):
-
     def test_magic_in_subkernel(self, notebook):
         """test %pwd in the python3 kernel (which is not a sos magic)"""
         assert len(notebook.check_output("%pwd", kernel="Python3")) > 0
@@ -21,24 +20,24 @@ class TestMagics(NotebookTest):
     def test_help_messages(self, notebook):
         """test help functions of magics"""
         for magic in (
-                "cd",
-                "convert",
-                "get",
-                "matplotlib",
-                "preview",
-                "put",
-                "render",
-                'revisions',
-                "run",
-                "runfile",
-                "save",
-                "sandbox",
-                "sessioninfo",
-                "sosrun",
-                "shutdown",
-                "task",
-                "use",
-                "with",
+            "cd",
+            "convert",
+            "get",
+            "matplotlib",
+            "preview",
+            "put",
+            "render",
+            "revisions",
+            "run",
+            "runfile",
+            "save",
+            "sandbox",
+            "sessioninfo",
+            "sosrun",
+            "shutdown",
+            "task",
+            "use",
+            "with",
         ):
             output = notebook.check_output(f"%{magic} -h", kernel="SoS")
             # output does not have error
@@ -54,8 +53,10 @@ class TestMagics(NotebookTest):
             """,
             kernel="R",
         )
-        output = notebook.check_output('__captured', kernel='SoS')
-        assert 'stream' in output and 'stdout' in output and 'this is to stdout' in output
+        output = notebook.check_output("__captured", kernel="SoS")
+        assert (
+            "stream" in output and "stdout" in output and "this is to stdout" in output
+        )
         # specify raw
         notebook.call(
             """\
@@ -64,8 +65,10 @@ class TestMagics(NotebookTest):
             """,
             kernel="R",
         )
-        output = notebook.check_output('__captured', kernel='SoS')
-        assert 'stream' in output and 'stdout' in output and 'this is to stdout' in output
+        output = notebook.check_output("__captured", kernel="SoS")
+        assert (
+            "stream" in output and "stdout" in output and "this is to stdout" in output
+        )
         #
         # capture SoS execute_result (#220)
         notebook.call(
@@ -75,17 +78,24 @@ class TestMagics(NotebookTest):
             """,
             kernel="SoS",
         )
-        output = notebook.check_output('__captured', kernel='SoS')
-        assert 'execute_result' in output and 'text/plain' in output and 'this is to texts' in output
+        output = notebook.check_output("__captured", kernel="SoS")
+        assert (
+            "execute_result" in output
+            and "text/plain" in output
+            and "this is to texts" in output
+        )
         #
         # capture to variable
-        assert (notebook.check_output(
-            """\
+        assert (
+            notebook.check_output(
+                """\
             %capture stdout --to R_out
             cat('this is to stdout')
             """,
-            kernel="R",
-        ) == "this is to stdout")
+                kernel="R",
+            )
+            == "this is to stdout"
+        )
         #
         notebook.call("%capture stdout --to R_out \n ", kernel="R")
         assert notebook.check_output("R_out", kernel="SoS") == "''"
@@ -130,7 +140,7 @@ class TestMagics(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert "[1, 2, 3]" in notebook.check_output('res', kernel="SoS")
+        assert "[1, 2, 3]" in notebook.check_output("res", kernel="SoS")
         #
         # test append to str
         notebook.call(
@@ -148,9 +158,8 @@ class TestMagics(NotebookTest):
             kernel="R",
         )
         output = notebook.check_output("captured_text", kernel="SoS")
-        assert 'from sos' in output and 'from R' in output
-        assert 'str' in notebook.check_output(
-            "type(captured_text)", kernel="SoS")
+        assert "from sos" in output and "from R" in output
+        assert "str" in notebook.check_output("type(captured_text)", kernel="SoS")
         # test append to dataframe
         notebook.call(
             """\
@@ -167,8 +176,8 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         output = notebook.check_output("table", kernel="SoS")
-        assert '11' in output and '22' in output and '33' in output and '44' in output
-        assert 'DataFrame' in notebook.check_output("type(table)", kernel="SoS")
+        assert "11" in output and "22" in output and "33" in output and "44" in output
+        assert "DataFrame" in notebook.check_output("type(table)", kernel="SoS")
 
     def test_magic_cd(self, notebook):
         # magic cd that changes directory of all subfolders
@@ -191,8 +200,7 @@ class TestMagics(NotebookTest):
 
     def test_magic_connectinfo(self, notebook):
         # test %capture
-        assert "Connection file" in notebook.check_output(
-            "%connectinfo", kernel="SoS")
+        assert "Connection file" in notebook.check_output("%connectinfo", kernel="SoS")
 
     def test_magic_debug(self, notebook):
         assert "debug" in notebook.check_output(
@@ -234,11 +242,14 @@ class TestMagics(NotebookTest):
     def test_magic_expand(self, notebook):
         # test %expand
         notebook.call("par=100", kernel="SoS")
-        assert "A parameter {par} greater than 50 is specified." == notebook.check_output(
-            """\
+        assert (
+            "A parameter {par} greater than 50 is specified."
+            == notebook.check_output(
+                """\
             cat('A parameter {par} greater than 50 is specified.');
             """,
-            kernel="R",
+                kernel="R",
+            )
         )
         assert "A parameter 100 greater than 50 is specified." == notebook.check_output(
             """\
@@ -365,9 +376,10 @@ class TestMagics(NotebookTest):
             """,
             kernel="R",
         )
-        assert 'sos_a' in notebook.check_output("subs_a", kernel='SoS')
-        assert 'NameError' in notebook.check_output(
-            "subs_b", kernel='SoS', expect_error=True)
+        assert "sos_a" in notebook.check_output("subs_a", kernel="SoS")
+        assert "NameError" in notebook.check_output(
+            "subs_b", kernel="SoS", expect_error=True
+        )
         #
         notebook.call(
             """\
@@ -375,7 +387,7 @@ class TestMagics(NotebookTest):
             """,
             kernel="R",
         )
-        assert 'python_b' in notebook.check_output("subr", kernel='R')
+        assert "python_b" in notebook.check_output("subr", kernel="R")
 
     def test_magic_matplotlib(self, notebook):
         # test %capture
@@ -409,26 +421,32 @@ class TestMagics(NotebookTest):
             ''',
             kernel="SoS",
         )
-        assert "header" in output and 'item1' in output and 'item2' in output
-        assert '# header' not in output and '* item1' not in output and '* item2' not in output
+        assert "header" in output and "item1" in output and "item2" in output
+        assert (
+            "# header" not in output
+            and "* item1" not in output
+            and "* item2" not in output
+        )
         # render wrong type from subkernel
         output = notebook.check_output(
-            '''\
+            """\
             %render text
             cat("\\n# header\\n* item1\\n* item2\\n")
-            ''',
+            """,
             kernel="R",
         )
-        assert "header" not in output and 'item1' not in output and 'item2' not in output
+        assert (
+            "header" not in output and "item1" not in output and "item2" not in output
+        )
         # render correct type
         output = notebook.check_output(
-            '''\
+            """\
             %render
             cat("\\n# header\\n* item1\\n* item2\\n")
-            ''',
+            """,
             kernel="R",
         )
-        assert "header" in output and 'item1' in output and 'item2' in output
+        assert "header" in output and "item1" in output and "item2" in output
         #
         # test render as other types
         output = notebook.check_output(
@@ -438,8 +456,9 @@ class TestMagics(NotebookTest):
             $$c = \\sqrt{a^2 + b^2}$$
             """
             ''',
-            kernel="SoS")
-        assert "c=" in output and 'a2+b2' in output
+            kernel="SoS",
+        )
+        assert "c=" in output and "a2+b2" in output
 
     def test_magic_run(self, notebook):
         # test passing parameters and %run
@@ -501,8 +520,7 @@ class TestMagics(NotebookTest):
             """,
             kernel="SoS",
         )
-        assert "2" == notebook.check_output(
-            "%runfile check_run --var=2", kernel="SoS")
+        assert "2" == notebook.check_output("%runfile check_run --var=2", kernel="SoS")
 
     @pytest.mark.skipif(
         sys.platform == "win32" or "TRAVIS" in os.environ,
@@ -560,8 +578,9 @@ class TestMagics(NotebookTest):
             kernel="SoS",
             selector="img",
         )
-        assert "a.jpg" in output and ("data:image/jpeg;base64" in output or
-                                      "data:image/png;base64" in output)
+        assert "a.jpg" in output and (
+            "data:image/jpeg;base64" in output or "data:image/png;base64" in output
+        )
 
     def test_magic_preview_pdf(self, notebook):
         output = notebook.check_output(
@@ -577,15 +596,16 @@ class TestMagics(NotebookTest):
             attribute="type",
         )
         assert "a.pdf" in output and (
-            "application/x-google-chrome-pdf" in output or
-            "application/pdf" in output)
+            "application/x-google-chrome-pdf" in output or "application/pdf" in output
+        )
 
     @pytest.mark.xfail(
-        reason='Some system has imagemagick refusing to read PDF due to policy reasons.'
+        reason="Some system has imagemagick refusing to read PDF due to policy reasons."
     )
     def test_magic_preview_pdf_as_png(self, notebook):
         try:
             from wand.image import Image
+
             Image
         except ImportError:
             pytest.skip("Skip because imagemagick is not properly installed")
@@ -685,6 +705,7 @@ class TestMagics(NotebookTest):
             kernel="SoS",
         )
         import time
+
         time.sleep(20)
         assert "> a.zip" in output and "1 file" in output and "a.csv" in output
 
@@ -768,8 +789,11 @@ class TestMagics(NotebookTest):
             ''',
             kernel="SoS",
         )
-        assert ("> a.html" in output and "My First Heading" in output and
-                "My first paragraph" in output)
+        assert (
+            "> a.html" in output
+            and "My First Heading" in output
+            and "My first paragraph" in output
+        )
 
     def test_magic_put(self, notebook):
         # test %put from subkernel to SoS Kernel
@@ -787,8 +811,7 @@ class TestMagics(NotebookTest):
 
         assert "[1, 2, 3]" in notebook.check_output(content="b", kernel="SoS")
 
-        assert "R variable" in notebook.check_output(
-            content="R_var", kernel="SoS")
+        assert "R variable" in notebook.check_output(content="R_var", kernel="SoS")
 
         # test %put from SoS to other kernel
         #
@@ -802,8 +825,7 @@ class TestMagics(NotebookTest):
         )
         assert "123" in notebook.check_output(content="cat(a1)", kernel="R")
 
-        assert "this is python" in notebook.check_output(
-            content="cat(b1)", kernel="R")
+        assert "this is python" in notebook.check_output(content="cat(b1)", kernel="R")
         #
         # test put variable with invalid names
         notebook.call(
@@ -867,14 +889,15 @@ class TestMagics(NotebookTest):
         assert "SoS Version" in output and "Python3" in output
         # test the with option
         notebook.call(
-            '''
+            """
         sinfo = {
             'str_section': 'rsync 3.2',
             'list_section': [('v1', 'v2'), ('v3', b'v4')],
             'dict_section': {'d1': 'd2', 'd3': b'd4'}
         }
-        ''',
-            kernel='SoS')
+        """,
+            kernel="SoS",
+        )
         output = notebook.check_output(
             """\
             %use Python3
@@ -885,17 +908,17 @@ class TestMagics(NotebookTest):
         )
         assert "SoS Version" in output and "Python3" in output
         assert all(
-            x in output for x in ('rsync 3.2', 'v1', 'v2', 'v3', 'v4', 'd1',
-                                  'd2', 'd3', 'd4'))
+            x in output
+            for x in ("rsync 3.2", "v1", "v2", "v3", "v4", "d1", "d2", "d3", "d4")
+        )
 
     @pytest.mark.skipif(
-        sys.platform == "win32",
-        reason="! magic does not support built-in command #203")
+        sys.platform == "win32", reason="! magic does not support built-in command #203"
+    )
     def test_magic_shell(self, notebook):
         assert "haha" in notebook.check_output("!echo haha", kernel="SoS")
 
-    @pytest.mark.xfail(
-        reason="Cannot figure out why the file sometimes does not exist")
+    @pytest.mark.xfail(reason="Cannot figure out why the file sometimes does not exist")
     def test_magic_convert(self, notebook):
         #
         notebook.save()
@@ -914,8 +937,7 @@ class TestMagics(NotebookTest):
         with open(tmp_file) as tt:
             assert "kkk" in tt.read()
 
-    @pytest.mark.xfail(
-        reason="Cannot figure out why the file sometimes does not exist")
+    @pytest.mark.xfail(reason="Cannot figure out why the file sometimes does not exist")
     def test_magic_convert_sos(self, notebook):
         #
         notebook.save()
@@ -934,8 +956,7 @@ class TestMagics(NotebookTest):
         with open(tmp_file) as tt:
             assert "kkk" in tt.read()
 
-    @pytest.mark.xfail(
-        reason="Cannot figure out why the file sometimes does not exist")
+    @pytest.mark.xfail(reason="Cannot figure out why the file sometimes does not exist")
     def test_magic_convert_sos_all(self, notebook):
         #
         notebook.save()
@@ -953,14 +974,13 @@ class TestMagics(NotebookTest):
         with open(tmp_file) as tt:
             assert "kkk" in tt.read()
 
-
     def test_magic_use(self, notebook):
-        idx = notebook.call(
-            "%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
+        idx = notebook.call("%use R0 -l sos_r.kernel:sos_R -c #CCCCCC", kernel="SoS")
         assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         idx = notebook.call(
-            "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS")
+            "%use R1 -l sos_r.kernel:sos_R -k ir -c #CCCCCC", kernel="SoS"
+        )
         assert [204, 204, 204] == notebook.get_input_backgroundColor(idx)
 
         notebook.call("%use R2 -k ir", kernel="SoS")

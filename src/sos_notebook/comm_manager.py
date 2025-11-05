@@ -13,8 +13,7 @@ from ipykernel.comm.manager import CommManager
 logger = logging.getLogger("soskernel.comm")
 
 
-class CommProxyHandler(object):
-
+class CommProxyHandler:
     def __init__(self, KC, sos_kernel):
         self._KC = KC
         self._sos_kernel = sos_kernel
@@ -27,10 +26,13 @@ class CommProxyHandler(object):
         while not (comm_msg_started and comm_msg_ended):
             while self._KC.iopub_channel.msg_ready():
                 sub_msg = self._KC.iopub_channel.get_msg()
-                if sub_msg['header']['msg_type'] == 'status':
-                    if sub_msg["content"]["execution_state"] == 'busy':
+                if sub_msg["header"]["msg_type"] == "status":
+                    if sub_msg["content"]["execution_state"] == "busy":
                         comm_msg_started = True
-                    elif comm_msg_started and sub_msg["content"]["execution_state"] == 'idle':
+                    elif (
+                        comm_msg_started
+                        and sub_msg["content"]["execution_state"] == "idle"
+                    ):
                         comm_msg_ended = True
                     continue
                 self._sos_kernel.session.send(self._sos_kernel.iopub_socket, sub_msg)
@@ -38,10 +40,11 @@ class CommProxyHandler(object):
 
 
 class SoSCommManager(CommManager):
-    '''This comm manager will replace the system default comm manager.
+    """This comm manager will replace the system default comm manager.
     When a comm is requested, it will return a `CommProxyHandler` instead
     of a real comm if the comm is created by the subkerel.
-    '''
+    """
+
     kernel = traitlets.Instance("sos_notebook.kernel.SoS_Kernel")
 
     def __init__(self, **kwargs):
