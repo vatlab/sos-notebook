@@ -113,8 +113,7 @@ def test(ctx, path="", verbose=False, coverage=False):
 
     cmd.append(path)
 
-    # Skip tests that require selenium/Docker if not available
-    cmd.extend(["-k", "not test_frontend", "--disable-warnings"])
+    cmd.extend(["--disable-warnings"])
 
     result = ctx.run(" ".join(cmd), warn=True)
 
