@@ -3,7 +3,6 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-from ._version import __version__
+from ._version import __version__ as __version__
 
-# suppress warning
-__version__
+# Import version for package

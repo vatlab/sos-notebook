@@ -854,7 +854,7 @@ class SoS_Kernel(IPythonKernel):
             self.send_response(
                 self.iopub_socket,
                 "stream",
-                dict(name="stdout", text=f'Restarting kernel "{self.kernel}"\n'),
+                {"name": "stdout", "text": f'Restarting kernel "{self.kernel}"\n'},
             )
             self.KM.restart_kernel(now=False)
             self.KC = self.KM.client()
@@ -863,13 +863,13 @@ class SoS_Kernel(IPythonKernel):
             self.KC.shell_channel.get_msg()
         # executing code in another kernel.
         # https://github.com/ipython/ipykernel/blob/604ee892623cca29eb495933eb5aa26bd166c7ff/ipykernel/inprocess/client.py#L94
-        content = dict(
-            code=code,
-            silent=silent,
-            store_history=store_history,
-            user_expressions={},
-            allow_stdin=False,
-        )
+        content = {
+            "code": code,
+            "silent": silent,
+            "store_history": store_history,
+            "user_expressions": {},
+            "allow_stdin": False,
+        }
         msg = self.KC.session.msg("execute_request", content)
         # use the msg_id of the sos kernel for the subkernel to make sure that the messages sent
         # from the subkernel has the correct msg_id in parent_header so that they can be
@@ -1016,7 +1016,7 @@ class SoS_Kernel(IPythonKernel):
             self.send_response(
                 self.iopub_socket,
                 "display_data",
-                dict(metadata={}, data={"text/html": self.get_info_of_subkernels()}),
+                {"metadata": {}, "data": {"text/html": self.get_info_of_subkernels()}},
             )
             return
         kinfo = self.subkernels.find(kernel, kernel_name, language, color)
@@ -1112,7 +1112,7 @@ class SoS_Kernel(IPythonKernel):
                 self.send_response(
                     self.iopub_socket,
                     "stream",
-                    dict(name="stdout", text=f"{kernel} is not running"),
+                    {"name": "stdout", "text": f"{kernel} is not running"},
                 )
             elif restart:
                 orig_kernel = self.kernel
@@ -1138,12 +1138,12 @@ class SoS_Kernel(IPythonKernel):
             self.send_response(
                 self.iopub_socket,
                 "stream",
-                dict(
-                    name="stdout",
-                    text="Specify one of the kernels to shutdown: SoS{}\n".format(
+                {
+                    "name": "stdout",
+                    "text": "Specify one of the kernels to shutdown: SoS{}\n".format(
                         "".join(f", {x}" for x in self.kernels)
                     ),
-                ),
+                },
             )
         # stop_controller(self.controller)
 
