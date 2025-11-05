@@ -17,27 +17,42 @@ import time
 from contextlib import contextmanager
 from queue import Empty
 from textwrap import dedent
+from typing import Any, Generator, List, Optional, Tuple, Union
 
 import pytest
-from ipykernel.tests import utils as test_utils
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from jupyter_client import KernelManager
+from jupyter_client.manager import start_new_kernel
+
+# Import Playwright compatibility layer
+from .playwright_wrapper import (
+    PlaywrightBrowserWrapper,
+    PlaywrightWebElement,
+    By,
+    Keys,
+    NoSuchElementException,
+    wait_for_selector,
+    wait_for_tag,
+    new_window,
+    create_new_sos_notebook,
+    trigger_keystrokes,
+    shift,
+    ctrl,
+    command,
+)
+
+# Type aliases for compatibility
+WebElement = PlaywrightWebElement
 
 pjoin = os.path.join
 
-test_utils.TIMEOUT = 60
+TIMEOUT = 60
 
-KM = None
-KC = None
+KM: Optional[Any] = None
+KC: Optional[Any] = None
 
 
 @contextmanager
-def sos_kernel():
+def sos_kernel() -> Generator[Any, None, None]:
     """Context manager for the global kernel instance
     Should be used for most kernel tests
     Returns
@@ -47,7 +62,7 @@ def sos_kernel():
     yield start_sos_kernel()
 
 
-def flush_channels(kc=None):
+def flush_channels(kc: Optional[Any] = None) -> None:
     """flush any messages waiting on the queue"""
     if kc is None:
         kc = KC
@@ -62,18 +77,18 @@ def flush_channels(kc=None):
             #    validate_message(msg)
 
 
-def start_sos_kernel():
+def start_sos_kernel() -> Any:
     """start the global kernel (if it isn't running) and return its client"""
     global KM, KC
     if KM is None:
-        KM, KC = test_utils.start_new_kernel(kernel_name="sos")
+        KM, KC = start_new_kernel(kernel_name="sos")
         atexit.register(stop_sos_kernel)
     else:
         flush_channels(KC)
     return KC
 
 
-def stop_sos_kernel():
+def stop_sos_kernel() -> None:
     """Stop the global shared kernel instance, if it exists"""
     global KM, KC
     KC.stop_channels()
@@ -84,12 +99,12 @@ def stop_sos_kernel():
     KM = None
 
 
-def get_result(iopub):
+def get_result(iopub: Any) -> Any:
     """retrieve result from an execution"""
     return asyncio.run(_async_get_result(iopub))
 
 
-async def _async_get_result(iopub):
+async def _async_get_result(iopub: Any) -> Any:
     result = None
     while True:
         msg = await iopub.get_msg(timeout=1)
@@ -115,7 +130,9 @@ async def _async_get_result(iopub):
     return eval(result["text/plain"])
 
 
-def get_display_data(iopub, data_type="text/plain"):
+def get_display_data(
+    iopub: Any, data_type: Union[str, List[str]] = "text/plain"
+) -> Any:
     """retrieve display_data from an execution from subkernel
     because subkernel (for example irkernel) does not return
     execution_result
@@ -123,7 +140,7 @@ def get_display_data(iopub, data_type="text/plain"):
     return asyncio.run(_async_get_display_data(iopub, data_type))
 
 
-async def _async_get_display_data(iopub, data_type):
+async def _async_get_display_data(iopub: Any, data_type: Union[str, List[str]]) -> Any:
     result = None
     while True:
         msg = await iopub.get_msg(timeout=1)
@@ -146,12 +163,12 @@ async def _async_get_display_data(iopub, data_type):
     return result
 
 
-def clear_channels(iopub):
+def clear_channels(iopub: Any) -> None:
     """assemble stdout/err from an execution"""
     return asyncio.run(_async_clear_channels(iopub))
 
 
-async def _async_clear_channels(iopub):
+async def _async_clear_channels(iopub: Any) -> None:
     while True:
         msg = await iopub.get_msg(timeout=1)
         msg_type = msg["msg_type"]
@@ -161,10 +178,34 @@ async def _async_clear_channels(iopub):
             break
 
 
-def get_std_output(iopub):
+def assemble_output(iopub: Any) -> Tuple[str, str]:
+    """Simple replacement for ipykernel.tests.utils.assemble_output"""
+    stdout_parts = []
+    stderr_parts = []
+
+    while True:
+        try:
+            msg = iopub.get_msg(timeout=1)
+            msg_type = msg["msg_type"]
+            content = msg["content"]
+
+            if msg_type == "status" and content["execution_state"] == "idle":
+                break
+            elif msg_type == "stream":
+                if content["name"] == "stdout":
+                    stdout_parts.append(content["text"])
+                elif content["name"] == "stderr":
+                    stderr_parts.append(content["text"])
+        except:
+            break
+
+    return "".join(stdout_parts), "".join(stderr_parts)
+
+
+def get_std_output(iopub: Any) -> Tuple[str, str]:
     """Obtain stderr and remove some unnecessary warning from
     https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710"""
-    stdout, stderr = test_utils.assemble_output(iopub)
+    stdout, stderr = assemble_output(iopub)
     return stdout, "\n".join(
         [
             x
@@ -176,87 +217,16 @@ def get_std_output(iopub):
     )
 
 
-def wait_for_selector(browser, selector, timeout=10, visible=False, single=False):
-    wait = WebDriverWait(browser, timeout)
-    if single:
-        if visible:
-            conditional = EC.visibility_of_element_located
-        else:
-            conditional = EC.presence_of_element_located
-    else:
-        if visible:
-            conditional = EC.visibility_of_all_elements_located
-        else:
-            conditional = EC.presence_of_all_elements_located
-    return wait.until(conditional((By.CSS_SELECTOR, selector)))
-
-
-def wait_for_tag(driver, tag, timeout=10, visible=False, single=False, wait_for_n=1):
-    if wait_for_n > 1:
-        return _wait_for_multiple(
-            driver, By.TAG_NAME, tag, timeout, wait_for_n, visible
-        )
-    return _wait_for(driver, By.TAG_NAME, tag, timeout, visible, single)
-
-
-def _wait_for(driver, locator_type, locator, timeout=10, visible=False, single=False):
-    """Waits `timeout` seconds for the specified condition to be met. Condition is
-    met if any matching element is found. Returns located element(s) when found.
-    Args:
-        driver: Selenium web driver instance
-        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
-        locator: name of tag, class, etc. to wait for
-        timeout: how long to wait for presence/visibility of element
-        visible: if True, require that element is not only present, but visible
-        single: if True, return a single element, otherwise return a list of matching
-        elements
-    """
-    wait = WebDriverWait(driver, timeout)
-    if single:
-        if visible:
-            conditional = EC.visibility_of_element_located
-        else:
-            conditional = EC.presence_of_element_located
-    else:
-        if visible:
-            conditional = EC.visibility_of_all_elements_located
-        else:
-            conditional = EC.presence_of_all_elements_located
-    return wait.until(conditional((locator_type, locator)))
-
-
-def _wait_for_multiple(
-    driver, locator_type, locator, timeout, wait_for_n, visible=False
-):
-    """Waits until `wait_for_n` matching elements to be present (or visible).
-    Returns located elements when found.
-    Args:
-        driver: Selenium web driver instance
-        locator_type: type of locator (e.g. By.CSS_SELECTOR or By.TAG_NAME)
-        locator: name of tag, class, etc. to wait for
-        timeout: how long to wait for presence/visibility of element
-        wait_for_n: wait until this number of matching elements are present/visible
-        visible: if True, require that elements are not only present, but visible
-    """
-    wait = WebDriverWait(driver, timeout)
-
-    def multiple_found(driver):
-        elements = driver.find_elements(locator_type, locator)
-        if visible:
-            elements = [e for e in elements if e.is_displayed()]
-        if len(elements) < wait_for_n:
-            return False
-        return elements
-
-    return wait.until(multiple_found)
+# Old Selenium functions replaced by Playwright wrapper
+# wait_for_selector, wait_for_tag, etc. are now imported from playwright_wrapper
 
 
 class CellTypeError(ValueError):
-    def __init__(self, message=""):
-        self.message = message
+    def __init__(self, message: str = "") -> None:
+        self.message: str = message
 
 
-promise_js = """
+promise_js: str = """
 var done = arguments[arguments.length - 1];
 %s.then(
     data => { done(["success", data]); },
@@ -265,7 +235,7 @@ var done = arguments[arguments.length - 1];
 """
 
 
-def execute_promise(js, browser):
+def execute_promise(js: str, browser: Any) -> Any:
     state, data = browser.execute_async_script(promise_js % js)
     if state == "success":
         return data
@@ -273,21 +243,21 @@ def execute_promise(js, browser):
 
 
 class Notebook:
-    def __init__(self, browser):
-        self.browser = browser
+    def __init__(self, browser: Any) -> None:
+        self.browser: Any = browser
         self._disable_autosave_and_onbeforeunload()
         wait_for_selector(browser, "#panel", timeout=10, visible=False, single=True)
-        self.prompt_cell = list(
+        self.prompt_cell: WebElement = list(
             self.browser.find_elements(By.XPATH, "//*[@id='panel-wrapper']/div")
         )[-1]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cells)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> WebElement:
         return self.cells[key]
 
-    def __setitem__(self, key, item):
+    def __setitem__(self, key: int, item: str) -> None:
         if isinstance(key, int):
             self.edit_cell(index=key, content=item, render=False)
         # TODO: re-add slicing support, handle general python slicing behaviour
@@ -298,15 +268,15 @@ class Notebook:
         #     for k, v in zip(indices, item):
         #         self.edit_cell(index=k, content=v, render=False)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[WebElement, None, None]:
         return (cell for cell in self.cells)
 
     @property
-    def body(self):
+    def body(self) -> WebElement:
         return self.browser.find_element(By.TAG_NAME, "body")
 
     @property
-    def cells(self):
+    def cells(self) -> List[WebElement]:
         """Gets all cells once they are visible."""
         # For SOS note book, there are 2 extra cells, one is the selection box for kernel, the other is the preview panel
         return list(
@@ -314,17 +284,17 @@ class Notebook:
         )
 
     @property
-    def panel_cells(self):
+    def panel_cells(self) -> List[WebElement]:
         return list(self.browser.find_elements(By.XPATH, "//*[@id='panel']/div"))
 
     @property
-    def current_index(self):
+    def current_index(self) -> int:
         return self.index(self.current_cell)
 
-    def index(self, cell):
+    def index(self, cell: WebElement) -> int:
         return self.cells.index(cell)
 
-    def save(self, name=""):
+    def save(self, name: str = "") -> Any:
         if name:
             self.browser.execute_script(
                 "Jupyter.notebook.set_notebook_name(arguments[0])", name
@@ -336,14 +306,16 @@ class Notebook:
     # operation
     #
 
-    def append_cell(self, *values, cell_type="code"):
+    def append_cell(self, *values: str, cell_type: str = "code") -> None:
         for _, value in enumerate(values):
             if isinstance(value, str):
                 self.add_cell(cell_type=cell_type, content=value)
             else:
                 raise TypeError(f"Don't know how to add cell from {value!r}")
 
-    def add_cell(self, index=-1, cell_type="code", content=""):
+    def add_cell(
+        self, index: int = -1, cell_type: str = "code", content: str = ""
+    ) -> None:
         self._focus_cell(index)
         self.current_cell.send_keys("b")
         new_index = index + 1 if index >= 0 else index
@@ -352,7 +324,9 @@ class Notebook:
         if cell_type != "code":
             self._convert_cell_type(index=new_index, cell_type=cell_type)
 
-    def select_kernel(self, index=0, kernel_name="SoS", by_click=True):
+    def select_kernel(
+        self, index: int = 0, kernel_name: str = "SoS", by_click: bool = True
+    ) -> None:
         self._focus_cell(index)
         kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.current_cell.find_element(By.TAG_NAME, "select")
@@ -362,7 +336,13 @@ class Notebook:
         else:
             self.edit_cell(index=0, content=f"%use {kernel_name}", render=True)
 
-    def edit_cell(self, cell=None, index=0, content="", render=False):
+    def edit_cell(
+        self,
+        cell: Optional[WebElement] = None,
+        index: int = 0,
+        content: str = "",
+        render: bool = False,
+    ) -> None:
         """Set the contents of a cell to *content*, by cell object or by index"""
         if cell is not None:
             index = self.index(cell)
@@ -391,7 +371,7 @@ class Notebook:
     #
     # Get info
     #
-    def get_kernel_list(self):
+    def get_kernel_list(self) -> List[str]:
         wait_for_selector(self.browser, "#menu-change-kernel-submenu")
         kernelMenu = self.browser.find_element(By.ID, "menu-change-kernel-submenu")
         kernelEntries = kernelMenu.find_elements(By.TAG_NAME, "a")
@@ -400,7 +380,9 @@ class Notebook:
             kernels.append(kernelEntry.get_attribute("innerHTML"))
         return kernels
 
-    def get_input_backgroundColor(self, index=0, in_console=False):
+    def get_input_backgroundColor(
+        self, index: int = 0, in_console: bool = False
+    ) -> List[int]:
         if in_console:
             rgba = self.current_cell.find_element(
                 By.CLASS_NAME, "input_prompt"
@@ -416,7 +398,7 @@ class Notebook:
         )
         return [r, g, b]
 
-    def get_output_backgroundColor(self, index=0):
+    def get_output_backgroundColor(self, index: int = 0) -> List[int]:
         rgba = self.current_cell.find_element(
             By.CLASS_NAME, "out_prompt_overlay"
         ).value_of_css_property("background-color")
@@ -429,7 +411,12 @@ class Notebook:
     # Execution of cells
     #
 
-    def execute_cell(self, cell_or_index=None, in_console=False, expect_error=False):
+    def execute_cell(
+        self,
+        cell_or_index: Optional[Union[int, WebElement]] = None,
+        in_console: bool = False,
+        expect_error: bool = False,
+    ) -> None:
         if isinstance(cell_or_index, int):
             index = cell_or_index
         elif isinstance(cell_or_index, WebElement):
@@ -444,7 +431,9 @@ class Notebook:
             self.current_cell.send_keys(Keys.CONTROL, Keys.ENTER)
             self._wait_for_done(index, expect_error)
 
-    def call(self, content="", kernel="SoS", expect_error=False):
+    def call(
+        self, content: str = "", kernel: str = "SoS", expect_error: bool = False
+    ) -> int:
         """
         Append a codecell to the end of the notebook, with specified `content` and
         `kernel`, execute it, waits for the completion of execution, and raise an
@@ -462,12 +451,12 @@ class Notebook:
 
     def check_output(
         self,
-        content="",
-        kernel="SoS",
-        expect_error=False,
-        selector=None,
-        attribute="src",
-    ):
+        content: str = "",
+        kernel: str = "SoS",
+        expect_error: bool = False,
+        selector: Optional[str] = None,
+        attribute: str = "src",
+    ) -> str:
         """
         This function calls call and gets its output with get_cell_output.
         """
@@ -482,8 +471,12 @@ class Notebook:
     #
 
     def get_cell_output(
-        self, index=0, in_console=False, selector=None, attribute="src"
-    ):
+        self,
+        index: int = 0,
+        in_console: bool = False,
+        selector: Optional[str] = None,
+        attribute: str = "src",
+    ) -> str:
         outputs = ""
         if in_console:
             outputs = self.panel_cells[index].find_elements(
@@ -512,16 +505,20 @@ class Notebook:
     #
     # For console panel
     #
-    def is_console_panel_open(self):
+    def is_console_panel_open(self) -> bool:
         return bool(self.browser.find_element(By.ID, "panel").is_displayed())
 
-    def toggle_console_panel(self):
+    def toggle_console_panel(self) -> None:
         panelButton = self.browser.find_element(By.ID, "panel_button")
         panelButton.click()
 
     def edit_prompt_cell(
-        self, content, kernel="SoS", execute=False, expect_error=False
-    ):
+        self,
+        content: str,
+        kernel: str = "SoS",
+        execute: bool = False,
+        expect_error: bool = False,
+    ) -> None:
         # print("panel", self.prompt_cell.get_attribute("innerHTML"))
         self.browser.execute_script(
             "window.my_panel.cell.set_text(" + repr(dedent(content)) + ")"
@@ -535,18 +532,18 @@ class Notebook:
             self.prompt_cell.send_keys(Keys.CONTROL, Keys.ENTER)
             self._wait_for_done(-1, expect_error=expect_error)
 
-    def get_prompt_content(self):
+    def get_prompt_content(self) -> str:
         JS = "return window.my_panel.cell.get_text();"
         return self.browser.execute_script(JS)
 
-    def select_console_kernel(self, kernel_name="SoS"):
+    def select_console_kernel(self, kernel_name: str = "SoS") -> None:
         kernel_selector = f"option[value='{kernel_name}']"
         kernelList = self.prompt_cell.find_element(By.TAG_NAME, "select")
         kernel = wait_for_selector(kernelList, kernel_selector, single=True)
         kernel.click()
 
     @classmethod
-    def new_notebook(cls, browser, kernel_name="kernel-sos"):
+    def new_notebook(cls, browser: Any, kernel_name: str = "kernel-sos") -> "Notebook":
         with new_window(browser, selector=".cell"):
             create_new_sos_notebook(browser, kernel_name=kernel_name)
         # wait for the notebook to be ready
@@ -567,7 +564,7 @@ class Notebook:
     # PRIVATE FUNCTIONS
     #
 
-    def _disable_autosave_and_onbeforeunload(self):
+    def _disable_autosave_and_onbeforeunload(self) -> None:
         """Disable request to save before closing window and autosave.
 
         This is most easily done by using js directly.
@@ -575,7 +572,7 @@ class Notebook:
         self.browser.execute_script("window.onbeforeunload = null;")
         self.browser.execute_script("Jupyter.notebook.set_autosave_interval(0)")
 
-    def _to_command_mode(self):
+    def _to_command_mode(self) -> None:
         """Changes us into command mode on currently focused cell"""
         self.body.send_keys(Keys.ESCAPE)
         self.browser.execute_script(
@@ -584,13 +581,13 @@ class Notebook:
             "Jupyter.notebook.get_edit_index()))"
         )
 
-    def _focus_cell(self, index=0):
+    def _focus_cell(self, index: int = 0) -> None:
         cell = self.cells[index]
         cell.click()
         self._to_command_mode()
         self.current_cell = cell
 
-    def _convert_cell_type(self, index=0, cell_type="code"):
+    def _convert_cell_type(self, index: int = 0, cell_type: str = "code") -> WebElement:
         # TODO add check to see if it is already present
         self._focus_cell(index)
         if cell_type == "markdown":
@@ -608,7 +605,7 @@ class Notebook:
         self._focus_cell(index)
         return self.current_cell
 
-    def _wait_for_done(self, index, expect_error=False):
+    def _wait_for_done(self, index: int, expect_error: bool = False) -> None:
         #
         # index < 0 means console panel
         while True:
@@ -741,7 +738,7 @@ class Notebook:
     #     return self.cells[index].find_element(By.CSS_SELECTOR, selector).text
 
 
-def create_new_sos_notebook(browser, kernel_name="kernel-sos"):
+def create_new_sos_notebook(browser: Any, kernel_name: str = "kernel-sos") -> None:
     """Clicks the "new" button and selects a kernel from the options."""
     wait = WebDriverWait(browser, 10)
     new_button = wait.until(EC.element_to_be_clickable((By.ID, "new-dropdown-button")))
@@ -752,7 +749,9 @@ def create_new_sos_notebook(browser, kernel_name="kernel-sos"):
 
 
 @contextmanager
-def new_window(browser, selector=None):
+def new_window(
+    browser: Any, selector: Optional[str] = None
+) -> Generator[None, None, None]:
     """Contextmanager for switching to & waiting for a window created.
 
     This context manager gives you the ability to create a new window inside
@@ -785,21 +784,21 @@ def new_window(browser, selector=None):
         wait_for_selector(browser, selector)
 
 
-def shift(browser, k):
+def shift(browser: Any, k: str) -> None:
     """Send key combination Shift+(k)"""
     trigger_keystrokes(browser, f"shift-{k}")
 
 
-def ctrl(browser, k):
+def ctrl(browser: Any, k: str) -> None:
     """Send key combination Ctrl+(k)"""
     trigger_keystrokes(browser, f"control-{k}")
 
 
-def command(browser, k):
+def command(browser: Any, k: str) -> None:
     trigger_keystrokes(browser, f"command-{k}")
 
 
-def trigger_keystrokes(browser, *keys):
+def trigger_keystrokes(browser: Any, *keys: str) -> None:
     """Send the keys in sequence to the browser.
     Handles following key combinations
     1. with modifiers eg. 'control-alt-a', 'shift-c'

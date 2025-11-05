@@ -12,6 +12,7 @@ from collections import OrderedDict
 from collections.abc import Sequence, Sized
 from io import StringIO
 from types import ModuleType
+from typing import Any, Dict, List, Optional, Pattern, Tuple
 
 import pandas as pd
 from IPython.core.error import UsageError
@@ -29,13 +30,13 @@ from sos.utils import env, load_config_files, pexpect_run, pretty_size, short_re
 
 
 class SoS_Magic:
-    name = "BaseMagic"
+    name: str = "BaseMagic"
 
-    def __init__(self, kernel):
-        self.sos_kernel = kernel
-        self.pattern = re.compile(rf"%{self.name}(\s|$)")
+    def __init__(self, kernel: Any) -> None:
+        self.sos_kernel: Any = kernel
+        self.pattern: Pattern[str] = re.compile(rf"%{self.name}(\s|$)")
 
-    def _interpolate_text(self, text, quiet=False):
+    def _interpolate_text(self, text: str, quiet: bool = False) -> str:
         # interpolate command
         try:
             new_text = interpolate(text, local_dict=env.sos_dict._dict)
@@ -55,7 +56,9 @@ class SoS_Magic:
             self.sos_kernel.warn(f"Failed to interpolate {short_repr(text)}: {e}\n")
             return None
 
-    def get_magic_and_code(self, code, warn_remaining=False):
+    def get_magic_and_code(
+        self, code: str, warn_remaining: bool = False
+    ) -> Tuple[str, str]:
         if code.startswith("%") or code.startswith("!"):
             lines = re.split(r"(?<!\\)\n", code, maxsplit=1)
             # remove lines joint by \
@@ -76,7 +79,7 @@ class SoS_Magic:
     def match(self, code):
         return self.pattern.match(code)
 
-    def run_shell_command(self, cmd):
+    def run_shell_command(self, cmd: str) -> None:
         # interpolate command
         if not cmd:
             return
@@ -93,7 +96,7 @@ class SoS_Magic:
     async def apply(self, code, silent, store_history, user_expressions, allow_stdin):
         raise RuntimeError(f"Unimplemented magic {self.name}")
 
-    def _parse_error(self, msg):
+    def _parse_error(self, msg: str) -> None:
         self.sos_kernel.warn(msg)
 
 
@@ -3376,7 +3379,7 @@ class With_Magic(SoS_Magic):
 
 
 class SoS_Magics:
-    magics = [
+    magics: List[Any] = [
         Command_Magic,
         Capture_Magic,
         Cd_Magic,
@@ -3410,13 +3413,13 @@ class SoS_Magics:
         Use_Magic,
         With_Magic,
     ]
-    names = [x.name for x in magics if x.name != "!"]
+    names: List[str] = [x.name for x in magics if x.name != "!"]
 
-    def __init__(self, kernel=None):
-        self._magics = {x.name: x(kernel) for x in self.magics}
+    def __init__(self, kernel: Optional[Any] = None) -> None:
+        self._magics: Dict[str, Any] = {x.name: x(kernel) for x in self.magics}
 
-    def get(self, name):
+    def get(self, name: str) -> Any:
         return self._magics[name]
 
-    def values(self):
+    def values(self) -> Any:
         return self._magics.values()

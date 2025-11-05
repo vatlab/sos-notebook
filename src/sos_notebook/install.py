@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import sys
+from typing import Any, Dict, Optional
 
 from IPython.utils.tempdir import TemporaryDirectory
 from jupyter_client.kernelspec import KernelSpecManager
@@ -22,21 +23,21 @@ if _py_ver.major == 2 or (
         f"sos requires Python 3.6 or higher. Please upgrade your Python {_py_ver.major}.{_py_ver.minor}.{_py_ver.micro}."
     )
 
-kernel_json = {
+kernel_json: Dict[str, Any] = {
     "argv": [sys.executable, "-m", "sos_notebook.kernel", "-f", "{connection_file}"],
     "display_name": "SoS",
     "language": "sos",
 }
 
 
-def _is_root():
+def _is_root() -> bool:
     try:
         return os.geteuid() == 0
     except AttributeError:
         return False  # assume not an admin on non-Unix platforms
 
 
-def get_install_sos_kernel_spec_parser():
+def get_install_sos_kernel_spec_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Install KernelSpec for sos Kernel")
     prefix_locations = parser.add_mutually_exclusive_group()
     prefix_locations.add_argument(
@@ -54,7 +55,7 @@ def get_install_sos_kernel_spec_parser():
     return parser
 
 
-def install_sos_kernel_spec(user, prefix):
+def install_sos_kernel_spec(user: bool, prefix: Optional[str]) -> None:
     with TemporaryDirectory() as td:
         os.chmod(td, 0o755)  # Starts off as 700, not user readable
         with open(os.path.join(td, "kernel.json"), "w") as f:
@@ -75,7 +76,7 @@ def install_sos_kernel_spec(user, prefix):
         print(f"sos jupyter kernel spec is installed to {destination}")
 
 
-def _get_config_dir(user=False, sys_prefix=False):
+def _get_config_dir(user: bool = False, sys_prefix: bool = False) -> str:
     """Get the location of config files for the current context."""
     user = False if sys_prefix else user
     if user:
@@ -87,7 +88,7 @@ def _get_config_dir(user=False, sys_prefix=False):
     return nbext
 
 
-def install_config(user, prefix):
+def install_config(user: bool, prefix: Optional[str]) -> None:
     config_dir = _get_config_dir(user=user, sys_prefix=prefix)
 
     # Set extra template path
@@ -151,7 +152,7 @@ def install_config(user, prefix):
     print("Please see https://github.com/jupyter/notebook/issues/6164 for details.")
 
 
-def main():
+def main() -> None:
     parser = get_install_sos_kernel_spec_parser()
     args = parser.parse_args()
     user = False

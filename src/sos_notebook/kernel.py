@@ -15,6 +15,7 @@ import time
 from collections import defaultdict
 from importlib import metadata
 from textwrap import dedent
+from typing import Any, Dict, List, Optional
 
 import comm
 import pandas as pd
@@ -43,11 +44,13 @@ from .workflow_executor import (
 
 
 class FlushableStringIO:
-    def __init__(self, kernel, name, *args, **kwargs):
-        self.kernel = kernel
-        self.name = name
+    def __init__(
+        self, kernel: "SoS_Kernel", name: str, *args: Any, **kwargs: Any
+    ) -> None:
+        self.kernel: SoS_Kernel = kernel
+        self.name: str = name
 
-    def write(self, content):
+    def write(self, content: str) -> None:
         if content.startswith("HINT: "):
             content = content.splitlines()
             hint_line = content[0][6:].strip()
@@ -72,7 +75,7 @@ class FlushableStringIO:
                     {"name": self.name, "text": content},
                 )
 
-    def flush(self):
+    def flush(self) -> None:
         pass
 
 
@@ -81,7 +84,7 @@ __all__ = ["SoS_Kernel"]
 # translate a message to transient_display_data message
 
 
-def make_transient_msg(msg_type, content):
+def make_transient_msg(msg_type: str, content: Dict[str, Any]) -> Dict[str, Any]:
     if msg_type == "display_data":
         return {
             "data": content.get("data", {}),
@@ -109,11 +112,11 @@ def make_transient_msg(msg_type, content):
 
 
 class SoS_Kernel(IPythonKernel):
-    implementation = "SOS"
-    implementation_version = __version__
-    language = "sos"
-    language_version = __sos_version__
-    language_info = {
+    implementation: str = "SOS"
+    implementation_version: str = __version__
+    language: str = "sos"
+    language_version: str = __sos_version__
+    language_info: Dict[str, str] = {
         "mimetype": "text/x-sos",
         "name": "sos",
         "file_extension": ".sos",
@@ -121,9 +124,9 @@ class SoS_Kernel(IPythonKernel):
         "codemirror_mode": "sos",
         "nbconvert_exporter": "sos_notebook.converter.SoS_Exporter",
     }
-    banner = "SoS kernel - script of scripts"
+    banner: str = "SoS kernel - script of scripts"
 
-    def get_supported_languages(self):
+    def get_supported_languages(self) -> Dict[str, Any]:
         if self._supported_languages is not None:
             return self._supported_languages
         group = "sos_languages"
@@ -145,7 +148,7 @@ class SoS_Kernel(IPythonKernel):
 
     supported_languages = property(lambda self: self.get_supported_languages())
 
-    def get_kernel_list(self):
+    def get_kernel_list(self) -> List[List[str]]:
         if not hasattr(self, "_subkernels"):
             self._subkernels = Subkernels(self)
 
@@ -168,10 +171,10 @@ class SoS_Kernel(IPythonKernel):
 
     inspector = property(lambda self: self.get_inspector())
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.options = ""
-        self.kernel = "SoS"
+        self.options: str = ""
+        self.kernel: str = "SoS"
         # a dictionary of started kernels, with the format of
         #
         # 'R': ['ir', 'sos.R.sos_R', '#FFEEAABB']
@@ -188,11 +191,11 @@ class SoS_Kernel(IPythonKernel):
             f"Starting SoS Kernel version {__notebook_version__} with SoS {__version__}",
         )
 
-        self.kernels = {}
+        self.kernels: Dict[str, Any] = {}
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
-        self._meta = {
+        self._meta: Dict[str, Any] = {
             "workflow": "",
             "workflow_mode": False,
             "render_result": False,
@@ -206,10 +209,10 @@ class SoS_Kernel(IPythonKernel):
             "cell_kernel": "SoS",
             "batch_mode": False,
         }
-        self._debug_mode = False
-        self._supported_languages = None
-        self._completer = None
-        self._inspector = None
+        self._debug_mode: bool = False
+        self._supported_languages: Optional[Dict[str, Any]] = None
+        self._completer: Optional[SoS_Completer] = None
+        self._inspector: Optional[SoS_Inspector] = None
         self._real_execution_count = 1
         self._execution_count = 1
         self.frontend_comm = None
@@ -224,12 +227,12 @@ class SoS_Kernel(IPythonKernel):
             self.shell_handlers[msg_type] = getattr(self.comm_manager, msg_type)
 
         self.comm_manager.register_target("sos_comm", self.sos_comm)
-        self.my_tasks = {}
-        self.magics = SoS_Magics(self)
-        self._failed_languages = {}
+        self.my_tasks: Dict[str, Any] = {}
+        self.magics: SoS_Magics = SoS_Magics(self)
+        self._failed_languages: Dict[str, Exception] = {}
         # enable matplotlib by default #77
         self.shell.enable_gui = lambda gui: None
-        self.editor_kernel = "sos"
+        self.editor_kernel: str = "sos"
         # initialize env
         prepare_env("")
         self.original_keys = set(env.sos_dict._dict.keys()) | {
@@ -681,7 +684,7 @@ class SoS_Kernel(IPythonKernel):
         finally:
             await self.switch_kernel(orig_kernel)
 
-    def do_is_complete(self, code):
+    def do_is_complete(self, code: str) -> Dict[str, str]:
         """check if new line is in order"""
         code = code.strip()
         if not code:
@@ -764,7 +767,9 @@ class SoS_Kernel(IPythonKernel):
             env.logger.debug(f"Completion fail with exception: {e}")
             return {"status": "incomplete", "indent": ""}
 
-    def do_inspect(self, code, cursor_pos, detail_level=0):
+    def do_inspect(
+        self, code: str, cursor_pos: int, detail_level: int = 0
+    ) -> Dict[str, Any]:
         if self.editor_kernel.lower() == "sos":
             line, offset = line_at_cursor(code, cursor_pos)
             name = token_at_cursor(code, cursor_pos)
@@ -799,7 +804,7 @@ class SoS_Kernel(IPythonKernel):
         except Exception as e:
             env.log_to_file("KERNEL", f"Completion fail with exception: {e}")
 
-    async def do_complete(self, code, cursor_pos):
+    async def do_complete(self, code: str, cursor_pos: int) -> Dict[str, Any]:
         if self.editor_kernel.lower() == "sos":
             text, matches = self.completer.complete_text(code, cursor_pos)
             return {
@@ -1343,8 +1348,13 @@ class SoS_Kernel(IPythonKernel):
         return self._meta
 
     async def do_execute(
-        self, code, silent, store_history=True, user_expressions=None, allow_stdin=True
-    ):
+        self,
+        code: str,
+        silent: bool,
+        store_history: bool = True,
+        user_expressions: Optional[Dict[str, str]] = None,
+        allow_stdin: bool = True,
+    ) -> Dict[str, Any]:
         env.log_to_file("KERNEL", f"execute: {code}")
         if not self.controller:
             self.controller = start_controller(self)
@@ -1491,7 +1501,7 @@ class SoS_Kernel(IPythonKernel):
                 env.sos_dict.pop("input", None)
                 env.sos_dict.pop("output", None)
 
-    def do_shutdown(self, restart):
+    def do_shutdown(self, restart: bool) -> Dict[str, bool]:
         #
         for name, (km, _) in self.kernels.items():
             try:

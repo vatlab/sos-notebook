@@ -6,13 +6,14 @@
 import glob
 import os
 import rlcompleter
+from typing import Any, List, Optional, Tuple, Union
 
 from sos.utils import env
 
 from .magics import SoS_Magics
 
 
-def last_valid(line):
+def last_valid(line: str) -> str:
     text = line
     for char in (" ", "\t", '"', "'", "=", "("):
         if text.endswith(char):
@@ -23,10 +24,10 @@ def last_valid(line):
 
 
 class SoS_MagicsCompleter:
-    def __init__(self, kernel):
+    def __init__(self, kernel: Any) -> None:
         self.kernel = kernel
 
-    def get_completions(self, line):
+    def get_completions(self, line: str) -> Optional[Tuple[str, List[str]]]:
         text = last_valid(line)
 
         if not text.strip():
@@ -63,10 +64,10 @@ class SoS_PathCompleter:
     it only matched 'text_before_cursor', which would not match cases such
     as %cd ~/, which we will need."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def get_completions(self, line):
+    def get_completions(self, line: str) -> Tuple[str, List[str]]:
         text = last_valid(line)
 
         if not text.strip():
@@ -82,10 +83,10 @@ class SoS_PathCompleter:
 
 
 class PythonCompleter:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def get_completions(self, line):
+    def get_completions(self, line: str) -> Tuple[str, List[str]]:
         text = last_valid(line)
 
         completer = rlcompleter.Completer(env.sos_dict._dict)
@@ -93,14 +94,18 @@ class PythonCompleter:
 
 
 class SoS_Completer:
-    def __init__(self, kernel):
-        self.completers = [
+    def __init__(self, kernel: Any) -> None:
+        self.completers: List[
+            Union[SoS_MagicsCompleter, SoS_PathCompleter, PythonCompleter]
+        ] = [
             SoS_MagicsCompleter(kernel),
             SoS_PathCompleter(),
             PythonCompleter(),
         ]
 
-    def complete_text(self, code, cursor_pos=None):
+    def complete_text(
+        self, code: str, cursor_pos: Optional[int] = None
+    ) -> Tuple[str, List[str]]:
         if cursor_pos is None:
             cursor_pos = len(code)
 

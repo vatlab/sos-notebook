@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from threading import Event
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import psutil
 import zmq
@@ -27,15 +28,17 @@ from .step_executor import Interactive_Step_Executor
 
 
 class NotebookLoggingHandler(logging.Handler):
-    def __init__(self, level, kernel=None, title="Log Messages"):
+    def __init__(
+        self, level: int, kernel: Optional[Any] = None, title: str = "Log Messages"
+    ) -> None:
         super().__init__(level)
         self.kernel = kernel
+        self.title: str = title
+
+    def setTitle(self, title: str) -> None:
         self.title = title
 
-    def setTitle(self, title):
-        self.title = title
-
-    def emit(self, record):
+    def emit(self, record: logging.LogRecord) -> None:
         msg = re.sub(
             r"``([^`]*)``", r'<span class="sos_highlight">\1</span>', record.msg
         )
@@ -52,7 +55,7 @@ class NotebookLoggingHandler(logging.Handler):
         #                          {'name': 'stdout', 'text': record.msg})
 
 
-def start_controller(kernel):
+def start_controller(kernel: Any) -> Controller:
     env.zmq_context = zmq.Context()
     # ready to monitor other workflows
     env.config["exec_mode"] = "master"
@@ -66,7 +69,7 @@ def start_controller(kernel):
     return controller
 
 
-def stop_controller(controller):
+def stop_controller(controller: Optional[Controller]) -> None:
     if not controller:
         return
     env.master_request_socket.send_pyobj(["done"])
@@ -75,10 +78,12 @@ def stop_controller(controller):
     controller.join()
 
 
-last_cell_id = None
+last_cell_id: Optional[str] = None
 
 
-def execute_scratch_cell(code, raw_args, kernel):
+def execute_scratch_cell(
+    code: Optional[str], raw_args: Union[str, List[str]], kernel: Any
+) -> Any:
     # we then have to change the parse to disable args.workflow when
     # there is no workflow option.
     raw_args = shlex.split(raw_args) if isinstance(raw_args, str) else raw_args
@@ -214,14 +219,14 @@ def execute_scratch_cell(code, raw_args, kernel):
 
 
 class Tapped_Executor(mp.Process):
-    def __init__(self, code, args, config):
+    def __init__(self, code: str, args: str, config: Dict[str, Any]) -> None:
         # the worker process knows configuration file, command line argument etc
         super().__init__()
-        self.code = code
-        self.args = args
-        self.config = config
+        self.code: str = code
+        self.args: str = args
+        self.config: Dict[str, Any] = config
 
-    def run(self):
+    def run(self) -> None:
         env.config.update(self.config)
         # start a socket?
         context = zmq.Context()
@@ -298,10 +303,12 @@ class Tapped_Executor(mp.Process):
 
 
 # workflow queue that holds all workflow
-g_workflow_queue = []
+g_workflow_queue: List[
+    List[Union[str, Optional[Union[Tapped_Executor, Tuple[str, str, Dict[str, Any]]]]]]
+] = []
 
 
-def run_next_workflow_in_queue():
+def run_next_workflow_in_queue() -> None:
     # execute the first available item
     global g_workflow_queue
 
@@ -320,7 +327,7 @@ def run_next_workflow_in_queue():
         break
 
 
-def execute_pending_workflow(cell_ids, kernel):
+def execute_pending_workflow(cell_ids: List[str], kernel: Any) -> None:
     # we are giving a list of cell_ids because some cells might be removed
     # we use this list to clear workflow queue of removed cells
     for idx, (cid, proc) in enumerate(g_workflow_queue):
@@ -333,8 +340,12 @@ def execute_pending_workflow(cell_ids, kernel):
 
 
 def run_sos_workflow(
-    code, raw_args="", kernel=None, workflow_mode=False, run_in_queue=False
-):
+    code: str,
+    raw_args: str = "",
+    kernel: Optional[Any] = None,
+    workflow_mode: bool = False,
+    run_in_queue: bool = False,
+) -> None:
     # when user asks to execute a cell as workflow. We either
     # execute the workflow or put it in queue
     global g_workflow_queue
@@ -373,7 +384,7 @@ def run_sos_workflow(
     return None
 
 
-def cancel_workflow(cell_id, kernel):
+def cancel_workflow(cell_id: str, kernel: Any) -> None:
     global g_workflow_queue
     env.logger.info("A queued or running workflow in this cell is canceled")
     kernel.send_frontend_msg(

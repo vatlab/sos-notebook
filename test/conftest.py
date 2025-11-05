@@ -12,12 +12,11 @@ from urllib.parse import urljoin
 
 import pytest
 import requests
-from selenium import webdriver
-from selenium.webdriver import Chrome, Firefox, Remote
+from playwright.sync_api import sync_playwright
 from testpath.tempdir import TemporaryDirectory
-from webdriver_manager.chrome import ChromeDriverManager
 
 from sos_notebook.test_utils import Notebook
+from sos_notebook.playwright_wrapper import PlaywrightBrowserWrapper
 
 pjoin = os.path.join
 
@@ -90,68 +89,39 @@ def notebook_server():
     )
 
 
-def make_sauce_driver():
-    """This function helps travis create a driver on Sauce Labs.
-
-    This function will err if used without specifying the variables expected
-    in that context.
-    """
-
-    username = os.environ["SAUCE_USERNAME"]
-    access_key = os.environ["SAUCE_ACCESS_KEY"]
-    capabilities = {
-        "tunnel-identifier": os.environ["TRAVIS_JOB_NUMBER"],
-        "build": os.environ["TRAVIS_BUILD_NUMBER"],
-        "tags": [os.environ["TRAVIS_PYTHON_VERSION"], "CI"],
-        "platform": "Windows 10",
-        "browserName": os.environ["JUPYTER_TEST_BROWSER"],
-        "version": "latest",
-    }
-    if capabilities["browserName"] == "firefox":
-        # Attempt to work around issue where browser loses authentication
-        capabilities["version"] = "57.0"
-    hub_url = f"{username}:{access_key}@localhost:4445"
-    print("Connecting remote driver on Sauce Labs")
-    driver = Remote(
-        desired_capabilities=capabilities, command_executor=f"http://{hub_url}/wd/hub"
-    )
-    return driver
-
-
 @pytest.fixture(scope="session")
-def selenium_driver():
-    if "JUPYTER_TEST_BROWSER" not in os.environ:
-        os.environ["JUPYTER_TEST_BROWSER"] = "chrome"
+def playwright_browser():
+    """Create a Playwright browser instance"""
+    browser_type = os.environ.get("JUPYTER_TEST_BROWSER", "chromium")
+    headless = os.environ.get("JUPYTER_TEST_BROWSER") != "live"
 
-    if os.environ.get("SAUCE_USERNAME"):
-        driver = make_sauce_driver()
-    elif os.environ.get("JUPYTER_TEST_BROWSER") == "live":
-        driver = Chrome(ChromeDriverManager().install())
-    elif os.environ.get("JUPYTER_TEST_BROWSER") == "chrome":
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--window-size=1420,1080")
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        driver = Chrome(ChromeDriverManager().install(), options=chrome_options)
-    elif os.environ.get("JUPYTER_TEST_BROWSER") == "firefox":
-        driver = Firefox()
-    else:
-        raise ValueError(
-            "Invalid setting for JUPYTER_TEST_BROWSER. Valid options include live, chrome, and firefox"
+    with sync_playwright() as p:
+        if browser_type in ["chrome", "chromium"]:
+            browser = p.chromium.launch(
+                headless=headless,
+                args=["--no-sandbox", "--disable-dev-shm-usage"]
+            )
+        elif browser_type == "firefox":
+            browser = p.firefox.launch(headless=headless)
+        else:
+            browser = p.chromium.launch(headless=headless)
+
+        context = browser.new_context(
+            viewport={"width": 1420, "height": 1080}
         )
+        page = context.new_page()
 
-    yield driver
+        yield page
 
-    # Teardown
-    driver.quit()
+        browser.close()
 
 
 @pytest.fixture(scope="module")
-def authenticated_browser(selenium_driver, notebook_server):
-    selenium_driver.jupyter_server_info = notebook_server
-    selenium_driver.get("{url}?token={token}".format(**notebook_server))
-    return selenium_driver
+def authenticated_browser(playwright_browser, notebook_server):
+    wrapper = PlaywrightBrowserWrapper(playwright_browser)
+    wrapper.jupyter_server_info = notebook_server
+    wrapper.goto("{url}?token={token}".format(**notebook_server))
+    return wrapper
 
 
 @pytest.fixture(scope="class")

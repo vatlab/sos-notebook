@@ -75,6 +75,28 @@ def lint(ctx, fix=False):
 
 
 @task
+def typecheck(ctx, strict=False):
+    """Run type checking with mypy."""
+    if not check_tool(ctx, "mypy"):
+        print("❌ mypy not found. Install with: uv add --dev mypy")
+        sys.exit(1)
+
+    print("🔍 Running type checking...")
+    result = ctx.run("mypy src/", warn=True)
+
+    if result.ok:
+        print("✅ Type checking passed!")
+    elif strict:
+        print("❌ Type checking issues found.")
+        sys.exit(1)
+    else:
+        print(
+            "⚠️  Type checking found issues, but continuing (run with --strict to fail on errors)"
+        )
+        print("💡 Type annotations are present for IDE support and documentation")
+
+
+@task
 def precommit(ctx, install=False):
     """Run pre-commit hooks."""
     if install:
@@ -113,8 +135,8 @@ def test(ctx, path="", verbose=False, coverage=False):
 
     cmd.append(path)
 
-    # Skip tests that require selenium/Docker if not available
-    cmd.extend(["-k", "not test_frontend", "--disable-warnings"])
+    # Add common test options
+    cmd.extend(["--disable-warnings"])
 
     result = ctx.run(" ".join(cmd), warn=True)
 
@@ -145,17 +167,23 @@ def test_docker(ctx):
     with ctx.cd("development"):
         print("🔧 Setting up Docker environment...")
         ctx.run("docker network create sosnet", warn=True)
+        # Set project name for consistent container naming
+        os.environ["COMPOSE_PROJECT_NAME"] = "sosnotebook"
         ctx.run("docker-compose up -d")
 
-        # Copy project and run tests
-        ctx.run("docker cp .. sosnotebook_sos-notebook_1:/home/jovyan")
+        # Copy project and run tests (Docker Compose V2 uses hyphens)
+        ctx.run("docker cp .. sosnotebook-sos-notebook-1:/home/jovyan/sos-notebook")
         ctx.run(
-            "docker exec -u root sosnotebook_sos-notebook_1 sh ./development/install_sos_notebook.sh"
+            "docker exec -u root sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook && sh development/install_sos_notebook.sh'"
         )
+
+        # Fix permissions for test directory
+        ctx.run("docker exec -u root sosnotebook-sos-notebook-1 chown -R jovyan:users /home/jovyan/sos-notebook/")
+        ctx.run("docker exec -u root sosnotebook-sos-notebook-1 chmod -R 777 /home/jovyan/sos-notebook/test/")
 
         print("🧪 Running tests in container...")
         result = ctx.run(
-            "docker exec sosnotebook_sos-notebook_1 bash -c 'cd test && pytest -v'",
+            "docker exec -u jovyan sosnotebook-sos-notebook-1 bash -c 'cd /home/jovyan/sos-notebook/test && pytest -v -x --tb=short'",
             warn=True,
         )
 
@@ -233,7 +261,7 @@ def install(ctx, dev=True, force=False):
 
 @task
 def check(ctx):
-    """Run all quality checks (format, lint, test)."""
+    """Run all quality checks (format, lint, typecheck, test)."""
     print("🔍 Running comprehensive quality checks...")
     print("\n" + "=" * 50)
     print("1. Code Formatting Check")
@@ -246,7 +274,12 @@ def check(ctx):
     lint(ctx)
 
     print("\n" + "=" * 50)
-    print("3. Running Tests")
+    print("3. Type Checking")
+    print("=" * 50)
+    typecheck(ctx)
+
+    print("\n" + "=" * 50)
+    print("4. Running Tests")
     print("=" * 50)
     test(ctx)
 

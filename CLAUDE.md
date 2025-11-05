@@ -15,6 +15,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `invoke format --check` - Check code formatting without changes
 - `invoke lint` - Run linting with ruff
 - `invoke lint --fix` - Run linting with auto-fix
+- `invoke typecheck` - Run type checking with mypy (warnings only)
+- `invoke typecheck --strict` - Run type checking with strict enforcement
 - `invoke test` - Run tests with pytest
 - `invoke test --verbose` - Run tests with verbose output
 - `invoke test --coverage` - Run tests with coverage report
@@ -46,6 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `ruff check --fix` - Run linting with auto-fix
 - `ruff format` - Format code
 - `ruff format --check` - Check code formatting
+- `mypy src/` - Run type checking with mypy
 
 **Development Environment:**
 - Uses Docker for testing - see `development/docker-compose.yml`

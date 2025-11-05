@@ -4,6 +4,7 @@
 # Distributed under the terms of the 3-clause BSD License.
 
 import pydoc
+from typing import Dict, List, Union
 
 from sos.syntax import SOS_USAGES
 from sos.utils import env
@@ -12,11 +13,11 @@ from .magics import SoS_Magics
 
 
 class SoS_VariableInspector:
-    def __init__(self, kernel):
+    def __init__(self, kernel) -> None:
         self.kernel = kernel
         self.preview_magic = kernel.magics.get("preview")
 
-    def inspect(self, name, line, pos):
+    def inspect(self, name: str, line: str, pos: int) -> Dict[str, str]:
         try:
             obj_desc, preview = self.preview_magic.preview_var(name, style=None)
             if preview is None:
@@ -30,10 +31,10 @@ class SoS_VariableInspector:
 
 
 class SoS_SyntaxInspector:
-    def __init__(self, kernel):
+    def __init__(self, kernel) -> None:
         self.kernel = kernel
 
-    def inspect(self, name, line, pos):
+    def inspect(self, name: str, line: str, pos: int) -> Dict[str, str]:
         if line.startswith("%") and name in SoS_Magics.names and pos <= len(name) + 1:
             try:
                 magic = SoS_Magics(self.kernel).get(name)
@@ -61,13 +62,13 @@ class SoS_SyntaxInspector:
 
 
 class SoS_Inspector:
-    def __init__(self, kernel):
-        self.inspectors = [
+    def __init__(self, kernel) -> None:
+        self.inspectors: List[Union[SoS_SyntaxInspector, SoS_VariableInspector]] = [
             SoS_SyntaxInspector(kernel),
             SoS_VariableInspector(kernel),
         ]
 
-    def inspect(self, name, line, pos):
+    def inspect(self, name: str, line: str, pos: int) -> Dict[str, str]:
         for c in self.inspectors:
             try:
                 data = c.inspect(name, line, pos)

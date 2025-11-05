@@ -38,13 +38,15 @@ dependencies = [
     "nbformat",
     "nbconvert>=6.0.1",
     "ipython",
-    "ipykernel>=6.18.0",  # 6.18.0 and newer has a new comm manager interface
-    "jinja2",  # https://github.com/spatialaudio/nbsphinx/issues/563
+    "ipykernel>=6.18.0", # 6.18.0 and newer has a new comm manager interface
+    "jinja2", # https://github.com/spatialaudio/nbsphinx/issues/563
     "notebook>=5.0.0",
     "tabulate",
     "pandas",
     "numpy",
     "psutil",
+    "papermill>=2.6.0",
+    "sos-papermill>=0.2.1",
 ]
 
 [project.optional-dependencies]
@@ -53,8 +55,12 @@ dev = [
     "pre-commit",
     "pytest>=6.0",
     "pytest-cov",
+    "pytest-playwright",
+    "testpath",
     "ruff",
     "build",
+    "mypy>=1.0",
+    "types-requests",
 ]
 
 [project.urls]
@@ -87,8 +93,12 @@ dev-dependencies = [
     "pre-commit",
     "pytest>=6.0",
     "pytest-cov",
+    "pytest-playwright",
+    "testpath",
     "ruff",
     "build",
+    "mypy>=1.0",
+    "types-requests",
 ]
 
 [tool.ruff]
@@ -122,3 +132,33 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = false
+warn_unused_configs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = false
+warn_redundant_casts = false
+warn_unused_ignores = false
+warn_no_return = false
+warn_unreachable = false
+strict_equality = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sos.*",
+    "jupyter_client.*", 
+    "ipykernel.*",
+    "nbformat.*",
+    "nbconvert.*",
+    "traitlets.*",
+    "selenium.*",
+    "pandas.*",
+    "numpy.*",
+]
+ignore_missing_imports = true
