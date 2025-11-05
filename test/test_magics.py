@@ -505,7 +505,7 @@ class TestMagics(NotebookTest):
             "a.txt",
             "1",
         ]
-        for index, line in enumerate(lines):
+        for index, _line in enumerate(lines):
             assert lines[index] == results[index]
 
     def test_magic_runfile(self, notebook):
@@ -606,7 +606,7 @@ class TestMagics(NotebookTest):
         try:
             from wand.image import Image
 
-            Image
+            _ = Image
         except ImportError:
             pytest.skip("Skip because imagemagick is not properly installed")
         # preview as png

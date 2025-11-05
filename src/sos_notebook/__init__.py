@@ -6,4 +6,4 @@
 from ._version import __version__
 
 # suppress warning
-__version__
+_ = __version__

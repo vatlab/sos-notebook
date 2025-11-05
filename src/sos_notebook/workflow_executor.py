@@ -170,12 +170,10 @@ def execute_scratch_cell(code, raw_args, kernel):
 
     try:
         if not any(
-            [
-                SOS_SECTION_HEADER.match(line)
+            SOS_SECTION_HEADER.match(line)
                 or line.startswith("%from")
                 or line.startswith("%include")
                 for line in code.splitlines()
-            ]
         ):
             code = (
                 f"[cell{str(kernel.cell_id)[:8] if kernel and kernel.cell_id else '0'}]\n"

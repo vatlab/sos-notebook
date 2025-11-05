@@ -19,12 +19,14 @@ from sos.utils import env
 
 
 def execute_sos_notebook(
-    input_notebook, output_notebook=None, return_content=True, parameters={}
+    input_notebook, output_notebook=None, return_content=True, parameters=None
 ):
     # execute input notebook
     # if input_notebook is a string, it will be loaded. Otherwise it should be a notebook object
     # if output_notebook is a string, it will be used as output filename. Otherwise
     # the notebook will be returned.
+    if parameters is None:
+        parameters = {}
     try:
         from papermill.execute import execute_notebook
     except ImportError as e:
@@ -451,7 +453,7 @@ def parse_papermill_parameters(values):
     for value in values:
         if "=" not in value:
             parameters[value] = True
-            contineu
+            continue
         k, v = value.split("=", 1)
         if v == "True":
             parameters[k] = True
@@ -553,7 +555,7 @@ class NotebookToHTMLConverter:
                 os.remove(notebook_file)
             except Exception as e:
                 env.logger.warning(
-                    f"Failed to remove temporary output file {noteput_file}: {e}"
+                    f"Failed to remove temporary output file {notebook_file}: {e}"
                 )
 
 

@@ -12,9 +12,11 @@ class subkernel:
         kernel=None,
         language="",
         color="",
-        options={},
+        options=None,
         codemirror_mode="",
     ):
+        if options is None:
+            options = {}
         self.name = name
         self.kernel = kernel
         self.language = language

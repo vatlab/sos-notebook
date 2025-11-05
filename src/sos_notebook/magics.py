@@ -57,7 +57,7 @@ class SoS_Magic:
 
     def get_magic_and_code(self, code, warn_remaining=False):
         if code.startswith("%") or code.startswith("!"):
-            lines = re.split(r"(?<!\\)\n", code, 1)
+            lines = re.split(r"(?<!\\)\n", code, maxsplit=1)
             # remove lines joint by \
             lines[0] = lines[0].replace("\\\n", "")
         else:
@@ -281,13 +281,10 @@ class Capture_Magic(SoS_Magic):
             if args.__to__ and not args.__to__.isidentifier():
                 self.sos_kernel.warn(f"Invalid variable name {args.__to__}")
                 self.sos_kernel._meta["capture_result"] = None
-                return
-            if args.__append__ and not args.__append__.isidentifier():
+            elif args.__append__ and not args.__append__.isidentifier():
                 self.sos_kernel.warn(f"Invalid variable name {args.__append__}")
                 self.sos_kernel._meta["capture_result"] = None
-                return
-
-            if args.__to__:
+            elif args.__to__:
                 env.sos_dict.set(args.__to__, content)
             elif args.__append__:
                 if args.__append__ not in env.sos_dict:
@@ -1189,7 +1186,7 @@ class Preview_Magic(SoS_Magic):
         else:
             self.sos_kernel.send_frontend_msg(
                 "stream",
-                dict(name="stderr", text=f"Unrecognized preview content: {result}"),
+                {"name": "stderr", "text": f"Unrecognized preview content: {result}"},
             )
 
     def preview_file(self, filename, style=None):
@@ -1230,10 +1227,10 @@ class Preview_Magic(SoS_Magic):
                         except Exception as e:
                             self.sos_kernel.send_frontend_msg(
                                 "stream",
-                                dict(
-                                    name="stderr",
-                                    text=f"Failed to load previewer {y}: {e}",
-                                ),
+                                {
+                                    "name": "stderr",
+                                    "text": f"Failed to load previewer {y}: {e}",
+                                },
                             )
                             continue
                         break
@@ -1467,10 +1464,10 @@ class Preview_Magic(SoS_Magic):
                     if not handled[idx]:
                         self.sos_kernel.send_frontend_msg(
                             "stream",
-                            dict(
-                                name="stderr",
-                                text="> Failed to preview file or expression {item}",
-                            ),
+                            {
+                                "name": "stderr",
+                                "text": "> Failed to preview file or expression {item}",
+                            },
                         )
                         env.log_to_file("MAGIC", str(e))
         finally:
@@ -1538,31 +1535,30 @@ class Preview_Magic(SoS_Magic):
                     self.sos_kernel.send_frontend_msg(
                         "highlight-workflow", [self.sos_kernel._meta["cell_id"], ta_id]
                     )
-            if not args.items:
-                return
-            if args.host is None:
-                await self.handle_magic_preview(args.items, args.kernel, style)
-            elif args.workflow:
-                self.sos_kernel.warn("Invalid option --kernel with -r (--host)")
-            elif args.kernel:
-                self.sos_kernel.warn("Invalid option --kernel with -r (--host)")
-            else:
-                load_config_files(args.config)
-                try:
-                    rargs = ["sos", "preview", "--html"] + options
-                    rargs = [
-                        x
-                        for x in rargs
-                        if x not in ("-n", "--notebook", "-p", "--panel")
-                    ]
-                    env.log_to_file("MAGIC", f'Running "{" ".join(rargs)}"')
-                    for msg in eval(subprocess.check_output(rargs)):
-                        self.sos_kernel.send_frontend_msg(msg[0], msg[1])
-                except Exception as e:
-                    self.sos_kernel.warn(
-                        f"Failed to preview {args.items} on remote host {args.host}"
-                    )
-                    env.log_to_file("MAGIC", str(e))
+            if args.items:
+                if args.host is None:
+                    await self.handle_magic_preview(args.items, args.kernel, style)
+                elif args.workflow:
+                    self.sos_kernel.warn("Invalid option --kernel with -r (--host)")
+                elif args.kernel:
+                    self.sos_kernel.warn("Invalid option --kernel with -r (--host)")
+                else:
+                    load_config_files(args.config)
+                    try:
+                        rargs = ["sos", "preview", "--html"] + options
+                        rargs = [
+                            x
+                            for x in rargs
+                            if x not in ("-n", "--notebook", "-p", "--panel")
+                        ]
+                        env.log_to_file("MAGIC", f'Running "{" ".join(rargs)}"')
+                        for msg in eval(subprocess.check_output(rargs)):
+                            self.sos_kernel.send_frontend_msg(msg[0], msg[1])
+                    except Exception as e:
+                        self.sos_kernel.warn(
+                            f"Failed to preview {args.items} on remote host {args.host}"
+                        )
+                        env.log_to_file("MAGIC", str(e))
 
 
 class Pull_Magic(SoS_Magic):
