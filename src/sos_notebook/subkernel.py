@@ -154,8 +154,8 @@ class Subkernels:
             if x.name == kdef.name:
                 self._kernel_list[idx] = kdef
                 return self._kernel_list[idx]
-            self._kernel_list.append(kdef)
-            return self._kernel_list[-1]
+        self._kernel_list.append(kdef)
+        return self._kernel_list[-1]
 
     def get_background_color(self, plugin, lan):
         # if a single color is defined, it is used for all supported
