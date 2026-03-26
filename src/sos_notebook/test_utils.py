@@ -3,17 +3,11 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-#
-# NOTE: for some namespace reason, this test can only be tested using
-# nose.
 import asyncio
 import atexit
 import os
 import re
 import time
-
-#
-#
 from contextlib import contextmanager
 from queue import Empty
 from textwrap import dedent
@@ -44,56 +38,10 @@ def start_new_kernel(kernel_name="python3"):
     return km, kc
 
 
-def assemble_output(iopub):
-    """Assemble stdout/stderr from an execution."""
-    stdout = []
-    stderr = []
-    
-    while True:
-        try:
-            msg = iopub.get_msg(timeout=1)
-        except Empty:
-            break
-        
-        msg_type = msg["msg_type"]
-        content = msg["content"]
-        
-        if msg_type == "status" and content["execution_state"] == "idle":
-            break
-        elif msg_type == "stream":
-            if content["name"] == "stdout":
-                stdout.append(content["text"])
-            elif content["name"] == "stderr":
-                stderr.append(content["text"])
-        elif msg_type == "error":
-            stderr.append("\n".join(content["traceback"]))
-    
-    return "".join(stdout), "".join(stderr)
-
-
-def execute(kc, code, **kwargs):
-    """Execute code in a kernel client."""
-    msg_id = kc.execute(code, **kwargs)
-    return msg_id
-
-
-def wait_for_idle(kc):
-    """Wait for the kernel to become idle."""
-    kc.get_shell_msg(timeout=TIMEOUT)
-    while True:
-        try:
-            msg = kc.get_iopub_msg(timeout=1)
-            if (msg['msg_type'] == 'status' and 
-                msg['content']['execution_state'] == 'idle'):
-                break
-        except Empty:
-            break
-
-
 @contextmanager
 def sos_kernel():
     """Context manager for the global kernel instance
-    Should be used for most kernel tests
+
     Returns
     -------
     kernel_client: connected KernelClient instance
@@ -111,9 +59,6 @@ def flush_channels(kc=None):
                 channel.get_msg(timeout=0.1)
             except Empty:
                 break
-            # do not validate message because SoS has special sos_comm
-            # else:
-            #    validate_message(msg)
 
 
 def start_sos_kernel():
@@ -150,21 +95,17 @@ async def _async_get_result(iopub):
         msg_type = msg["msg_type"]
         content = msg["content"]
         if msg_type == "status" and content["execution_state"] == "idle":
-            # idle message signals end of output
             break
         if msg["msg_type"] == "execute_result":
             result = content["data"]
         elif msg["msg_type"] == "display_data":
             result = content["data"]
-    # text/plain can have fronzen dict, this is ok,
     from numpy import array, matrix, uint8
 
-    # suppress pyflakes warning
     _ = array
     _ = matrix
     _ = uint8
 
-    # it can also have dict_keys, we will have to redefine it
     def dict_keys(args):
         return args
 
@@ -174,10 +115,7 @@ async def _async_get_result(iopub):
 
 
 def get_display_data(iopub, data_type="text/plain"):
-    """retrieve display_data from an execution from subkernel
-    because subkernel (for example irkernel) does not return
-    execution_result
-    """
+    """retrieve display_data from an execution from subkernel"""
     return asyncio.run(_async_get_display_data(iopub, data_type))
 
 
@@ -188,7 +126,6 @@ async def _async_get_display_data(iopub, data_type):
         msg_type = msg["msg_type"]
         content = msg["content"]
         if msg_type == "status" and content["execution_state"] == "idle":
-            # idle message signals end of output
             break
         if msg["msg_type"] == "display_data":
             if isinstance(data_type, str):
@@ -198,7 +135,6 @@ async def _async_get_display_data(iopub, data_type):
                 for dt in data_type:
                     if dt in content["data"]:
                         result = content["data"][dt]
-        # some early version of IRKernel still passes execute_result
         elif msg["msg_type"] == "execute_result":
             result = content["data"]["text/plain"]
     return result
@@ -215,62 +151,135 @@ async def _async_clear_channels(iopub):
         msg_type = msg["msg_type"]
         content = msg["content"]
         if msg_type == "status" and content["execution_state"] == "idle":
-            # idle message signals end of output
             break
 
 
 def get_std_output(iopub):
     """Obtain stderr and remove some unnecessary warning from
     https://github.com/jupyter/jupyter_client/pull/201#issuecomment-314269710"""
-    stdout, stderr = assemble_output(iopub)
-    return stdout, "\n".join(
-        [
-            x
-            for x in stderr.splitlines()
-            if "sticky" not in x
-            and "RuntimeWarning" not in x
-            and "communicator" not in x
-        ]
+    stdout = []
+    stderr = []
+    while True:
+        try:
+            msg = iopub.get_msg(timeout=1)
+        except Empty:
+            break
+        msg_type = msg["msg_type"]
+        content = msg["content"]
+        if msg_type == "status" and content["execution_state"] == "idle":
+            break
+        if msg_type == "stream":
+            if content["name"] == "stdout":
+                stdout.append(content["text"])
+            elif content["name"] == "stderr":
+                stderr.append(content["text"])
+        elif msg_type == "error":
+            stderr.append("\n".join(content["traceback"]))
+    return "".join(stdout), "\n".join(
+        x
+        for x in "".join(stderr).splitlines()
+        if "sticky" not in x
+        and "RuntimeWarning" not in x
+        and "communicator" not in x
     )
 
 
 class NotebookTest:
-    """Base test class for kernel tests (replaces frontend-based tests)"""
-    pass
+    """Base test class for kernel tests"""
 
 
 class Notebook:
-    """Minimal notebook interface for kernel testing"""
-    
+    """Notebook interface for kernel testing.
+
+    Executes code in the SoS kernel and supports switching between
+    subkernels (R, Python3, etc.) using the %use magic.
+    """
+
     def __init__(self, kernel_client=None):
         self.kc = kernel_client or start_sos_kernel()
-    
+        self.current_kernel = "SoS"
+
+    def _execute_and_collect(self, code):
+        """Execute code and collect all iopub messages until idle.
+
+        Returns (stdout, stderr, result, all_messages) where result is
+        the text/plain from execute_result or display_data if any.
+        """
+        self.kc.execute(code)
+        self.kc.get_shell_msg(timeout=TIMEOUT)
+
+        stdout = []
+        stderr = []
+        result = None
+        messages = []
+
+        while True:
+            try:
+                msg = self.kc.get_iopub_msg(timeout=5)
+            except Empty:
+                break
+            messages.append(msg)
+            msg_type = msg["msg_type"]
+            content = msg["content"]
+            if msg_type == "status" and content["execution_state"] == "idle":
+                break
+            if msg_type == "stream":
+                if content["name"] == "stdout":
+                    stdout.append(content["text"])
+                elif content["name"] == "stderr":
+                    stderr.append(content["text"])
+            elif msg_type == "execute_result":
+                if "text/plain" in content.get("data", {}):
+                    result = content["data"]["text/plain"]
+            elif msg_type == "display_data":
+                if "text/plain" in content.get("data", {}):
+                    result = content["data"]["text/plain"]
+            elif msg_type == "error":
+                stderr.append("\n".join(content["traceback"]))
+
+        return "".join(stdout), "".join(stderr), result, messages
+
+    def _switch_kernel(self, kernel):
+        """Switch to a different kernel using %use magic."""
+        if kernel != self.current_kernel:
+            self._execute_and_collect(f"%use {kernel}")
+            self.current_kernel = kernel
+
     def check_output(self, code, kernel="SoS"):
-        """Execute code and return the output as a string"""
-        # For now, implement basic kernel execution
-        # This is a simplified version - may need enhancement
-        msg_id = self.kc.execute(code)
-        # Get the result
-        reply = self.kc.get_shell_msg(timeout=30)
-        
-        # Collect output
-        output = ""
+        """Execute code in the specified kernel and return output as string."""
+        self._switch_kernel(kernel)
+        code = dedent(code).strip()
+        stdout, stderr, result, _ = self._execute_and_collect(code)
+        if result is not None:
+            return result
+        return stdout
+
+    def call(self, code, kernel="SoS"):
+        """Execute code in the specified kernel without returning output."""
+        self._switch_kernel(kernel)
+        code = dedent(code).strip()
+        self._execute_and_collect(code)
+
+    def save(self):
+        """No-op: save is a frontend concept, not applicable in kernel testing."""
+
+    def get_input_backgroundColor(self, idx=0):
+        """Not available without frontend. Returns None."""
+        return None
+
+    def get_cell_output(self, idx=0):
+        """Drain any pending iopub messages and return accumulated output.
+
+        This is used to poll for output from background tasks (%run &).
+        """
+        output = []
         while True:
             try:
                 msg = self.kc.get_iopub_msg(timeout=1)
-                if msg['msg_type'] == 'stream':
-                    output += msg['content']['text']
-                elif msg['msg_type'] == 'execute_result':
-                    if 'text/plain' in msg['content']['data']:
-                        output += msg['content']['data']['text/plain']
-                elif msg['msg_type'] == 'status' and msg['content']['execution_state'] == 'idle':
+                if msg["msg_type"] == "stream":
+                    output.append(msg["content"]["text"])
+                elif msg["msg_type"] == "status" and msg["content"]["execution_state"] == "idle":
                     break
-            except:
+            except Empty:
                 break
-        
-        return output
-    
-    def call(self, code, kernel="SoS"):
-        """Execute code without returning output"""
-        self.check_output(code, kernel)
-        return None
+        return "".join(output)
