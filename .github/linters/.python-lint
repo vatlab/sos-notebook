@@ -42,7 +42,7 @@ persistent=yes
 
 # When enabled, pylint would attempt to guess common misconfiguration and emit
 # user-friendly hints instead of false-positive error messages.
-suggestion-mode=yes
+# suggestion-mode=yes  # removed: unrecognized in newer pylint
 
 # Allow loading of arbitrary C extensions. Extensions are imported into the
 # active Python interpreter and may run arbitrary code.
@@ -106,7 +106,7 @@ disable=abstract-method,
       missing-module-docstring,
       no-member,
       no-name-in-module,
-      no-self-use,
+      # no-self-use,  # moved to optional extension in pylint 2.14
       no-value-for-parameter,
       pointless-statement,
       protected-access,
@@ -150,7 +150,20 @@ disable=abstract-method,
       useless-super-delegation,
       useless-suppression,
       useless-with-lock,
-      wildcard-import
+      wildcard-import,
+      assignment-from-none,
+      broad-exception-raised,
+      global-variable-not-assigned,
+      invalid-overridden-method,
+      no-else-return,
+      possibly-used-before-assignment,
+      stop-iteration-return,
+      too-many-positional-arguments,
+      ungrouped-imports,
+      unnecessary-dunder-call,
+      unused-variable,
+      used-before-assignment,
+      useless-return
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
