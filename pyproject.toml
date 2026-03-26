@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sos-notebook"
-version = "0.24.6"
+version = "0.24.7"
 description = "Script of Scripts (SoS) kernel and backend for Jupyter - backend dependency for jupyterlab-sos"
 readme = "README.md"
 requires-python = ">=3.8"

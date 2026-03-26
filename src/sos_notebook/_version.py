@@ -18,7 +18,7 @@ if _py_ver.major == 2 or (
 # version of the SoS language
 __sos_version__ = "1.0"
 # version of the sos command
-__version__ = "0.24.5"
+__version__ = "0.24.7"
 __py_version__ = f"{_py_ver.major}.{_py_ver.minor}.{_py_ver.micro}"
 
 #
