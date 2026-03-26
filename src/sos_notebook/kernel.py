@@ -3,6 +3,7 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 import asyncio
+import atexit
 import contextlib
 import inspect
 import logging
@@ -189,6 +190,8 @@ class SoS_Kernel(IPythonKernel):
         )
 
         self.kernels = {}
+        self._shutting_down = False
+        atexit.register(self._atexit_shutdown)
         # self.shell = InteractiveShell.instance()
         self.format_obj = self.shell.display_formatter.format
 
@@ -257,8 +260,8 @@ class SoS_Kernel(IPythonKernel):
                 kernel=self,
             )
         )
-        env.logger.print = (
-            lambda cell_id, msg, *args: self.send_response(
+        env.logger.print = lambda cell_id, msg, *args: (
+            self.send_response(
                 self.iopub_socket, "stream", {"name": "stdout", "text": msg}
             )
             if self._meta["batch_mode"]
@@ -1492,17 +1495,29 @@ class SoS_Kernel(IPythonKernel):
                 env.sos_dict.pop("output", None)
 
     def do_shutdown(self, restart):
-        #
-        for name, (km, _) in self.kernels.items():
-            try:
-                km.shutdown_kernel(restart=restart)
-            except Exception as e:
-                self.warn(f"Failed to shutdown kernel {name}: {e}")
+        if self._shutting_down:
+            return
+        self._shutting_down = True
+        try:
+            for name, (km, _) in self.kernels.items():
+                try:
+                    km.shutdown_kernel(restart=restart)
+                except Exception as e:
+                    self.warn(f"Failed to shutdown kernel {name}: {e}")
+        finally:
+            if not restart:
+                self.kernels.clear()
+            self._shutting_down = False
+
+    def _atexit_shutdown(self):
+        """Ensure all subkernels are shut down when the process exits.
+
+        This is more reliable than __del__ which is not guaranteed to be
+        called during interpreter shutdown, especially with reference cycles.
+        """
+        self.do_shutdown(False)
 
     def __del__(self):
-        # upon releasing of sos kernel, kill all subkernels. This I thought would be
-        # called by the Jupyter cleanup code or the OS (because subkernels are subprocesses)
-        # but they are not.
         self.do_shutdown(False)
 
 
