@@ -4,6 +4,15 @@
 [![Build Status](https://travis-ci.org/vatlab/sos-notebook.svg?branch=master)](https://travis-ci.org/vatlab/sos-notebook)
 [![Build status](https://ci.appveyor.com/api/projects/status/nkyw7f4o97u7jl1l/branch/master?svg=true)](https://ci.appveyor.com/project/BoPeng/sos-notebook/branch/master)
 
+## ⚠️ Deprecation Notice
+
+**The classic Jupyter notebook interface support for SoS Notebook has been deprecated.** 
+
+This package no longer provides JavaScript extensions or frontend functionality for the classic Jupyter notebook interface. All frontend features have been migrated to JupyterLab and are available through [jupyterlab-sos](https://github.com/vatlab/jupyterlab-sos).
+
+**This package is still required** as a backend dependency for jupyterlab-sos and contains the SoS kernel, magics, notebook converters (HTML, PDF, Markdown), and other core functionality. However, **for the best SoS experience, please use JupyterLab with the jupyterlab-sos extension**.
+
+For more information, see the [JupyterLab SoS extension](https://github.com/vatlab/jupyterlab-sos).
 
 # SoS Notebook
 

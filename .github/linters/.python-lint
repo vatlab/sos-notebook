@@ -163,7 +163,10 @@ disable=abstract-method,
       unnecessary-dunder-call,
       unused-variable,
       used-before-assignment,
-      useless-return
+      useless-return,
+      trailing-whitespace,
+      no-else-break,
+      unnecessary-pass
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

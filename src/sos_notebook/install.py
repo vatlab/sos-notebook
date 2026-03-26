@@ -60,10 +60,7 @@ def install_sos_kernel_spec(user, prefix):
         with open(os.path.join(td, "kernel.json"), "w") as f:
             json.dump(kernel_json, f, sort_keys=True)
         # Copy resources once they're specified
-        shutil.copy(
-            os.path.join(os.path.split(__file__)[0], "kernel.js"),
-            os.path.join(td, "kernel.js"),
-        )
+        # Note: kernel.js removed as classic Jupyter notebook frontend is deprecated
         shutil.copy(
             os.path.join(os.path.split(__file__)[0], "logo-64x64.png"),
             os.path.join(td, "logo-64x64.png"),
