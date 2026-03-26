@@ -3,6 +3,8 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
+import pytest
+
 from sos_notebook.test_utils import NotebookTest
 
 
@@ -95,6 +97,7 @@ class TestWorkflow(NotebookTest):
         )
         assert "Ran for < 5 seconds" in output
 
+    @pytest.mark.skip(reason="background task output polling requires frontend")
     def test_background_mode(self, notebook):
         """test executing sos workflows in background"""
         idx = notebook.call(

@@ -3,88 +3,12 @@
 # Copyright (c) Bo Peng and the University of Texas MD Anderson Cancer Center
 # Distributed under the terms of the 3-clause BSD License.
 
-import json
 import os
-import sys
-import time
-from subprocess import Popen
-from urllib.parse import urljoin
+import tempfile
 
 import pytest
-import requests
-from testpath.tempdir import TemporaryDirectory
 
 from sos_notebook.test_utils import Notebook
-
-pjoin = os.path.join
-
-
-def _wait_for_server(proc, info_file_path):
-    """Wait 30 seconds for the notebook server to start"""
-    for _i in range(300):
-        if proc.poll() is not None:
-            raise RuntimeError("Notebook server failed to start")
-        if os.path.exists(info_file_path):
-            try:
-                with open(info_file_path) as f:
-                    return json.load(f)
-            except ValueError:
-                # If the server is halfway through writing the file, we may
-                # get invalid JSON; it should be ready next iteration.
-                pass
-        time.sleep(0.1)
-    raise RuntimeError("Didn't find %s in 30 seconds", info_file_path)
-
-
-@pytest.fixture(scope="session")
-def notebook_server():
-    info = {}
-    temp_dir = TemporaryDirectory()
-    td = temp_dir.name
-    # do not use context manager because of https://github.com/vatlab/sos-notebook/issues/214
-    if True:
-        nbdir = info["nbdir"] = pjoin(td, "notebooks")
-        os.makedirs(pjoin(nbdir, "sub ∂ir1", "sub ∂ir 1a"))
-        os.makedirs(pjoin(nbdir, "sub ∂ir2", "sub ∂ir 1b"))
-        # print(nbdir)
-        info["extra_env"] = {
-            "JUPYTER_CONFIG_DIR": pjoin(td, "jupyter_config"),
-            "JUPYTER_RUNTIME_DIR": pjoin(td, "jupyter_runtime"),
-            "IPYTHONDIR": pjoin(td, "ipython"),
-        }
-        env = os.environ.copy()
-        env.update(info["extra_env"])
-
-        command = [
-            sys.executable,
-            "-m",
-            "notebook",
-            "--no-browser",
-            "--notebook-dir",
-            nbdir,
-            # run with a base URL that would be escaped,
-            # to test that we don't double-escape URLs
-            "--NotebookApp.base_url=/a@b/",
-        ]
-        print("command=", command)
-        proc = info["popen"] = Popen(command, cwd=nbdir, env=env)
-        info_file_path = pjoin(td, "jupyter_runtime", f"nbserver-{proc.pid}.json")
-        info.update(_wait_for_server(proc, info_file_path))
-
-        print("Notebook server info:", info)
-        yield info
-
-    # manually try to clean up, which would fail under windows because
-    # a permission error caused by iPython history.sqlite.
-    try:
-        temp_dir.cleanup()
-    except Exception:
-        pass
-    # Shut the server down
-    requests.post(
-        urljoin(info["url"], "api/shutdown"),
-        headers={"Authorization": "token " + info["token"]},
-    )
 
 
 @pytest.fixture(scope="class")
@@ -115,7 +39,7 @@ print(output)
 seq = range(3)
 input: for_each='seq'
 output: 'test${_seq}.txt'
-run:			concurrent=True
+run:\t\t\tconcurrent=True
 echo 'this is test script'
 [10]
 report('this is action report')
